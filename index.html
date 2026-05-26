@@ -1,411 +1,1872 @@
-<!-- =========================================================
-공지사항 탭 수정 패치
-기존 파일에서 아래 블록들을 교체/추가하세요.
-========================================================= -->
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <!-- 핀치 줌을 허용하도록 maximum-scale 늘리고 user-scalable을 yes로 변경 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
+    <title>Patek-S</title>
+    
+    <!-- iOS 홈 화면 추가를 위한 PWA 메타 태그 -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Patek-S">
+    <link class="rounded-full" rel="apple-touch-icon" href="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Patek_Philippe_logo.svg/512px-Patek_Philippe_logo.svg.png">
 
-<!-- 1) script 상단 상태값 추가
-위치: window.appNotices = []; 바로 아래에 추가
--->
-<script>
-window.noticeSearchQuery = '';
-window.noticeCategoryFilter = '전체';
-window.noticeSortType = 'deadlineAsc';
-window.selectedNoticeId = null;
-</script>
+    <!-- Tailwind CSS 및 아이콘 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
 
-
-<!-- 2) fetchNotices, renderNotices 전체 교체 -->
-<script>
-function fetchNotices() {
-    const colRef = collection(db, 'notices');
-    unsubscribeNotices = onSnapshot(colRef, (snapshot) => {
-        window.appNotices = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        renderNotices();
-    });
-}
-
-function normalizeSearchText(value) {
-    return String(value || '').toLowerCase().replace(/\s+/g, '');
-}
-
-function getNoticeRegisterDate(notice) {
-    return notice.registerDate || notice.date || notice.createdAt || '';
-}
-
-function getNoticeDeadlineDate(notice) {
-    return notice.deadlineDate || notice.date || '';
-}
-
-window.renderNotices = function() {
-    const list = document.getElementById('notice-list-content');
-    if (!list) return;
-    list.innerHTML = '';
-
-    const query = normalizeSearchText(window.noticeSearchQuery);
-
-    let filtered = [...window.appNotices];
-
-    // 완료된 공지는 기본 리스트에서 숨김. 단, 검색어가 있으면 검색 결과에 노출.
-    if (!query) {
-        filtered = filtered.filter(notice => notice.completed !== true);
-    }
-
-    // 제목 + 내용 검색. 순서 상관없이 입력된 단어들이 모두 포함되면 검색.
-    if (query) {
-        const terms = query.split(/[,]+/).filter(Boolean);
-        filtered = filtered.filter(notice => {
-            const target = normalizeSearchText(`${notice.title || ''} ${notice.content || ''}`);
-            return terms.every(term => target.includes(term));
-        });
-    }
-
-    // 카테고리 필터
-    if (window.noticeCategoryFilter !== '전체') {
-        filtered = filtered.filter(notice => notice.category === window.noticeCategoryFilter);
-    }
-
-    // 정렬
-    filtered.sort((a, b) => {
-        if (window.noticeSortType === 'registerAsc') {
-            return new Date(getNoticeRegisterDate(a) || '9999-12-31') - new Date(getNoticeRegisterDate(b) || '9999-12-31');
+    <style>
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+        
+        body {
+            font-family: 'Pretendard', -apple-system, sans-serif;
+            background-color: #FAF9F5;
+            margin: 0; padding: 0;
+            color: #333;
+            -webkit-tap-highlight-color: transparent;
+            overscroll-behavior-y: none;
         }
-        return new Date(getNoticeDeadlineDate(a) || '9999-12-31') - new Date(getNoticeDeadlineDate(b) || '9999-12-31');
-    });
+        
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-    if (filtered.length === 0) {
-        list.innerHTML = '<div class="text-center text-[#999] py-10 text-sm">조건에 맞는 공지사항이 없습니다.</div>';
-        return;
-    }
+        /* 화면 전환 애니메이션 및 독립 스크롤 영역 */
+        .page {
+            display: none;
+            position: absolute; /* 부모 relative 컨테이너에 꽉 차게 설정 */
+            top: 0; left: 0; right: 0; bottom: 0;
+            overflow-y: auto;
+            padding-bottom: 240px; /* 2줄 하단 네비게이션 공간 충분히 확보 */
+            animation: fadeIn 0.2s ease-out;
+        }
+        .page.active { display: block; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
 
-    filtered.forEach(notice => {
-        const catStyle = CATEGORIES[notice.category] || CATEGORIES['매장'];
-        const readCount = notice.readers ? notice.readers.length : 0;
-        const isRead = notice.readers && notice.readers.includes(currentUser.uid);
-        const registerDate = getNoticeRegisterDate(notice) || '-';
-        const deadlineDate = getNoticeDeadlineDate(notice) || '-';
-        const completedBadge = notice.completed === true
-            ? `<span class="text-[10px] font-bold text-[#777] bg-[#EFEFEF] px-2 py-0.5 rounded-md">완료</span>`
-            : '';
+        /* 하단 네비게이션 아이템 액티브 컬러 (레이아웃은 Tailwind로 HTML 직접 제어) */
+        .nav-item { transition: color 0.2s; }
+        .nav-item.active { color: #B4975A; }
+        .nav-item.active svg { stroke: #B4975A; }
 
-        list.innerHTML += `
-            <div onclick="openNoticeDetail('${notice.id}')" class="bg-white p-4 rounded-2xl border border-[#F0EFEA] shadow-sm cursor-pointer active:scale-[0.98] transition-transform mb-3">
-                <div class="flex items-center gap-3">
-                    <div class="px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap" style="background-color: ${catStyle.bg}; color: ${catStyle.text};">
-                        ${notice.category}
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="flex items-center gap-2 min-w-0">
-                            <div class="truncate text-[15px] font-semibold text-[#333]">${notice.title || ''}</div>
-                            ${completedBadge}
-                        </div>
-                        <div class="text-[11px] text-[#999] mt-1 font-medium truncate">등록 ${registerDate} · 마감 ${deadlineDate}</div>
-                    </div>
-                    <div class="flex items-center gap-2 shrink-0">
-                        <span class="text-xs font-semibold ${isRead ? 'text-[#B4975A]' : 'text-[#999]'}">${readCount} / ${MAX_READERS}</span>
-                        <i data-lucide="chevron-right" class="w-4 h-4 text-[#CCC]"></i>
-                    </div>
-                </div>
-            </div>
-        `;
-    });
-    lucide.createIcons();
-};
-</script>
+        /* 로딩 및 모달 */
+        #loading-overlay { position: fixed; top:0; left:0; width:100%; height:100vh; background:rgba(250,249,245,0.9); z-index: 99999; display: flex; justify-content: center; align-items: center; flex-direction: column; }
+        .spinner { border: 3px solid #E8E4DB; border-top: 3px solid #B4975A; border-radius: 50%; width: 36px; height: 36px; animation: spin 1s linear infinite; margin-bottom: 16px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
+        /* 테이블 스크롤 및 극도로 섬세한 텍스트 가독성 최적화 (한 화면에 다 들어오도록 크기 축소) */
+        .schedule-table {
+            table-layout: fixed;
+            width: 100%;
+        }
+        .schedule-table th, .schedule-table td {
+            border: 1px solid #E2E0D9;
+            text-align: center;
+            vertical-align: middle;
+            font-size: 7.5px;
+            padding: 3px 0;
+            line-height: 1;
+            overflow: hidden;
+            word-break: keep-all;
+        }
+        /* 첫 두 열(연차, 성명) 넓이 고정 */
+        .schedule-table th:nth-child(1), .schedule-table td:nth-child(1) { width: 18px; }
+        .schedule-table th:nth-child(2), .schedule-table td:nth-child(2) { width: 26px; }
+        
+        .schedule-table th {
+            background-color: #F8F6F0;
+            font-weight: 700;
+            color: #555552;
+        }
+        .holiday-sun { background-color: #FDE2E4 !important; color: #E63946 !important; }
+        .holiday-sat { background-color: #E2EFFF !important; color: #1D3557 !important; }
+        .holiday-pub { background-color: #FFD6E8 !important; color: #D81B60 !important; }
+    </style>
+</head>
+<body>
 
-<!-- 3) 공지사항 검색/필터/정렬 함수 추가
-위치: renderNotices 아래 또는 공지사항 함수 영역
--->
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    const searchInput = document.getElementById('notice-search-input');
-    if (searchInput) {
-        searchInput.addEventListener('input', (e) => {
-            window.noticeSearchQuery = e.target.value;
-            const clearBtn = document.getElementById('notice-search-clear');
-            if (clearBtn) clearBtn.style.display = window.noticeSearchQuery ? 'block' : 'none';
-            window.renderNotices();
-        });
-    }
-});
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, collection, onSnapshot, doc, setDoc, getDoc, addDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-window.clearNoticeSearch = function() {
-    const searchInput = document.getElementById('notice-search-input');
-    const clearBtn = document.getElementById('notice-search-clear');
-    if (searchInput) searchInput.value = '';
-    if (clearBtn) clearBtn.style.display = 'none';
-    window.noticeSearchQuery = '';
-    window.renderNotices();
-};
+    // ⭐️ patek-s 프로젝트 설정값
+    const firebaseConfig = {
+      apiKey: "AIzaSyCt7aQXA5eFdnDTMHlRhjPAkyH4b8UB6HY",
+      authDomain: "patek-s.firebaseapp.com",
+      projectId: "patek-s",
+      storageBucket: "patek-s.firebasestorage.app",
+      messagingSenderId: "786016749285",
+      appId: "1:786016749285:web:58538eec1cf7e72068b60c",
+      measurementId: "G-QZQYBJMFH8"
+    };
 
-window.setNoticeCategoryFilter = function(category, btnElement) {
-    window.noticeCategoryFilter = category;
-    document.querySelectorAll('.notice-filter-btn').forEach(btn => {
-        btn.className = 'notice-filter-btn px-3 py-2 rounded-lg text-[12px] font-semibold whitespace-nowrap border bg-white text-[#8A847E] border-[#E8E4DB]';
-    });
-    if (btnElement) {
-        btnElement.className = 'notice-filter-btn px-3 py-2 rounded-lg text-[12px] font-semibold whitespace-nowrap border bg-[#8B7355] text-white border-[#8B7355]';
-    }
-    window.renderNotices();
-};
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const provider = new GoogleAuthProvider();
 
-window.setNoticeSortType = function(value) {
-    window.noticeSortType = value;
-    window.renderNotices();
-};
+    // 카테고리 색상 데이터
+    const CATEGORIES = {
+        '매장': { bg: '#F9E5E2', text: '#D46B61' },
+        '본사': { bg: '#E3EDFD', text: '#5A85DB' },
+        'PP': { bg: '#FCE6C3', text: '#D69641' },
+        '백화점': { bg: '#E5E5E5', text: '#7A7A7A' },
+        '행사': { bg: '#EBE2FB', text: '#8E67C9' }
+    };
+    const MAX_READERS = 6;
 
-window.resetNoticeControls = function() {
+    let currentUser = null;
+    let unsubscribeNotices = null;
+    let unsubscribeApproval = null;
+    let unsubscribeAlbums = null;
+    let unsubscribeSchedules = null;
+    let unsubscribeLeaveRequests = null;
+    
+    window.appNotices = [];
     window.noticeSearchQuery = '';
     window.noticeCategoryFilter = '전체';
     window.noticeSortType = 'deadlineAsc';
+    window.selectedNoticeId = null;
+    window.albums = [];
+    window.selectedAlbumIds = [];
+    window.albumFilter = '전체';
+    window.albumSearchQuery = '';
+    window.albumForm = { id: '', files: [], category: '기타', title: '', ref: '', memo: '', imageUrl: '' };
 
-    const searchInput = document.getElementById('notice-search-input');
-    const clearBtn = document.getElementById('notice-search-clear');
-    const sortSelect = document.getElementById('notice-sort-select');
+    // 근무표 및 휴무 신청 상태값
+    window.scheduleYear = 2026;
+    window.scheduleMonth = 5;
+    window.schedulesData = {}; // Firestore에서 가져온 월별 원시 근무표 데이터
+    window.leaveRequests = []; // Firestore에서 가져온 휴무 리스트
+    window.storeStaffs = ['옥영세', '엄인주', '장용석', '최혜지', '이승범', '형영지']; // 기본 직원 매핑
+    window.leaveRangeStart = null;
+    window.leaveRangeEnd = null;
 
-    if (searchInput) searchInput.value = '';
-    if (clearBtn) clearBtn.style.display = 'none';
-    if (sortSelect) sortSelect.value = 'deadlineAsc';
+    // 공휴일 정보 (2026년 기준 예시 데이터)
+    const PUBLIC_HOLIDAYS_2026 = {
+        "2026-05-05": "어린이날",
+        "2026-05-24": "석가탄신일",
+        "2026-06-06": "현충일"
+    };
 
-    document.querySelectorAll('.notice-filter-btn').forEach(btn => {
-        const isAll = btn.dataset.category === '전체';
-        btn.className = isAll
-            ? 'notice-filter-btn px-3 py-2 rounded-lg text-[12px] font-semibold whitespace-nowrap border bg-[#8B7355] text-white border-[#8B7355]'
-            : 'notice-filter-btn px-3 py-2 rounded-lg text-[12px] font-semibold whitespace-nowrap border bg-white text-[#8A847E] border-[#E8E4DB]';
-    });
-
-    window.renderNotices();
-};
-</script>
-
-
-<!-- 4) 공지사항 등록 관련 함수 교체 -->
-<script>
-window.openNoticeCreate = function() {
-    document.getElementById('page-notice-create').style.display = 'flex';
-    document.getElementById('bottom-nav-bar').style.display = 'none';
-
-    window.selectedCategory = '';
-    document.querySelectorAll('.cat-btn').forEach(b => {
-        b.style.border = '1px solid #E5E5E5';
-        b.style.fontWeight = 'normal';
-    });
-
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('input-register-date').value = today;
-    document.getElementById('input-deadline-date').value = '';
-    document.getElementById('input-title').value = '';
-    document.getElementById('input-content').value = '';
-};
-
-window.submitNotice = async function() {
-    const registerDate = document.getElementById('input-register-date').value;
-    const deadlineDate = document.getElementById('input-deadline-date').value;
-    const title = document.getElementById('input-title').value.trim();
-    const content = document.getElementById('input-content').value.trim();
-
-    if (!window.selectedCategory || !title) {
-        window.showCustomAlert('카테고리와 제목을 입력해주세요.');
-        return;
-    }
-
-    if (!registerDate || !deadlineDate) {
-        window.showCustomAlert('등록 날짜와 마감 날짜를 모두 선택해주세요.');
-        return;
-    }
-
-    document.getElementById('loading-overlay').style.display = 'flex';
-    try {
-        await addDoc(collection(db, 'notices'), {
-            category: window.selectedCategory,
-            registerDate,
-            deadlineDate,
-            date: registerDate, // 기존 데이터 호환용
-            title,
-            content,
-            author: currentUser.uid,
-            createdAt: new Date().toISOString(),
-            readers: [],
-            completed: false,
-            completedAt: ''
-        });
-        closeNoticeCreate();
-    } catch(e) {
-        console.error(e);
-        window.showCustomAlert('등록 실패');
-    } finally {
+    // 리다이렉트 처리 (오류 방지 핵심)
+    getRedirectResult(auth).catch(error => {
+        console.error("로그인 에러:", error);
         document.getElementById('loading-overlay').style.display = 'none';
-    }
-};
-</script>
-
-
-<!-- 5) 공지사항 상세/수정/완료 함수 교체 및 추가 -->
-<script>
-window.openNoticeDetail = async function(id) {
-    const notice = window.appNotices.find(n => n.id === id);
-    if (!notice) return;
-
-    window.selectedNoticeId = id;
-
-    document.getElementById('page-notice-detail').style.display = 'flex';
-    document.getElementById('bottom-nav-bar').style.display = 'none';
-
-    const catStyle = CATEGORIES[notice.category] || CATEGORIES['매장'];
-    const readCount = notice.readers ? notice.readers.length : 0;
-
-    document.getElementById('detail-edit-cat-label').innerText = notice.category;
-    document.getElementById('detail-edit-cat-label').style.backgroundColor = catStyle.bg;
-    document.getElementById('detail-edit-cat-label').style.color = catStyle.text;
-
-    document.getElementById('detail-edit-category').value = notice.category || '매장';
-    document.getElementById('detail-edit-title').value = notice.title || '';
-    document.getElementById('detail-edit-register-date').value = getNoticeRegisterDate(notice) || '';
-    document.getElementById('detail-edit-deadline-date').value = getNoticeDeadlineDate(notice) || '';
-    document.getElementById('detail-edit-content').value = notice.content || '';
-    document.getElementById('detail-edit-count').innerText = `${readCount} / ${MAX_READERS}`;
-
-    const completedText = document.getElementById('detail-completed-text');
-    if (completedText) {
-        completedText.innerText = notice.completed === true ? '완료된 공지' : '진행 중인 공지';
-        completedText.className = notice.completed === true
-            ? 'text-xs font-bold text-[#777] bg-[#EFEFEF] px-2 py-1 rounded-md'
-            : 'text-xs font-bold text-[#B4975A] bg-[#F8F3E7] px-2 py-1 rounded-md';
-    }
-
-    if (!notice.readers || !notice.readers.includes(currentUser.uid)) {
-        const currentReaders = notice.readers || [];
-        if (currentReaders.length < MAX_READERS) {
-            currentReaders.push(currentUser.uid);
-            await updateDoc(doc(db, 'notices', notice.id), { readers: currentReaders });
-            document.getElementById('detail-edit-count').innerText = `${currentReaders.length} / ${MAX_READERS}`;
+        if (error.code === 'auth/unauthorized-domain') {
+            window.showCustomAlert("구글 로그인 정책: 현재 주소가 승인된 도메인이 아닙니다.");
         }
-    }
-};
+    });
 
-window.saveNoticeEdit = async function() {
-    if (!window.selectedNoticeId) return;
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            currentUser = user;
+            document.getElementById('login-page').style.display = 'none';
+            document.getElementById('loading-overlay').style.display = 'flex';
+            checkApproval(user);
+        } else {
+            currentUser = null;
+            window.appNotices = [];
+            window.albums = [];
+            window.selectedAlbumIds = [];
+            if(unsubscribeNotices) unsubscribeNotices();
+            if(unsubscribeApproval) unsubscribeApproval();
+            if(unsubscribeAlbums) unsubscribeAlbums();
+            if(unsubscribeSchedules) unsubscribeSchedules();
+            if(unsubscribeLeaveRequests) unsubscribeLeaveRequests();
+            
+            document.getElementById('loading-overlay').style.display = 'none';
+            document.getElementById('pending-page').style.display = 'none';
+            document.getElementById('app-container').style.display = 'none';
+            document.getElementById('page-notice-create').style.display = 'none';
+            document.getElementById('page-notice-detail').style.display = 'none';
+            document.getElementById('page-album-modal').style.display = 'none';
+            
+            document.getElementById('login-page').style.display = 'flex';
+        }
+    });
 
-    const category = document.getElementById('detail-edit-category').value;
-    const registerDate = document.getElementById('detail-edit-register-date').value;
-    const deadlineDate = document.getElementById('detail-edit-deadline-date').value;
-    const title = document.getElementById('detail-edit-title').value.trim();
-    const content = document.getElementById('detail-edit-content').value.trim();
-
-    if (!category || !title || !registerDate || !deadlineDate) {
-        window.showCustomAlert('카테고리, 제목, 등록 날짜, 마감 날짜를 모두 입력해주세요.');
-        return;
-    }
-
-    document.getElementById('loading-overlay').style.display = 'flex';
-    try {
-        await updateDoc(doc(db, 'notices', window.selectedNoticeId), {
-            category,
-            registerDate,
-            deadlineDate,
-            date: registerDate,
-            title,
-            content,
-            updatedAt: new Date().toISOString(),
-            updatedBy: currentUser.uid
+    function checkApproval(user) {
+        const userDocRef = doc(db, 'users', user.uid);
+        
+        unsubscribeApproval = onSnapshot(userDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                if (data.approved === true) {
+                    document.getElementById('loading-overlay').style.display = 'none';
+                    document.getElementById('pending-page').style.display = 'none';
+                    document.getElementById('app-container').style.display = 'flex'; 
+                    
+                    fetchNotices(); // 공지사항 데이터 불러오기
+                    fetchAlbums(user); // 개인 앨범 실시간 데이터 불러오기
+                    fetchSchedules(); // 공용 근무표 실시간 구독
+                    fetchLeaveRequests(); // 휴무 신청 데이터 실시간 구독
+                    lucide.createIcons();
+                } else {
+                    document.getElementById('loading-overlay').style.display = 'none';
+                    document.getElementById('app-container').style.display = 'none';
+                    document.getElementById('pending-page').style.display = 'flex';
+                }
+            } else {
+                setDoc(userDocRef, {
+                    approved: false,
+                    email: user.email || '',
+                    name: user.displayName || '',
+                    role: 'user',
+                    createdAt: new Date().toISOString()
+                }, { merge: true }).then(() => {
+                    document.getElementById('loading-overlay').style.display = 'none';
+                    document.getElementById('app-container').style.display = 'none';
+                    document.getElementById('pending-page').style.display = 'flex';
+                }).catch(err => {
+                    console.error("데이터베이스 저장 오류:", err);
+                    document.getElementById('loading-overlay').style.display = 'none';
+                    window.showCustomAlert("가입 처리에 실패했습니다. 다시 로그인해주세요.");
+                });
+            }
+        }, (error) => {
+            console.error("Firestore Error:", error);
+            document.getElementById('loading-overlay').style.display = 'none';
+            window.showCustomAlert("데이터베이스 권한 오류가 발생했습니다.");
         });
-        window.showCustomAlert('공지사항이 수정되었습니다.');
-        closeNoticeDetail();
-    } catch(e) {
-        console.error(e);
-        window.showCustomAlert('수정 실패');
-    } finally {
-        document.getElementById('loading-overlay').style.display = 'none';
     }
-};
 
-window.completeNotice = function() {
-    if (!window.selectedNoticeId) return;
+    // 로그인 함수
+    window.loginWithGoogle = function() {
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        const isPWA = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
 
-    window.showCustomConfirm('이 공지사항을 완료 처리하시겠습니까?\n완료된 공지는 기본 리스트에서 숨겨지고, 검색 시에만 표시됩니다.', async () => {
+        document.getElementById('loading-overlay').style.display = 'flex';
+        
+        if (isMobile || isPWA) {
+            signInWithRedirect(auth, provider).catch(error => {
+                document.getElementById('loading-overlay').style.display = 'none';
+                window.showCustomAlert("로그인 실패: " + error.message);
+            });
+        } else {
+            signInWithPopup(auth, provider).catch(error => {
+                document.getElementById('loading-overlay').style.display = 'none';
+                if (error.code !== 'auth/popup-closed-by-user') {
+                    window.showCustomAlert("로그인 중 오류가 발생했습니다.\n" + error.message);
+                }
+            });
+        }
+    };
+
+    window.logout = function() {
+        window.showCustomConfirm("로그아웃 하시겠습니까?", () => {
+            signOut(auth);
+        });
+    };
+
+    // ==========================================
+    // 앱 데이터 및 화면 로직
+    // ==========================================
+    function fetchNotices() {
+        const colRef = collection(db, 'notices');
+        unsubscribeNotices = onSnapshot(colRef, (snapshot) => {
+            window.appNotices = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            renderNotices();
+        });
+    }
+
+    function normalizeSearchText(value) {
+        return String(value || '').toLowerCase().replace(/\s+/g, '');
+    }
+
+    function getNoticeRegisterDate(notice) {
+        return notice.registerDate || notice.date || notice.createdAt || '';
+    }
+
+    function getNoticeDeadlineDate(notice) {
+        return notice.deadlineDate || notice.date || '';
+    }
+
+    window.renderNotices = function() {
+        const list = document.getElementById('notice-list-content');
+        if (!list) return;
+        list.innerHTML = '';
+
+        const rawQuery = String(window.noticeSearchQuery || '').trim();
+        const queryTerms = rawQuery
+            ? rawQuery.split(/\s+/).map(term => normalizeSearchText(term)).filter(Boolean)
+            : [];
+
+        let filtered = [...window.appNotices];
+
+        // 완료된 공지는 기본 리스트에서는 숨기고, 검색어가 있을 때만 다시 보이게 처리
+        if (queryTerms.length === 0) {
+            filtered = filtered.filter(notice => notice.completed !== true);
+        }
+
+        // 제목 + 내용 검색. 입력한 단어들이 순서와 상관없이 포함되면 노출
+        if (queryTerms.length > 0) {
+            filtered = filtered.filter(notice => {
+                const target = normalizeSearchText(`${notice.title || ''} ${notice.content || ''}`);
+                return queryTerms.every(term => target.includes(term));
+            });
+        }
+
+        // 카테고리 필터
+        if (window.noticeCategoryFilter !== '전체') {
+            filtered = filtered.filter(notice => notice.category === window.noticeCategoryFilter);
+        }
+
+        // 정렬
+        filtered.sort((a, b) => {
+            if (window.noticeSortType === 'registerAsc') {
+                return new Date(getNoticeRegisterDate(a) || '9999-12-31') - new Date(getNoticeRegisterDate(b) || '9999-12-31');
+            }
+            return new Date(getNoticeDeadlineDate(a) || '9999-12-31') - new Date(getNoticeDeadlineDate(b) || '9999-12-31');
+        });
+
+        if (filtered.length === 0) {
+            list.innerHTML = '<div class="text-center text-[#999] py-10 text-sm">조건에 맞는 공지사항이 없습니다.</div>';
+            return;
+        }
+
+        filtered.forEach(notice => {
+            const catStyle = CATEGORIES[notice.category] || CATEGORIES['매장'];
+            const readCount = notice.readers ? notice.readers.length : 0;
+            const isRead = notice.readers && currentUser && notice.readers.includes(currentUser.uid);
+            const registerDate = getNoticeRegisterDate(notice) || '-';
+            const deadlineDate = getNoticeDeadlineDate(notice) || '-';
+            const completedBadge = notice.completed === true
+                ? `<span class="text-[10px] font-bold text-[#777] bg-[#EFEFEF] px-2 py-0.5 rounded-md shrink-0">완료</span>`
+                : '';
+
+            list.innerHTML += `
+                <div onclick="openNoticeDetail('${notice.id}')" class="bg-white p-4 rounded-2xl border border-[#F0EFEA] shadow-sm cursor-pointer active:scale-[0.98] transition-transform mb-3">
+                    <div class="flex items-center gap-3">
+                        <div class="px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap" style="background-color: ${catStyle.bg}; color: ${catStyle.text};">
+                            ${notice.category || '매장'}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 min-w-0">
+                                <div class="truncate text-[15px] font-semibold text-[#333]">${notice.title || ''}</div>
+                                ${completedBadge}
+                            </div>
+                            <div class="text-[11px] text-[#999] mt-1 font-medium truncate">등록 ${registerDate} · 마감 ${deadlineDate}</div>
+                        </div>
+                        <div class="flex items-center gap-2 shrink-0">
+                            <span class="text-xs font-semibold ${isRead ? 'text-[#B4975A]' : 'text-[#999]'}">${readCount} / ${MAX_READERS}</span>
+                            <i data-lucide="chevron-right" class="w-4 h-4 text-[#CCC]"></i>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        lucide.createIcons();
+    };
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const searchInput = document.getElementById('notice-search-input');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                window.noticeSearchQuery = e.target.value;
+                const clearBtn = document.getElementById('notice-search-clear');
+                if (clearBtn) clearBtn.style.display = window.noticeSearchQuery ? 'block' : 'none';
+                window.renderNotices();
+            });
+        }
+    });
+
+    window.clearNoticeSearch = function() {
+        const searchInput = document.getElementById('notice-search-input');
+        const clearBtn = document.getElementById('notice-search-clear');
+        if (searchInput) searchInput.value = '';
+        if (clearBtn) clearBtn.style.display = 'none';
+        window.noticeSearchQuery = '';
+        window.renderNotices();
+    };
+
+    window.setNoticeCategoryFilter = function(category, btnElement) {
+        window.noticeCategoryFilter = category;
+        document.querySelectorAll('.notice-filter-btn').forEach(btn => {
+            btn.className = 'notice-filter-btn px-3 py-2 rounded-lg text-[12px] font-semibold whitespace-nowrap border bg-white text-[#8A847E] border-[#E8E4DB]';
+        });
+        if (btnElement) {
+            btnElement.className = 'notice-filter-btn px-3 py-2 rounded-lg text-[12px] font-semibold whitespace-nowrap border bg-[#8B7355] text-white border-[#8B7355]';
+        }
+        window.renderNotices();
+    };
+
+    window.setNoticeSortType = function(value) {
+        window.noticeSortType = value;
+        window.renderNotices();
+    };
+
+    window.resetNoticeControls = function() {
+        window.noticeSearchQuery = '';
+        window.noticeCategoryFilter = '전체';
+        window.noticeSortType = 'deadlineAsc';
+
+        const searchInput = document.getElementById('notice-search-input');
+        const clearBtn = document.getElementById('notice-search-clear');
+        const sortSelect = document.getElementById('notice-sort-select');
+
+        if (searchInput) searchInput.value = '';
+        if (clearBtn) clearBtn.style.display = 'none';
+        if (sortSelect) sortSelect.value = 'deadlineAsc';
+
+        document.querySelectorAll('.notice-filter-btn').forEach(btn => {
+            const isAll = btn.dataset.category === '전체';
+            btn.className = isAll
+                ? 'notice-filter-btn px-3 py-2 rounded-lg text-[12px] font-semibold whitespace-nowrap border bg-[#8B7355] text-white border-[#8B7355]'
+                : 'notice-filter-btn px-3 py-2 rounded-lg text-[12px] font-semibold whitespace-nowrap border bg-white text-[#8A847E] border-[#E8E4DB]';
+        });
+
+        window.renderNotices();
+    };
+
+    // 네비게이션 탭 스위치
+    window.switchTab = function(tabId, btnElement) {
+        document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+        document.getElementById('page-' + tabId).classList.add('active');
+
+        document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+        btnElement.classList.add('active');
+    };
+
+    // 공지사항 등록 화면 열기/닫기
+    window.openNoticeCreate = function() {
+        document.getElementById('page-notice-create').style.display = 'flex';
+        document.getElementById('bottom-nav-bar').style.display = 'none';
+
+        window.selectedCategory = '';
+        document.querySelectorAll('.cat-btn').forEach(b => {
+            b.style.border = '1px solid #E5E5E5';
+            b.style.fontWeight = 'normal';
+        });
+
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('input-register-date').value = today;
+        document.getElementById('input-deadline-date').value = '';
+        document.getElementById('input-title').value = '';
+        document.getElementById('input-content').value = '';
+    };
+
+    window.closeNoticeCreate = function() {
+        document.getElementById('page-notice-create').style.display = 'none';
+        document.getElementById('bottom-nav-bar').style.display = 'flex';
+    };
+
+    // 카테고리 선택
+    window.selectCategory = function(catName, btnElement) {
+        window.selectedCategory = catName;
+        document.querySelectorAll('.cat-btn').forEach(b => {
+            b.style.border = '1px solid #E5E5E5';
+            b.style.fontWeight = 'normal';
+        });
+        btnElement.style.border = `2px solid ${CATEGORIES[catName].text}`;
+        btnElement.style.fontWeight = 'bold';
+    };
+
+    // 공지사항 저장
+    window.submitNotice = async function() {
+        const registerDate = document.getElementById('input-register-date').value;
+        const deadlineDate = document.getElementById('input-deadline-date').value;
+        const title = document.getElementById('input-title').value.trim();
+        const content = document.getElementById('input-content').value.trim();
+
+        if (!window.selectedCategory || !title) {
+            window.showCustomAlert('카테고리와 제목을 입력해주세요.');
+            return;
+        }
+
+        if (!registerDate || !deadlineDate) {
+            window.showCustomAlert('등록 날짜와 마감 날짜를 모두 선택해주세요.');
+            return;
+        }
+
         document.getElementById('loading-overlay').style.display = 'flex';
         try {
-            await updateDoc(doc(db, 'notices', window.selectedNoticeId), {
-                completed: true,
-                completedAt: new Date().toISOString(),
-                completedBy: currentUser.uid
+            await addDoc(collection(db, 'notices'), {
+                category: window.selectedCategory,
+                registerDate,
+                deadlineDate,
+                date: registerDate, // 기존 데이터 호환용
+                title,
+                content,
+                author: currentUser.uid,
+                createdAt: new Date().toISOString(),
+                readers: [],
+                completed: false,
+                completedAt: ''
             });
-            window.showCustomAlert('완료 처리되었습니다.');
-            closeNoticeDetail();
+            closeNoticeCreate();
         } catch(e) {
             console.error(e);
-            window.showCustomAlert('완료 처리 실패');
+            window.showCustomAlert('등록 실패');
         } finally {
             document.getElementById('loading-overlay').style.display = 'none';
         }
-    });
-};
+    };
 
-window.closeNoticeDetail = function() {
-    window.selectedNoticeId = null;
-    document.getElementById('page-notice-detail').style.display = 'none';
-    document.getElementById('bottom-nav-bar').style.display = 'flex';
-};
+    // 공지사항 상세/수정 화면 열기
+    window.openNoticeDetail = async function(id) {
+        const notice = window.appNotices.find(n => n.id === id);
+        if (!notice) return;
+
+        window.selectedNoticeId = id;
+        document.getElementById('page-notice-detail').style.display = 'flex';
+        document.getElementById('bottom-nav-bar').style.display = 'none';
+
+        const catStyle = CATEGORIES[notice.category] || CATEGORIES['매장'];
+        const readCount = notice.readers ? notice.readers.length : 0;
+
+        document.getElementById('detail-edit-cat-label').innerText = notice.category || '매장';
+        document.getElementById('detail-edit-cat-label').style.backgroundColor = catStyle.bg;
+        document.getElementById('detail-edit-cat-label').style.color = catStyle.text;
+
+        document.getElementById('detail-edit-category').value = notice.category || '매장';
+        document.getElementById('detail-edit-title').value = notice.title || '';
+        document.getElementById('detail-edit-register-date').value = getNoticeRegisterDate(notice) || '';
+        document.getElementById('detail-edit-deadline-date').value = getNoticeDeadlineDate(notice) || '';
+        document.getElementById('detail-edit-content').value = notice.content || '';
+        document.getElementById('detail-edit-count').innerText = `${readCount} / ${MAX_READERS}`;
+
+        const completedText = document.getElementById('detail-completed-text');
+        if (completedText) {
+            completedText.innerText = notice.completed === true ? '완료된 공지' : '진행 중인 공지';
+            completedText.className = notice.completed === true
+                ? 'text-xs font-bold text-[#777] bg-[#EFEFEF] px-2 py-1 rounded-md'
+                : 'text-xs font-bold text-[#B4975A] bg-[#F8F3E7] px-2 py-1 rounded-md';
+        }
+
+        // 열람 카운트 업데이트
+        if (!notice.readers || !notice.readers.includes(currentUser.uid)) {
+            const currentReaders = notice.readers || [];
+            if (currentReaders.length < MAX_READERS) {
+                currentReaders.push(currentUser.uid);
+                await updateDoc(doc(db, 'notices', notice.id), { readers: currentReaders });
+                document.getElementById('detail-edit-count').innerText = `${currentReaders.length} / ${MAX_READERS}`;
+            }
+        }
+
+        lucide.createIcons();
+    };
+
+    window.saveNoticeEdit = async function() {
+        if (!window.selectedNoticeId) return;
+
+        const category = document.getElementById('detail-edit-category').value;
+        const registerDate = document.getElementById('detail-edit-register-date').value;
+        const deadlineDate = document.getElementById('detail-edit-deadline-date').value;
+        const title = document.getElementById('detail-edit-title').value.trim();
+        const content = document.getElementById('detail-edit-content').value.trim();
+
+        if (!category || !title || !registerDate || !deadlineDate) {
+            window.showCustomAlert('카테고리, 제목, 등록 날짜, 마감 날짜를 모두 입력해주세요.');
+            return;
+        }
+
+        document.getElementById('loading-overlay').style.display = 'flex';
+        try {
+            await updateDoc(doc(db, 'notices', window.selectedNoticeId), {
+                category,
+                registerDate,
+                deadlineDate,
+                date: registerDate, // 기존 정렬/표시 호환용
+                title,
+                content,
+                updatedAt: new Date().toISOString(),
+                updatedBy: currentUser.uid
+            });
+            window.showCustomAlert('공지사항이 수정되었습니다.');
+            closeNoticeDetail();
+        } catch(e) {
+            console.error(e);
+            window.showCustomAlert('수정 실패');
+        } finally {
+            document.getElementById('loading-overlay').style.display = 'none';
+        }
+    };
+
+    window.completeNotice = function() {
+        if (!window.selectedNoticeId) return;
+
+        window.showCustomConfirm('이 공지사항을 완료 처리하시겠습니까?\n완료된 공지는 기본 리스트에서 숨겨지고, 검색 시에만 표시됩니다.', async () => {
+            document.getElementById('loading-overlay').style.display = 'flex';
+            try {
+                await updateDoc(doc(db, 'notices', window.selectedNoticeId), {
+                    completed: true,
+                    completedAt: new Date().toISOString(),
+                    completedBy: currentUser.uid
+                });
+                window.showCustomAlert('완료 처리되었습니다.');
+                closeNoticeDetail();
+            } catch(e) {
+                console.error(e);
+                window.showCustomAlert('완료 처리 실패');
+            } finally {
+                document.getElementById('loading-overlay').style.display = 'none';
+            }
+        });
+    };
+
+    window.closeNoticeDetail = function() {
+        window.selectedNoticeId = null;
+        document.getElementById('page-notice-detail').style.display = 'none';
+        document.getElementById('bottom-nav-bar').style.display = 'flex';
+    };
+
+
+    // ==========================================
+    // 앨범 로직 (개별 관리 연동)
+    // ==========================================
+    
+    // 이미지 압축 (최대 1000x1000, JPEG 60%)
+    const compressImage = (file) => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = (event) => {
+                const img = new Image();
+                img.src = event.target.result;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    const MAX_WIDTH = 1000, MAX_HEIGHT = 1000;
+                    let width = img.width, height = img.height;
+                    if (width > height) {
+                        if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+                    } else {
+                        if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
+                    }
+                    canvas.width = width;
+                    canvas.height = height;
+                    ctx.drawImage(img, 0, 0, width, height);
+                    resolve(canvas.toDataURL('image/jpeg', 0.6));
+                };
+                img.onerror = (error) => reject(error);
+            };
+            reader.onerror = (error) => reject(error);
+        });
+    };
+
+    // base64 → File 변환 (네이티브 공유용)
+    const base64ToFile = async (dataUrl, filename) => {
+        const res = await fetch(dataUrl);
+        const blob = await res.blob();
+        return new File([blob], filename, { type: blob.type });
+    };
+
+    function fetchAlbums(user) {
+        if (!db) return;
+        // RULE 1에 따른 개인 전용 앨범 참조 설정
+        const colRef = collection(db, 'artifacts', 'patek-s', 'users', user.uid, 'albums');
+        unsubscribeAlbums = onSnapshot(colRef, (snapshot) => {
+            window.albums = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            window.albums.sort((a, b) => new Date(b.date) - new Date(a.date));
+            window.renderAlbums();
+        }, (error) => {
+            console.error("Album Load Error:", error);
+        });
+    }
+
+    // 앨범 필터링 변경
+    window.setAlbumFilter = function(category, btnElement) {
+        window.albumFilter = category;
+        document.querySelectorAll('.album-filter-btn').forEach(btn => {
+            btn.className = "album-filter-btn flex-1 py-2 rounded-lg text-[13px] font-sans whitespace-nowrap transition-colors border shadow-sm bg-white text-[#8A847E] border-[#E8E4DB]";
+        });
+        btnElement.className = "album-filter-btn flex-1 py-2 rounded-lg text-[13px] font-sans whitespace-nowrap transition-colors border shadow-sm bg-[#8B7355] text-white border-[#8B7355] font-medium";
+        window.renderAlbums();
+    };
+
+    // 앨범 검색 인풋 제어
+    document.addEventListener('DOMContentLoaded', () => {
+        const searchInput = document.getElementById('album-search-input');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                window.albumSearchQuery = e.target.value;
+                const clearBtn = document.getElementById('album-search-clear');
+                if (window.albumSearchQuery) {
+                    clearBtn.style.display = 'block';
+                } else {
+                    clearBtn.style.display = 'none';
+                }
+                window.renderAlbums();
+            });
+        }
+    });
+
+    window.clearAlbumSearch = function() {
+        document.getElementById('album-search-input').value = '';
+        window.albumSearchQuery = '';
+        document.getElementById('album-search-clear').style.display = 'none';
+        window.renderAlbums();
+    };
+
+    // 앨범 렌더링
+    window.renderAlbums = function() {
+        const list = document.getElementById('album-grid-content');
+        if (!list) return;
+        list.innerHTML = '';
+
+        const safeQuery = String(window.albumSearchQuery || '').toLowerCase().replace(/[\s-]/g, '');
+        let filtered = window.albums.filter(a => window.albumFilter === '전체' || a.category === window.albumFilter);
+        
+        if (safeQuery) {
+            filtered = filtered.filter(a => {
+                const matchTitle = String(a.title || '').toLowerCase().replace(/[\s-]/g, '').includes(safeQuery);
+                const matchRef = String(a.ref || '').toLowerCase().replace(/[\s-]/g, '').includes(safeQuery);
+                return matchTitle || matchRef;
+            });
+        }
+
+        if (filtered.length === 0) {
+            list.innerHTML = `<div class="col-span-2 flex flex-col items-center justify-center py-20 text-[#A8A29D] font-serif text-sm">등록된 사진이 없습니다.</div>`;
+            return;
+        }
+
+        filtered.forEach(album => {
+            const isSelected = window.selectedAlbumIds.includes(album.id);
+            const card = document.createElement('div');
+            card.className = `relative rounded-xl overflow-hidden bg-white shadow-sm border flex flex-col transition-all cursor-pointer ${isSelected ? 'border-[#8B7355] ring-1 ring-[#8B7355]' : 'border-[#E8E4DB]'}`;
+            
+            // 카드 바디 클릭 핸들러 (선택 모드면 선택 처리, 아니면 수정 모달 오픈)
+            card.onclick = (e) => {
+                if (e.target.closest('.no-card-trigger')) return; // 체크버튼이나 공유버튼 영역 클릭 시 예외
+                if (window.selectedAlbumIds.length > 0) {
+                    window.toggleAlbumSelection(album.id);
+                } else {
+                    window.openEditAlbum(album);
+                }
+            };
+
+            card.innerHTML = `
+                <div class="relative w-full aspect-[4/3] bg-[#F2EFE8]">
+                    <img src="${album.imageUrl}" alt="${album.title}" class="w-full h-full object-cover" />
+                    <div class="absolute top-2 left-2 px-2.5 py-1 bg-white/95 backdrop-blur-sm rounded-md text-[10px] text-[#4A443F] font-bold shadow-sm">
+                        ${album.category}
+                    </div>
+                    <button class="no-card-trigger absolute top-2 right-2 w-7 h-7 bg-white/95 backdrop-blur-sm rounded-full flex items-center justify-center shadow-sm text-[#4A443F] hover:text-[#8B7355] transition-colors" onclick="window.shareSingleAlbum('${album.id}', event)">
+                        <i data-lucide="share-2" class="w-3.5 h-3.5"></i>
+                    </button>
+                </div>
+                <div class="flex justify-between items-center p-2.5 bg-white">
+                    <div class="flex flex-col min-w-0 flex-1 leading-tight">
+                        <span class="text-[12px] font-semibold font-sans text-[#3A3532] truncate">${album.title}</span>
+                        ${album.ref ? `<span class="text-[10px] font-sans text-[#999] truncate mt-0.5">${album.ref}</span>` : ''}
+                    </div>
+                    <button class="no-card-trigger ml-2 shrink-0" onclick="window.toggleAlbumSelection('${album.id}')">
+                        ${isSelected 
+                            ? `<div class="text-[#8B7355]"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"></path></svg></div>`
+                            : `<div class="text-[#DCD6CC]"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle></svg></div>`
+                        }
+                    </button>
+                </div>
+            `;
+            list.appendChild(card);
+        });
+        lucide.createIcons();
+    };
+
+    // 다중 선택 관리
+    window.toggleAlbumSelection = function(id) {
+        if (window.selectedAlbumIds.includes(id)) {
+            window.selectedAlbumIds = window.selectedAlbumIds.filter(v => v !== id);
+        } else {
+            window.selectedAlbumIds.push(id);
+        }
+        window.updateMultiSelectActionBar();
+        window.renderAlbums();
+    };
+
+    window.clearAlbumSelection = function() {
+        window.selectedAlbumIds = [];
+        window.updateMultiSelectActionBar();
+        window.renderAlbums();
+    };
+
+    window.updateMultiSelectActionBar = function() {
+        const bar = document.getElementById('album-multi-action-bar');
+        if (window.selectedAlbumIds.length > 0) {
+            document.getElementById('album-selected-count-text').innerText = `${window.selectedAlbumIds.length}장 선택됨`;
+            bar.style.display = 'flex';
+        } else {
+            bar.style.display = 'none';
+        }
+    };
+
+    // 사진 등록 모달 열기
+    window.openCreateAlbum = function() {
+        window.albumForm = { id: '', files: [], category: '기타', title: '', ref: '', memo: '', imageUrl: '' };
+        document.getElementById('album-modal-title').innerText = 'Upload Photo';
+        document.getElementById('album-delete-btn-container').style.display = 'none';
+        document.getElementById('album-form-title').value = '';
+        document.getElementById('album-form-ref').value = '';
+        document.getElementById('album-form-memo').value = '';
+        
+        window.setFormCategory('기타');
+        window.renderAlbumFormPreviews();
+        
+        document.getElementById('page-album-modal').style.display = 'flex';
+    };
+
+    // 사진 수정 모달 열기
+    window.openEditAlbum = function(album) {
+        window.albumForm = { 
+            id: album.id, 
+            files: [], 
+            category: album.category, 
+            title: album.title, 
+            ref: album.ref || '', 
+            memo: album.memo || '', 
+            imageUrl: album.imageUrl 
+        };
+        document.getElementById('album-modal-title').innerText = 'Edit Photo';
+        document.getElementById('album-delete-btn-container').style.display = 'block';
+        document.getElementById('album-form-title').value = window.albumForm.title;
+        document.getElementById('album-form-ref').value = window.albumForm.ref;
+        document.getElementById('album-form-memo').value = window.albumForm.memo;
+        
+        window.setFormCategory(window.albumForm.category);
+        window.renderAlbumFormPreviews();
+        
+        document.getElementById('page-album-modal').style.display = 'flex';
+    };
+
+    window.closeAlbumModal = function() {
+        document.getElementById('page-album-modal').style.display = 'none';
+    };
+
+    window.setFormCategory = function(cat) {
+        window.albumForm.category = cat;
+        document.querySelectorAll('.album-form-cat-btn').forEach(btn => {
+            if (btn.dataset.category === cat) {
+                btn.className = "album-form-cat-btn flex-1 py-2.5 rounded-[8px] text-[13px] font-sans whitespace-nowrap transition-colors border shadow-sm bg-[#8B7355] text-white border-[#8B7355] font-medium";
+            } else {
+                btn.className = "album-form-cat-btn flex-1 py-2.5 rounded-[8px] text-[13px] font-sans whitespace-nowrap transition-colors border shadow-sm bg-white text-[#8A847E] border-[#E8E4DB]";
+            }
+        });
+    };
+
+    window.triggerAlbumFileSelect = function() {
+        document.getElementById('album-file-input').click();
+    };
+
+    window.handleAlbumFileChange = async function(e) {
+        const files = Array.from(e.target.files);
+        const currentFiles = window.albumForm.files || [];
+        const combined = [...currentFiles, ...files];
+        
+        if (combined.length > 10) {
+            window.showCustomAlert("최대 10장까지만 업로드 가능합니다.");
+            window.albumForm.files = combined.slice(0, 10);
+        } else {
+            window.albumForm.files = combined;
+        }
+        e.target.value = '';
+        window.renderAlbumFormPreviews();
+    };
+
+    window.removeFormFile = function(index) {
+        window.albumForm.files.splice(index, 1);
+        window.renderAlbumFormPreviews();
+    };
+
+    // 사진 폼 미리보기 UI 렌더
+    window.renderAlbumFormPreviews = function() {
+        const list = document.getElementById('album-preview-list');
+        list.innerHTML = '';
+
+        // 수정 모드에서 기존 이미지만 있을 때
+        if (window.albumForm.id && window.albumForm.imageUrl && (!window.albumForm.files || window.albumForm.files.length === 0)) {
+            const wrapper = document.createElement('div');
+            wrapper.className = "relative w-full h-[180px] shrink-0 rounded-[14px] overflow-hidden border border-[#E8E4DB]";
+            wrapper.innerHTML = `<img src="${window.albumForm.imageUrl}" class="h-full w-full object-contain bg-[#FDFBF7]" alt="preview" />`;
+            list.appendChild(wrapper);
+            return;
+        }
+
+        // 새로 선택한 파일들 있을 때
+        if (window.albumForm.files && window.albumForm.files.length > 0) {
+            window.albumForm.files.forEach((file, idx) => {
+                const url = URL.createObjectURL(file);
+                const item = document.createElement('div');
+                item.className = "relative w-28 h-28 shrink-0 rounded-[14px] overflow-hidden shadow-sm border border-[#E8E4DB]";
+                item.innerHTML = `
+                    <img src="${url}" class="w-full h-full object-cover" alt="preview" />
+                    <button type="button" onclick="window.removeFormFile(${idx})" class="absolute top-1.5 right-1.5 bg-black/60 text-white rounded-full p-1 leading-none flex items-center justify-center w-5 h-5">
+                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                    </button>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        // 추가 버튼 홀더 노출
+        if (!window.albumForm.id && (!window.albumForm.files || window.albumForm.files.length < 10)) {
+            const addBtn = document.createElement('div');
+            const isFirst = !window.albumForm.files || window.albumForm.files.length === 0;
+            addBtn.className = `shrink-0 border-[1.5px] border-dashed border-[#C2BDB5] rounded-[14px] flex flex-col items-center justify-center cursor-pointer hover:bg-[#FDFBF7] transition-colors ${isFirst ? 'w-full h-[180px]' : 'w-28 h-28'}`;
+            addBtn.onclick = window.triggerAlbumFileSelect;
+            addBtn.innerHTML = `
+                <i data-lucide="camera" class="${isFirst ? 'w-11 h-11' : 'w-7 h-7'} text-[#8B7355] mb-2"></i>
+                <p class="text-[#8A847E] font-sans text-[12px]">추가</p>
+            `;
+            list.appendChild(addBtn);
+        }
+        lucide.createIcons();
+    };
+
+    // 사진 폼 저장 제출
+    window.submitAlbumForm = async function() {
+        if (!currentUser) return;
+
+        const titleInput = document.getElementById('album-form-title').value.trim();
+        const refInput = document.getElementById('album-form-ref').value.trim();
+        const memoInput = document.getElementById('album-form-memo').value.trim();
+
+        if (!titleInput) {
+            window.showCustomAlert("사진명(제목)을 입력해주세요.");
+            return;
+        }
+
+        document.getElementById('loading-overlay').style.display = 'flex';
+        try {
+            // 수정 저장 처리
+            if (window.albumForm.id) {
+                let finalUrl = window.albumForm.imageUrl;
+                if (window.albumForm.files && window.albumForm.files.length > 0) {
+                    finalUrl = await compressImage(window.albumForm.files[0]);
+                }
+                const docRef = doc(db, 'artifacts', 'patek-s', 'users', currentUser.uid, 'albums', window.albumForm.id);
+                await updateDoc(docRef, {
+                    title: titleInput,
+                    ref: refInput,
+                    memo: memoInput,
+                    category: window.albumForm.category,
+                    imageUrl: finalUrl
+                });
+                window.closeAlbumModal();
+                window.showCustomAlert("사진이 수정되었습니다.");
+            } else {
+                // 신규 업로드 처리 (멀티 장수 대응)
+                if (!window.albumForm.files || window.albumForm.files.length === 0) {
+                    window.showCustomAlert("사진을 추가해 주세요.");
+                    document.getElementById('loading-overlay').style.display = 'none';
+                    return;
+                }
+
+                const promises = window.albumForm.files.map(async (file) => {
+                    const base64Url = await compressImage(file);
+                    const payload = {
+                        imageUrl: base64Url,
+                        category: window.albumForm.category,
+                        title: titleInput,
+                        ref: refInput,
+                        memo: memoInput,
+                        date: new Date().toISOString().split('T')[0]
+                    };
+                    const colRef = collection(db, 'artifacts', 'patek-s', 'users', currentUser.uid, 'albums');
+                    await addDoc(colRef, payload);
+                });
+                await Promise.all(promises);
+                window.closeAlbumModal();
+                window.showCustomAlert(`${window.albumForm.files.length}장의 사진이 저장되었습니다.`);
+            }
+        } catch (err) {
+            console.error(err);
+            window.showCustomAlert("저장 중 오류가 발생했습니다.");
+        } finally {
+            document.getElementById('loading-overlay').style.display = 'none';
+        }
+    };
+
+    // 개별 사진 삭제
+    window.deleteSingleAlbum = function() {
+        window.showCustomConfirm("이 사진을 정말 삭제하시겠습니까?", async () => {
+            document.getElementById('loading-overlay').style.display = 'flex';
+            try {
+                const docRef = doc(db, 'artifacts', 'patek-s', 'users', currentUser.uid, 'albums', window.albumForm.id);
+                await deleteDoc(docRef);
+                window.closeAlbumModal();
+                window.showCustomAlert("사진이 삭제되었습니다.");
+            } catch(e) {
+                console.error(e);
+                window.showCustomAlert("삭제 실패");
+            } finally {
+                document.getElementById('loading-overlay').style.display = 'none';
+            }
+        });
+    };
+
+    // 다중 선택 사진 일괄 삭제
+    window.deleteSelectedAlbums = function() {
+        window.showCustomConfirm(`선택하신 ${window.selectedAlbumIds.length}장의 사진을 삭제하시겠습니까?`, async () => {
+            document.getElementById('loading-overlay').style.display = 'flex';
+            try {
+                const promises = window.selectedAlbumIds.map(id => {
+                    const docRef = doc(db, 'artifacts', 'patek-s', 'users', currentUser.uid, 'albums', id);
+                    return deleteDoc(docRef);
+                });
+                await Promise.all(promises);
+                window.selectedAlbumIds = [];
+                window.updateMultiSelectActionBar();
+                window.showCustomAlert("사진이 일괄 삭제되었습니다.");
+            } catch(e) {
+                console.error(e);
+                window.showCustomAlert("삭제 중 오류가 발생했습니다.");
+            } finally {
+                document.getElementById('loading-overlay').style.display = 'none';
+            }
+        });
+    };
+
+    // 사진 네이티브 공유 및 저장 다운로드
+    window.shareSelectedAlbums = async function() {
+        if (window.selectedAlbumIds.length === 0) return;
+        document.getElementById('loading-overlay').style.display = 'flex';
+        try {
+            const filesArray = [];
+            for (const id of window.selectedAlbumIds) {
+                const album = window.albums.find(a => a.id === id);
+                if (album && album.imageUrl) {
+                    const file = await base64ToFile(album.imageUrl, `patek_${id}.jpg`);
+                    filesArray.push(file);
+                }
+            }
+            document.getElementById('loading-overlay').style.display = 'none';
+            if (navigator.canShare && navigator.canShare({ files: filesArray })) {
+                await navigator.share({ files: filesArray });
+                window.selectedAlbumIds = [];
+                window.updateMultiSelectActionBar();
+                window.renderAlbums();
+            } else {
+                throw new Error("공유 미지원");
+            }
+        } catch (error) {
+            document.getElementById('loading-overlay').style.display = 'none';
+            if (error.name === 'AbortError') return;
+
+            // 다운로드 Fallback 개별 다운로드 처리
+            window.selectedAlbumIds.forEach(id => {
+                const album = window.albums.find(a => a.id === id);
+                if (album) {
+                    const link = document.createElement('a');
+                    link.href = album.imageUrl;
+                    link.download = `patek_${id}.jpg`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                }
+            });
+            window.showCustomAlert("기본 방식으로 사진 다운로드를 시작했습니다.\n(갤러리 또는 파일 앱 확인)");
+            window.selectedAlbumIds = [];
+            window.updateMultiSelectActionBar();
+            window.renderAlbums();
+        }
+    };
+
+    window.shareSingleAlbum = async function(id, e) {
+        e.stopPropagation();
+        document.getElementById('loading-overlay').style.display = 'flex';
+        try {
+            const album = window.albums.find(a => a.id === id);
+            if (album && album.imageUrl) {
+                const file = await base64ToFile(album.imageUrl, `patek_${id}.jpg`);
+                document.getElementById('loading-overlay').style.display = 'none';
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    await navigator.share({ files: [file] });
+                } else {
+                    const link = document.createElement('a');
+                    link.href = album.imageUrl;
+                    link.download = `patek_${id}.jpg`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                }
+            }
+        } catch (error) {
+            document.getElementById('loading-overlay').style.display = 'none';
+        }
+    };
+
+
+    // ==========================================
+    // ⭐️ 신규: 매장 근무표 관리 로직 (사진 3, 4, 5, 6)
+    // ==========================================
+
+    function fetchSchedules() {
+        if (!db) return;
+        const colRef = collection(db, 'artifacts', 'patek-s', 'public', 'data', 'schedules');
+        unsubscribeSchedules = onSnapshot(colRef, (snapshot) => {
+            window.schedulesData = {};
+            snapshot.docs.forEach(doc => {
+                window.schedulesData[doc.id] = doc.data();
+            });
+            window.renderScheduleSheet();
+        });
+    }
+
+    function fetchLeaveRequests() {
+        if (!db) return;
+        const colRef = collection(db, 'artifacts', 'patek-s', 'public', 'data', 'leave_requests');
+        unsubscribeLeaveRequests = onSnapshot(colRef, (snapshot) => {
+            window.leaveRequests = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            window.renderScheduleSheet();
+            window.renderLeaveCalendar();
+        });
+    }
+
+    // 연월 증감
+    window.adjustScheduleMonth = function(amount) {
+        window.scheduleMonth += amount;
+        if (window.scheduleMonth > 12) {
+            window.scheduleMonth = 1;
+            window.scheduleYear += 1;
+        } else if (window.scheduleMonth < 1) {
+            window.scheduleMonth = 12;
+            window.scheduleYear -= 1;
+        }
+        
+        // 날짜 텍스트 업데이트
+        const textVal = `${window.scheduleYear}년 ${window.scheduleMonth}월`;
+        document.getElementById('schedule-month-text').innerText = textVal;
+        document.getElementById('leave-month-text').innerText = textVal;
+        
+        // 내부 date input 값 동기화
+        const monthVal = `${window.scheduleYear}-${String(window.scheduleMonth).padStart(2, '0')}`;
+        document.getElementById('schedule-month-picker').value = monthVal;
+        document.getElementById('leave-month-picker').value = monthVal;
+        
+        window.renderScheduleSheet();
+        window.renderLeaveCalendar();
+    };
+    
+    // 네이티브 달력 월 선택 연동
+    window.handleMonthPicker = function(val) {
+        if(!val) return;
+        const [year, month] = val.split('-');
+        window.scheduleYear = parseInt(year);
+        window.scheduleMonth = parseInt(month);
+        
+        const textVal = `${window.scheduleYear}년 ${window.scheduleMonth}월`;
+        document.getElementById('schedule-month-text').innerText = textVal;
+        document.getElementById('leave-month-text').innerText = textVal;
+        
+        document.getElementById('schedule-month-picker').value = val;
+        document.getElementById('leave-month-picker').value = val;
+        
+        window.renderScheduleSheet();
+        window.renderLeaveCalendar();
+    };
+
+    // 특정 연월의 일 수 알아내기
+    function getDaysInMonth(year, month) {
+        return new Date(year, month, 0).getDate();
+    }
+
+    // 연월 선택에 따른 실시간 매장 근무표 렌더 (사진 3)
+    window.renderScheduleSheet = function() {
+        const year = window.scheduleYear;
+        const month = window.scheduleMonth;
+        const totalDays = getDaysInMonth(year, month);
+        
+        // 헤더 일자 & 요일 렌더
+        const headerDaysTr = document.getElementById('sheet-header-days');
+        const headerWeeksTr = document.getElementById('sheet-header-weeks');
+        if (!headerDaysTr || !headerWeeksTr) return;
+
+        headerDaysTr.innerHTML = '<th rowspan="2" class="font-sans text-[7.5px]">연차</th><th rowspan="2" class="font-sans text-[7.5px]">성명</th>';
+        headerWeeksTr.innerHTML = '';
+
+        for (let d = 1; d <= totalDays; d++) {
+            const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+            const dayOfWeek = new Date(year, month - 1, d).getDay(); // 0:일, 6:토
+            const isHoliday = PUBLIC_HOLIDAYS_2026[dateStr] !== undefined;
+
+            let dayClass = "";
+            if (isHoliday) dayClass = "holiday-pub";
+            else if (dayOfWeek === 0) dayClass = "holiday-sun";
+            else if (dayOfWeek === 6) dayClass = "holiday-sat";
+
+            headerDaysTr.innerHTML += `<th class="${dayClass} font-sans text-[7.5px]">${d}</th>`;
+            
+            const weekChars = ['일', '월', '화', '수', '목', '금', '토'];
+            headerWeeksTr.innerHTML += `<th class="${dayClass} font-sans text-[7.5px]">${weekChars[dayOfWeek]}</th>`;
+        }
+
+        // 끝 통계 칼럼 추가
+        headerDaysTr.innerHTML += '<th rowspan="2" class="font-sans text-[7.5px]">DO</th><th rowspan="2" class="font-sans text-[7.5px]">A</th><th rowspan="2" class="font-sans text-[7.5px]">B</th><th rowspan="2" class="font-sans text-[7.5px]">C</th><th rowspan="2" class="font-sans text-[7.5px] bg-green-50 text-green-700">사용</th><th rowspan="2" class="font-sans text-[7.5px]">남은</th>';
+
+        // 바디 렌더 (직원별 스케줄 테이블 행 채우기)
+        const tbody = document.getElementById('sheet-body-staffs');
+        tbody.innerHTML = '';
+
+        const currentMonthKey = `${year}-${String(month).padStart(2, '0')}`;
+        const monthScheduleDoc = window.schedulesData[currentMonthKey] || {};
+        const staffData = monthScheduleDoc.staffs || {};
+
+        // 수정 정보 동기화
+        if (monthScheduleDoc.lastUpdated) {
+            document.getElementById('schedule-meta-info').innerText = `마지막 수정일 ${monthScheduleDoc.lastUpdated} / 수정자 ${monthScheduleDoc.updatedBy || '시스템'}`;
+        } else {
+            document.getElementById('schedule-meta-info').innerText = '근무표가 등록되지 않았습니다.';
+        }
+
+        // 기본 제공하는 직원별 기본 연차 세팅 정보
+        const initialLeaveBalances = {
+            '옥영세': 15.0,
+            '엄인주': 13.5,
+            '장용석': 10.5,
+            '최혜지': 17.0,
+            '이승범': 6.0,
+            '형영지': 9.0
+        };
+
+        window.storeStaffs.forEach(staffName => {
+            const userDays = staffData[staffName] || {};
+            const initialBalance = initialLeaveBalances[staffName] || 15.0;
+
+            let countDO = 0;
+            let countA = 0;
+            let countB = 0;
+            let countC = 0;
+            let usedLeaves = 0.0;
+
+            let rowHtml = `<tr>`;
+            rowHtml += `<td class="font-semibold text-center text-[#666] bg-[#FAF9F5]">${initialBalance.toFixed(1)}</td>`;
+            rowHtml += `<td class="font-semibold text-center text-[#333] bg-white">${staffName}</td>`;
+
+            for (let d = 1; d <= totalDays; d++) {
+                // 당일에 신청한 개인 휴무가 있는지 탐색
+                const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                const hasLeave = window.leaveRequests.some(r => r.name === staffName && dateStr >= r.startDate && dateStr <= r.endDate);
+
+                // 당일 근무 타입 획득
+                let code = userDays[d] || '';
+                
+                // 만약 공식 휴무 신청이 승인되어 있고 별도 수동 근무 코드가 비어 있다면 자동 휴무'/' 표기
+                if (hasLeave && !code) {
+                    code = '/';
+                }
+
+                // 통계 합산
+                if (code === 'A') countA++;
+                else if (code === 'B') countB++;
+                else if (code === 'C') countC++;
+                else if (code === '/' || code === '휴') {
+                    countDO++;
+                }
+
+                rowHtml += `<td class="font-sans font-semibold text-[#4A443F] text-center">${code}</td>`;
+            }
+
+            // 남은 연차 자동 산정
+            const remainBalance = initialBalance - usedLeaves;
+
+            rowHtml += `<td class="font-bold text-center">${countDO}</td>`;
+            rowHtml += `<td class="font-semibold text-[#4A443F]">${countA}</td>`;
+            rowHtml += `<td class="font-semibold text-[#4A443F]">${countB}</td>`;
+            rowHtml += `<td class="font-semibold text-[#4A443F]">${countC}</td>`;
+            rowHtml += `<td class="font-bold text-green-700 bg-green-50">${usedLeaves.toFixed(1)}</td>`;
+            rowHtml += `<td class="font-bold text-center">${remainBalance.toFixed(1)}</td>`;
+            rowHtml += `</tr>`;
+
+            tbody.innerHTML += rowHtml;
+        });
+    };
+
+    // 근무표 수정 모달 열기 (직원별 슬라이더 수정용 시트 제공)
+    window.openScheduleEdit = function() {
+        if (!currentUser) return;
+        const year = window.scheduleYear;
+        const month = window.scheduleMonth;
+        const totalDays = getDaysInMonth(year, month);
+        const currentMonthKey = `${year}-${String(month).padStart(2, '0')}`;
+        const monthScheduleDoc = window.schedulesData[currentMonthKey] || {};
+        const staffData = monthScheduleDoc.staffs || {};
+
+        document.getElementById('edit-schedule-title').innerText = `${year}년 ${month}월 매장 근무표 작성`;
+
+        const container = document.getElementById('edit-staff-rows-container');
+        container.innerHTML = '';
+
+        window.storeStaffs.forEach(staffName => {
+            const userDays = staffData[staffName] || {};
+            let staffSection = `
+                <div class="bg-white border border-[#E8E4DB] rounded-xl p-4 shadow-sm mb-4">
+                    <div class="font-bold text-[#B4975A] mb-3 border-b border-[#F0EFEA] pb-2 text-[15px]">${staffName}의 근무표 입력</div>
+                    <div class="grid grid-cols-4 gap-2">
+            `;
+            for (let d = 1; d <= totalDays; d++) {
+                const curVal = userDays[d] || '';
+                staffSection += `
+                    <div class="flex flex-col items-center border border-[#E5E5E5] rounded p-1.5 bg-[#FCFBF9]">
+                        <span class="text-[10px] text-[#999] font-bold mb-1">${d}일</span>
+                        <select data-staff="${staffName}" data-day="${d}" class="schedule-input-select w-full text-xs font-bold text-center outline-none bg-transparent">
+                            <option value="" ${curVal === '' ? 'selected' : ''}>-</option>
+                            <option value="A" ${curVal === 'A' ? 'selected' : ''}>A</option>
+                            <option value="B" ${curVal === 'B' ? 'selected' : ''}>B</option>
+                            <option value="C" ${curVal === 'C' ? 'selected' : ''}>C</option>
+                            <option value="/" ${curVal === '/' ? 'selected' : ''}>휴(/)</option>
+                        </select>
+                    </div>
+                `;
+            }
+            staffSection += `</div></div>`;
+            container.innerHTML += staffSection;
+        });
+
+        document.getElementById('page-schedule-edit-modal').style.display = 'flex';
+    };
+
+    window.closeScheduleEdit = function() {
+        document.getElementById('page-schedule-edit-modal').style.display = 'none';
+    };
+
+    // 작성한 매장 근무표 Firestore 업데이트 저장
+    window.saveScheduleSheet = async function() {
+        if (!currentUser) return;
+        document.getElementById('loading-overlay').style.display = 'flex';
+
+        const year = window.scheduleYear;
+        const month = window.scheduleMonth;
+        const currentMonthKey = `${year}-${String(month).padStart(2, '0')}`;
+
+        const selects = document.querySelectorAll('.schedule-input-select');
+        const updatedStaffs = {};
+
+        selects.forEach(sel => {
+            const staff = sel.dataset.staff;
+            const day = sel.dataset.day;
+            const val = sel.value;
+
+            if (!updatedStaffs[staff]) {
+                updatedStaffs[staff] = {};
+            }
+            updatedStaffs[staff][day] = val;
+        });
+
+        const now = new Date();
+        const formattedDate = `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+        try {
+            const docRef = doc(db, 'artifacts', 'patek-s', 'public', 'data', 'schedules', currentMonthKey);
+            await setDoc(docRef, {
+                staffs: updatedStaffs,
+                lastUpdated: formattedDate,
+                updatedBy: currentUser.displayName || currentUser.email
+            }, { merge: true });
+
+            window.closeScheduleEdit();
+            window.showCustomAlert(`${year}년 ${month}월 근무표가 저장되었습니다.`);
+        } catch(e) {
+            console.error(e);
+            window.showCustomAlert("근무표 저장 오류가 발생했습니다.");
+        } finally {
+            document.getElementById('loading-overlay').style.display = 'none';
+        }
+    };
+
+
+    // ==========================================
+    // ⭐️ 신규: 휴무 신청 & 캘린더 관리 로직 (사진 6)
+    // ==========================================
+
+    window.openLeaveCalendarModal = function() {
+        window.leaveRangeStart = null;
+        window.leaveRangeEnd = null;
+        document.getElementById('leave-reason-input').value = '';
+        document.getElementById('leave-region-input').value = '';
+        document.getElementById('leave-region-container').style.display = 'none'; // 기본 숨김
+
+        window.renderLeaveCalendar();
+        document.getElementById('page-leave-calendar-modal').style.display = 'flex';
+    };
+
+    window.closeLeaveCalendarModal = function() {
+        document.getElementById('page-leave-calendar-modal').style.display = 'none';
+    };
+
+    // 휴무 달력 그리기 (사진 6 형태)
+    window.renderLeaveCalendar = function() {
+        const year = window.scheduleYear;
+        const month = window.scheduleMonth;
+        const container = document.getElementById('leave-calendar-grid');
+        if (!container) return;
+        container.innerHTML = '';
+
+        const firstDay = new Date(year, month - 1, 1).getDay(); // 1일의 요일 인덱스
+        const totalDays = getDaysInMonth(year, month);
+
+        // 요일 맞춤용 앞단 빈 셀 삽입
+        const firstDayShift = firstDay === 0 ? 6 : firstDay - 1; // 월요일 시작 정비
+        for (let i = 0; i < firstDayShift; i++) {
+            container.innerHTML += `<div class="aspect-square bg-[#FAF9F5] border border-[#F0EFEA]"></div>`;
+        }
+
+        for (let d = 1; d <= totalDays; d++) {
+            const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+            const dayOfWeek = new Date(year, month - 1, d).getDay(); // 0:일, 6:토
+            const isHoliday = PUBLIC_HOLIDAYS_2026[dateStr] !== undefined;
+
+            // 해당 일자의 휴무 신청 직원들 색출
+            const matchedRequests = window.leaveRequests.filter(r => dateStr >= r.startDate && dateStr <= r.endDate);
+            const isEventDay = matchedRequests.some(r => r.reason && r.reason.includes('행사')); // 행사 구분선
+
+            let dayTextClass = "text-[#333]";
+            if (isHoliday) dayTextClass = "text-[#D81B60]";
+            else if (dayOfWeek === 0) dayTextClass = "text-red-500";
+            else if (dayOfWeek === 6) dayTextClass = "text-blue-500";
+
+            // 클릭 범위 지정 중인 백그라운드 칼라 색상 세팅
+            let selectBg = "bg-white";
+            if (window.leaveRangeStart && window.leaveRangeEnd) {
+                if (dateStr >= window.leaveRangeStart && dateStr <= window.leaveRangeEnd) {
+                    selectBg = "bg-[#DDEBFF]"; // 선택 범위 하이라이트
+                }
+            } else if (window.leaveRangeStart && dateStr === window.leaveRangeStart) {
+                selectBg = "bg-[#DDEBFF]";
+            }
+
+            // 3명 이상 신청 여부 확인
+            const isOverbooked = matchedRequests.length >= 3;
+            let overbookedBg = "";
+            if (isOverbooked) {
+                overbookedBg = "bg-[#FFE5E5]"; // 3명 이상 신청 색상
+            }
+
+            // 행사 하이라이팅 테두리
+            let eventBorder = "";
+            if (isEventDay) {
+                eventBorder = "border-2 border-amber-500 rounded-lg";
+            }
+
+            // 직원 이름 및 지역 노출 가공
+            let staffNamesMarkup = "";
+            matchedRequests.forEach(req => {
+                // 시작일 일 때만 등록된 지역 표기 지원
+                const isStart = dateStr === req.startDate;
+                const regionSuffix = (isStart && req.region) ? ` (${req.region})` : '';
+                staffNamesMarkup += `
+                    <div class="text-[9px] font-bold text-slate-700 bg-slate-100 rounded px-1 py-0.5 truncate w-full text-center leading-none mt-1">
+                        ${req.name}${regionSuffix}
+                    </div>
+                `;
+            });
+
+            const dayCell = document.createElement('div');
+            dayCell.className = `aspect-square p-1 border border-[#F0EFEA] flex flex-col items-center justify-between cursor-pointer transition-colors hover:bg-slate-50 relative ${selectBg} ${overbookedBg} ${eventBorder}`;
+            dayCell.onclick = () => window.handleLeaveCalendarCellClick(dateStr);
+
+            dayCell.innerHTML = `
+                <div class="w-full flex justify-between">
+                    <span class="text-xs font-bold ${dayTextClass}">${d}</span>
+                    ${isHoliday ? `<span class="text-[8px] text-[#D81B60] truncate font-sans">${PUBLIC_HOLIDAYS_2026[dateStr]}</span>` : ''}
+                </div>
+                <div class="w-full flex-1 overflow-y-auto no-scrollbar flex flex-col justify-end mt-1">
+                    ${staffNamesMarkup}
+                </div>
+            `;
+            container.appendChild(dayCell);
+        }
+    };
+
+    // 달력 셀 날짜 클릭 핸들러
+    window.handleLeaveCalendarCellClick = function(dateStr) {
+        if (!window.leaveRangeStart || (window.leaveRangeStart && window.leaveRangeEnd)) {
+            // 시작점 지정
+            window.leaveRangeStart = dateStr;
+            window.leaveRangeEnd = null;
+        } else {
+            // 종료점 지정
+            if (dateStr < window.leaveRangeStart) {
+                window.leaveRangeStart = dateStr;
+                window.leaveRangeEnd = null;
+            } else {
+                window.leaveRangeEnd = dateStr;
+                
+                // 3일 이상 연휴 신청 여부에 따른 지역 입력창 보이기 판단
+                const diffDays = Math.ceil((new Date(window.leaveRangeEnd) - new Date(window.leaveRangeStart)) / (1000 * 60 * 60 * 24)) + 1;
+                if (diffDays >= 3) {
+                    document.getElementById('leave-region-container').style.display = 'block';
+                } else {
+                    document.getElementById('leave-region-container').style.display = 'none';
+                }
+            }
+        }
+        window.renderLeaveCalendar();
+    };
+
+    // 최종 휴무 신청 저장 처리
+    window.submitLeaveRequest = async function() {
+        if (!currentUser) return;
+        if (!window.leaveRangeStart) {
+            window.showCustomAlert("휴무일을 하루 이상 선택해주세요.");
+            return;
+        }
+
+        const startDate = window.leaveRangeStart;
+        const endDate = window.leaveRangeEnd ? window.leaveRangeEnd : window.leaveRangeStart;
+
+        // 기간(장수) 일 수 계산
+        const diffDays = Math.ceil((new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24)) + 1;
+        const reason = document.getElementById('leave-reason-input').value.trim();
+        const region = document.getElementById('leave-region-input').value.trim();
+
+        // ⭐️ 3일 이상 휴무 시 지역 입력 필수 규격 필터링
+        if (diffDays >= 3 && !region) {
+            window.showCustomAlert("지역을 입력하세요");
+            return;
+        }
+
+        document.getElementById('loading-overlay').style.display = 'flex';
+        try {
+            const payload = {
+                name: currentUser.displayName || '미인증',
+                uid: currentUser.uid,
+                startDate: startDate,
+                endDate: endDate,
+                reason: reason,
+                region: region || '',
+                createdAt: new Date().toISOString()
+            };
+
+            await addDoc(collection(db, 'artifacts', 'patek-s', 'public', 'data', 'leave_requests'), payload);
+            
+            window.closeLeaveCalendarModal();
+            window.showCustomAlert("휴무 신청이 성공적으로 완료되었습니다.");
+        } catch(e) {
+            console.error(e);
+            window.showCustomAlert("휴무 신청 중 서버 오류가 발생했습니다.");
+        } finally {
+            document.getElementById('loading-overlay').style.display = 'none';
+        }
+    };
+
+    // 휴무 신청 현황 리스트 열기
+    window.openLeaveHistoryModal = function() {
+        const listContainer = document.getElementById('leave-history-list');
+        listContainer.innerHTML = '';
+
+        if (window.leaveRequests.length === 0) {
+            listContainer.innerHTML = `<div class="text-center py-12 text-[#999] text-sm">등록된 휴무 신청 내역이 존재하지 않습니다.</div>`;
+        } else {
+            window.leaveRequests.forEach(req => {
+                const diffDays = Math.ceil((new Date(req.endDate) - new Date(req.startDate)) / (1000 * 60 * 60 * 24)) + 1;
+                const canDelete = currentUser && currentUser.uid === req.uid;
+
+                listContainer.innerHTML += `
+                    <div class="bg-[#FCFBF9] p-4 rounded-xl border border-[#F0EFEA] shadow-sm flex justify-between items-center mb-3">
+                        <div>
+                            <div class="flex items-center gap-2 mb-1.5">
+                                <span class="text-sm font-bold text-[#333]">${req.name}</span>
+                                <span class="text-[10px] text-green-700 bg-green-50 px-2 py-0.5 rounded font-bold">${diffDays}일간 휴무</span>
+                                ${req.region ? `<span class="text-[10px] text-blue-700 bg-blue-50 px-2 py-0.5 rounded font-bold">${req.region}</span>` : ''}
+                            </div>
+                            <div class="text-xs text-[#666] font-medium leading-relaxed">${req.startDate} ~ ${req.endDate}</div>
+                            ${req.reason ? `<div class="text-xs text-[#999] mt-1 font-medium italic">사유: ${req.reason}</div>` : ''}
+                        </div>
+                        ${canDelete ? `
+                            <button onclick="window.deleteLeaveRequest('${req.id}')" class="p-2 text-red-500 hover:bg-red-50 rounded transition-colors">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        ` : ''}
+                    </div>
+                `;
+            });
+        }
+
+        document.getElementById('page-leave-history-modal').style.display = 'flex';
+        lucide.createIcons();
+    };
+
+    window.closeLeaveHistoryModal = function() {
+        document.getElementById('page-leave-history-modal').style.display = 'none';
+    };
+
+    window.deleteLeaveRequest = function(id) {
+        window.showCustomConfirm("해당 휴무 신청을 취소/삭제하시겠습니까?", async () => {
+            document.getElementById('loading-overlay').style.display = 'flex';
+            try {
+                const docRef = doc(db, 'artifacts', 'patek-s', 'public', 'data', 'leave_requests', id);
+                await deleteDoc(docRef);
+                window.openLeaveHistoryModal(); // 리프레시
+                window.showCustomAlert("휴무 신청이 취소되었습니다.");
+            } catch(e) {
+                console.error(e);
+                window.showCustomAlert("취소 실패");
+            } finally {
+                document.getElementById('loading-overlay').style.display = 'none';
+            }
+        });
+    };
+
 </script>
 
+<!-- ==========================================
+     화면 UI 영역
+     ========================================== -->
 
-<!-- 6) 공지사항 메인 화면 HTML 교체
-기존 <div id="page-notice" ...> 전체를 아래로 교체
--->
-<div id="page-notice" class="page p-6 no-scrollbar">
-    <div class="flex justify-between items-center mb-5 relative">
-        <div class="w-10"></div>
-        <h2 class="text-2xl font-serif text-[#333]">공지사항</h2>
-        <button onclick="openNoticeCreate()" class="w-10 h-10 flex items-center justify-center border border-[#E5E5E5] rounded-xl text-[#B4975A] bg-white shadow-sm active:scale-95">
-            <i data-lucide="plus" class="w-5 h-5"></i>
+<!-- 1. 로그인 화면 -->
+<div id="login-page" style="display: flex;" class="w-full max-w-md mx-auto h-screen bg-[#DCD6CC] flex-col justify-center items-center px-4 font-sans z-[100000] relative">
+    <div class="w-full max-w-md bg-[#FCFBF9] shadow-2xl flex flex-col items-center justify-center relative px-6 rounded-3xl h-[85vh]">
+        <img src="log.png" alt="Patek Philippe" class="w-56 h-auto mb-16 object-contain" />
+        
+        <button onclick="loginWithGoogle()" class="flex items-center gap-4 bg-white border border-[#E8E4DB] px-6 py-4 rounded-full shadow-sm transition-all active:scale-95 w-full justify-center">
+            <svg width="20" height="20" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+            </svg>
+            <span class="text-[15px] font-semibold text-[#4A443F]">Google 계정으로 시작하기</span>
         </button>
     </div>
-
-    <!-- 검색창 -->
-    <div class="bg-white border border-[#E8E4DB] rounded-[14px] px-3 py-3 flex items-center shadow-sm relative mb-3">
-        <i data-lucide="search" class="text-[#8A847E] mr-2 shrink-0 w-[18px] h-[18px]"></i>
-        <input
-            id="notice-search-input"
-            type="text"
-            placeholder="제목 또는 내용 검색"
-            class="flex-1 min-w-0 bg-transparent outline-none font-sans text-[13px] text-[#4A443F] placeholder-[#C2BDB5] pr-8"
-        />
-        <button id="notice-search-clear" onclick="clearNoticeSearch()" style="display:none;" class="absolute right-3 top-1/2 -translate-y-1/2 text-[#999] p-1">
-            <i data-lucide="x" class="w-4 h-4"></i>
-        </button>
-    </div>
-
-    <!-- 필터: 공지사항 제일 왼쪽 기준으로 가로 배치 -->
-    <div class="flex gap-2 overflow-x-auto no-scrollbar mb-3 pb-1">
-        <button data-category="전체" onclick="setNoticeCategoryFilter('전체', this)" class="notice-filter-btn px-3 py-2 rounded-lg text-[12px] font-semibold whitespace-nowrap border bg-[#8B7355] text-white border-[#8B7355]">전체</button>
-        <button data-category="매장" onclick="setNoticeCategoryFilter('매장', this)" class="notice-filter-btn px-3 py-2 rounded-lg text-[12px] font-semibold whitespace-nowrap border bg-white text-[#8A847E] border-[#E8E4DB]">매장</button>
-        <button data-category="본사" onclick="setNoticeCategoryFilter('본사', this)" class="notice-filter-btn px-3 py-2 rounded-lg text-[12px] font-semibold whitespace-nowrap border bg-white text-[#8A847E] border-[#E8E4DB]">본사</button>
-        <button data-category="PP" onclick="setNoticeCategoryFilter('PP', this)" class="notice-filter-btn px-3 py-2 rounded-lg text-[12px] font-semibold whitespace-nowrap border bg-white text-[#8A847E] border-[#E8E4DB]">PP</button>
-        <button data-category="백화점" onclick="setNoticeCategoryFilter('백화점', this)" class="notice-filter-btn px-3 py-2 rounded-lg text-[12px] font-semibold whitespace-nowrap border bg-white text-[#8A847E] border-[#E8E4DB]">백화점</button>
-        <button data-category="행사" onclick="setNoticeCategoryFilter('행사', this)" class="notice-filter-btn px-3 py-2 rounded-lg text-[12px] font-semibold whitespace-nowrap border bg-white text-[#8A847E] border-[#E8E4DB]">행사</button>
-    </div>
-
-    <!-- 정렬 + 초기화 -->
-    <div class="flex items-center gap-2 mb-4">
-        <div class="flex-1 bg-white border border-[#E8E4DB] rounded-xl px-3 py-2.5 flex items-center shadow-sm">
-            <i data-lucide="arrow-up-down" class="w-4 h-4 text-[#8A847E] mr-2"></i>
-            <select id="notice-sort-select" onchange="setNoticeSortType(this.value)" class="w-full bg-transparent outline-none text-[13px] text-[#4A443F] font-semibold">
-                <option value="deadlineAsc">마감 날짜 빠른 순</option>
-                <option value="registerAsc">등록 날짜 빠른 순</option>
-            </select>
-        </div>
-        <button onclick="resetNoticeControls()" class="px-4 py-2.5 rounded-xl bg-[#F2EFE8] text-[#8B7355] text-[13px] font-bold border border-[#E8E4DB]">
-            초기화
-        </button>
-    </div>
-
-    <div id="notice-list-content" class="space-y-3 mt-4"></div>
 </div>
 
+<!-- 2. 승인 대기 화면 -->
+<div id="pending-page" style="display: none;" class="w-full max-w-md mx-auto h-screen bg-[#FAF9F5] flex-col items-center justify-center p-6 z-[90000]">
+    <img src="log.png" alt="Patek Philippe" class="w-48 h-auto object-contain mb-8" />
+    <div class="text-center">
+        <h2 class="text-xl font-bold text-[#333] mb-3">승인 대기 중</h2>
+        <p class="text-[#666] mb-8 leading-relaxed">관리자의 가입 승인을 기다리고 있습니다.<br>승인이 완료되면 자동으로 접속됩니다.</p>
+        <button onclick="logout()" class="text-[#999] underline text-sm p-2">다른 계정으로 로그인 / 취소</button>
+    </div>
+</div>
 
-<!-- 7) 공지사항 등록 화면 HTML 교체
-기존 <div id="page-notice-create" ...> 전체를 아래로 교체
--->
+<!-- 로딩 오버레이 -->
+<div id="loading-overlay" style="display: none;">
+    <div class="spinner"></div>
+    <div class="font-medium text-[#B4975A] text-sm">로딩 중...</div>
+</div>
+
+<!-- 3. 메인 앱 컨테이너 -->
+<div id="app-container" style="display: none;" class="w-full max-w-md mx-auto h-screen relative overflow-hidden bg-[#FAF9F5] flex-col">
+    
+    <!-- 공통 헤더 로고 -->
+    <div class="pt-12 pb-4 bg-[#FAF9F5] flex-shrink-0 z-10 relative flex flex-col items-center justify-center">
+        <img src="log.png" alt="Patek Philippe" class="w-40 h-auto object-contain" />
+        <div class="w-[80%] flex items-center justify-center mt-4 opacity-50">
+            <div class="h-[1px] w-full bg-[#B4975A]"></div>
+            <div class="w-1.5 h-1.5 rotate-45 bg-[#B4975A] mx-2 flex-shrink-0"></div>
+            <div class="h-[1px] w-full bg-[#B4975A]"></div>
+        </div>
+    </div>
+
+    <!-- 완전히 독립된 탭 컨테이너 -->
+    <div class="flex-1 relative w-full h-full bg-[#FAF9F5]">
+        
+        <!-- [탭] 캘린더 (메인 화면) -->
+        <div id="page-calendar" class="page active p-6 no-scrollbar">
+            <h2 class="text-2xl font-serif text-center mb-8 text-[#333]">캘린더</h2>
+            <div class="bg-white rounded-2xl shadow-sm border border-[#F0EFEA] p-4 h-[400px] flex items-center justify-center text-[#999]">
+                달력 컴포넌트 영역
+            </div>
+        </div>
+
+        <!-- [탭] 공지사항 리스트 -->
+        <div id="page-notice" class="page p-6 no-scrollbar">
+            <div class="flex justify-between items-center mb-5 relative">
+                <div class="w-10"></div>
+                <h2 class="text-2xl font-serif text-[#333]">공지사항</h2>
+                <button onclick="openNoticeCreate()" class="w-10 h-10 flex items-center justify-center border border-[#E5E5E5] rounded-xl text-[#B4975A] bg-white shadow-sm active:scale-95">
+                    <i data-lucide="plus" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <!-- 검색창 -->
+            <div class="bg-white border border-[#E8E4DB] rounded-[14px] px-3 py-3 flex items-center shadow-sm relative mb-3">
+                <i data-lucide="search" class="text-[#8A847E] mr-2 shrink-0 w-[18px] h-[18px]"></i>
+                <input
+                    id="notice-search-input"
+                    type="text"
+                    placeholder="제목 또는 내용 검색"
+                    class="flex-1 min-w-0 bg-transparent outline-none font-sans text-[13px] text-[#4A443F] placeholder-[#C2BDB5] pr-8"
+                />
+                <button id="notice-search-clear" onclick="clearNoticeSearch()" style="display:none;" class="absolute right-3 top-1/2 -translate-y-1/2 text-[#999] p-1">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <!-- 필터 -->
+            <div class="flex gap-2 overflow-x-auto no-scrollbar mb-3 pb-1">
+                <button data-category="전체" onclick="setNoticeCategoryFilter('전체', this)" class="notice-filter-btn px-3 py-2 rounded-lg text-[12px] font-semibold whitespace-nowrap border bg-[#8B7355] text-white border-[#8B7355]">전체</button>
+                <button data-category="매장" onclick="setNoticeCategoryFilter('매장', this)" class="notice-filter-btn px-3 py-2 rounded-lg text-[12px] font-semibold whitespace-nowrap border bg-white text-[#8A847E] border-[#E8E4DB]">매장</button>
+                <button data-category="본사" onclick="setNoticeCategoryFilter('본사', this)" class="notice-filter-btn px-3 py-2 rounded-lg text-[12px] font-semibold whitespace-nowrap border bg-white text-[#8A847E] border-[#E8E4DB]">본사</button>
+                <button data-category="PP" onclick="setNoticeCategoryFilter('PP', this)" class="notice-filter-btn px-3 py-2 rounded-lg text-[12px] font-semibold whitespace-nowrap border bg-white text-[#8A847E] border-[#E8E4DB]">PP</button>
+                <button data-category="백화점" onclick="setNoticeCategoryFilter('백화점', this)" class="notice-filter-btn px-3 py-2 rounded-lg text-[12px] font-semibold whitespace-nowrap border bg-white text-[#8A847E] border-[#E8E4DB]">백화점</button>
+                <button data-category="행사" onclick="setNoticeCategoryFilter('행사', this)" class="notice-filter-btn px-3 py-2 rounded-lg text-[12px] font-semibold whitespace-nowrap border bg-white text-[#8A847E] border-[#E8E4DB]">행사</button>
+            </div>
+
+            <!-- 정렬 + 초기화 -->
+            <div class="flex items-center gap-2 mb-4">
+                <div class="flex-1 bg-white border border-[#E8E4DB] rounded-xl px-3 py-2.5 flex items-center shadow-sm">
+                    <i data-lucide="arrow-up-down" class="w-4 h-4 text-[#8A847E] mr-2"></i>
+                    <select id="notice-sort-select" onchange="setNoticeSortType(this.value)" class="w-full bg-transparent outline-none text-[13px] text-[#4A443F] font-semibold">
+                        <option value="deadlineAsc">마감 날짜 빠른 순</option>
+                        <option value="registerAsc">등록 날짜 빠른 순</option>
+                    </select>
+                </div>
+                <button onclick="resetNoticeControls()" class="px-4 py-2.5 rounded-xl bg-[#F2EFE8] text-[#8B7355] text-[13px] font-bold border border-[#E8E4DB] active:scale-95">
+                    초기화
+                </button>
+            </div>
+
+            <div id="notice-list-content" class="space-y-3 mt-4"></div>
+        </div>
+
+        <!-- [탭] 신규: 매장 근무표 화면 -->
+        <div id="page-schedule" class="page bg-[#FAF9F5] no-scrollbar px-4 pt-4">
+            
+            <!-- 1번 이미지 시안 반영: 정밀한 대칭형 가운데 정렬 헤더 -->
+            <div class="flex flex-col items-center mb-6 w-full text-center">
+                <div class="flex items-center justify-center w-full relative mb-4 h-10">
+                    <h2 class="text-2xl font-serif text-[#3A3532] font-semibold absolute left-1/2 -translate-x-1/2 whitespace-nowrap">매장 근무표</h2>
+                    <div class="flex gap-1.5 absolute right-0">
+                        <button onclick="openScheduleEdit()" class="w-9 h-9 bg-white border border-[#E8E4DB] rounded-xl flex items-center justify-center text-[#B4975A] shadow-sm active:scale-95">
+                            <i data-lucide="plus" class="w-4.5 h-4.5"></i>
+                        </button>
+                        <button onclick="openLeaveCalendarModal()" class="w-9 h-9 bg-white border border-[#E8E4DB] rounded-xl flex items-center justify-center text-[#B4975A] shadow-sm active:scale-95">
+                            <i data-lucide="calendar-days" class="w-4.5 h-4.5"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 연월 제어 바 & 네이티브 달력 선택기 융합 -->
+                <div class="w-full bg-white p-3 rounded-2xl border border-[#F0EFEA] shadow-sm flex justify-between items-center text-sm">
+                    <div class="flex items-center gap-3">
+                        <button onclick="adjustScheduleMonth(-1)" class="p-1 hover:bg-[#F2EFE8] rounded"><i data-lucide="chevron-left" class="w-4 h-4 text-[#8B7355]"></i></button>
+                        <div class="relative flex items-center justify-center bg-slate-50 px-3 py-1.5 rounded-lg cursor-pointer border border-[#E8E4DB]">
+                            <span id="schedule-month-text" class="text-[15px] font-bold text-[#3A3532] tracking-wide pointer-events-none mr-1.5">2026년 5월</span>
+                            <i data-lucide="calendar-days" class="w-4 h-4 text-[#8B7355] pointer-events-none"></i>
+                            <!-- 터치 시 OS 기본 월 선택기 팝업 -->
+                            <input type="month" id="schedule-month-picker" onchange="handleMonthPicker(this.value)" class="absolute inset-0 opacity-0 w-full h-full cursor-pointer" />
+                        </div>
+                        <button onclick="adjustScheduleMonth(1)" class="p-1 hover:bg-[#F2EFE8] rounded"><i data-lucide="chevron-right" class="w-4 h-4 text-[#8B7355]"></i></button>
+                    </div>
+                    <div class="flex flex-col items-end">
+                        <span id="schedule-meta-info" class="text-[9px] text-[#999] font-medium leading-none">근무표 불러오는 중...</span>
+                        <span class="text-[9px] text-[#A06C6C] font-semibold mt-1.5">(법정공휴일 : 13개)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 스크롤 필요없이 뷰포트 내에 모두 보이도록 최적화된 근무표 (핀치 줌 허용) -->
+            <div class="w-full border border-[#E5E5E5] rounded-xl bg-white p-1">
+                <table class="schedule-table">
+                    <thead>
+                        <tr id="sheet-header-days"></tr>
+                        <tr id="sheet-header-weeks"></tr>
+                    </thead>
+                    <tbody id="sheet-body-staffs"></tbody>
+                </table>
+            </div>
+
+        </div>
+
+        <!-- [탭] 개인용 앨범 화면 -->
+        <div id="page-album" class="page bg-[#FAF9F5] no-scrollbar">
+            <div class="flex flex-col items-center pt-4 pb-2 shrink-0">
+                <h2 class="text-2xl font-serif text-[#333] tracking-wider mb-5">앨범</h2>
+
+                <!-- 검색창 -->
+                <div class="w-full px-5 flex gap-2 relative">
+                    <div class="flex-1 min-w-0 bg-white border border-[#E8E4DB] rounded-[12px] px-3 py-2.5 flex items-center shadow-sm relative">
+                        <i data-lucide="search" class="text-[#8A847E] mr-2 shrink-0 w-[18px] h-[18px]"></i>
+                        <input
+                            id="album-search-input"
+                            type="text"
+                            placeholder="사진명 또는 REF 검색"
+                            class="flex-1 min-w-0 bg-transparent outline-none font-sans text-[13px] text-[#4A443F] placeholder-[#C2BDB5] pr-6"
+                        />
+                        <button id="album-search-clear" onclick="clearAlbumSearch()" class="absolute right-2 text-[#C2BDB5] hover:text-[#8A847E] p-1" style="display: none;">
+                            <i data-lucide="x" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 카테고리 필터 탭 -->
+                <div class="w-full px-5 mt-4 flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                    <button data-category="전체" onclick="setAlbumFilter('전체', this)" class="album-filter-btn flex-1 py-2 rounded-lg text-[13px] font-sans whitespace-nowrap transition-colors border shadow-sm bg-[#8B7355] text-white border-[#8B7355] font-medium">
+                        전체
+                    </button>
+                    <button data-category="착용샷" onclick="setAlbumFilter('착용샷', this)" class="album-filter-btn flex-1 py-2 rounded-lg text-[13px] font-sans whitespace-nowrap transition-colors border shadow-sm bg-white text-[#8A847E] border-[#E8E4DB]">
+                        착용샷
+                    </button>
+                    <button data-category="실물" onclick="setAlbumFilter('실물', this)" class="album-filter-btn flex-1 py-2 rounded-lg text-[13px] font-sans whitespace-nowrap transition-colors border shadow-sm bg-white text-[#8A847E] border-[#E8E4DB]">
+                        실물
+                    </button>
+                    <button data-category="기타" onclick="setAlbumFilter('기타', this)" class="album-filter-btn flex-1 py-2 rounded-lg text-[13px] font-sans whitespace-nowrap transition-colors border shadow-sm bg-white text-[#8A847E] border-[#E8E4DB]">
+                        기타
+                    </button>
+                </div>
+            </div>
+
+            <!-- 사진 앨범 그리드 영역 -->
+            <div class="px-5 pt-2 pb-10">
+                <div id="album-grid-content" class="grid grid-cols-2 gap-x-3 gap-y-4"></div>
+            </div>
+
+            <!-- 다중선택 하단 플로팅 컨트롤 바 -->
+            <div id="album-multi-action-bar" style="display: none;" class="absolute bottom-[20px] left-5 right-5 rounded-2xl bg-[#3A3532] text-white px-6 py-4 flex justify-between items-center z-[95] shadow-2xl">
+                <div class="flex items-center gap-3">
+                    <button onclick="clearAlbumSelection()" class="text-[#DCD6CC] hover:text-white transition-colors">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                    <span id="album-selected-count-text" class="font-sans font-bold text-[13px]">0장 선택됨</span>
+                </div>
+                <div class="flex gap-5">
+                    <!-- 선택 삭제 -->
+                    <button onclick="deleteSelectedAlbums()" class="flex flex-col items-center gap-1 text-[#FF453A] hover:text-[#FF6961] transition-colors">
+                        <i data-lucide="trash-2" class="w-[20px] h-[20px]"></i>
+                        <span class="text-[10px] font-sans">삭제</span>
+                    </button>
+                    <!-- 네이티브 공유 및 기기 저장 -->
+                    <button onclick="shareSelectedAlbums()" class="flex flex-col items-center gap-1 hover:text-[#DCD6CC] transition-colors">
+                        <i data-lucide="share-2" class="w-[20px] h-[20px]"></i>
+                        <span class="text-[10px] font-sans">공유</span>
+                    </button>
+                    <button onclick="shareSelectedAlbums()" class="flex flex-col items-center gap-1 hover:text-[#DCD6CC] transition-colors">
+                        <i data-lucide="download" class="w-[20px] h-[20px]"></i>
+                        <span class="text-[10px] font-sans">저장</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 사진 추가 Floating Action Button -->
+            <button onclick="openCreateAlbum()" class="absolute bottom-[24px] right-6 w-14 h-14 bg-[#3A3532] text-[#F3EFE8] rounded-full flex items-center justify-center shadow-[0_8px_20px_rgba(58,53,50,0.3)] active:scale-95 z-40 border border-[#2A2522]">
+                <i data-lucide="plus" class="w-7 h-7" stroke-width="1.5"></i>
+            </button>
+        </div>
+
+        <!-- [탭] 임시 화면들 -->
+        <div id="page-sales" class="page p-6 no-scrollbar"><div class="h-full flex items-center justify-center text-[#999]">매출 준비중입니다.</div></div>
+        <div id="page-inventory" class="page p-6 no-scrollbar"><div class="h-full flex items-center justify-center text-[#999]">재고 준비중입니다.</div></div>
+        <div id="page-as" class="page p-6 no-scrollbar"><div class="h-full flex items-center justify-center text-[#999]">A/S 준비중입니다.</div></div>
+        <div id="page-sp" class="page p-6 no-scrollbar"><div class="h-full flex items-center justify-center text-[#999]">SP 준비중입니다.</div></div>
+    </div>
+
+    <!-- 하단 네비게이션 (시안 3 완벽 매칭: 4x2 격자 그리드 형태 최적화 교정 완료) -->
+    <div id="bottom-nav-bar" class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] bg-white border-t border-[#F0EFEA] grid grid-cols-4 gap-y-4 gap-x-2 px-4 pt-4 pb-[calc(24px+env(safe-area-inset-bottom))] z-[90] shadow-[0_-8px_30px_rgba(0,0,0,0.04)] rounded-t-[24px]">
+        <!-- 첫 번째 줄 (정밀 정렬 및 아이콘-라벨 분배) -->
+        <div class="nav-item flex flex-col items-center justify-center gap-1 text-[#A0A0A0] w-full cursor-pointer" onclick="window.switchTab('notice', this)"><i data-lucide="megaphone" class="w-[22px] h-[22px]"></i><span class="text-[11.5px] font-bold">공지사항</span></div>
+        <div class="nav-item flex flex-col items-center justify-center gap-1 text-[#A0A0A0] w-full cursor-pointer" onclick="window.switchTab('schedule', this)"><i data-lucide="calendar-days" class="w-[22px] h-[22px]"></i><span class="text-[11.5px] font-bold">근무표</span></div>
+        <div class="nav-item flex flex-col items-center justify-center gap-1 text-[#A0A0A0] w-full cursor-pointer active" onclick="window.switchTab('calendar', this)"><i data-lucide="calendar" class="w-[22px] h-[22px]"></i><span class="text-[11.5px] font-bold">캘린더</span></div>
+        <div class="nav-item flex flex-col items-center justify-center gap-1 text-[#A0A0A0] w-full cursor-pointer" onclick="window.switchTab('sales', this)"><i data-lucide="bar-chart-3" class="w-[22px] h-[22px]"></i><span class="text-[11.5px] font-bold">매출</span></div>
+        <!-- 두 번째 줄 -->
+        <div class="nav-item flex flex-col items-center justify-center gap-1 text-[#A0A0A0] w-full cursor-pointer" onclick="window.switchTab('inventory', this)"><i data-lucide="package" class="w-[22px] h-[22px]"></i><span class="text-[11.5px] font-bold">재고</span></div>
+        <div class="nav-item flex flex-col items-center justify-center gap-1 text-[#A0A0A0] w-full cursor-pointer" onclick="window.switchTab('as', this)"><i data-lucide="wrench" class="w-[22px] h-[22px]"></i><span class="text-[11.5px] font-bold">A/S</span></div>
+        <div class="nav-item flex flex-col items-center justify-center gap-1 text-[#A0A0A0] w-full cursor-pointer" onclick="window.switchTab('sp', this)"><i data-lucide="star" class="w-[22px] h-[22px]"></i><span class="text-[11.5px] font-bold">SP</span></div>
+        <div class="nav-item flex flex-col items-center justify-center gap-1 text-[#A0A0A0] w-full cursor-pointer" onclick="window.switchTab('album', this)"><i data-lucide="image" class="w-[22px] h-[22px]"></i><span class="text-[11.5px] font-bold">앨범</span></div>
+    </div>
+</div>
+
+<!-- ==========================================
+     전체화면 모달 영역 (공지사항 등록/상세/앨범/근무표작성/휴무신청)
+     ========================================== -->
+
+<!-- 공지사항 등록 -->
 <div id="page-notice-create" style="display: none;" class="fixed inset-0 w-full max-w-md mx-auto bg-[#FAF9F5] z-[200] flex-col">
     <div class="pt-12 pb-4 bg-[#FAF9F5] flex-shrink-0 relative flex flex-col items-center">
         <button onclick="closeNoticeCreate()" class="absolute right-6 top-14 text-[#999] p-2"><i data-lucide="x" class="w-6 h-6"></i></button>
@@ -446,6 +1907,7 @@ window.closeNoticeDetail = function() {
             <label class="block text-sm font-semibold text-[#666] mb-2">제목</label>
             <input type="text" id="input-title" placeholder="제목을 입력하세요" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-3.5 outline-none font-medium" />
         </div>
+
         <div>
             <label class="block text-sm font-semibold text-[#666] mb-2">내용</label>
             <textarea id="input-content" rows="6" placeholder="내용을 입력하세요" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-3.5 outline-none font-medium resize-none"></textarea>
@@ -457,10 +1919,7 @@ window.closeNoticeDetail = function() {
     </div>
 </div>
 
-
-<!-- 8) 공지사항 상세/수정 화면 HTML 교체
-기존 <div id="page-notice-detail" ...> 전체를 아래로 교체
--->
+<!-- 공지사항 수정 화면 -->
 <div id="page-notice-detail" style="display: none;" class="fixed inset-0 w-full max-w-md mx-auto bg-[#FAF9F5] z-[200] flex-col">
     <div class="pt-12 pb-4 bg-[#FAF9F5] flex-shrink-0 relative flex flex-col items-center">
         <button onclick="closeNoticeDetail()" class="absolute right-6 top-14 text-[#999] p-2"><i data-lucide="x" class="w-6 h-6"></i></button>
@@ -506,7 +1965,7 @@ window.closeNoticeDetail = function() {
             <textarea id="detail-edit-content" rows="8" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-3.5 outline-none font-medium resize-none leading-relaxed"></textarea>
         </div>
 
-        <!-- 눈 모양은 등록 화면에서는 제거하고, 수정 화면에서만 표시 -->
+        <!-- 눈 모양은 등록 화면에서는 제거하고 수정 화면에서만 표시 -->
         <div class="bg-white border border-[#F2EFE8] rounded-xl p-4 flex items-center justify-center gap-3 text-[#B4975A] shadow-sm">
             <i data-lucide="eye" class="w-6 h-6"></i>
             <span id="detail-edit-count" class="font-bold text-xl">0 / 6</span>
@@ -518,3 +1977,186 @@ window.closeNoticeDetail = function() {
         <button onclick="completeNotice()" class="flex-1 bg-[#4A443F] text-white py-4 rounded-xl text-[16px] font-bold shadow-md active:scale-95 transition-transform">완료</button>
     </div>
 </div>
+
+<!-- 앨범 업로드/수정 모달 -->
+<div id="page-album-modal" style="display: none;" class="fixed inset-0 w-full max-w-md mx-auto bg-[#FAF9F5] z-[210] flex-col font-sans">
+    
+    <!-- 모달 헤더 (배경 매칭 완료) -->
+    <div class="flex justify-between items-center px-5 pt-12 pb-4 bg-[#FAF9F5] sticky top-0 z-20 shrink-0">
+        <button onclick="closeAlbumModal()" class="text-[#8A847E] text-[15px] hover:text-[#4A443F] py-2">취소</button>
+        <div class="absolute left-1/2 -translate-x-1/2 flex flex-col items-center top-10">
+            <img src="log.png" alt="Logo" class="w-24 h-auto object-contain mb-1" />
+            <span id="album-modal-title" class="font-serif text-[18px] text-[#3A3532]">Upload Photo</span>
+        </div>
+        <button onclick="submitAlbumForm()" class="text-[#8B7355] text-[15px] font-medium hover:text-[#6B5335] py-2">완료</button>
+    </div>
+
+    <div class="flex-1 overflow-y-auto px-5 pb-8 mt-12 no-scrollbar">
+        <!-- 숨겨진 실물 파일 인풋 -->
+        <input type="file" id="album-file-input" multiple accept="image/*" class="hidden" onchange="window.handleAlbumFileChange(event)" />
+
+        <!-- 이미지 미리보기 가로 스크롤 영역 -->
+        <div id="album-preview-list" class="flex overflow-x-auto gap-3 no-scrollbar mb-6 pb-2 px-1"></div>
+
+        <!-- 카테고리 태그 선택 -->
+        <div class="flex gap-2 mb-6 justify-center">
+            <button data-category="착용샷" onclick="setFormCategory('착용샷')" class="album-form-cat-btn flex-1 py-2.5 rounded-[8px] text-[13px] font-sans whitespace-nowrap transition-colors border shadow-sm bg-white text-[#8A847E] border-[#E8E4DB]">
+                착용샷
+            </button>
+            <button data-category="실물" onclick="setFormCategory('실물')" class="album-form-cat-btn flex-1 py-2.5 rounded-[8px] text-[13px] font-sans whitespace-nowrap transition-colors border shadow-sm bg-white text-[#8A847E] border-[#E8E4DB]">
+                실물
+            </button>
+            <button data-category="기타" onclick="setFormCategory('기타')" class="album-form-cat-btn flex-1 py-2.5 rounded-[8px] text-[13px] font-sans whitespace-nowrap transition-colors border shadow-sm bg-[#8B7355] text-white border-[#8B7355] font-medium">
+                기타
+            </button>
+        </div>
+
+        <!-- 데이터 입력 카드 폼 -->
+        <div class="bg-white border border-[#E8E4DB] rounded-[14px] p-5 shadow-[0_2px_10px_rgba(0,0,0,0.02)] mb-8">
+            <div class="flex flex-col py-3 border-b border-[#F2EFE8]">
+                <span class="text-[13px] text-[#2C2724] font-semibold mb-1.5 ml-1">사진명</span>
+                <input id="album-form-title" type="text" class="bg-transparent outline-none text-[#4A443F] w-full text-sm px-1 py-1 font-medium" placeholder="제목을 입력하세요" />
+            </div>
+            <div class="flex flex-col py-3 border-b border-[#F2EFE8]">
+                <span class="text-[13px] text-[#2C2724] font-semibold mb-1.5 ml-1">REF.</span>
+                <input id="album-form-ref" type="text" class="bg-transparent outline-none text-[#4A443F] w-full text-sm px-1 py-1 font-medium" placeholder="레퍼런스 넘버 입력" />
+            </div>
+            <div class="flex flex-col pt-3 pb-1">
+                <span class="text-[13px] text-[#2C2724] font-semibold mb-2 ml-1">메모</span>
+                <textarea id="album-form-memo" class="bg-transparent outline-none text-[#4A443F] w-full text-sm resize-none h-[70px] px-1 font-medium" placeholder="메모를 입력하세요"></textarea>
+            </div>
+        </div>
+
+        <!-- 단일 앨범 삭제 (수정 시에만 노출) -->
+        <div id="album-delete-btn-container" style="display: none;">
+            <button onclick="deleteSingleAlbum()" class="w-full py-4 mt-2 mb-8 bg-white border border-[#E8D8D8] text-[#A06C6C] rounded-[14px] font-sans font-semibold text-sm tracking-wide hover:bg-[#FFF5F5] transition-colors shadow-sm">
+                이 사진 삭제하기
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- 근무표 편집 모달 (작성 모달) -->
+<div id="page-schedule-edit-modal" style="display: none;" class="fixed inset-0 w-full max-w-md mx-auto bg-[#FAF9F5] z-[200] flex-col font-sans">
+    <div class="pt-12 pb-4 bg-[#FAF9F5] flex-shrink-0 relative flex flex-col items-center">
+        <button onclick="closeScheduleEdit()" class="absolute right-6 top-14 text-[#999] p-2"><i data-lucide="x" class="w-6 h-6"></i></button>
+        <img src="log.png" alt="Patek Philippe" class="w-32 h-auto object-contain mt-2 mb-4" />
+        <h2 id="edit-schedule-title" class="text-2xl font-serif text-[#333]">근무표 작성</h2>
+    </div>
+    <div id="edit-staff-rows-container" class="flex-1 overflow-y-auto p-6 space-y-4 pb-32">
+        <!-- 직원별 스케줄 로우 드롭다운 리스트 동적 삽입 -->
+    </div>
+    <div class="absolute bottom-0 w-full p-6 bg-white border-t border-[#F0EFEA] pb-8">
+        <button onclick="saveScheduleSheet()" class="w-full bg-[#B4975A] text-white py-4 rounded-xl text-[17px] font-bold shadow-md active:scale-95 transition-transform">저장하기</button>
+    </div>
+</div>
+
+<!-- 휴무 신청 캘린더 모달 (사진 6 완벽 복제) -->
+<div id="page-leave-calendar-modal" style="display: none;" class="fixed inset-0 w-full max-w-md mx-auto bg-[#FAF9F5] z-[200] flex-col font-sans">
+    <div class="pt-12 pb-4 bg-[#FAF9F5] flex-shrink-0 relative flex flex-col items-center">
+        <button onclick="closeLeaveCalendarModal()" class="absolute right-6 top-14 text-[#999] p-2"><i data-lucide="x" class="w-6 h-6"></i></button>
+        <img src="log.png" alt="Patek Philippe" class="w-32 h-auto object-contain mt-2 mb-2" />
+        <h2 class="text-2xl font-serif text-[#333]">휴무 신청</h2>
+        <!-- 삭제 요청된 텍스트 제거 완료 -->
+    </div>
+
+    <div class="flex-1 overflow-y-auto px-5 pb-32 no-scrollbar">
+        <!-- 연월 조정 바 & 네이티브 달력 선택기 융합 -->
+        <div class="flex justify-between items-center bg-white border border-[#E8E4DB] rounded-xl p-3 mb-4 shadow-sm">
+            <button onclick="adjustScheduleMonth(-1)" class="p-1 hover:bg-[#F2EFE8] rounded"><i data-lucide="chevron-left" class="w-4 h-4 text-[#8B7355]"></i></button>
+            <div class="relative flex items-center justify-center bg-slate-50 px-3 py-1.5 rounded-lg cursor-pointer border border-[#E8E4DB]">
+                <span id="leave-month-text" class="text-[15px] font-bold text-[#3A3532] pointer-events-none mr-1.5">2026년 6월</span>
+                <i data-lucide="calendar-days" class="w-4 h-4 text-[#8B7355] pointer-events-none"></i>
+                <input type="month" id="leave-month-picker" onchange="handleMonthPicker(this.value)" class="absolute inset-0 opacity-0 w-full h-full cursor-pointer" />
+            </div>
+            <button onclick="adjustScheduleMonth(1)" class="p-1 hover:bg-[#F2EFE8] rounded"><i data-lucide="chevron-right" class="w-4 h-4 text-[#8B7355]"></i></button>
+        </div>
+
+        <!-- 요일 헤더 -->
+        <div class="grid grid-cols-7 gap-1 text-center font-bold text-xs text-[#666] mb-1">
+            <div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div class="text-blue-500">토</div><div class="text-red-500">일</div>
+        </div>
+
+        <!-- 달력 본체 그리드 -->
+        <div id="leave-calendar-grid" class="grid grid-cols-7 gap-1 bg-white border border-[#F0EFEA] rounded-xl p-1 shadow-sm mb-4 overflow-hidden">
+            <!-- JS 렌더링 -->
+        </div>
+
+        <!-- 6번 이미지 시안 범례 표시 완벽 구현 -->
+        <div class="flex flex-wrap justify-center items-center gap-4 text-[10px] font-bold text-[#666] mb-6">
+            <div class="flex items-center gap-1.5"><span class="w-3.5 h-3.5 bg-[#DDEBFF] border border-[#A0C4FF] rounded-sm"></span><span>휴무 신청</span></div>
+            <div class="flex items-center gap-1.5"><span class="w-3.5 h-3.5 bg-[#E2F0D9] border border-[#A9D18E] rounded-sm"></span><span>정기휴점</span></div>
+            <div class="flex items-center gap-1.5"><span class="w-3.5 h-3.5 bg-[#FFE5E5] border border-[#FFADAD] rounded-sm"></span><span>3명 이상 신청</span></div>
+            <div class="flex items-center gap-1.5"><span class="w-3.5 h-3.5 border-2 border-amber-500 rounded-sm"></span><span>행사</span></div>
+        </div>
+
+        <!-- 입력란: 사유 & 지역 -->
+        <div class="space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-[#666] mb-1.5 ml-1">휴무 사유 (선택 사항)</label>
+                <input id="leave-reason-input" type="text" placeholder="예: 정기 검진, 연차 등" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-3 outline-none text-xs font-semibold" />
+            </div>
+            <!-- 3일 이상 연휴인 경우 노출되는 지역 필수 입력란 -->
+            <div id="leave-region-container" style="display: none;">
+                <label class="block text-xs font-bold text-red-600 mb-1.5 ml-1">지역 (3일 이상 휴무 시 필수 입력)</label>
+                <input id="leave-region-input" type="text" placeholder="예: 일본, 제주도 등" class="w-full bg-white border-2 border-[#B4975A] rounded-xl p-3 outline-none text-xs font-bold text-[#333]" />
+            </div>
+        </div>
+    </div>
+
+    <!-- 푸터 단추들 (휴무 신청하기 / 신청 내역 보기) -->
+    <div class="absolute bottom-0 w-full p-4 bg-white border-t border-[#F0EFEA] pb-6 flex flex-col gap-2">
+        <button onclick="submitLeaveRequest()" class="w-full bg-[#B4975A] text-white py-3.5 rounded-xl text-[15px] font-bold shadow-md active:scale-95 transition-all">
+            휴무 신청하기
+        </button>
+        <button onclick="openLeaveHistoryModal()" class="w-full bg-white border border-[#E5E5E5] text-[#8B7355] py-3 rounded-xl text-[13px] font-bold active:scale-95 transition-all flex items-center justify-center gap-1">
+            신청 내역 보기 <i data-lucide="chevron-right" class="w-4 h-4"></i>
+        </button>
+    </div>
+</div>
+
+<!-- 휴무 신청 내역 리스트 모달 -->
+<div id="page-leave-history-modal" style="display: none;" class="fixed inset-0 w-full max-w-md mx-auto bg-[#FAF9F5] z-[220] flex-col font-sans">
+    <div class="pt-12 pb-4 bg-[#FAF9F5] flex-shrink-0 relative flex flex-col items-center">
+        <button onclick="closeLeaveHistoryModal()" class="absolute right-6 top-14 text-[#999] p-2"><i data-lucide="x" class="w-6 h-6"></i></button>
+        <img src="log.png" alt="Patek Philippe" class="w-32 h-auto object-contain mt-2 mb-4" />
+        <h2 class="text-2xl font-serif text-[#333]">휴무 신청 내역</h2>
+    </div>
+    <div id="leave-history-list" class="flex-1 overflow-y-auto p-6 space-y-3 pb-24 no-scrollbar">
+        <!-- 내역 리스트 주입 -->
+    </div>
+</div>
+
+
+<!-- ==========================================
+     커스텀 모달 다이얼로그 (Alert / Confirm)
+     ========================================== -->
+
+<!-- 커스텀 알림 모달 (Alert) -->
+<div id="custom-alert" style="display: none;" class="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center p-6 z-[200000]">
+    <div class="bg-[#FCFBF9] rounded-xl p-6 w-full max-w-[280px] shadow-2xl border border-[#E8E4DB] flex flex-col items-center">
+        <div class="w-12 h-12 rounded-full bg-[#FDFBF7] border border-[#E8E4DB] flex items-center justify-center mb-4 text-[#8B7355]">
+            <i data-lucide="info" class="w-6 h-6"></i>
+        </div>
+        <p id="custom-alert-message" class="text-[#3A3532] text-[15px] font-sans text-center font-medium leading-relaxed mb-6 whitespace-pre-wrap">알림 메시지</p>
+        <button onclick="window.closeCustomAlert()" class="w-full bg-[#3A3532] hover:bg-[#2A2522] text-[#F3EFE8] font-serif tracking-widest py-3 rounded-md transition-colors text-[13px]">확인</button>
+    </div>
+</div>
+
+<!-- 커스텀 확인 모달 (Confirm) -->
+<div id="custom-confirm" style="display: none;" class="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center p-6 z-[200000]">
+    <div class="bg-[#FCFBF9] rounded-xl p-6 w-full max-w-[280px] shadow-2xl border border-[#E8E4DB] flex flex-col items-center">
+        <div class="w-12 h-12 rounded-full bg-[#FFF5F5] border border-[#E8D8D8] flex items-center justify-center mb-4 text-[#A06C6C]">
+            <i data-lucide="trash-2" class="w-6 h-6"></i>
+        </div>
+        <p id="custom-confirm-message" class="text-[#3A3532] text-[15px] font-sans text-center font-medium leading-relaxed mb-6 whitespace-pre-wrap">정말 삭제하시겠습니까?</p>
+        <div class="flex gap-3 w-full">
+            <button onclick="window.closeCustomConfirm()" class="flex-1 bg-white hover:bg-[#F2EFE8] text-[#8A847E] font-serif tracking-widest py-3 rounded-md transition-colors text-[13px] border border-[#E8E4DB]">취소</button>
+            <button id="custom-confirm-ok-btn" class="flex-1 bg-[#FF3B30] hover:bg-[#D93025] text-white font-serif tracking-widest py-3 rounded-md transition-colors text-[13px]">삭제</button>
+        </div>
+    </div>
+</div>
+
+<script>lucide.createIcons();</script>
+</body>
+</html>
