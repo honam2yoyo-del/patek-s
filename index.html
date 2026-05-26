@@ -64,13 +64,11 @@
         #loading-overlay { position: fixed; top:0; left:0; width:100%; height:100vh; background:rgba(250,249,245,0.9); z-index: 99999; display: flex; justify-content: center; align-items: center; flex-direction: column; }
         .spinner { border: 3px solid #E8E4DB; border-top: 3px solid #B4975A; border-radius: 50%; width: 36px; height: 36px; animation: spin 1s linear infinite; margin-bottom: 16px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-        .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
-<!-- 가계부 코드와 100% 동일한 순수 JS 기반 Firebase 로드 -->
+<!-- 순수 JS 기반 Firebase 로드 -->
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -107,7 +105,7 @@
     let unsubscribeApproval = null;
     window.appNotices = [];
 
-    // 가계부 코드와 똑같은 리다이렉트 처리 (오류 방지 핵심)
+    // 리다이렉트 처리 (오류 방지 핵심)
     getRedirectResult(auth).catch(error => {
         console.error("로그인 에러:", error);
         document.getElementById('loading-overlay').style.display = 'none';
@@ -131,6 +129,9 @@
             document.getElementById('loading-overlay').style.display = 'none';
             document.getElementById('pending-page').style.display = 'none';
             document.getElementById('app-container').style.display = 'none';
+            document.getElementById('page-notice-create').style.display = 'none';
+            document.getElementById('page-notice-detail').style.display = 'none';
+            
             document.getElementById('login-page').style.display = 'flex';
         }
     });
@@ -164,12 +165,20 @@
                     document.getElementById('loading-overlay').style.display = 'none';
                     document.getElementById('app-container').style.display = 'none';
                     document.getElementById('pending-page').style.display = 'flex';
+                }).catch(err => {
+                    console.error("데이터베이스 저장 오류:", err);
+                    document.getElementById('loading-overlay').style.display = 'none';
+                    alert("가입 처리에 실패했습니다. 다시 로그인해주세요.");
                 });
             }
+        }, (error) => {
+            console.error("Firestore Error:", error);
+            document.getElementById('loading-overlay').style.display = 'none';
+            alert("데이터베이스 권한 오류가 발생했습니다.");
         });
     }
 
-    // ⭐️ 가계부 앱과 완벽히 동일한 로그인 함수 ⭐️
+    // 로그인 함수
     window.loginWithGoogle = function() {
         const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
         const isPWA = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
@@ -196,7 +205,7 @@
     };
 
     // ==========================================
-    // 앱 데이터 및 화면 로직 (Vanilla JS)
+    // 앱 데이터 및 화면 로직
     // ==========================================
     function fetchNotices() {
         const colRef = collection(db, 'notices');
@@ -252,8 +261,7 @@
 
     // 공지사항 등록 화면 열기/닫기
     window.openNoticeCreate = function() {
-        document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
-        document.getElementById('page-notice-create').classList.add('active');
+        document.getElementById('page-notice-create').style.display = 'flex';
         document.getElementById('bottom-nav-bar').style.display = 'none';
         
         // 초기화
@@ -265,8 +273,7 @@
     };
 
     window.closeNoticeCreate = function() {
-        document.getElementById('page-notice-create').classList.remove('active');
-        document.getElementById('page-notice').classList.add('active');
+        document.getElementById('page-notice-create').style.display = 'none';
         document.getElementById('bottom-nav-bar').style.display = 'flex';
     };
 
@@ -310,9 +317,8 @@
         const notice = window.appNotices.find(n => n.id === id);
         if(!notice) return;
 
-        // 화면 전환
-        document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
-        document.getElementById('page-notice-detail').classList.add('active');
+        // 화면 띄우기
+        document.getElementById('page-notice-detail').style.display = 'flex';
         document.getElementById('bottom-nav-bar').style.display = 'none';
 
         // 내용 채우기
@@ -340,8 +346,7 @@
     };
 
     window.closeNoticeDetail = function() {
-        document.getElementById('page-notice-detail').classList.remove('active');
-        document.getElementById('page-notice').classList.add('active');
+        document.getElementById('page-notice-detail').style.display = 'none';
         document.getElementById('bottom-nav-bar').style.display = 'flex';
     };
 </script>
@@ -351,7 +356,7 @@
      ========================================== -->
 
 <!-- 1. 로그인 화면 -->
-<div id="login-page" class="w-full max-w-md mx-auto h-screen bg-[#DCD6CC] flex flex-col justify-center items-center px-4 font-sans z-[100000] relative">
+<div id="login-page" style="display: flex;" class="w-full max-w-md mx-auto h-screen bg-[#DCD6CC] flex-col justify-center items-center px-4 font-sans z-[100000] relative">
     <div class="w-full max-w-md bg-[#FCFBF9] shadow-2xl flex flex-col items-center justify-center relative px-6 rounded-3xl h-[85vh]">
         <img src="log.png" alt="Patek Philippe" class="w-56 h-auto mb-16 object-contain" />
         
@@ -368,7 +373,7 @@
 </div>
 
 <!-- 2. 승인 대기 화면 -->
-<div id="pending-page" class="hidden w-full max-w-md mx-auto h-screen bg-[#FAF9F5] flex-col items-center justify-center p-6 z-[90000]">
+<div id="pending-page" style="display: none;" class="w-full max-w-md mx-auto h-screen bg-[#FAF9F5] flex-col items-center justify-center p-6 z-[90000]">
     <div class="text-[#B4975A] mb-1">
         <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L13 11L22 12L13 13L12 22L11 13L2 12L11 11L12 2Z" /></svg>
     </div>
@@ -381,13 +386,13 @@
 </div>
 
 <!-- 로딩 오버레이 -->
-<div id="loading-overlay" class="hidden">
+<div id="loading-overlay" style="display: none;">
     <div class="spinner"></div>
     <div class="font-medium text-[#B4975A] text-sm">로딩 중...</div>
 </div>
 
 <!-- 3. 메인 앱 컨테이너 -->
-<div id="app-container" class="hidden w-full max-w-md mx-auto h-screen relative overflow-hidden bg-[#FAF9F5]">
+<div id="app-container" style="display: none;" class="w-full max-w-md mx-auto h-screen relative overflow-hidden bg-[#FAF9F5]">
     
     <!-- 공통 헤더 로고 -->
     <div class="pt-12 pb-4 bg-white flex-shrink-0 rounded-b-3xl shadow-sm z-10 relative flex flex-col items-center justify-center">
@@ -455,7 +460,7 @@
      ========================================== -->
 
 <!-- 공지사항 등록 -->
-<div id="page-notice-create" class="hidden fixed inset-0 w-full max-w-md mx-auto bg-[#FAF9F5] z-[200] flex flex-col">
+<div id="page-notice-create" style="display: none;" class="fixed inset-0 w-full max-w-md mx-auto bg-[#FAF9F5] z-[200] flex-col">
     <div class="pt-12 pb-4 bg-white flex-shrink-0 relative border-b border-[#F0EFEA] flex flex-col items-center">
         <button onclick="closeNoticeCreate()" class="absolute right-6 top-14 text-[#999] p-2"><i data-lucide="x" class="w-6 h-6"></i></button>
         <div class="text-[#B4975A] mb-1"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L13 11L22 12L13 13L12 22L11 13L2 12L11 11L12 2Z" /></svg></div>
@@ -502,7 +507,7 @@
 </div>
 
 <!-- 공지사항 상세 보기 -->
-<div id="page-notice-detail" class="hidden fixed inset-0 w-full max-w-md mx-auto bg-[#FAF9F5] z-[200] flex flex-col">
+<div id="page-notice-detail" style="display: none;" class="fixed inset-0 w-full max-w-md mx-auto bg-[#FAF9F5] z-[200] flex-col">
     <div class="pt-12 pb-4 bg-white flex-shrink-0 relative border-b border-[#F0EFEA] flex flex-col items-center">
         <button onclick="closeNoticeDetail()" class="absolute right-6 top-14 text-[#999] p-2"><i data-lucide="x" class="w-6 h-6"></i></button>
         <div class="text-[#B4975A] mb-1"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L13 11L22 12L13 13L12 22L11 13L2 12L11 11L12 2Z" /></svg></div>
