@@ -267,27 +267,39 @@
         });
     }
 
-    // 로그인 함수
+    // 로그인 함수 (Vercel 도메인 + 모바일 Safari ITP 해결을 위해 Popup 기본 사용)
     window.loginWithGoogle = async function() {
-        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-        const isPWA = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-
-        // Safari 등에서 팝업/리다이렉트 차단 방지를 위해 로딩 표시 후 즉시 실행합니다.
         document.getElementById('loading-overlay').style.display = 'flex';
 
         try {
-            if (isMobile || isPWA) {
-                await signInWithRedirect(auth, provider);
-            } else {
-                await signInWithPopup(auth, provider);
-            }
+            // Safari 크로스 도메인(Vercel <-> Firebase) 보안 정책(ITP) 이슈로 인해
+            // signInWithRedirect 실행 시 쿠키가 유실되어 바로 튕기는 현상을 방지하고자
+            // signInWithPopup을 기본 방식으로 사용합니다.
+            await signInWithPopup(auth, provider);
         } catch (error) {
             console.error("로그인 에러:", error);
-            document.getElementById('loading-overlay').style.display = 'none';
             
+            // 사용자가 팝업 창을 임의로 닫은 경우 무시
+            if (error.code === 'auth/popup-closed-by-user') {
+                document.getElementById('loading-overlay').style.display = 'none';
+                return;
+            }
+
+            // 만약 브라우저 설정에 의해 팝업이 강제로 차단된 경우에만 리다이렉트로 폴백(Fallback) 실행
+            if (error.code === 'auth/popup-blocked') {
+                try {
+                    await signInWithRedirect(auth, provider);
+                } catch(redirectErr) {
+                    document.getElementById('loading-overlay').style.display = 'none';
+                    window.showCustomAlert("로그인 중 오류가 발생했습니다.\n" + redirectErr.message);
+                }
+                return;
+            }
+
+            document.getElementById('loading-overlay').style.display = 'none';
             if (error.code === 'auth/unauthorized-domain') {
                 window.showCustomAlert("구글 로그인 정책: 현재 주소가 승인된 도메인이 아닙니다.");
-            } else if (error.code !== 'auth/popup-closed-by-user') {
+            } else {
                 window.showCustomAlert("로그인 중 오류가 발생했습니다.\n" + error.message);
             }
         }
