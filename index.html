@@ -15,7 +15,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- Babel (React 코드를 브라우저가 읽을 수 있게 변환) -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js">ㅁ</script>
 
     <style>
         /* 스크롤바 숨기기 */
@@ -344,20 +344,25 @@
               setUser(currentUser);
               if (currentUser) {
                 if (!IS_CANVAS) {
-                  const userDocRef = doc(db, 'users', currentUser.uid);
-                  const userSnap = await getDoc(userDocRef);
-                  if (userSnap.exists()) {
-                    setUserData(userSnap.data());
-                  } else {
-                    const newData = { 
-                      name: currentUser.displayName || '이름 없음', 
-                      email: currentUser.email || '', 
-                      approved: false, 
-                      role: 'user', 
-                      createdAt: new Date().toISOString() 
-                    };
-                    await setDoc(userDocRef, newData);
-                    setUserData(newData);
+                  try {
+                    const userDocRef = doc(db, 'users', currentUser.uid);
+                    const userSnap = await getDoc(userDocRef);
+                    if (userSnap.exists()) {
+                      setUserData(userSnap.data());
+                    } else {
+                      const newData = { 
+                        name: currentUser.displayName || '이름 없음', 
+                        email: currentUser.email || '', 
+                        approved: false, 
+                        role: 'user', 
+                        createdAt: new Date().toISOString() 
+                      };
+                      await setDoc(userDocRef, newData);
+                      setUserData(newData);
+                    }
+                  } catch (e) {
+                    console.error("Firestore Error:", e);
+                    alert("데이터베이스 연결에 문제가 발생했습니다.");
                   }
                 } else {
                   // Canvas 시뮬레이터 가상 로그인 시 기본 승인 상태 처리
@@ -372,7 +377,7 @@
             return () => unsubscribe();
           }, []);
 
-          // 첨부해주신 로그인 로직 완벽 반영
+          // 첨부해주신 로그인 로직 완벽 반영 (에러 방어 코드 추가)
           const handleGoogleLogin = async () => {
             if (!auth) return;
             if (IS_CANVAS) return;
@@ -380,6 +385,9 @@
             setIsLoggingIn(true); // 버튼의 상태만 "로그인 중..."으로 변경
             try {
               const provider = new GoogleAuthProvider();
+              // 계정 선택 화면을 강제로 띄우는 옵션 추가
+              provider.setCustomParameters({ prompt: 'select_account' });
+              
               const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
               const isPWA    = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
 
@@ -392,12 +400,15 @@
               }
             } catch (error) {
               console.error("Google Login Error:", error);
-              // Fallback: 커스텀 토큰 또는 익명 로그인
-              if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                await signInWithCustomToken(auth, __initial_auth_token);
-              } else {
-                await signInAnonymously(auth);
+              
+              // 팝업이 바로 꺼지는 가장 큰 원인: Vercel 도메인이 Firebase에 미등록된 경우 안내창 표시
+              if (error.code === 'auth/unauthorized-domain') {
+                  alert("에러: Firebase 승인된 도메인에 Vercel 주소가 등록되지 않았습니다. Firebase 콘솔(Authentication -> Settings -> Authorized domains)에서 현재 주소를 추가해주세요.");
+              } else if (error.code !== 'auth/popup-closed-by-user') {
+                  alert("로그인 에러: " + error.message);
               }
+              
+              // 에러 발생 시 무한 로딩 해제
               setIsLoggingIn(false);
             }
           };
