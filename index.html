@@ -89,23 +89,25 @@
         .schedule-pill {
             width: 100%;
             border: 1px solid;
-            border-radius: 6px;
-            padding: 5px 3px;
-            font-size: 11px;
+            border-radius: 5px;
+            padding: 3px 2px;
+            font-size: 8.5px;
             font-weight: 700;
-            line-height: 1.15;
+            line-height: 1.05;
             text-align: center;
             word-break: keep-all;
-            white-space: normal;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: clip;
             box-sizing: border-box;
             box-shadow: inset 0 1px 0 rgba(255,255,255,0.45);
         }
         .schedule-meta-line {
             display: block;
             max-width: 100%;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+            overflow: visible;
+            text-overflow: unset;
+            white-space: normal;
         }
 
     </style>
@@ -576,6 +578,7 @@
         const editBtn = document.getElementById('notice-detail-edit-btn');
         const saveBtn = document.getElementById('notice-detail-save-btn');
         const completeBtn = document.getElementById('notice-detail-complete-btn');
+        const deleteBtn = document.getElementById('notice-detail-delete-btn');
         const modalTitle = document.getElementById('notice-detail-modal-title');
 
         if (!viewArea || !editArea) return;
@@ -587,6 +590,7 @@
             if (editBtn) editBtn.style.display = 'none';
             if (saveBtn) saveBtn.style.display = 'block';
             if (completeBtn) completeBtn.style.display = 'none';
+            if (deleteBtn) deleteBtn.style.display = 'none';
             applyEditCategoryStyles();
         } else {
             viewArea.style.display = 'block';
@@ -595,6 +599,7 @@
             if (editBtn) editBtn.style.display = 'flex';
             if (saveBtn) saveBtn.style.display = 'none';
             if (completeBtn) completeBtn.style.display = 'block';
+            if (deleteBtn) deleteBtn.style.display = 'block';
         }
         lucide.createIcons();
     }
@@ -746,6 +751,33 @@
             okBg: '#4A443F',
             okHoverBg: '#2A2522',
             icon: 'check-circle',
+            iconBg: '#F8F3E7',
+            iconBorder: '#E8E4DB',
+            iconColor: '#4A443F'
+        });
+    };
+
+
+    window.deleteNotice = function() {
+        if (!window.selectedNoticeId) return;
+
+        window.showCustomConfirm('삭제 하시겠습니까?', async () => {
+            document.getElementById('loading-overlay').style.display = 'flex';
+            try {
+                await deleteDoc(doc(db, 'notices', window.selectedNoticeId));
+                closeNoticeDetail();
+            } catch(e) {
+                console.error(e);
+                window.showCustomAlert('삭제 실패');
+            } finally {
+                document.getElementById('loading-overlay').style.display = 'none';
+            }
+        }, {
+            cancelText: '아니오',
+            okText: '네',
+            okBg: '#4A443F',
+            okHoverBg: '#2A2522',
+            icon: 'trash-2',
             iconBg: '#F8F3E7',
             iconBorder: '#E8E4DB',
             iconColor: '#4A443F'
@@ -1054,7 +1086,7 @@
             addBtn.className = `shrink-0 border-[1.5px] border-dashed border-[#C2BDB5] rounded-[14px] flex flex-col items-center justify-center cursor-pointer hover:bg-[#FDFBF7] transition-colors ${isFirst ? 'w-full h-[180px]' : 'w-28 h-28'}`;
             addBtn.onclick = window.triggerAlbumFileSelect;
             addBtn.innerHTML = `
-                <i data-lucide="camera" class="${isFirst ? 'w-11 h-11' : 'w-7 h-7'} text-[#8B7355] mb-2"></i>
+                <i data-lucide="camera" class="${isFirst ? 'w-11 h-11' : 'w-7 h-7'} text-[#8B7355] mb-1"></i>
                 <p class="text-[#8A847E] font-sans text-[12px]">추가</p>
             `;
             list.appendChild(addBtn);
@@ -1321,6 +1353,7 @@
 
     window.openScheduleMonthPicker = function() {
         window.schedulePickerYear = window.scheduleYear;
+        window.schedulePickerMode = 'month';
         renderScheduleMonthModal();
         const modal = document.getElementById('schedule-month-modal');
         if (modal) modal.style.display = 'flex';
@@ -1333,6 +1366,17 @@
 
     window.adjustSchedulePickerYear = function(amount) {
         window.schedulePickerYear = (window.schedulePickerYear || window.scheduleYear) + amount;
+        renderScheduleMonthModal();
+    };
+
+    window.openScheduleYearPicker = function() {
+        window.schedulePickerMode = 'year';
+        renderScheduleMonthModal();
+    };
+
+    window.selectSchedulePickerYear = function(year) {
+        window.schedulePickerYear = year;
+        window.schedulePickerMode = 'month';
         renderScheduleMonthModal();
     };
 
@@ -1355,8 +1399,21 @@
         const monthGrid = document.getElementById('schedule-picker-month-grid');
         if (!yearText || !monthGrid) return;
         const year = window.schedulePickerYear || window.scheduleYear;
+        const mode = window.schedulePickerMode || 'month';
         yearText.innerText = `${year}년`;
         monthGrid.innerHTML = '';
+
+        if (mode === 'year') {
+            const startYear = year - 5;
+            for (let y = startYear; y < startYear + 12; y++) {
+                const active = y === window.scheduleYear;
+                monthGrid.innerHTML += `
+                    <button onclick="selectSchedulePickerYear(${y})" class="py-3 rounded-xl text-[15px] font-bold border active:scale-95 transition-transform ${active ? 'bg-[#B4975A] text-white border-[#B4975A]' : 'bg-white text-[#4A443F] border-[#E8E4DB]'}">${y}</button>
+                `;
+            }
+            return;
+        }
+
         for (let m = 1; m <= 12; m++) {
             const active = year === window.scheduleYear && m === window.scheduleMonth;
             monthGrid.innerHTML += `
@@ -1516,13 +1573,14 @@
         if (!grid) return;
         grid.innerHTML = '';
 
-        const weekLabels = ['월', '화', '수', '목', '금', '토', '일'];
-        weekLabels.forEach(label => {
-            grid.innerHTML += `<div class="h-11 flex items-center justify-center text-[14px] font-bold text-[#6B5335] border-b border-r border-[#E8D8BD] last:border-r-0 bg-[#FFFDF8]">${label}</div>`;
+        const weekLabels = ['일', '월', '화', '수', '목', '금', '토'];
+        weekLabels.forEach((label, index) => {
+            const labelColor = index === 0 ? 'text-[#B35C5C]' : (index === 6 ? 'text-[#4F74A8]' : 'text-[#6B5335]');
+            grid.innerHTML += `<div class="h-10 flex items-center justify-center text-[13px] font-bold ${labelColor} border-b border-r border-[#E8D8BD] last:border-r-0 bg-[#FFFDF8]">${label}</div>`;
         });
 
         const firstDay = new Date(year, month - 1, 1).getDay();
-        const firstDayShift = firstDay === 0 ? 6 : firstDay - 1; // 월요일 시작
+        const firstDayShift = firstDay; // 일요일 시작
         const totalCells = Math.ceil((firstDayShift + totalDays) / 7) * 7;
 
         const codeMeta = {
@@ -1556,7 +1614,7 @@
         for (let cell = 0; cell < totalCells; cell++) {
             const day = cell - firstDayShift + 1;
             if (day < 1 || day > totalDays) {
-                grid.innerHTML += `<div class="min-h-[116px] border-r border-b border-[#E8D8BD] bg-[#FFFDF8]/60"></div>`;
+                grid.innerHTML += `<div class="min-h-[82px] border-r border-b border-[#E8D8BD] bg-[#FFFDF8]/60"></div>`;
                 continue;
             }
 
@@ -1575,12 +1633,12 @@
             }).join('');
 
             grid.innerHTML += `
-                <div class="min-h-[116px] p-2 border-r border-b border-[#E8D8BD] bg-[#FFFDF8] overflow-hidden">
-                    <div class="flex items-center justify-between mb-2">
-                        <span class="text-[15px] font-semibold ${dateColor}">${day}</span>
-                        ${isHoliday ? `<span class="text-[9px] font-bold text-[#B35C5C] truncate ml-1">${PUBLIC_HOLIDAYS_2026[dateStr]}</span>` : ''}
+                <div class="min-h-[82px] p-1.5 border-r border-b border-[#E8D8BD] bg-[#FFFDF8] overflow-hidden">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-[13px] font-semibold ${dateColor}">${day}</span>
+                        ${isHoliday ? `<span class="text-[8px] font-bold text-[#B35C5C] truncate ml-1">${PUBLIC_HOLIDAYS_2026[dateStr]}</span>` : ''}
                     </div>
-                    <div class="space-y-1.5">${pills}</div>
+                    <div class="space-y-0.5">${pills}</div>
                 </div>
             `;
         }
@@ -2187,7 +2245,7 @@
             <button onclick="adjustSchedulePickerYear(-1)" class="w-10 h-10 rounded-full bg-white border border-[#E8E4DB] flex items-center justify-center text-[#8B7355] active:scale-95">
                 <i data-lucide="chevron-left" class="w-5 h-5"></i>
             </button>
-            <div id="schedule-picker-year-text" class="text-[20px] font-bold text-[#2F2924]">2026년</div>
+            <button type="button" id="schedule-picker-year-text" onclick="openScheduleYearPicker()" class="text-[20px] font-bold text-[#2F2924] bg-transparent border-0 px-3 py-1 rounded-lg active:bg-[#F2EFE8]">2026년</button>
             <button onclick="adjustSchedulePickerYear(1)" class="w-10 h-10 rounded-full bg-white border border-[#E8E4DB] flex items-center justify-center text-[#8B7355] active:scale-95">
                 <i data-lucide="chevron-right" class="w-5 h-5"></i>
             </button>
@@ -2278,7 +2336,7 @@
             <div class="bg-white rounded-2xl border border-[#F0EFEA] shadow-sm p-5">
                 <div class="grid grid-cols-2 gap-3 mb-5">
                     <div class="bg-[#FCFBF9] border border-[#F2EFE8] rounded-xl p-3">
-                        <div class="text-[11px] font-bold text-[#999] mb-1">Date Created</div>
+                        <div class="text-[11px] font-bold text-[#999] mb-1">Start Date</div>
                         <div id="view-notice-register-date" class="text-[13px] font-bold text-[#4A443F]">-</div>
                     </div>
                     <div class="bg-[#FCFBF9] border border-[#F2EFE8] rounded-xl p-3">
@@ -2319,7 +2377,7 @@
 
             <div class="grid grid-cols-2 gap-3">
                 <div>
-                    <label class="block text-sm font-semibold text-[#666] mb-2">Date Created</label>
+                    <label class="block text-sm font-semibold text-[#666] mb-2">Start Date</label>
                     <input type="date" id="detail-edit-register-date" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-3.5 outline-none font-medium text-[13px]" />
                 </div>
                 <div>
@@ -2347,7 +2405,10 @@
 
     <div class="absolute bottom-0 w-full p-6 bg-white border-t border-[#F0EFEA] pb-8">
         <button id="notice-detail-save-btn" onclick="saveNoticeEdit()" style="display:none;" class="w-full bg-[#B4975A] text-white py-4 rounded-xl text-[16px] font-bold shadow-md active:scale-95 transition-transform">저장</button>
-        <button id="notice-detail-complete-btn" onclick="completeNotice()" class="w-full bg-[#4A443F] text-white py-4 rounded-xl text-[16px] font-bold shadow-md active:scale-95 transition-transform">완료</button>
+        <div class="flex gap-3">
+            <button id="notice-detail-complete-btn" onclick="completeNotice()" class="flex-1 bg-[#4A443F] text-white py-4 rounded-xl text-[16px] font-bold shadow-md active:scale-95 transition-transform">완료</button>
+            <button id="notice-detail-delete-btn" onclick="deleteNotice()" class="flex-1 bg-white text-[#4A443F] py-4 rounded-xl text-[16px] font-bold shadow-md border border-[#D8D8D8] active:scale-95 transition-transform">삭제</button>
+        </div>
     </div>
 </div>
 
