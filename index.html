@@ -4,85 +4,33 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Patek-S</title>
-    
-    <!-- iOS 홈 화면 추가를 위한 PWA 메타 태그 -->
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="Patek-S">
-    <link rel="apple-touch-icon" href="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Patek_Philippe_logo.svg/512px-Patek_Philippe_logo.svg.png">
-
-    <!-- Tailwind CSS 및 아이콘 -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-
     <style>
-        /* 폰트 및 스크롤바 설정 */
         @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
-        
-        body {
-            font-family: 'Pretendard', -apple-system, sans-serif;
-            background-color: #FAF9F5;
-            margin: 0; padding: 0;
-            color: #333;
-            -webkit-tap-highlight-color: transparent;
-            overscroll-behavior-y: none;
-        }
-        
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-
-        /* 화면 전환 애니메이션 */
-        .page {
-            display: none;
-            animation: fadeIn 0.2s ease-out;
-            padding-bottom: 100px;
-        }
+        body { font-family: 'Pretendard', sans-serif; background-color: #FAF9F5; margin: 0; color: #333; }
+        .page { display: none; padding-bottom: 100px; }
         .page.active { display: block; }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(5px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* 하단 네비게이션 */
-        .bottom-nav {
-            position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); 
-            width: 100%; max-width: 480px; background-color: #ffffff; 
-            border-top: 1px solid #F0EFEA; display: flex; justify-content: space-around; 
-            padding: 12px 0 calc(24px + env(safe-area-inset-bottom)); z-index: 90;
-            box-shadow: 0 -4px 20px rgba(0,0,0,0.03);
-            border-radius: 24px 24px 0 0;
-        }
-        .nav-item { 
-            display: flex; flex-direction: column; align-items: center; gap: 6px; 
-            color: #A0A0A0; cursor: pointer; flex: 1; transition: color 0.2s;
-        }
-        .nav-item svg { width: 24px; height: 24px; }
-        .nav-item span { font-size: 0.65rem; font-weight: 600; }
+        .bottom-nav { position: fixed; bottom: 0; width: 100%; max-width: 480px; background: white; border-top: 1px solid #F0EFEA; display: flex; justify-content: space-around; padding: 12px 0; z-index: 90; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: #A0A0A0; cursor: pointer; flex: 1; font-size: 10px; font-weight: 600; }
         .nav-item.active { color: #B4975A; }
-
-        /* 로딩 및 모달 */
         #loading-overlay { position: fixed; top:0; left:0; width:100%; height:100vh; background:rgba(250,249,245,0.9); z-index: 99999; display: flex; justify-content: center; align-items: center; flex-direction: column; }
-        .spinner { border: 3px solid #E8E4DB; border-top: 3px solid #B4975A; border-radius: 50%; width: 36px; height: 36px; animation: spin 1s linear infinite; margin-bottom: 16px; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
-<!-- 순수 JS 기반 Firebase 로드 -->
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, collection, onSnapshot, doc, setDoc, getDoc, addDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, collection, onSnapshot, doc, setDoc, addDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    // ⭐️ patek-s 프로젝트 설정값
     const firebaseConfig = {
       apiKey: "AIzaSyCt7aQXA5eFdnDTMHlRhjPAkyH4b8UB6HY",
       authDomain: "patek-s.firebaseapp.com",
       projectId: "patek-s",
       storageBucket: "patek-s.firebasestorage.app",
       messagingSenderId: "786016749285",
-      appId: "1:786016749285:web:58538eec1cf7e72068b60c",
-      measurementId: "G-QZQYBJMFH8"
+      appId: "1:786016749285:web:58538eec1cf7e72068b60c"
     };
 
     const app = initializeApp(firebaseConfig);
@@ -90,442 +38,95 @@
     const db = getFirestore(app);
     const provider = new GoogleAuthProvider();
 
-    // 카테고리 색상 데이터
-    const CATEGORIES = {
-        '매장': { bg: '#F9E5E2', text: '#D46B61' },
-        '본사': { bg: '#E3EDFD', text: '#5A85DB' },
-        'PP': { bg: '#FCE6C3', text: '#D69641' },
-        '백화점': { bg: '#E5E5E5', text: '#7A7A7A' },
-        '행사': { bg: '#EBE2FB', text: '#8E67C9' }
-    };
-    const MAX_READERS = 6;
-
     let currentUser = null;
-    let unsubscribeNotices = null;
-    let unsubscribeApproval = null;
     window.appNotices = [];
-
-    // 리다이렉트 처리 (오류 방지 핵심)
-    getRedirectResult(auth).catch(error => {
-        console.error("로그인 에러:", error);
-        document.getElementById('loading-overlay').style.display = 'none';
-        if (error.code === 'auth/unauthorized-domain') {
-            alert("구글 로그인 정책: 현재 주소가 승인된 도메인이 아닙니다.");
-        }
-    });
 
     onAuthStateChanged(auth, (user) => {
         if (user) {
             currentUser = user;
             document.getElementById('login-page').style.display = 'none';
-            document.getElementById('loading-overlay').style.display = 'flex';
             checkApproval(user);
         } else {
-            currentUser = null;
-            window.appNotices = [];
-            if(unsubscribeNotices) unsubscribeNotices();
-            if(unsubscribeApproval) unsubscribeApproval();
-            
-            document.getElementById('loading-overlay').style.display = 'none';
-            document.getElementById('pending-page').style.display = 'none';
-            document.getElementById('app-container').style.display = 'none';
-            document.getElementById('page-notice-create').style.display = 'none';
-            document.getElementById('page-notice-detail').style.display = 'none';
-            
             document.getElementById('login-page').style.display = 'flex';
+            document.getElementById('app-container').style.display = 'none';
         }
     });
 
     function checkApproval(user) {
-        const userDocRef = doc(db, 'users', user.uid);
-        
-        unsubscribeApproval = onSnapshot(userDocRef, (docSnap) => {
-            if (docSnap.exists()) {
-                const data = docSnap.data();
-                if (data.approved === true) {
-                    document.getElementById('loading-overlay').style.display = 'none';
-                    document.getElementById('pending-page').style.display = 'none';
-                    document.getElementById('app-container').style.display = 'block';
-                    
-                    fetchNotices(); // 공지사항 데이터 불러오기
-                    lucide.createIcons();
-                } else {
-                    document.getElementById('loading-overlay').style.display = 'none';
-                    document.getElementById('app-container').style.display = 'none';
-                    document.getElementById('pending-page').style.display = 'flex';
-                }
+        onSnapshot(doc(db, 'users', user.uid), (docSnap) => {
+            if (docSnap.exists() && docSnap.data().approved === true) {
+                document.getElementById('app-container').style.display = 'block';
+                document.getElementById('pending-page').style.display = 'none';
+                fetchNotices();
             } else {
-                setDoc(userDocRef, {
-                    approved: false,
-                    email: user.email || '',
-                    name: user.displayName || '',
-                    role: 'user',
-                    createdAt: new Date().toISOString()
-                }, { merge: true }).then(() => {
-                    document.getElementById('loading-overlay').style.display = 'none';
-                    document.getElementById('app-container').style.display = 'none';
-                    document.getElementById('pending-page').style.display = 'flex';
-                }).catch(err => {
-                    console.error("데이터베이스 저장 오류:", err);
-                    document.getElementById('loading-overlay').style.display = 'none';
-                    alert("가입 처리에 실패했습니다. 다시 로그인해주세요.");
-                });
+                document.getElementById('pending-page').style.display = 'flex';
             }
-        }, (error) => {
-            console.error("Firestore Error:", error);
-            document.getElementById('loading-overlay').style.display = 'none';
-            alert("데이터베이스 권한 오류가 발생했습니다.");
         });
     }
 
-    // 로그인 함수
-    window.loginWithGoogle = function() {
-        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-        const isPWA = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-
-        document.getElementById('loading-overlay').style.display = 'flex';
-        
-        if (isMobile || isPWA) {
-            signInWithRedirect(auth, provider).catch(error => {
-                document.getElementById('loading-overlay').style.display = 'none';
-                alert("로그인 실패: " + error.message);
-            });
-        } else {
-            signInWithPopup(auth, provider).catch(error => {
-                document.getElementById('loading-overlay').style.display = 'none';
-                if (error.code !== 'auth/popup-closed-by-user') {
-                    alert("로그인 중 오류가 발생했습니다.\n" + error.message);
-                }
-            });
-        }
-    };
-
-    window.logout = function() {
-        if(confirm("로그아웃 하시겠습니까?")) signOut(auth);
-    };
-
-    // ==========================================
-    // 앱 데이터 및 화면 로직
-    // ==========================================
     function fetchNotices() {
-        const colRef = collection(db, 'notices');
-        unsubscribeNotices = onSnapshot(colRef, (snapshot) => {
+        onSnapshot(collection(db, 'notices'), (snapshot) => {
             window.appNotices = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            window.appNotices.sort((a, b) => new Date(b.date) - new Date(a.date));
             renderNotices();
         });
     }
 
     window.renderNotices = function() {
         const list = document.getElementById('notice-list-content');
-        list.innerHTML = '';
-        
-        if (window.appNotices.length === 0) {
-            list.innerHTML = '<div class="text-center text-[#999] py-10 text-sm">등록된 공지사항이 없습니다.</div>';
-            return;
-        }
-
-        window.appNotices.forEach(notice => {
-            const catStyle = CATEGORIES[notice.category] || CATEGORIES['매장'];
-            const readCount = notice.readers ? notice.readers.length : 0;
-            const isRead = notice.readers && notice.readers.includes(currentUser.uid);
-            
-            list.innerHTML += `
-                <div onclick="openNoticeDetail('${notice.id}')" class="bg-white p-4 rounded-2xl border border-[#F0EFEA] shadow-sm flex items-center gap-3 cursor-pointer active:scale-[0.98] transition-transform mb-3">
-                    <div class="px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap" style="background-color: ${catStyle.bg}; color: ${catStyle.text};">
-                        ${notice.category}
-                    </div>
-                    <div class="flex-1 truncate text-[15px] font-medium text-[#333]">
-                        [${notice.category}] ${notice.title}
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <span class="text-xs font-semibold ${isRead ? 'text-[#B4975A]' : 'text-[#999]'}">
-                            ${readCount} / ${MAX_READERS}
-                        </span>
-                        <i data-lucide="chevron-right" class="w-4 h-4 text-[#CCC]"></i>
-                    </div>
-                </div>
-            `;
-        });
-        lucide.createIcons();
+        list.innerHTML = window.appNotices.map(n => `
+            <div onclick="openDetail('${n.id}')" class="bg-white p-4 rounded-xl border border-[#F0EFEA] mb-2 flex justify-between items-center">
+                <span class="font-medium">${n.title}</span>
+                <span class="text-xs text-[#B4975A] font-bold">${n.readers?.length || 0} / 6</span>
+            </div>
+        `).join('');
     };
 
-    // 네비게이션 탭 스위치
-    window.switchTab = function(tabId, btnElement) {
-        document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
-        document.getElementById('page-' + tabId).classList.add('active');
-
-        document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
-        btnElement.classList.add('active');
-    };
-
-    // 공지사항 등록 화면 열기/닫기
-    window.openNoticeCreate = function() {
-        document.getElementById('page-notice-create').style.display = 'flex';
-        document.getElementById('bottom-nav-bar').style.display = 'none';
-        
-        // 초기화
-        window.selectedCategory = '';
-        document.querySelectorAll('.cat-btn').forEach(b => { b.style.border = "1px solid #E5E5E5"; b.style.fontWeight = "normal"; });
-        document.getElementById('input-date').value = new Date().toISOString().split('T')[0];
-        document.getElementById('input-title').value = '';
-        document.getElementById('input-content').value = '';
-    };
-
-    window.closeNoticeCreate = function() {
-        document.getElementById('page-notice-create').style.display = 'none';
-        document.getElementById('bottom-nav-bar').style.display = 'flex';
-    };
-
-    // 카테고리 선택
-    window.selectCategory = function(catName, btnElement) {
-        window.selectedCategory = catName;
-        document.querySelectorAll('.cat-btn').forEach(b => { 
-            b.style.border = "1px solid #E5E5E5"; 
-            b.style.fontWeight = "normal";
-        });
-        btnElement.style.border = `2px solid ${CATEGORIES[catName].text}`;
-        btnElement.style.fontWeight = "bold";
-    };
-
-    // 공지사항 저장
-    window.submitNotice = async function() {
-        if (!window.selectedCategory || !document.getElementById('input-title').value) {
-            alert("카테고리와 제목을 입력해주세요."); return;
-        }
-        document.getElementById('loading-overlay').style.display = 'flex';
-        try {
-            await addDoc(collection(db, 'notices'), {
-                category: window.selectedCategory,
-                date: document.getElementById('input-date').value,
-                title: document.getElementById('input-title').value,
-                content: document.getElementById('input-content').value,
-                author: currentUser.uid,
-                createdAt: new Date().toISOString(),
-                readers: []
-            });
-            closeNoticeCreate();
-        } catch(e) {
-            console.error(e); alert("등록 실패");
-        } finally {
-            document.getElementById('loading-overlay').style.display = 'none';
-        }
-    };
-
-    // 공지사항 상세 열기
-    window.openNoticeDetail = async function(id) {
-        const notice = window.appNotices.find(n => n.id === id);
-        if(!notice) return;
-
-        // 화면 띄우기
-        document.getElementById('page-notice-detail').style.display = 'flex';
-        document.getElementById('bottom-nav-bar').style.display = 'none';
-
-        // 내용 채우기
-        const catStyle = CATEGORIES[notice.category] || CATEGORIES['매장'];
-        const readCount = notice.readers ? notice.readers.length : 0;
-        
-        document.getElementById('detail-cat').innerText = notice.category;
-        document.getElementById('detail-cat').style.backgroundColor = catStyle.bg;
-        document.getElementById('detail-cat').style.color = catStyle.text;
-        
-        document.getElementById('detail-title').innerText = notice.title;
-        document.getElementById('detail-date').innerText = notice.date;
-        document.getElementById('detail-count').innerText = `${readCount} / ${MAX_READERS}`;
-        document.getElementById('detail-content').innerText = notice.content;
-
-        // 열람 카운트 업데이트
-        if (!notice.readers || !notice.readers.includes(currentUser.uid)) {
-            const currentReaders = notice.readers || [];
-            if (currentReaders.length < MAX_READERS) {
-                currentReaders.push(currentUser.uid);
-                await updateDoc(doc(db, 'notices', notice.id), { readers: currentReaders });
-                document.getElementById('detail-count').innerText = `${currentReaders.length} / ${MAX_READERS}`;
+    window.openDetail = async function(id) {
+        const n = window.appNotices.find(n => n.id === id);
+        if (!n.readers?.includes(currentUser.uid)) {
+            const readers = n.readers || [];
+            if(readers.length < 6) {
+                readers.push(currentUser.uid);
+                await updateDoc(doc(db, 'notices', id), { readers });
             }
         }
+        alert(n.content);
     };
 
-    window.closeNoticeDetail = function() {
-        document.getElementById('page-notice-detail').style.display = 'none';
-        document.getElementById('bottom-nav-bar').style.display = 'flex';
-    };
+    window.loginWithGoogle = () => signInWithRedirect(auth, provider);
 </script>
 
-<!-- ==========================================
-     화면 UI 영역
-     ========================================== -->
-
-<!-- 1. 로그인 화면 -->
-<div id="login-page" style="display: flex;" class="w-full max-w-md mx-auto h-screen bg-[#DCD6CC] flex-col justify-center items-center px-4 font-sans z-[100000] relative">
-    <div class="w-full max-w-md bg-[#FCFBF9] shadow-2xl flex flex-col items-center justify-center relative px-6 rounded-3xl h-[85vh]">
-        <img src="log.png" alt="Patek Philippe" class="w-56 h-auto mb-16 object-contain" />
-        
-        <button onclick="loginWithGoogle()" class="flex items-center gap-4 bg-white border border-[#E8E4DB] px-6 py-4 rounded-full shadow-sm transition-all active:scale-95 w-full justify-center">
-            <svg width="20" height="20" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-            </svg>
-            <span class="text-[15px] font-semibold text-[#4A443F]">Google 계정으로 시작하기</span>
-        </button>
-    </div>
+<!-- 로그인 -->
+<div id="login-page" class="fixed inset-0 bg-[#FAF9F5] flex flex-col justify-center items-center z-[100]">
+    <img src="log.png" class="w-40 mb-10">
+    <button onclick="loginWithGoogle()" class="bg-white px-8 py-3 rounded-full shadow-md text-sm font-bold text-[#333]">Google 계정으로 시작</button>
 </div>
 
-<!-- 2. 승인 대기 화면 -->
-<div id="pending-page" style="display: none;" class="w-full max-w-md mx-auto h-screen bg-[#FAF9F5] flex-col items-center justify-center p-6 z-[90000]">
-    <div class="text-[#B4975A] mb-1">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L13 11L22 12L13 13L12 22L11 13L2 12L11 11L12 2Z" /></svg>
-    </div>
-    <h1 class="text-2xl font-serif tracking-widest text-[#333]">PATEK PHILIPPE</h1>
-    <div class="mt-12 text-center">
-        <h2 class="text-xl font-bold text-[#333] mb-3">승인 대기 중</h2>
-        <p class="text-[#666] mb-8 leading-relaxed">관리자의 가입 승인을 기다리고 있습니다.<br>승인이 완료되면 자동으로 접속됩니다.</p>
-        <button onclick="logout()" class="text-[#999] underline text-sm p-2">다른 계정으로 로그인 / 취소</button>
-    </div>
+<!-- 승인 대기 -->
+<div id="pending-page" class="hidden fixed inset-0 bg-[#FAF9F5] flex-col justify-center items-center z-[90]">
+    <img src="log.png" class="w-32 mb-8">
+    <p class="text-[#666]">관리자 승인 대기 중입니다.</p>
 </div>
 
-<!-- 로딩 오버레이 -->
-<div id="loading-overlay" style="display: none;">
-    <div class="spinner"></div>
-    <div class="font-medium text-[#B4975A] text-sm">로딩 중...</div>
-</div>
-
-<!-- 3. 메인 앱 컨테이너 -->
-<div id="app-container" style="display: none;" class="w-full max-w-md mx-auto h-screen relative overflow-hidden bg-[#FAF9F5]">
+<!-- 메인 앱 -->
+<div id="app-container" class="hidden w-full max-w-md mx-auto min-h-screen">
+    <div id="page-calendar" class="page active p-6"><h2 class="text-xl font-bold mb-4">캘린더</h2></div>
+    <div id="page-notice" class="page p-6"><h2 class="text-xl font-bold mb-4">공지사항</h2><div id="notice-list-content"></div></div>
     
-    <!-- 공통 헤더 로고 -->
-    <div class="pt-12 pb-4 bg-white flex-shrink-0 rounded-b-3xl shadow-sm z-10 relative flex flex-col items-center justify-center">
-        <div class="text-[#B4975A] mb-1"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L13 11L22 12L13 13L12 22L11 13L2 12L11 11L12 2Z" /></svg></div>
-        <h1 class="text-xl font-serif tracking-widest text-[#333]">PATEK PHILIPPE</h1>
-        <p class="text-[9px] tracking-[0.3em] text-[#666] mt-1">GENEVE</p>
-        <div class="w-[80%] flex items-center justify-center mt-5 opacity-50">
-            <div class="h-[1px] w-full bg-[#B4975A]"></div>
-            <div class="w-1.5 h-1.5 rotate-45 bg-[#B4975A] mx-2 flex-shrink-0"></div>
-            <div class="h-[1px] w-full bg-[#B4975A]"></div>
-        </div>
-    </div>
-
-    <!-- 스크롤 영역 -->
-    <div class="flex-1 h-full overflow-y-auto pb-[120px] no-scrollbar">
-        
-        <!-- [탭] 캘린더 (메인 화면) -->
-        <div id="page-calendar" class="page active p-6 h-full flex flex-col">
-            <h2 class="text-2xl font-serif text-center mb-8 text-[#333]">캘린더</h2>
-            <div class="bg-white rounded-2xl shadow-sm border border-[#F0EFEA] p-4 flex-1 flex items-center justify-center text-[#999]">
-                달력 컴포넌트 영역
-            </div>
-        </div>
-
-        <!-- [탭] 공지사항 리스트 -->
-        <div id="page-notice" class="page p-6">
-            <div class="flex justify-between items-center mb-8 relative">
-                <div class="w-10"></div>
-                <h2 class="text-2xl font-serif text-[#333]">공지사항</h2>
-                <button onclick="openNoticeCreate()" class="w-10 h-10 flex items-center justify-center border border-[#E5E5E5] rounded-xl text-[#B4975A] bg-white shadow-sm active:scale-95">
-                    <i data-lucide="plus" class="w-5 h-5"></i>
-                </button>
-            </div>
-            <div class="flex justify-between items-center mb-4 text-sm text-[#666]">
-                <div class="flex items-center gap-1 font-medium">정렬: 날짜순 <i data-lucide="chevron-down" class="w-4 h-4"></i></div>
-            </div>
-            <div id="notice-list-content" class="space-y-3"></div>
-        </div>
-
-        <!-- [탭] 임시 화면들 -->
-        <div id="page-schedule" class="page p-6 h-full flex items-center justify-center text-[#999]">근무표 준비중입니다.</div>
-        <div id="page-sales" class="page p-6 h-full flex items-center justify-center text-[#999]">매출 준비중입니다.</div>
-        <div id="page-inventory" class="page p-6 h-full flex items-center justify-center text-[#999]">재고 준비중입니다.</div>
-        <div id="page-as" class="page p-6 h-full flex items-center justify-center text-[#999]">A/S 준비중입니다.</div>
-        <div id="page-sp" class="page p-6 h-full flex items-center justify-center text-[#999]">SP 준비중입니다.</div>
-        <div id="page-album" class="page p-6 h-full flex items-center justify-center text-[#999]">앨범 준비중입니다.</div>
-
-    </div>
-
-    <!-- 하단 네비게이션 (고정) -->
-    <div id="bottom-nav-bar" class="bottom-nav grid grid-cols-4 gap-y-6 gap-x-2 px-2">
-        <div class="nav-item" onclick="switchTab('notice', this)"><i data-lucide="megaphone"></i><span>공지사항</span></div>
-        <div class="nav-item" onclick="switchTab('schedule', this)"><i data-lucide="calendar-days"></i><span>근무표</span></div>
+    <div class="bottom-nav">
+        <div class="nav-item" onclick="switchTab('notice', this)"><i data-lucide="megaphone"></i><span>공지</span></div>
         <div class="nav-item active" onclick="switchTab('calendar', this)"><i data-lucide="calendar"></i><span>캘린더</span></div>
-        <div class="nav-item" onclick="switchTab('sales', this)"><i data-lucide="bar-chart-3"></i><span>매출</span></div>
-        <div class="nav-item" onclick="switchTab('inventory', this)"><i data-lucide="package"></i><span>재고</span></div>
-        <div class="nav-item" onclick="switchTab('as', this)"><i data-lucide="wrench"></i><span>A/S</span></div>
-        <div class="nav-item" onclick="switchTab('sp', this)"><i data-lucide="star"></i><span>SP</span></div>
-        <div class="nav-item" onclick="switchTab('album', this)"><i data-lucide="image"></i><span>앨범</span></div>
     </div>
 </div>
 
-<!-- ==========================================
-     전체화면 모달 영역 (공지사항 등록/상세)
-     ========================================== -->
-
-<!-- 공지사항 등록 -->
-<div id="page-notice-create" style="display: none;" class="fixed inset-0 w-full max-w-md mx-auto bg-[#FAF9F5] z-[200] flex-col">
-    <div class="pt-12 pb-4 bg-white flex-shrink-0 relative border-b border-[#F0EFEA] flex flex-col items-center">
-        <button onclick="closeNoticeCreate()" class="absolute right-6 top-14 text-[#999] p-2"><i data-lucide="x" class="w-6 h-6"></i></button>
-        <div class="text-[#B4975A] mb-1"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L13 11L22 12L13 13L12 22L11 13L2 12L11 11L12 2Z" /></svg></div>
-        <h1 class="text-xl font-serif tracking-widest text-[#333]">PATEK PHILIPPE</h1>
-        <h2 class="text-2xl font-serif mt-6 mb-2">공지사항 등록</h2>
-    </div>
-    <div class="flex-1 overflow-y-auto p-6 space-y-6 pb-32">
-        <div>
-            <label class="block text-sm font-semibold text-[#666] mb-3">카테고리 선택하기</label>
-            <div class="flex flex-wrap gap-2">
-                <button onclick="selectCategory('매장', this)" class="cat-btn px-4 py-2 rounded-lg text-sm bg-[#F9E5E2] text-[#D46B61] border border-[#E5E5E5]">매장</button>
-                <button onclick="selectCategory('본사', this)" class="cat-btn px-4 py-2 rounded-lg text-sm bg-[#E3EDFD] text-[#5A85DB] border border-[#E5E5E5]">본사</button>
-                <button onclick="selectCategory('PP', this)" class="cat-btn px-4 py-2 rounded-lg text-sm bg-[#FCE6C3] text-[#D69641] border border-[#E5E5E5]">PP</button>
-                <button onclick="selectCategory('백화점', this)" class="cat-btn px-4 py-2 rounded-lg text-sm bg-[#E5E5E5] text-[#7A7A7A] border border-[#E5E5E5]">백화점</button>
-                <button onclick="selectCategory('행사', this)" class="cat-btn px-4 py-2 rounded-lg text-sm bg-[#EBE2FB] text-[#8E67C9] border border-[#E5E5E5]">행사</button>
-            </div>
-        </div>
-        <div>
-            <label class="block text-sm font-semibold text-[#666] mb-2">날짜</label>
-            <div class="relative">
-                <input type="date" id="input-date" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-3.5 outline-none font-medium appearance-none" />
-                <i data-lucide="calendar-days" class="absolute right-4 top-3.5 text-[#999] pointer-events-none w-5 h-5"></i>
-            </div>
-        </div>
-        <div>
-            <label class="block text-sm font-semibold text-[#666] mb-2">제목</label>
-            <input type="text" id="input-title" placeholder="제목을 입력하세요" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-3.5 outline-none font-medium" />
-        </div>
-        <div>
-            <label class="block text-sm font-semibold text-[#666] mb-2">내용</label>
-            <textarea id="input-content" rows="4" placeholder="내용을 입력하세요" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-3.5 outline-none font-medium resize-none"></textarea>
-        </div>
-        <div class="bg-[#FCFBF8] border border-[#F2EFE8] rounded-xl p-5 flex items-start gap-4">
-            <div class="w-12 h-12 rounded-full border border-[#E8E2D2] flex items-center justify-center flex-shrink-0 text-[#B4975A] bg-white"><i data-lucide="eye" class="w-6 h-6"></i></div>
-            <div>
-                <div class="font-serif text-[17px] mb-1 font-semibold text-[#333]">열람 카운트 0 / 6</div>
-                <p class="text-[11px] text-[#888] leading-relaxed">읽은 사람은 중복 없이 집계되며,<br>아이디별 최대 6명까지 카운팅됩니다.</p>
-            </div>
-        </div>
-    </div>
-    <div class="absolute bottom-0 w-full p-6 bg-white border-t border-[#F0EFEA] pb-8">
-        <button onclick="submitNotice()" class="w-full bg-[#B4975A] text-white py-4 rounded-xl text-[17px] font-bold shadow-md active:scale-95 transition-transform">등록하기</button>
-    </div>
-</div>
-
-<!-- 공지사항 상세 보기 -->
-<div id="page-notice-detail" style="display: none;" class="fixed inset-0 w-full max-w-md mx-auto bg-[#FAF9F5] z-[200] flex-col">
-    <div class="pt-12 pb-4 bg-white flex-shrink-0 relative border-b border-[#F0EFEA] flex flex-col items-center">
-        <button onclick="closeNoticeDetail()" class="absolute right-6 top-14 text-[#999] p-2"><i data-lucide="x" class="w-6 h-6"></i></button>
-        <div class="text-[#B4975A] mb-1"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L13 11L22 12L13 13L12 22L11 13L2 12L11 11L12 2Z" /></svg></div>
-        <h1 class="text-xl font-serif tracking-widest text-[#333]">PATEK PHILIPPE</h1>
-    </div>
-    <div class="flex-1 overflow-y-auto p-6 bg-white">
-        <div class="mb-6 border-b border-[#E5E5E5] pb-6">
-            <div id="detail-cat" class="inline-block px-3 py-1.5 rounded-lg text-sm font-bold mb-3">카테고리</div>
-            <h2 id="detail-title" class="text-xl font-bold mb-3 leading-snug text-[#333]">제목</h2>
-            <div class="flex justify-between items-center text-sm text-[#999] font-medium">
-                <span id="detail-date">날짜</span>
-                <span class="flex items-center gap-1"><i data-lucide="eye" class="w-4 h-4"></i> 읽음 <span id="detail-count" class="text-[#B4975A] font-bold ml-1">0 / 6</span></span>
-            </div>
-        </div>
-        <div id="detail-content" class="text-[#444] whitespace-pre-wrap leading-relaxed text-[15.5px] font-medium">내용</div>
-    </div>
-</div>
-
-<script>lucide.createIcons();</script>
+<script>
+    window.switchTab = (tab, el) => {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+        document.getElementById('page-' + tab).classList.add('active');
+        el.classList.add('active');
+    };
+    lucide.createIcons();
+</script>
 </body>
 </html>
