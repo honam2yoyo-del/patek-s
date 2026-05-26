@@ -47,28 +47,10 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* 하단 네비게이션 (4x2 그리드 배열 완벽 가공 및 대칭 정렬) */
-        .bottom-nav {
-            position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); 
-            width: 100%; max-width: 480px; background-color: #ffffff; 
-            border-top: 1px solid #F0EFEA; 
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            row-gap: 14px;
-            column-gap: 8px;
-            padding: 16px 16px calc(24px + env(safe-area-inset-bottom)); 
-            z-index: 90;
-            box-shadow: 0 -8px 30px rgba(0,0,0,0.04);
-            border-radius: 24px 24px 0 0;
-        }
-        .nav-item { 
-            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; 
-            color: #A0A0A0; cursor: pointer; transition: color 0.2s;
-            width: 100%;
-        }
-        .nav-item svg { width: 22px; height: 22px; }
-        .nav-item span { font-size: 0.72rem; font-weight: 600; }
+        /* 하단 네비게이션 아이템 액티브 컬러 (레이아웃은 Tailwind로 HTML 직접 제어) */
+        .nav-item { transition: color 0.2s; }
         .nav-item.active { color: #B4975A; }
+        .nav-item.active svg { stroke: #B4975A; }
 
         /* 로딩 및 모달 */
         #loading-overlay { position: fixed; top:0; left:0; width:100%; height:100vh; background:rgba(250,249,245,0.9); z-index: 99999; display: flex; justify-content: center; align-items: center; flex-direction: column; }
@@ -1507,8 +1489,9 @@
                 <div class="w-full bg-white p-3 rounded-2xl border border-[#F0EFEA] shadow-sm flex justify-between items-center text-sm">
                     <div class="flex items-center gap-3">
                         <button onclick="adjustScheduleMonth(-1)" class="p-1 hover:bg-[#F2EFE8] rounded"><i data-lucide="chevron-left" class="w-4 h-4 text-[#8B7355]"></i></button>
-                        <div class="relative flex items-center justify-center">
-                            <span id="schedule-month-text" class="text-sm font-bold text-[#3A3532] tracking-wide pointer-events-none">2026년 5월</span>
+                        <div class="relative flex items-center justify-center bg-slate-50 px-3 py-1.5 rounded-lg cursor-pointer border border-[#E8E4DB]">
+                            <span id="schedule-month-text" class="text-[15px] font-bold text-[#3A3532] tracking-wide pointer-events-none mr-1.5">2026년 5월</span>
+                            <i data-lucide="calendar-days" class="w-4 h-4 text-[#8B7355] pointer-events-none"></i>
                             <!-- 터치 시 OS 기본 월 선택기 팝업 -->
                             <input type="month" id="schedule-month-picker" onchange="handleMonthPicker(this.value)" class="absolute inset-0 opacity-0 w-full h-full cursor-pointer" />
                         </div>
@@ -1617,17 +1600,17 @@
     </div>
 
     <!-- 하단 네비게이션 (시안 3 완벽 매칭: 4x2 격자 그리드 형태 최적화 교정 완료) -->
-    <div id="bottom-nav-bar" class="bottom-nav">
+    <div id="bottom-nav-bar" class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] bg-white border-t border-[#F0EFEA] grid grid-cols-4 gap-y-4 gap-x-2 px-4 pt-4 pb-[calc(24px+env(safe-area-inset-bottom))] z-[90] shadow-[0_-8px_30px_rgba(0,0,0,0.04)] rounded-t-[24px]">
         <!-- 첫 번째 줄 (정밀 정렬 및 아이콘-라벨 분배) -->
-        <div class="nav-item" onclick="window.switchTab('notice', this)"><i data-lucide="megaphone"></i><span>공지사항</span></div>
-        <div class="nav-item" onclick="window.switchTab('schedule', this)"><i data-lucide="calendar-days"></i><span>근무표</span></div>
-        <div class="nav-item active" onclick="window.switchTab('calendar', this)"><i data-lucide="calendar"></i><span>캘린더</span></div>
-        <div class="nav-item" onclick="window.switchTab('sales', this)"><i data-lucide="bar-chart-3"></i><span>매출</span></div>
+        <div class="nav-item flex flex-col items-center justify-center gap-1 text-[#A0A0A0] w-full cursor-pointer" onclick="window.switchTab('notice', this)"><i data-lucide="megaphone" class="w-[22px] h-[22px]"></i><span class="text-[11.5px] font-bold">공지사항</span></div>
+        <div class="nav-item flex flex-col items-center justify-center gap-1 text-[#A0A0A0] w-full cursor-pointer" onclick="window.switchTab('schedule', this)"><i data-lucide="calendar-days" class="w-[22px] h-[22px]"></i><span class="text-[11.5px] font-bold">근무표</span></div>
+        <div class="nav-item flex flex-col items-center justify-center gap-1 text-[#A0A0A0] w-full cursor-pointer active" onclick="window.switchTab('calendar', this)"><i data-lucide="calendar" class="w-[22px] h-[22px]"></i><span class="text-[11.5px] font-bold">캘린더</span></div>
+        <div class="nav-item flex flex-col items-center justify-center gap-1 text-[#A0A0A0] w-full cursor-pointer" onclick="window.switchTab('sales', this)"><i data-lucide="bar-chart-3" class="w-[22px] h-[22px]"></i><span class="text-[11.5px] font-bold">매출</span></div>
         <!-- 두 번째 줄 -->
-        <div class="nav-item" onclick="window.switchTab('inventory', this)"><i data-lucide="package"></i><span>재고</span></div>
-        <div class="nav-item" onclick="window.switchTab('as', this)"><i data-lucide="wrench"></i><span>A/S</span></div>
-        <div class="nav-item" onclick="window.switchTab('sp', this)"><i data-lucide="star"></i><span>SP</span></div>
-        <div class="nav-item" onclick="window.switchTab('album', this)"><i data-lucide="image"></i><span>앨범</span></div>
+        <div class="nav-item flex flex-col items-center justify-center gap-1 text-[#A0A0A0] w-full cursor-pointer" onclick="window.switchTab('inventory', this)"><i data-lucide="package" class="w-[22px] h-[22px]"></i><span class="text-[11.5px] font-bold">재고</span></div>
+        <div class="nav-item flex flex-col items-center justify-center gap-1 text-[#A0A0A0] w-full cursor-pointer" onclick="window.switchTab('as', this)"><i data-lucide="wrench" class="w-[22px] h-[22px]"></i><span class="text-[11.5px] font-bold">A/S</span></div>
+        <div class="nav-item flex flex-col items-center justify-center gap-1 text-[#A0A0A0] w-full cursor-pointer" onclick="window.switchTab('sp', this)"><i data-lucide="star" class="w-[22px] h-[22px]"></i><span class="text-[11.5px] font-bold">SP</span></div>
+        <div class="nav-item flex flex-col items-center justify-center gap-1 text-[#A0A0A0] w-full cursor-pointer" onclick="window.switchTab('album', this)"><i data-lucide="image" class="w-[22px] h-[22px]"></i><span class="text-[11.5px] font-bold">앨범</span></div>
     </div>
 </div>
 
@@ -1786,8 +1769,9 @@
         <!-- 연월 조정 바 & 네이티브 달력 선택기 융합 -->
         <div class="flex justify-between items-center bg-white border border-[#E8E4DB] rounded-xl p-3 mb-4 shadow-sm">
             <button onclick="adjustScheduleMonth(-1)" class="p-1 hover:bg-[#F2EFE8] rounded"><i data-lucide="chevron-left" class="w-4 h-4 text-[#8B7355]"></i></button>
-            <div class="relative flex items-center justify-center">
-                <span id="leave-month-text" class="text-base font-bold text-[#3A3532] pointer-events-none">2026년 6월</span>
+            <div class="relative flex items-center justify-center bg-slate-50 px-3 py-1.5 rounded-lg cursor-pointer border border-[#E8E4DB]">
+                <span id="leave-month-text" class="text-[15px] font-bold text-[#3A3532] pointer-events-none mr-1.5">2026년 6월</span>
+                <i data-lucide="calendar-days" class="w-4 h-4 text-[#8B7355] pointer-events-none"></i>
                 <input type="month" id="leave-month-picker" onchange="handleMonthPicker(this.value)" class="absolute inset-0 opacity-0 w-full h-full cursor-pointer" />
             </div>
             <button onclick="adjustScheduleMonth(1)" class="p-1 hover:bg-[#F2EFE8] rounded"><i data-lucide="chevron-right" class="w-4 h-4 text-[#8B7355]"></i></button>
