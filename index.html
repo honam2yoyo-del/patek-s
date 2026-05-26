@@ -90,7 +90,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, collection, onSnapshot, doc, setDoc, getDoc, addDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     // ⭐️ patek-s 프로젝트 설정값
@@ -129,7 +129,7 @@
     window.appNotices = [];
     window.noticeSearchQuery = '';
     window.noticeCategoryFilter = '전체';
-    window.noticeSortType = 'deadlineAsc';
+    window.noticeSortType = 'registerDesc';
     window.selectedNoticeId = null;
     window.albums = [];
     window.selectedAlbumIds = [];
@@ -318,11 +318,17 @@
 
         // 정렬
         filtered.sort((a, b) => {
-            if (window.noticeSortType === 'registerAsc') {
-                return new Date(getNoticeRegisterDate(a) || '9999-12-31') - new Date(getNoticeRegisterDate(b) || '9999-12-31');
+            if (window.noticeSortType === 'registerDesc') {
+                return new Date(getNoticeRegisterDate(b) || '1970-01-01') - new Date(getNoticeRegisterDate(a) || '1970-01-01');
             }
             return new Date(getNoticeDeadlineDate(a) || '9999-12-31') - new Date(getNoticeDeadlineDate(b) || '9999-12-31');
         });
+
+        const countText = document.getElementById('notice-result-count');
+        if (countText) {
+            const label = window.noticeCategoryFilter === '전체' ? '전체' : window.noticeCategoryFilter;
+            countText.innerText = `${label} ${filtered.length}`;
+        }
 
         if (filtered.length === 0) {
             list.innerHTML = '<div class="text-center text-[#999] py-10 text-sm">조건에 맞는 공지사항이 없습니다.</div>';
@@ -384,42 +390,43 @@
         window.renderNotices();
     };
 
-    window.setNoticeCategoryFilter = function(category, btnElement) {
-        window.noticeCategoryFilter = category;
-        document.querySelectorAll('.notice-filter-btn').forEach(btn => {
-            btn.className = 'notice-filter-btn px-3 py-2 rounded-lg text-[12px] font-semibold whitespace-nowrap border bg-white text-[#8A847E] border-[#E8E4DB]';
-        });
-        if (btnElement) {
-            btnElement.className = 'notice-filter-btn px-3 py-2 rounded-lg text-[12px] font-semibold whitespace-nowrap border bg-[#8B7355] text-white border-[#8B7355]';
+    function getNoticeFilterTheme(category) {
+        if (category === '전체') {
+            return { bg: '#9C825A', text: '#FFFFFF', border: '#9C825A' };
         }
+        const fallback = { bg: '#F2EFE8', text: '#8A847E', border: '#E8E4DB' };
+        return CATEGORIES[category] ? { ...CATEGORIES[category], border: CATEGORIES[category].bg } : fallback;
+    }
+
+    function applyNoticeFilterButtonStyles() {
+        document.querySelectorAll('.notice-filter-btn').forEach(btn => {
+            const category = btn.dataset.category;
+            const isActive = category === window.noticeCategoryFilter;
+            const theme = getNoticeFilterTheme(category);
+
+            btn.className = 'notice-filter-btn h-8 px-3 rounded-full text-[12px] font-semibold whitespace-nowrap transition-all duration-150';
+            if (isActive) {
+                btn.style.backgroundColor = theme.bg;
+                btn.style.color = theme.text;
+                btn.style.border = `1px solid ${theme.border}`;
+                btn.style.boxShadow = '0 1px 2px rgba(0,0,0,0.06)';
+            } else {
+                btn.style.backgroundColor = 'transparent';
+                btn.style.color = '#8A847E';
+                btn.style.border = '1px solid transparent';
+                btn.style.boxShadow = 'none';
+            }
+        });
+    }
+
+    window.setNoticeCategoryFilter = function(category) {
+        window.noticeCategoryFilter = category;
+        applyNoticeFilterButtonStyles();
         window.renderNotices();
     };
 
     window.setNoticeSortType = function(value) {
         window.noticeSortType = value;
-        window.renderNotices();
-    };
-
-    window.resetNoticeControls = function() {
-        window.noticeSearchQuery = '';
-        window.noticeCategoryFilter = '전체';
-        window.noticeSortType = 'deadlineAsc';
-
-        const searchInput = document.getElementById('notice-search-input');
-        const clearBtn = document.getElementById('notice-search-clear');
-        const sortSelect = document.getElementById('notice-sort-select');
-
-        if (searchInput) searchInput.value = '';
-        if (clearBtn) clearBtn.style.display = 'none';
-        if (sortSelect) sortSelect.value = 'deadlineAsc';
-
-        document.querySelectorAll('.notice-filter-btn').forEach(btn => {
-            const isAll = btn.dataset.category === '전체';
-            btn.className = isAll
-                ? 'notice-filter-btn px-3 py-2 rounded-lg text-[12px] font-semibold whitespace-nowrap border bg-[#8B7355] text-white border-[#8B7355]'
-                : 'notice-filter-btn px-3 py-2 rounded-lg text-[12px] font-semibold whitespace-nowrap border bg-white text-[#8A847E] border-[#E8E4DB]';
-        });
-
         window.renderNotices();
     };
 
@@ -438,10 +445,7 @@
         document.getElementById('bottom-nav-bar').style.display = 'none';
 
         window.selectedCategory = '';
-        document.querySelectorAll('.cat-btn').forEach(b => {
-            b.style.border = '1px solid #E5E5E5';
-            b.style.fontWeight = 'normal';
-        });
+        applyCreateCategoryStyles();
 
         const today = new Date().toISOString().split('T')[0];
         document.getElementById('input-register-date').value = today;
@@ -455,15 +459,31 @@
         document.getElementById('bottom-nav-bar').style.display = 'flex';
     };
 
-    // 카테고리 선택
-    window.selectCategory = function(catName, btnElement) {
-        window.selectedCategory = catName;
-        document.querySelectorAll('.cat-btn').forEach(b => {
-            b.style.border = '1px solid #E5E5E5';
-            b.style.fontWeight = 'normal';
+    function applyCreateCategoryStyles() {
+        document.querySelectorAll('.cat-btn').forEach(btn => {
+            const catName = btn.dataset.category;
+            const theme = CATEGORIES[catName] || { bg: '#F2EFE8', text: '#8A847E' };
+            const isActive = window.selectedCategory === catName;
+
+            btn.className = 'cat-btn h-11 w-full rounded-xl text-sm font-semibold border transition-all duration-150';
+            if (isActive) {
+                btn.style.backgroundColor = theme.bg;
+                btn.style.color = theme.text;
+                btn.style.border = `1.5px solid ${theme.text}`;
+                btn.style.boxShadow = '0 1px 2px rgba(0,0,0,0.06)';
+            } else {
+                btn.style.backgroundColor = '#FFFFFF';
+                btn.style.color = '#8A847E';
+                btn.style.border = '1px solid #E5E5E5';
+                btn.style.boxShadow = 'none';
+            }
         });
-        btnElement.style.border = `2px solid ${CATEGORIES[catName].text}`;
-        btnElement.style.fontWeight = 'bold';
+    }
+
+    // 카테고리 선택
+    window.selectCategory = function(catName) {
+        window.selectedCategory = catName;
+        applyCreateCategoryStyles();
     };
 
     // 공지사항 저장
@@ -1669,19 +1689,19 @@
         <div id="page-notice" class="page p-6 no-scrollbar">
             <div class="flex justify-between items-center mb-5 relative">
                 <div class="w-10"></div>
-                <h2 class="text-2xl font-serif text-[#333]">공지사항</h2>
+                <h2 class="text-[26px] font-serif text-[#333]">Team Announcements</h2>
                 <button onclick="openNoticeCreate()" class="w-10 h-10 flex items-center justify-center border border-[#E5E5E5] rounded-xl text-[#B4975A] bg-white shadow-sm active:scale-95">
                     <i data-lucide="plus" class="w-5 h-5"></i>
                 </button>
             </div>
 
             <!-- 검색창 -->
-            <div class="bg-white border border-[#E8E4DB] rounded-[14px] px-3 py-3 flex items-center shadow-sm relative mb-3">
+            <div class="bg-white border border-[#E8E4DB] rounded-[14px] px-3 py-3 flex items-center shadow-sm relative mb-4">
                 <i data-lucide="search" class="text-[#8A847E] mr-2 shrink-0 w-[18px] h-[18px]"></i>
                 <input
                     id="notice-search-input"
                     type="text"
-                    placeholder="제목 또는 내용 검색"
+                    placeholder="Search title or memo"
                     class="flex-1 min-w-0 bg-transparent outline-none font-sans text-[13px] text-[#4A443F] placeholder-[#C2BDB5] pr-8"
                 />
                 <button id="notice-search-clear" onclick="clearNoticeSearch()" style="display:none;" class="absolute right-3 top-1/2 -translate-y-1/2 text-[#999] p-1">
@@ -1690,27 +1710,27 @@
             </div>
 
             <!-- 필터 -->
-            <div class="flex gap-2 overflow-x-auto no-scrollbar mb-3 pb-1">
-                <button data-category="전체" onclick="setNoticeCategoryFilter('전체', this)" class="notice-filter-btn px-3 py-2 rounded-lg text-[12px] font-semibold whitespace-nowrap border bg-[#8B7355] text-white border-[#8B7355]">전체</button>
-                <button data-category="매장" onclick="setNoticeCategoryFilter('매장', this)" class="notice-filter-btn px-3 py-2 rounded-lg text-[12px] font-semibold whitespace-nowrap border bg-white text-[#8A847E] border-[#E8E4DB]">매장</button>
-                <button data-category="본사" onclick="setNoticeCategoryFilter('본사', this)" class="notice-filter-btn px-3 py-2 rounded-lg text-[12px] font-semibold whitespace-nowrap border bg-white text-[#8A847E] border-[#E8E4DB]">본사</button>
-                <button data-category="PP" onclick="setNoticeCategoryFilter('PP', this)" class="notice-filter-btn px-3 py-2 rounded-lg text-[12px] font-semibold whitespace-nowrap border bg-white text-[#8A847E] border-[#E8E4DB]">PP</button>
-                <button data-category="백화점" onclick="setNoticeCategoryFilter('백화점', this)" class="notice-filter-btn px-3 py-2 rounded-lg text-[12px] font-semibold whitespace-nowrap border bg-white text-[#8A847E] border-[#E8E4DB]">백화점</button>
-                <button data-category="행사" onclick="setNoticeCategoryFilter('행사', this)" class="notice-filter-btn px-3 py-2 rounded-lg text-[12px] font-semibold whitespace-nowrap border bg-white text-[#8A847E] border-[#E8E4DB]">행사</button>
+            <div class="bg-white border border-[#E5DED2] rounded-[22px] p-[4px] shadow-sm mb-4 overflow-x-auto no-scrollbar">
+                <div class="grid grid-cols-6 gap-1 min-w-[430px]">
+                    <button data-category="전체" onclick="setNoticeCategoryFilter('전체')" class="notice-filter-btn">전체</button>
+                    <button data-category="매장" onclick="setNoticeCategoryFilter('매장')" class="notice-filter-btn">매장</button>
+                    <button data-category="본사" onclick="setNoticeCategoryFilter('본사')" class="notice-filter-btn">본사</button>
+                    <button data-category="PP" onclick="setNoticeCategoryFilter('PP')" class="notice-filter-btn">PP</button>
+                    <button data-category="백화점" onclick="setNoticeCategoryFilter('백화점')" class="notice-filter-btn">백화점</button>
+                    <button data-category="행사" onclick="setNoticeCategoryFilter('행사')" class="notice-filter-btn">행사</button>
+                </div>
             </div>
 
-            <!-- 정렬 + 초기화 -->
-            <div class="flex items-center gap-2 mb-4">
-                <div class="flex-1 bg-white border border-[#E8E4DB] rounded-xl px-3 py-2.5 flex items-center shadow-sm">
-                    <i data-lucide="arrow-up-down" class="w-4 h-4 text-[#8A847E] mr-2"></i>
-                    <select id="notice-sort-select" onchange="setNoticeSortType(this.value)" class="w-full bg-transparent outline-none text-[13px] text-[#4A443F] font-semibold">
-                        <option value="deadlineAsc">마감 날짜 빠른 순</option>
-                        <option value="registerAsc">등록 날짜 빠른 순</option>
+            <!-- 정렬 -->
+            <div class="flex items-center justify-between mb-4 px-1">
+                <div id="notice-result-count" class="text-[15px] text-[#4A443F] font-medium">전체 0</div>
+                <div class="relative flex items-center">
+                    <select id="notice-sort-select" onchange="setNoticeSortType(this.value)" class="appearance-none bg-transparent outline-none text-[15px] text-[#4A443F] font-medium pr-5 cursor-pointer">
+                        <option value="registerDesc">등록순</option>
+                        <option value="deadlineAsc">마감순</option>
                     </select>
+                    <i data-lucide="chevron-down" class="absolute right-0 w-4 h-4 text-[#7C736A] pointer-events-none"></i>
                 </div>
-                <button onclick="resetNoticeControls()" class="px-4 py-2.5 rounded-xl bg-[#F2EFE8] text-[#8B7355] text-[13px] font-bold border border-[#E8E4DB] active:scale-95">
-                    초기화
-                </button>
             </div>
 
             <div id="notice-list-content" class="space-y-3 mt-4"></div>
@@ -1871,31 +1891,31 @@
     <div class="pt-12 pb-4 bg-[#FAF9F5] flex-shrink-0 relative flex flex-col items-center">
         <button onclick="closeNoticeCreate()" class="absolute right-6 top-14 text-[#999] p-2"><i data-lucide="x" class="w-6 h-6"></i></button>
         <img src="log.png" alt="Patek Philippe" class="w-32 h-auto object-contain mt-2 mb-4" />
-        <h2 class="text-2xl font-serif mb-2 text-[#333]">공지사항 등록</h2>
+        <h2 class="text-2xl font-serif mb-2 text-[#333]">New Announcement</h2>
     </div>
 
     <div class="flex-1 overflow-y-auto p-6 space-y-6 pb-32">
         <div>
-            <label class="block text-sm font-semibold text-[#666] mb-3">카테고리 선택하기</label>
-            <div class="flex flex-wrap gap-2">
-                <button onclick="selectCategory('매장', this)" class="cat-btn px-4 py-2 rounded-lg text-sm bg-[#F9E5E2] text-[#D46B61] border border-[#E5E5E5]">매장</button>
-                <button onclick="selectCategory('본사', this)" class="cat-btn px-4 py-2 rounded-lg text-sm bg-[#E3EDFD] text-[#5A85DB] border border-[#E5E5E5]">본사</button>
-                <button onclick="selectCategory('PP', this)" class="cat-btn px-4 py-2 rounded-lg text-sm bg-[#FCE6C3] text-[#D69641] border border-[#E5E5E5]">PP</button>
-                <button onclick="selectCategory('백화점', this)" class="cat-btn px-4 py-2 rounded-lg text-sm bg-[#E5E5E5] text-[#7A7A7A] border border-[#E5E5E5]">백화점</button>
-                <button onclick="selectCategory('행사', this)" class="cat-btn px-4 py-2 rounded-lg text-sm bg-[#EBE2FB] text-[#8E67C9] border border-[#E5E5E5]">행사</button>
+            <label class="block text-sm font-semibold text-[#666] mb-3">Category</label>
+            <div class="grid grid-cols-3 gap-3">
+                <button data-category="매장" onclick="selectCategory('매장')" class="cat-btn">매장</button>
+                <button data-category="본사" onclick="selectCategory('본사')" class="cat-btn">본사</button>
+                <button data-category="PP" onclick="selectCategory('PP')" class="cat-btn">PP</button>
+                <button data-category="백화점" onclick="selectCategory('백화점')" class="cat-btn">백화점</button>
+                <button data-category="행사" onclick="selectCategory('행사')" class="cat-btn">행사</button>
             </div>
         </div>
 
         <div class="grid grid-cols-2 gap-3">
             <div>
-                <label class="block text-sm font-semibold text-[#666] mb-2">등록 날짜</label>
+                <label class="block text-sm font-semibold text-[#666] mb-2">Date Created</label>
                 <div class="relative">
                     <input type="date" id="input-register-date" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-3.5 outline-none font-medium appearance-none text-[13px]" />
                     <i data-lucide="calendar-days" class="absolute right-3 top-3.5 text-[#999] pointer-events-none w-4 h-4"></i>
                 </div>
             </div>
             <div>
-                <label class="block text-sm font-semibold text-[#666] mb-2">마감 날짜</label>
+                <label class="block text-sm font-semibold text-[#666] mb-2">Due Date</label>
                 <div class="relative">
                     <input type="date" id="input-deadline-date" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-3.5 outline-none font-medium appearance-none text-[13px]" />
                     <i data-lucide="calendar-days" class="absolute right-3 top-3.5 text-[#999] pointer-events-none w-4 h-4"></i>
@@ -1904,18 +1924,18 @@
         </div>
 
         <div>
-            <label class="block text-sm font-semibold text-[#666] mb-2">제목</label>
-            <input type="text" id="input-title" placeholder="제목을 입력하세요" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-3.5 outline-none font-medium" />
+            <label class="block text-sm font-semibold text-[#666] mb-2">Title</label>
+            <input type="text" id="input-title" placeholder="Enter title" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-3.5 outline-none font-medium" />
         </div>
 
         <div>
-            <label class="block text-sm font-semibold text-[#666] mb-2">내용</label>
-            <textarea id="input-content" rows="6" placeholder="내용을 입력하세요" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-3.5 outline-none font-medium resize-none"></textarea>
+            <label class="block text-sm font-semibold text-[#666] mb-2">Memo</label>
+            <textarea id="input-content" rows="6" placeholder="Enter memo" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-3.5 outline-none font-medium resize-none"></textarea>
         </div>
     </div>
 
     <div class="absolute bottom-0 w-full p-6 bg-white border-t border-[#F0EFEA] pb-8">
-        <button onclick="submitNotice()" class="w-full bg-[#B4975A] text-white py-4 rounded-xl text-[17px] font-bold shadow-md active:scale-95 transition-transform">등록하기</button>
+        <button onclick="submitNotice()" class="w-full bg-[#B4975A] text-white py-4 rounded-xl text-[17px] font-bold shadow-md active:scale-95 transition-transform">Save</button>
     </div>
 </div>
 
@@ -1924,7 +1944,7 @@
     <div class="pt-12 pb-4 bg-[#FAF9F5] flex-shrink-0 relative flex flex-col items-center">
         <button onclick="closeNoticeDetail()" class="absolute right-6 top-14 text-[#999] p-2"><i data-lucide="x" class="w-6 h-6"></i></button>
         <img src="log.png" alt="Patek Philippe" class="w-32 h-auto object-contain mt-2 mb-3" />
-        <h2 class="text-2xl font-serif text-[#333]">공지사항 수정</h2>
+        <h2 class="text-2xl font-serif text-[#333]">Edit Announcement</h2>
     </div>
 
     <div class="flex-1 overflow-y-auto p-6 space-y-5 pb-36 bg-[#FAF9F5]">
@@ -1934,7 +1954,7 @@
         </div>
 
         <div>
-            <label class="block text-sm font-semibold text-[#666] mb-2">카테고리</label>
+            <label class="block text-sm font-semibold text-[#666] mb-2">Category</label>
             <select id="detail-edit-category" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-3.5 outline-none font-medium">
                 <option value="매장">매장</option>
                 <option value="본사">본사</option>
@@ -1946,22 +1966,22 @@
 
         <div class="grid grid-cols-2 gap-3">
             <div>
-                <label class="block text-sm font-semibold text-[#666] mb-2">등록 날짜</label>
+                <label class="block text-sm font-semibold text-[#666] mb-2">Date Created</label>
                 <input type="date" id="detail-edit-register-date" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-3.5 outline-none font-medium text-[13px]" />
             </div>
             <div>
-                <label class="block text-sm font-semibold text-[#666] mb-2">마감 날짜</label>
+                <label class="block text-sm font-semibold text-[#666] mb-2">Due Date</label>
                 <input type="date" id="detail-edit-deadline-date" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-3.5 outline-none font-medium text-[13px]" />
             </div>
         </div>
 
         <div>
-            <label class="block text-sm font-semibold text-[#666] mb-2">제목</label>
+            <label class="block text-sm font-semibold text-[#666] mb-2">Title</label>
             <input id="detail-edit-title" type="text" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-3.5 outline-none font-bold text-[#333]" />
         </div>
 
         <div>
-            <label class="block text-sm font-semibold text-[#666] mb-2">내용</label>
+            <label class="block text-sm font-semibold text-[#666] mb-2">Memo</label>
             <textarea id="detail-edit-content" rows="8" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-3.5 outline-none font-medium resize-none leading-relaxed"></textarea>
         </div>
 
@@ -1973,8 +1993,8 @@
     </div>
 
     <div class="absolute bottom-0 w-full p-6 bg-white border-t border-[#F0EFEA] pb-8 flex gap-3">
-        <button onclick="saveNoticeEdit()" class="flex-1 bg-[#B4975A] text-white py-4 rounded-xl text-[16px] font-bold shadow-md active:scale-95 transition-transform">수정</button>
-        <button onclick="completeNotice()" class="flex-1 bg-[#4A443F] text-white py-4 rounded-xl text-[16px] font-bold shadow-md active:scale-95 transition-transform">완료</button>
+        <button onclick="saveNoticeEdit()" class="flex-1 bg-[#B4975A] text-white py-4 rounded-xl text-[16px] font-bold shadow-md active:scale-95 transition-transform">Edit</button>
+        <button onclick="completeNotice()" class="flex-1 bg-[#4A443F] text-white py-4 rounded-xl text-[16px] font-bold shadow-md active:scale-95 transition-transform">Complete</button>
     </div>
 </div>
 
