@@ -90,22 +90,23 @@
             width: 100%;
             border: 1px solid;
             border-radius: 5px;
-            padding: 3px 1px;
-            font-size: 7px;
+            padding: 2px 0;
+            font-size: clamp(5px, 1.38vw, 6.6px);
             font-weight: 700;
-            line-height: 1.05;
+            line-height: 1;
             text-align: center;
             word-break: keep-all;
             white-space: nowrap;
             overflow: visible;
             text-overflow: unset;
-            letter-spacing: -0.65px;
+            letter-spacing: -0.95px;
             box-sizing: border-box;
             box-shadow: inset 0 1px 0 rgba(255,255,255,0.45);
+            transform-origin: center;
         }
         .schedule-pill.tight {
-            font-size: 6.2px;
-            letter-spacing: -0.9px;
+            font-size: clamp(4.3px, 1.18vw, 5.4px);
+            letter-spacing: -1.15px;
             padding-left: 0;
             padding-right: 0;
         }
@@ -187,34 +188,78 @@
         "2026-06-06": "현충일"
     };
 
-    // 모바일 등 환경을 위한 리다이렉트 처리
-    getRedirectResult(auth).catch(console.error);
+    function showLoginState() {
+        currentUser = null;
+        window.appNotices = [];
+        window.albums = [];
+        window.selectedAlbumIds = [];
+        if(unsubscribeNotices) unsubscribeNotices();
+        if(unsubscribeApproval) unsubscribeApproval();
+        if(unsubscribeAlbums) unsubscribeAlbums();
+        if(unsubscribeSchedules) unsubscribeSchedules();
+        if(unsubscribeLeaveRequests) unsubscribeLeaveRequests();
+
+        document.getElementById('loading-overlay').style.display = 'none';
+        document.getElementById('pending-page').style.display = 'none';
+        document.getElementById('app-container').style.display = 'none';
+        document.getElementById('page-notice-create').style.display = 'none';
+        document.getElementById('page-notice-detail').style.display = 'none';
+        document.getElementById('page-album-modal').style.display = 'none';
+        document.getElementById('login-page').style.display = 'flex';
+    }
+
+    function handleSignedInUser(user) {
+        if (!user) return;
+        currentUser = user;
+        sessionStorage.removeItem('patekAuthRedirecting');
+        document.getElementById('login-page').style.display = 'none';
+        document.getElementById('loading-overlay').style.display = 'flex';
+        checkApproval(user);
+    }
+
+    // 모바일 Safari 리다이렉트 복귀 처리
+    // onAuthStateChanged가 null을 먼저 반환하는 경우가 있어, redirect 확인 전에는 로그인 화면으로 되돌리지 않습니다.
+    let redirectCheckDone = false;
+    let pendingNullAuth = false;
+
+    const redirectCheckPromise = getRedirectResult(auth)
+        .then((result) => {
+            redirectCheckDone = true;
+            if (result && result.user) {
+                handleSignedInUser(result.user);
+                return;
+            }
+            if (pendingNullAuth && !auth.currentUser) {
+                sessionStorage.removeItem('patekAuthRedirecting');
+                showLoginState();
+            }
+        })
+        .catch((error) => {
+            console.error('Redirect 로그인 에러:', error);
+            redirectCheckDone = true;
+            sessionStorage.removeItem('patekAuthRedirecting');
+            document.getElementById('loading-overlay').style.display = 'none';
+            window.showCustomAlert('로그인 실패: ' + error.message);
+            showLoginState();
+        });
 
     onAuthStateChanged(auth, (user) => {
         if (user) {
-            currentUser = user;
-            document.getElementById('login-page').style.display = 'none';
-            document.getElementById('loading-overlay').style.display = 'flex';
-            checkApproval(user);
+            handleSignedInUser(user);
         } else {
-            currentUser = null;
-            window.appNotices = [];
-            window.albums = [];
-            window.selectedAlbumIds = [];
-            if(unsubscribeNotices) unsubscribeNotices();
-            if(unsubscribeApproval) unsubscribeApproval();
-            if(unsubscribeAlbums) unsubscribeAlbums();
-            if(unsubscribeSchedules) unsubscribeSchedules();
-            if(unsubscribeLeaveRequests) unsubscribeLeaveRequests();
-            
-            document.getElementById('loading-overlay').style.display = 'none';
-            document.getElementById('pending-page').style.display = 'none';
-            document.getElementById('app-container').style.display = 'none';
-            document.getElementById('page-notice-create').style.display = 'none';
-            document.getElementById('page-notice-detail').style.display = 'none';
-            document.getElementById('page-album-modal').style.display = 'none';
-            
-            document.getElementById('login-page').style.display = 'flex';
+            if (!redirectCheckDone || sessionStorage.getItem('patekAuthRedirecting') === '1') {
+                pendingNullAuth = true;
+                document.getElementById('login-page').style.display = 'none';
+                document.getElementById('loading-overlay').style.display = 'flex';
+                redirectCheckPromise.finally(() => {
+                    if (!auth.currentUser && pendingNullAuth) {
+                        sessionStorage.removeItem('patekAuthRedirecting');
+                        showLoginState();
+                    }
+                });
+                return;
+            }
+            showLoginState();
         }
     });
 
@@ -1632,12 +1677,12 @@
                 if (!groups[code] || groups[code].length === 0) return '';
                 const meta = codeMeta[code];
                 const namesText = groups[code].join(',');
-                const tightClass = groups[code].length >= 3 || namesText.length >= 8 ? ' tight' : '';
+                const tightClass = groups[code].length >= 3 || namesText.length >= 7 ? ' tight' : '';
                 return `<div class="schedule-pill${tightClass}" style="background:${meta.bg}; color:${meta.text}; border-color:${meta.border};">${namesText}</div>`;
             }).join('');
 
             grid.innerHTML += `
-                <div class="min-h-[82px] p-1.5 border-r border-b border-[#E8D8BD] bg-[#FFFDF8] overflow-hidden">
+                <div class="min-h-[82px] p-1 border-r border-b border-[#E8D8BD] bg-[#FFFDF8] overflow-visible">
                     <div class="flex items-center justify-between mb-1">
                         <span class="text-[13px] font-semibold ${dateColor}">${day}</span>
                         ${isHoliday ? `<span class="text-[8px] font-bold text-[#B35C5C] truncate ml-1">${PUBLIC_HOLIDAYS_2026[dateStr]}</span>` : ''}
