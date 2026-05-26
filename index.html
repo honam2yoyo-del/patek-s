@@ -2,14 +2,17 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
+    <!-- 핀치 줌을 허용하도록 maximum-scale 늘리고 user-scalable을 yes로 변경 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
     <title>Patek-S</title>
     
+    <!-- iOS 홈 화면 추가를 위한 PWA 메타 태그 -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Patek-S">
     <link class="rounded-full" rel="apple-touch-icon" href="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Patek_Philippe_logo.svg/512px-Patek_Philippe_logo.svg.png">
 
+    <!-- Tailwind CSS 및 아이콘 -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -29,12 +32,13 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
+        /* 화면 전환 애니메이션 및 독립 스크롤 영역 */
         .page {
             display: none;
-            position: absolute;
+            position: absolute; /* 부모 relative 컨테이너에 꽉 차게 설정 */
             top: 0; left: 0; right: 0; bottom: 0;
             overflow-y: auto;
-            padding-bottom: 240px;
+            padding-bottom: 240px; /* 2줄 하단 네비게이션 공간 충분히 확보 */
             animation: fadeIn 0.2s ease-out;
         }
         .page.active { display: block; }
@@ -44,37 +48,77 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
+        /* 하단 네비게이션 아이템 액티브 컬러 (레이아웃은 Tailwind로 HTML 직접 제어) */
         .nav-item { transition: color 0.2s; }
         .nav-item.active { color: #B4975A; }
         .nav-item.active svg { stroke: #B4975A; }
 
+        /* 로딩 및 모달 */
         #loading-overlay { position: fixed; top:0; left:0; width:100%; height:100vh; background:rgba(250,249,245,0.9); z-index: 99999; display: flex; justify-content: center; align-items: center; flex-direction: column; }
         .spinner { border: 3px solid #E8E4DB; border-top: 3px solid #B4975A; border-radius: 50%; width: 36px; height: 36px; animation: spin 1s linear infinite; margin-bottom: 16px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        .schedule-table { table-layout: fixed; width: 100%; }
-        .schedule-table th, .schedule-table td { border: 1px solid #E2E0D9; text-align: center; vertical-align: middle; font-size: 7.5px; padding: 3px 0; line-height: 1; overflow: hidden; word-break: keep-all; }
+        /* 테이블 스크롤 및 극도로 섬세한 텍스트 가독성 최적화 (한 화면에 다 들어오도록 크기 축소) */
+        .schedule-table {
+            table-layout: fixed;
+            width: 100%;
+        }
+        .schedule-table th, .schedule-table td {
+            border: 1px solid #E2E0D9;
+            text-align: center;
+            vertical-align: middle;
+            font-size: 7.5px;
+            padding: 3px 0;
+            line-height: 1;
+            overflow: hidden;
+            word-break: keep-all;
+        }
+        /* 첫 두 열(연차, 성명) 넓이 고정 */
         .schedule-table th:nth-child(1), .schedule-table td:nth-child(1) { width: 18px; }
         .schedule-table th:nth-child(2), .schedule-table td:nth-child(2) { width: 26px; }
         
-        .schedule-table th { background-color: #F8F6F0; font-weight: 700; color: #555552; }
+        .schedule-table th {
+            background-color: #F8F6F0;
+            font-weight: 700;
+            color: #555552;
+        }
         .holiday-sun { background-color: #FDE2E4 !important; color: #E63946 !important; }
         .holiday-sat { background-color: #E2EFFF !important; color: #1D3557 !important; }
         .holiday-pub { background-color: #FFD6E8 !important; color: #D81B60 !important; }
 
-        .schedule-pill { width: 100%; border: 1px solid; border-radius: 5px; padding: 3px 2px; font-size: 8.5px; font-weight: 700; line-height: 1.05; text-align: center; word-break: keep-all; white-space: nowrap; overflow: hidden; text-overflow: clip; box-sizing: border-box; box-shadow: inset 0 1px 0 rgba(255,255,255,0.45); }
-        .schedule-meta-line { display: block; max-width: 100%; overflow: visible; text-overflow: unset; white-space: normal; }
+        .schedule-pill {
+            width: 100%;
+            border: 1px solid;
+            border-radius: 5px;
+            padding: 3px 2px;
+            font-size: 8.5px;
+            font-weight: 700;
+            line-height: 1.15;
+            text-align: center;
+            word-break: keep-all;
+            white-space: normal; /* 이름이 여러개일 때 잘리지 않고 여러 줄로 표기되게 변경 */
+            box-sizing: border-box;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.45);
+        }
+        .schedule-meta-line {
+            display: block;
+            max-width: 100%;
+            overflow: visible;
+            text-overflow: unset;
+            white-space: normal;
+        }
+
     </style>
 </head>
 <body>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, collection, onSnapshot, doc, setDoc, getDoc, addDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    // 환경 변수 설정값 반영 (Fallback 지원용)
-    const YOUR_FIREBASE_CONFIG = {
+    // ⭐️ patek-s 프로젝트 설정값
+    const firebaseConfig = {
       apiKey: "AIzaSyCt7aQXA5eFdnDTMHlRhjPAkyH4b8UB6HY",
       authDomain: "patek-s.firebaseapp.com",
       projectId: "patek-s",
@@ -84,13 +128,10 @@
       measurementId: "G-QZQYBJMFH8"
     };
 
-    const firebaseConfig = typeof __firebase_config !== 'undefined' && __firebase_config
-      ? JSON.parse(__firebase_config)
-      : YOUR_FIREBASE_CONFIG;
-
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
+    const provider = new GoogleAuthProvider();
 
     // 카테고리 색상 데이터
     const CATEGORIES = {
@@ -121,14 +162,16 @@
     window.albumSearchQuery = '';
     window.albumForm = { id: '', files: [], category: '기타', title: '', ref: '', memo: '', imageUrl: '' };
 
+    // 근무표 및 휴무 신청 상태값
     window.scheduleYear = 2026;
     window.scheduleMonth = 5;
-    window.schedulesData = {};
-    window.leaveRequests = [];
-    window.storeStaffs = ['옥영세', '엄인주', '장용석', '최혜지', '이승범', '형영지'];
+    window.schedulesData = {}; // Firestore에서 가져온 월별 원시 근무표 데이터
+    window.leaveRequests = []; // Firestore에서 가져온 휴무 리스트
+    window.storeStaffs = ['옥영세', '엄인주', '장용석', '최혜지', '이승범', '형영지']; // 기본 직원 매핑
     window.leaveRangeStart = null;
     window.leaveRangeEnd = null;
 
+    // 공휴일 정보 (2026년 기준 예시 데이터)
     const PUBLIC_HOLIDAYS_2026 = {
         "2026-05-05": "어린이날",
         "2026-05-24": "석가탄신일",
@@ -137,7 +180,7 @@
 
     // 모바일 Safari/PWA 환경을 위한 리다이렉트 로그인 결과 처리
     getRedirectResult(auth).catch(error => {
-        console.error("Redirect Error:", error);
+        console.error("로그인 에러:", error);
         const loading = document.getElementById('loading-overlay');
         if (loading) loading.style.display = 'none';
         if (error.code === 'auth/unauthorized-domain') {
@@ -184,10 +227,10 @@
                     document.getElementById('pending-page').style.display = 'none';
                     document.getElementById('app-container').style.display = 'flex'; 
                     
-                    fetchNotices();
-                    fetchAlbums(user);
-                    fetchSchedules();
-                    fetchLeaveRequests();
+                    fetchNotices(); // 공지사항 데이터 불러오기
+                    fetchAlbums(user); // 개인 앨범 실시간 데이터 불러오기
+                    fetchSchedules(); // 공용 근무표 실시간 구독
+                    fetchLeaveRequests(); // 휴무 신청 데이터 실시간 구독
                     lucide.createIcons();
                 } else {
                     document.getElementById('loading-overlay').style.display = 'none';
@@ -218,38 +261,29 @@
         });
     }
 
-    // ⭐️ 로그인 함수 모바일 지원 강화 및 우회(Fallback) 처리 적용
-    window.loginWithGoogle = async function() {
-        document.getElementById('loading-overlay').style.display = 'flex';
-        try {
-            const provider = new GoogleAuthProvider();
-            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-            const isPWA = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+    // 로그인 함수
+    window.loginWithGoogle = function() {
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        const isPWA = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
 
-            if (isMobile || isPWA) {
-                await signInWithRedirect(auth, provider);
-            } else {
-                await signInWithPopup(auth, provider);
-            }
-        } catch (error) {
-            console.error("Google Login Error:", error);
-            // Fallback: 인앱 브라우저나 리다이렉트가 막힌 경우 커스텀/익명 로그인으로 처리
-            try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-            } catch(fallbackErr) {
-                console.error("Fallback Login Error:", fallbackErr);
+        document.getElementById('loading-overlay').style.display = 'flex';
+
+        if (isMobile || isPWA) {
+            signInWithRedirect(auth, provider).catch(error => {
+                console.error("로그인 에러:", error);
                 document.getElementById('loading-overlay').style.display = 'none';
-                
+                window.showCustomAlert("로그인 실패: " + error.message);
+            });
+        } else {
+            signInWithPopup(auth, provider).catch(error => {
+                console.error("로그인 에러:", error);
+                document.getElementById('loading-overlay').style.display = 'none';
                 if (error.code === 'auth/unauthorized-domain') {
                     window.showCustomAlert("구글 로그인 정책: 현재 주소가 승인된 도메인이 아닙니다.");
                 } else if (error.code !== 'auth/popup-closed-by-user') {
                     window.showCustomAlert("로그인 중 오류가 발생했습니다.\n" + error.message);
                 }
-            }
+            });
         }
     };
 
@@ -259,6 +293,9 @@
         });
     };
 
+    // ==========================================
+    // 앱 데이터 및 화면 로직
+    // ==========================================
     function fetchNotices() {
         const colRef = collection(db, 'notices');
         unsubscribeNotices = onSnapshot(colRef, (snapshot) => {
@@ -291,10 +328,12 @@
 
         let filtered = [...window.appNotices];
 
+        // 완료된 공지는 기본 리스트에서는 숨기고, 검색어가 있을 때만 다시 보이게 처리
         if (queryTerms.length === 0) {
             filtered = filtered.filter(notice => notice.completed !== true);
         }
 
+        // 제목 + 내용 검색. 입력한 단어들이 순서와 상관없이 포함되면 노출
         if (queryTerms.length > 0) {
             filtered = filtered.filter(notice => {
                 const target = normalizeSearchText(`${notice.title || ''} ${notice.content || ''}`);
@@ -302,10 +341,12 @@
             });
         }
 
+        // 카테고리 필터
         if (window.noticeCategoryFilter !== '전체') {
             filtered = filtered.filter(notice => notice.category === window.noticeCategoryFilter);
         }
 
+        // 정렬
         filtered.sort((a, b) => {
             if (window.noticeSortType === 'registerDesc') {
                 return new Date(getNoticeRegisterDate(b) || '1970-01-01') - new Date(getNoticeRegisterDate(a) || '1970-01-01');
@@ -425,6 +466,7 @@
         window.renderNotices();
     };
 
+    // 네비게이션 탭 스위치
     window.switchTab = function(tabId, btnElement) {
         document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
         document.getElementById('page-' + tabId).classList.add('active');
@@ -438,6 +480,7 @@
         }
     };
 
+    // 공지사항 등록 화면 열기/닫기
     window.openNoticeCreate = function() {
         document.getElementById('page-notice-create').style.display = 'flex';
         document.getElementById('bottom-nav-bar').style.display = 'none';
@@ -480,11 +523,13 @@
         });
     }
 
+    // 카테고리 선택
     window.selectCategory = function(catName) {
         window.selectedCategory = catName;
         applyCreateCategoryStyles();
     };
 
+    // 공지사항 저장
     window.submitNotice = async function() {
         const registerDate = document.getElementById('input-register-date').value;
         const deadlineDate = document.getElementById('input-deadline-date').value;
@@ -507,7 +552,7 @@
                 category: window.selectedCategory,
                 registerDate,
                 deadlineDate,
-                date: registerDate,
+                date: registerDate, // 기존 데이터 호환용
                 title,
                 content,
                 author: currentUser.uid,
@@ -587,6 +632,7 @@
         setNoticeDetailMode('edit');
     };
 
+    // 공지사항 상세/수정 화면 열기
     window.openNoticeDetail = async function(id) {
         const notice = window.appNotices.find(n => n.id === id);
         if (!notice) return;
@@ -600,6 +646,7 @@
         const registerDate = getNoticeRegisterDate(notice) || '-';
         const deadlineDate = getNoticeDeadlineDate(notice) || '-';
 
+        // Viewer
         const viewCat = document.getElementById('view-notice-category');
         viewCat.innerText = notice.category || '매장';
         viewCat.style.backgroundColor = catStyle.bg;
@@ -617,6 +664,7 @@
             ? 'text-xs font-bold text-[#777] bg-[#EFEFEF] px-2 py-1 rounded-md'
             : 'text-xs font-bold text-[#B4975A] bg-[#F8F3E7] px-2 py-1 rounded-md';
 
+        // Edit form
         window.noticeEditCategory = notice.category || '매장';
         applyEditCategoryStyles();
         document.getElementById('detail-edit-title').value = notice.title || '';
@@ -627,6 +675,7 @@
 
         setNoticeDetailMode('view');
 
+        // 열람 카운트 업데이트
         if (!notice.readers || !notice.readers.includes(currentUser.uid)) {
             const currentReaders = notice.readers || [];
             if (currentReaders.length < MAX_READERS) {
@@ -660,7 +709,7 @@
                 category,
                 registerDate,
                 deadlineDate,
-                date: registerDate,
+                date: registerDate, // 기존 정렬/표시 호환용
                 title,
                 content,
                 updatedAt: new Date().toISOString(),
@@ -706,6 +755,7 @@
         });
     };
 
+
     window.deleteNotice = function() {
         if (!window.selectedNoticeId) return;
 
@@ -741,6 +791,11 @@
     };
 
 
+    // ==========================================
+    // 앨범 로직 (개별 관리 연동)
+    // ==========================================
+    
+    // 이미지 압축 (최대 1000x1000, JPEG 60%)
     const compressImage = (file) => {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -769,6 +824,7 @@
         });
     };
 
+    // base64 → File 변환 (네이티브 공유용)
     const base64ToFile = async (dataUrl, filename) => {
         const res = await fetch(dataUrl);
         const blob = await res.blob();
@@ -777,6 +833,7 @@
 
     function fetchAlbums(user) {
         if (!db) return;
+        // RULE 1에 따른 개인 전용 앨범 참조 설정
         const colRef = collection(db, 'artifacts', 'patek-s', 'users', user.uid, 'albums');
         unsubscribeAlbums = onSnapshot(colRef, (snapshot) => {
             window.albums = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -787,6 +844,7 @@
         });
     }
 
+    // 앨범 필터링 변경
     window.setAlbumFilter = function(category, btnElement) {
         window.albumFilter = category;
         document.querySelectorAll('.album-filter-btn').forEach(btn => {
@@ -796,6 +854,7 @@
         window.renderAlbums();
     };
 
+    // 앨범 검색 인풋 제어
     document.addEventListener('DOMContentLoaded', () => {
         const searchInput = document.getElementById('album-search-input');
         if (searchInput) {
@@ -819,6 +878,7 @@
         window.renderAlbums();
     };
 
+    // 앨범 렌더링
     window.renderAlbums = function() {
         const list = document.getElementById('album-grid-content');
         if (!list) return;
@@ -845,8 +905,9 @@
             const card = document.createElement('div');
             card.className = `relative rounded-xl overflow-hidden bg-white shadow-sm border flex flex-col transition-all cursor-pointer ${isSelected ? 'border-[#8B7355] ring-1 ring-[#8B7355]' : 'border-[#E8E4DB]'}`;
             
+            // 카드 바디 클릭 핸들러 (선택 모드면 선택 처리, 아니면 수정 모달 오픈)
             card.onclick = (e) => {
-                if (e.target.closest('.no-card-trigger')) return;
+                if (e.target.closest('.no-card-trigger')) return; // 체크버튼이나 공유버튼 영역 클릭 시 예외
                 if (window.selectedAlbumIds.length > 0) {
                     window.toggleAlbumSelection(album.id);
                 } else {
@@ -882,6 +943,7 @@
         lucide.createIcons();
     };
 
+    // 다중 선택 관리
     window.toggleAlbumSelection = function(id) {
         if (window.selectedAlbumIds.includes(id)) {
             window.selectedAlbumIds = window.selectedAlbumIds.filter(v => v !== id);
@@ -908,6 +970,7 @@
         }
     };
 
+    // 사진 등록 모달 열기
     window.openCreateAlbum = function() {
         window.albumForm = { id: '', files: [], category: '기타', title: '', ref: '', memo: '', imageUrl: '' };
         document.getElementById('album-modal-title').innerText = 'Upload Photo';
@@ -922,6 +985,7 @@
         document.getElementById('page-album-modal').style.display = 'flex';
     };
 
+    // 사진 수정 모달 열기
     window.openEditAlbum = function(album) {
         window.albumForm = { 
             id: album.id, 
@@ -983,10 +1047,12 @@
         window.renderAlbumFormPreviews();
     };
 
+    // 사진 폼 미리보기 UI 렌더
     window.renderAlbumFormPreviews = function() {
         const list = document.getElementById('album-preview-list');
         list.innerHTML = '';
 
+        // 수정 모드에서 기존 이미지만 있을 때
         if (window.albumForm.id && window.albumForm.imageUrl && (!window.albumForm.files || window.albumForm.files.length === 0)) {
             const wrapper = document.createElement('div');
             wrapper.className = "relative w-full h-[180px] shrink-0 rounded-[14px] overflow-hidden border border-[#E8E4DB]";
@@ -995,6 +1061,7 @@
             return;
         }
 
+        // 새로 선택한 파일들 있을 때
         if (window.albumForm.files && window.albumForm.files.length > 0) {
             window.albumForm.files.forEach((file, idx) => {
                 const url = URL.createObjectURL(file);
@@ -1010,6 +1077,7 @@
             });
         }
 
+        // 추가 버튼 홀더 노출
         if (!window.albumForm.id && (!window.albumForm.files || window.albumForm.files.length < 10)) {
             const addBtn = document.createElement('div');
             const isFirst = !window.albumForm.files || window.albumForm.files.length === 0;
@@ -1024,6 +1092,7 @@
         lucide.createIcons();
     };
 
+    // 사진 폼 저장 제출
     window.submitAlbumForm = async function() {
         if (!currentUser) return;
 
@@ -1038,6 +1107,7 @@
 
         document.getElementById('loading-overlay').style.display = 'flex';
         try {
+            // 수정 저장 처리
             if (window.albumForm.id) {
                 let finalUrl = window.albumForm.imageUrl;
                 if (window.albumForm.files && window.albumForm.files.length > 0) {
@@ -1054,6 +1124,7 @@
                 window.closeAlbumModal();
                 window.showCustomAlert("사진이 수정되었습니다.");
             } else {
+                // 신규 업로드 처리 (멀티 장수 대응)
                 if (!window.albumForm.files || window.albumForm.files.length === 0) {
                     window.showCustomAlert("사진을 추가해 주세요.");
                     document.getElementById('loading-overlay').style.display = 'none';
@@ -1085,6 +1156,7 @@
         }
     };
 
+    // 개별 사진 삭제
     window.deleteSingleAlbum = function() {
         window.showCustomConfirm("이 사진을 정말 삭제하시겠습니까?", async () => {
             document.getElementById('loading-overlay').style.display = 'flex';
@@ -1102,6 +1174,7 @@
         });
     };
 
+    // 다중 선택 사진 일괄 삭제
     window.deleteSelectedAlbums = function() {
         window.showCustomConfirm(`선택하신 ${window.selectedAlbumIds.length}장의 사진을 삭제하시겠습니까?`, async () => {
             document.getElementById('loading-overlay').style.display = 'flex';
@@ -1123,6 +1196,7 @@
         });
     };
 
+    // 사진 네이티브 공유 및 저장 다운로드
     window.shareSelectedAlbums = async function() {
         if (window.selectedAlbumIds.length === 0) return;
         document.getElementById('loading-overlay').style.display = 'flex';
@@ -1148,6 +1222,7 @@
             document.getElementById('loading-overlay').style.display = 'none';
             if (error.name === 'AbortError') return;
 
+            // 다운로드 Fallback 개별 다운로드 처리
             window.selectedAlbumIds.forEach(id => {
                 const album = window.albums.find(a => a.id === id);
                 if (album) {
@@ -1190,6 +1265,11 @@
         }
     };
 
+
+    // ==========================================
+    // ⭐️ 신규: 매장 근무표 관리 로직 (사진 3, 4, 5, 6)
+    // ==========================================
+
     function fetchSchedules() {
         if (!db) return;
         const colRef = collection(db, 'artifacts', 'patek-s', 'public', 'data', 'schedules');
@@ -1212,6 +1292,7 @@
         });
     }
 
+    // 연월 증감
     window.adjustScheduleMonth = function(amount) {
         window.scheduleMonth += amount;
         if (window.scheduleMonth > 12) {
@@ -1222,6 +1303,7 @@
             window.scheduleYear -= 1;
         }
         
+        // 날짜 텍스트 업데이트
         const textVal = `${window.scheduleYear}년 ${window.scheduleMonth}월`;
         const monthVal = `${window.scheduleYear}-${String(window.scheduleMonth).padStart(2, '0')}`;
 
@@ -1239,6 +1321,7 @@
         window.renderLeaveCalendar();
     };
     
+    // 네이티브 달력 월 선택 연동
     window.handleMonthPicker = function(val) {
         if(!val) return;
         const [year, month] = val.split('-');
@@ -1260,9 +1343,11 @@
         window.renderLeaveCalendar();
     };
 
+    // 특정 연월의 일 수 알아내기
     function getDaysInMonth(year, month) {
         return new Date(year, month, 0).getDate();
     }
+
 
     window.openScheduleMonthPicker = function() {
         window.schedulePickerYear = window.scheduleYear;
@@ -1443,6 +1528,7 @@
         }
     };
 
+    // 연월 선택에 따른 실시간 매장 근무표 렌더 (달력형)
     window.renderScheduleSheet = function() {
         const year = window.scheduleYear;
         const month = window.scheduleMonth;
@@ -1492,7 +1578,7 @@
         });
 
         const firstDay = new Date(year, month - 1, 1).getDay();
-        const firstDayShift = firstDay;
+        const firstDayShift = firstDay; // 일요일 시작
         const totalCells = Math.ceil((firstDayShift + totalDays) / 7) * 7;
 
         const codeMeta = {
@@ -1557,6 +1643,7 @@
         lucide.createIcons();
     };
 
+    // 근무표 수정 모달 열기 (직원별 슬라이더 수정용 시트 제공)
     window.openScheduleEdit = function() {
         if (!currentUser) return;
         const year = window.scheduleYear;
@@ -1604,6 +1691,7 @@
         document.getElementById('page-schedule-edit-modal').style.display = 'none';
     };
 
+    // 작성한 매장 근무표 Firestore 업데이트 저장
     window.saveScheduleSheet = async function() {
         if (!currentUser) return;
         document.getElementById('loading-overlay').style.display = 'flex';
@@ -1648,12 +1736,16 @@
     };
 
 
+    // ==========================================
+    // ⭐️ 신규: 휴무 신청 & 캘린더 관리 로직 (사진 6)
+    // ==========================================
+
     window.openLeaveCalendarModal = function() {
         window.leaveRangeStart = null;
         window.leaveRangeEnd = null;
         document.getElementById('leave-reason-input').value = '';
         document.getElementById('leave-region-input').value = '';
-        document.getElementById('leave-region-container').style.display = 'none';
+        document.getElementById('leave-region-container').style.display = 'none'; // 기본 숨김
 
         window.renderLeaveCalendar();
         document.getElementById('page-leave-calendar-modal').style.display = 'flex';
@@ -1663,7 +1755,7 @@
         document.getElementById('page-leave-calendar-modal').style.display = 'none';
     };
 
-    // ⭐️ 휴무 달력 렌더링 수정 (이름 잘림 방지)
+    // 휴무 달력 그리기 (사진 6 형태)
     window.renderLeaveCalendar = function() {
         const year = window.scheduleYear;
         const month = window.scheduleMonth;
@@ -1671,71 +1763,77 @@
         if (!container) return;
         container.innerHTML = '';
 
-        const firstDay = new Date(year, month - 1, 1).getDay();
+        const firstDay = new Date(year, month - 1, 1).getDay(); // 1일의 요일 인덱스
         const totalDays = getDaysInMonth(year, month);
 
-        const firstDayShift = firstDay === 0 ? 6 : firstDay - 1;
+        // 요일 맞춤용 앞단 빈 셀 삽입 (aspect-square 대신 높이 자동 확장 적용)
+        const firstDayShift = firstDay === 0 ? 6 : firstDay - 1; // 월요일 시작 정비
         for (let i = 0; i < firstDayShift; i++) {
-            // 변경점: aspect-square 제거 및 min-h 지정
-            container.innerHTML += `<div class="min-h-[75px] bg-[#FAF9F5] border border-[#F0EFEA]"></div>`;
+            container.innerHTML += `<div class="min-h-[70px] bg-[#FAF9F5] border border-[#F0EFEA]"></div>`;
         }
 
         for (let d = 1; d <= totalDays; d++) {
             const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-            const dayOfWeek = new Date(year, month - 1, d).getDay();
+            const dayOfWeek = new Date(year, month - 1, d).getDay(); // 0:일, 6:토
             const isHoliday = PUBLIC_HOLIDAYS_2026[dateStr] !== undefined;
 
+            // 해당 일자의 휴무 신청 직원들 색출
             const matchedRequests = window.leaveRequests.filter(r => dateStr >= r.startDate && dateStr <= r.endDate);
-            const isEventDay = matchedRequests.some(r => r.reason && r.reason.includes('행사'));
+            const isEventDay = matchedRequests.some(r => r.reason && r.reason.includes('행사')); // 행사 구분선
 
             let dayTextClass = "text-[#333]";
             if (isHoliday) dayTextClass = "text-[#D81B60]";
             else if (dayOfWeek === 0) dayTextClass = "text-red-500";
             else if (dayOfWeek === 6) dayTextClass = "text-blue-500";
 
+            // 클릭 범위 지정 중인 백그라운드 칼라 색상 세팅
             let selectBg = "bg-white";
             if (window.leaveRangeStart && window.leaveRangeEnd) {
                 if (dateStr >= window.leaveRangeStart && dateStr <= window.leaveRangeEnd) {
-                    selectBg = "bg-[#DDEBFF]";
+                    selectBg = "bg-[#DDEBFF]"; // 선택 범위 하이라이트
                 }
             } else if (window.leaveRangeStart && dateStr === window.leaveRangeStart) {
                 selectBg = "bg-[#DDEBFF]";
             }
 
+            // 3명 이상 신청 여부 확인
             const isOverbooked = matchedRequests.length >= 3;
             let overbookedBg = "";
             if (isOverbooked) {
-                overbookedBg = "bg-[#FFE5E5]";
+                overbookedBg = "bg-[#FFE5E5]"; // 3명 이상 신청 색상
             }
 
+            // 행사 하이라이팅 테두리
             let eventBorder = "";
             if (isEventDay) {
-                eventBorder = "border-2 border-amber-500 rounded-lg";
+                eventBorder = "border-2 border-amber-500 rounded-lg z-10";
             }
 
+            // 직원 이름 및 지역 노출 가공
             let staffNamesMarkup = "";
             matchedRequests.forEach(req => {
+                // 시작일 일 때만 등록된 지역 표기 지원
                 const isStart = dateStr === req.startDate;
                 const regionSuffix = (isStart && req.region) ? ` (${req.region})` : '';
-                // 변경점: 폰트, 패딩, 여백 최소화하여 더 빽빽하게 담기도록 조치
                 staffNamesMarkup += `
-                    <div class="text-[8.5px] font-bold text-slate-700 bg-slate-100 rounded px-1 py-[2px] truncate w-full text-center leading-tight mt-[2px]">
+                    <div class="text-[9px] font-bold text-slate-700 bg-slate-100 rounded px-1 py-[2px] truncate w-full text-center leading-none mt-[2px]">
                         ${req.name}${regionSuffix}
                     </div>
                 `;
             });
 
             const dayCell = document.createElement('div');
-            // 변경점: aspect-square 제거 후 min-h-[75px] h-auto 적용 (내용물이 많아지면 세로로 늘어남)
-            dayCell.className = `min-h-[75px] h-auto p-1 border border-[#F0EFEA] flex flex-col items-center justify-start cursor-pointer transition-colors hover:bg-slate-50 relative ${selectBg} ${overbookedBg} ${eventBorder}`;
+            // aspect-square 제거, min-h-[70px] h-full 추가하여 내용이 늘어나도 잘리지 않도록 함
+            dayCell.className = `min-h-[70px] h-full p-1 border border-[#F0EFEA] flex flex-col items-center justify-start cursor-pointer transition-colors hover:bg-slate-50 relative ${selectBg} ${overbookedBg} ${eventBorder}`;
             dayCell.onclick = () => window.handleLeaveCalendarCellClick(dateStr);
 
             dayCell.innerHTML = `
-                <div class="w-full flex justify-between mb-0.5">
+                <div class="w-full flex justify-between shrink-0">
                     <span class="text-xs font-bold ${dayTextClass}">${d}</span>
-                    ${isHoliday ? `<span class="text-[8px] text-[#D81B60] truncate font-sans">${PUBLIC_HOLIDAYS_2026[dateStr]}</span>` : ''}
+                    ${isHoliday ? `<span class="text-[8px] text-[#D81B60] truncate font-sans ml-1 mt-0.5">${PUBLIC_HOLIDAYS_2026[dateStr]}</span>` : ''}
                 </div>
-                <div class="w-full flex-1 flex flex-col justify-start">
+                <!-- overflow-y-auto 제거, justify-start 적용으로 모든 이름이 다 보이도록 확장 -->
+                <div class="w-full flex-1 flex flex-col justify-end mt-1 gap-[1px]">
                     ${staffNamesMarkup}
                 </div>
             `;
@@ -1743,17 +1841,21 @@
         }
     };
 
+    // 달력 셀 날짜 클릭 핸들러
     window.handleLeaveCalendarCellClick = function(dateStr) {
         if (!window.leaveRangeStart || (window.leaveRangeStart && window.leaveRangeEnd)) {
+            // 시작점 지정
             window.leaveRangeStart = dateStr;
             window.leaveRangeEnd = null;
         } else {
+            // 종료점 지정
             if (dateStr < window.leaveRangeStart) {
                 window.leaveRangeStart = dateStr;
                 window.leaveRangeEnd = null;
             } else {
                 window.leaveRangeEnd = dateStr;
                 
+                // 3일 이상 연휴 신청 여부에 따른 지역 입력창 보이기 판단
                 const diffDays = Math.ceil((new Date(window.leaveRangeEnd) - new Date(window.leaveRangeStart)) / (1000 * 60 * 60 * 24)) + 1;
                 if (diffDays >= 3) {
                     document.getElementById('leave-region-container').style.display = 'block';
@@ -1765,6 +1867,7 @@
         window.renderLeaveCalendar();
     };
 
+    // 최종 휴무 신청 저장 처리
     window.submitLeaveRequest = async function() {
         if (!currentUser) return;
         if (!window.leaveRangeStart) {
@@ -1775,10 +1878,12 @@
         const startDate = window.leaveRangeStart;
         const endDate = window.leaveRangeEnd ? window.leaveRangeEnd : window.leaveRangeStart;
 
+        // 기간(장수) 일 수 계산
         const diffDays = Math.ceil((new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24)) + 1;
         const reason = document.getElementById('leave-reason-input').value.trim();
         const region = document.getElementById('leave-region-input').value.trim();
 
+        // ⭐️ 3일 이상 휴무 시 지역 입력 필수 규격 필터링
         if (diffDays >= 3 && !region) {
             window.showCustomAlert("지역을 입력하세요");
             return;
@@ -1808,6 +1913,7 @@
         }
     };
 
+    // 휴무 신청 현황 리스트 열기
     window.openLeaveHistoryModal = function() {
         const listContainer = document.getElementById('leave-history-list');
         listContainer.innerHTML = '';
@@ -1854,7 +1960,7 @@
             try {
                 const docRef = doc(db, 'artifacts', 'patek-s', 'public', 'data', 'leave_requests', id);
                 await deleteDoc(docRef);
-                window.openLeaveHistoryModal();
+                window.openLeaveHistoryModal(); // 리프레시
                 window.showCustomAlert("휴무 신청이 취소되었습니다.");
             } catch(e) {
                 console.error(e);
@@ -1867,10 +1973,14 @@
 
 </script>
 
+<!-- ==========================================
+     화면 UI 영역
+     ========================================== -->
+
+<!-- 1. 로그인 화면 -->
 <div id="login-page" style="display: flex;" class="w-full max-w-md mx-auto h-screen bg-[#DCD6CC] flex-col justify-center items-center px-4 font-sans z-[100000] relative">
     <div class="w-full max-w-md bg-[#FCFBF9] shadow-2xl flex flex-col items-center justify-center relative px-6 rounded-3xl h-[85vh]">
-        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Patek_Philippe_logo.svg/512px-Patek_Philippe_logo.svg.png" alt="Patek Philippe" class="w-24 h-24 mb-6 object-contain" />
-        <h1 class="text-3xl font-serif text-[#3A3532] tracking-widest mb-16 text-center leading-snug">PATEK PHILIPPE</h1>
+        <img src="log.png" alt="Patek Philippe" class="w-56 h-auto mb-16 object-contain" />
         
         <button onclick="loginWithGoogle()" class="flex items-center gap-4 bg-white border border-[#E8E4DB] px-6 py-4 rounded-full shadow-sm transition-all active:scale-95 w-full justify-center">
             <svg width="20" height="20" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -1884,8 +1994,9 @@
     </div>
 </div>
 
+<!-- 2. 승인 대기 화면 -->
 <div id="pending-page" style="display: none;" class="w-full max-w-md mx-auto h-screen bg-[#FAF9F5] flex-col items-center justify-center p-6 z-[90000]">
-    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Patek_Philippe_logo.svg/512px-Patek_Philippe_logo.svg.png" alt="Patek Philippe" class="w-32 h-auto object-contain mb-8" />
+    <img src="log.png" alt="Patek Philippe" class="w-48 h-auto object-contain mb-8" />
     <div class="text-center">
         <h2 class="text-xl font-bold text-[#333] mb-3">승인 대기 중</h2>
         <p class="text-[#666] mb-8 leading-relaxed">관리자의 가입 승인을 기다리고 있습니다.<br>승인이 완료되면 자동으로 접속됩니다.</p>
@@ -1893,14 +2004,18 @@
     </div>
 </div>
 
+<!-- 로딩 오버레이 -->
 <div id="loading-overlay" style="display: none;">
     <div class="spinner"></div>
     <div class="font-medium text-[#B4975A] text-sm">로딩 중...</div>
 </div>
 
+<!-- 3. 메인 앱 컨테이너 -->
 <div id="app-container" style="display: none;" class="w-full max-w-md mx-auto h-screen relative overflow-hidden bg-[#FAF9F5] flex-col">
+    
+    <!-- 공통 헤더 로고 -->
     <div class="pt-12 pb-4 bg-[#FAF9F5] flex-shrink-0 z-10 relative flex flex-col items-center justify-center">
-        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Patek_Philippe_logo.svg/512px-Patek_Philippe_logo.svg.png" alt="Patek Philippe" class="w-20 h-auto object-contain" />
+        <img src="log.png" alt="Patek Philippe" class="w-40 h-auto object-contain" />
         <div class="w-[80%] flex items-center justify-center mt-4 opacity-50">
             <div class="h-[1px] w-full bg-[#B4975A]"></div>
             <div class="w-1.5 h-1.5 rotate-45 bg-[#B4975A] mx-2 flex-shrink-0"></div>
@@ -1908,7 +2023,10 @@
         </div>
     </div>
 
+    <!-- 완전히 독립된 탭 컨테이너 -->
     <div class="flex-1 relative w-full h-full bg-[#FAF9F5]">
+        
+        <!-- [탭] 캘린더 (메인 화면) -->
         <div id="page-calendar" class="page active p-6 no-scrollbar">
             <h2 class="text-2xl font-serif text-center mb-8 text-[#333]">캘린더</h2>
             <div class="bg-white rounded-2xl shadow-sm border border-[#F0EFEA] p-4 h-[400px] flex items-center justify-center text-[#999]">
@@ -1916,6 +2034,7 @@
             </div>
         </div>
 
+        <!-- [탭] 공지사항 리스트 -->
         <div id="page-notice" class="page p-6 no-scrollbar">
             <div class="flex justify-between items-center mb-5 relative">
                 <div class="w-10"></div>
@@ -1925,6 +2044,7 @@
                 </button>
             </div>
 
+            <!-- 검색창 -->
             <div class="bg-white border border-[#E8E4DB] rounded-[14px] px-3 py-3 flex items-center shadow-sm relative mb-4">
                 <i data-lucide="search" class="text-[#8A847E] mr-2 shrink-0 w-[18px] h-[18px]"></i>
                 <input
@@ -1938,6 +2058,7 @@
                 </button>
             </div>
 
+            <!-- 필터 -->
             <div class="bg-white border border-[#E5DED2] rounded-[22px] p-[4px] shadow-sm mb-4 overflow-x-auto no-scrollbar">
                 <div class="grid grid-cols-6 gap-1 w-full">
                     <button data-category="전체" onclick="setNoticeCategoryFilter('전체')" class="notice-filter-btn">전체</button>
@@ -1949,6 +2070,7 @@
                 </div>
             </div>
 
+            <!-- 정렬 -->
             <div class="flex items-center justify-between mb-4 px-1">
                 <div id="notice-result-count" class="text-[13px] text-[#4A443F] font-medium">전체 0</div>
                 <div class="relative flex items-center">
@@ -1963,6 +2085,7 @@
             <div id="notice-list-content" class="space-y-3 mt-4"></div>
         </div>
 
+        <!-- [탭] 신규: 매장 근무표 화면 -->
         <div id="page-schedule" class="page bg-[#FAF9F5] no-scrollbar px-4 pt-4">
             <div class="flex flex-col items-center mb-5 w-full text-center">
                 <div class="flex items-center justify-center w-full relative mb-4 h-10">
@@ -1978,6 +2101,7 @@
                     </div>
                 </div>
 
+                <!-- 2번 사진 느낌의 월 선택/수정 정보 바 -->
                 <div class="w-full flex items-center justify-between gap-3">
                     <div class="relative shrink-0 flex items-center rounded-xl border border-[#D8B98B] bg-[#FFFDF8] shadow-sm overflow-hidden h-12">
                         <button onclick="adjustScheduleMonth(-1)" class="w-11 h-full flex items-center justify-center text-[#B17A2A] active:bg-[#F8EFE3]">
@@ -1999,6 +2123,7 @@
                 </div>
             </div>
 
+            <!-- 달력형 근무표 -->
             <div class="w-full bg-[#FFFDF8] border border-[#E8D8BD] rounded-2xl shadow-[0_8px_28px_rgba(139,115,85,0.12)] overflow-hidden mb-8">
                 <div class="flex items-center justify-between px-5 py-4 border-b border-[#E8D8BD] bg-[#FFFDF8]">
                     <div class="flex items-center gap-3">
@@ -2016,10 +2141,12 @@
             </div>
         </div>
 
+        <!-- [탭] 개인용 앨범 화면 -->
         <div id="page-album" class="page bg-[#FAF9F5] no-scrollbar">
             <div class="flex flex-col items-center pt-4 pb-2 shrink-0">
                 <h2 class="text-2xl font-serif text-[#333] tracking-wider mb-5">앨범</h2>
 
+                <!-- 검색창 -->
                 <div class="w-full px-5 flex gap-2 relative">
                     <div class="flex-1 min-w-0 bg-white border border-[#E8E4DB] rounded-[12px] px-3 py-2.5 flex items-center shadow-sm relative">
                         <i data-lucide="search" class="text-[#8A847E] mr-2 shrink-0 w-[18px] h-[18px]"></i>
@@ -2035,6 +2162,7 @@
                     </div>
                 </div>
 
+                <!-- 카테고리 필터 탭 -->
                 <div class="w-full px-5 mt-4 flex gap-2 overflow-x-auto no-scrollbar pb-1">
                     <button data-category="전체" onclick="setAlbumFilter('전체', this)" class="album-filter-btn flex-1 py-2 rounded-lg text-[13px] font-sans whitespace-nowrap transition-colors border shadow-sm bg-[#8B7355] text-white border-[#8B7355] font-medium">
                         전체
@@ -2051,10 +2179,12 @@
                 </div>
             </div>
 
+            <!-- 사진 앨범 그리드 영역 -->
             <div class="px-5 pt-2 pb-10">
                 <div id="album-grid-content" class="grid grid-cols-2 gap-x-3 gap-y-4"></div>
             </div>
 
+            <!-- 다중선택 하단 플로팅 컨트롤 바 -->
             <div id="album-multi-action-bar" style="display: none;" class="absolute bottom-[20px] left-5 right-5 rounded-2xl bg-[#3A3532] text-white px-6 py-4 flex justify-between items-center z-[95] shadow-2xl">
                 <div class="flex items-center gap-3">
                     <button onclick="clearAlbumSelection()" class="text-[#DCD6CC] hover:text-white transition-colors">
@@ -2063,10 +2193,12 @@
                     <span id="album-selected-count-text" class="font-sans font-bold text-[13px]">0장 선택됨</span>
                 </div>
                 <div class="flex gap-5">
+                    <!-- 선택 삭제 -->
                     <button onclick="deleteSelectedAlbums()" class="flex flex-col items-center gap-1 text-[#FF453A] hover:text-[#FF6961] transition-colors">
                         <i data-lucide="trash-2" class="w-[20px] h-[20px]"></i>
                         <span class="text-[10px] font-sans">삭제</span>
                     </button>
+                    <!-- 네이티브 공유 및 기기 저장 -->
                     <button onclick="shareSelectedAlbums()" class="flex flex-col items-center gap-1 hover:text-[#DCD6CC] transition-colors">
                         <i data-lucide="share-2" class="w-[20px] h-[20px]"></i>
                         <span class="text-[10px] font-sans">공유</span>
@@ -2078,22 +2210,27 @@
                 </div>
             </div>
 
+            <!-- 사진 추가 Floating Action Button -->
             <button onclick="openCreateAlbum()" class="absolute bottom-[24px] right-6 w-14 h-14 bg-[#3A3532] text-[#F3EFE8] rounded-full flex items-center justify-center shadow-[0_8px_20px_rgba(58,53,50,0.3)] active:scale-95 z-40 border border-[#2A2522]">
                 <i data-lucide="plus" class="w-7 h-7" stroke-width="1.5"></i>
             </button>
         </div>
 
+        <!-- [탭] 임시 화면들 -->
         <div id="page-sales" class="page p-6 no-scrollbar"><div class="h-full flex items-center justify-center text-[#999]">매출 준비중입니다.</div></div>
         <div id="page-inventory" class="page p-6 no-scrollbar"><div class="h-full flex items-center justify-center text-[#999]">재고 준비중입니다.</div></div>
         <div id="page-as" class="page p-6 no-scrollbar"><div class="h-full flex items-center justify-center text-[#999]">A/S 준비중입니다.</div></div>
         <div id="page-sp" class="page p-6 no-scrollbar"><div class="h-full flex items-center justify-center text-[#999]">SP 준비중입니다.</div></div>
     </div>
 
+    <!-- 하단 네비게이션 (시안 3 완벽 매칭: 4x2 격자 그리드 형태 최적화 교정 완료) -->
     <div id="bottom-nav-bar" class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] bg-white border-t border-[#F0EFEA] grid grid-cols-4 gap-y-4 gap-x-2 px-4 pt-4 pb-[calc(24px+env(safe-area-inset-bottom))] z-[90] shadow-[0_-8px_30px_rgba(0,0,0,0.04)] rounded-t-[24px]">
+        <!-- 첫 번째 줄 (정밀 정렬 및 아이콘-라벨 분배) -->
         <div class="nav-item flex flex-col items-center justify-center gap-1 text-[#A0A0A0] w-full cursor-pointer" onclick="window.switchTab('notice', this)"><i data-lucide="megaphone" class="w-[22px] h-[22px]"></i><span class="text-[11.5px] font-bold">공지사항</span></div>
         <div class="nav-item flex flex-col items-center justify-center gap-1 text-[#A0A0A0] w-full cursor-pointer" onclick="window.switchTab('schedule', this)"><i data-lucide="calendar-days" class="w-[22px] h-[22px]"></i><span class="text-[11.5px] font-bold">근무표</span></div>
         <div class="nav-item flex flex-col items-center justify-center gap-1 text-[#A0A0A0] w-full cursor-pointer active" onclick="window.switchTab('calendar', this)"><i data-lucide="calendar" class="w-[22px] h-[22px]"></i><span class="text-[11.5px] font-bold">캘린더</span></div>
         <div class="nav-item flex flex-col items-center justify-center gap-1 text-[#A0A0A0] w-full cursor-pointer" onclick="window.switchTab('sales', this)"><i data-lucide="bar-chart-3" class="w-[22px] h-[22px]"></i><span class="text-[11.5px] font-bold">매출</span></div>
+        <!-- 두 번째 줄 -->
         <div class="nav-item flex flex-col items-center justify-center gap-1 text-[#A0A0A0] w-full cursor-pointer" onclick="window.switchTab('inventory', this)"><i data-lucide="package" class="w-[22px] h-[22px]"></i><span class="text-[11.5px] font-bold">재고</span></div>
         <div class="nav-item flex flex-col items-center justify-center gap-1 text-[#A0A0A0] w-full cursor-pointer" onclick="window.switchTab('as', this)"><i data-lucide="wrench" class="w-[22px] h-[22px]"></i><span class="text-[11.5px] font-bold">A/S</span></div>
         <div class="nav-item flex flex-col items-center justify-center gap-1 text-[#A0A0A0] w-full cursor-pointer" onclick="window.switchTab('sp', this)"><i data-lucide="star" class="w-[22px] h-[22px]"></i><span class="text-[11.5px] font-bold">SP</span></div>
@@ -2101,6 +2238,7 @@
     </div>
 </div>
 
+<!-- 근무표 월 선택 모달 -->
 <div id="schedule-month-modal" style="display:none;" class="fixed inset-0 bg-black/35 z-[260] items-end justify-center">
     <div class="w-full max-w-md bg-[#FAF9F5] rounded-t-[26px] p-6 pb-[calc(24px+env(safe-area-inset-bottom))] shadow-2xl">
         <div class="flex items-center justify-between mb-5">
@@ -2117,10 +2255,15 @@
     </div>
 </div>
 
+<!-- ==========================================
+     전체화면 모달 영역 (공지사항 등록/상세/앨범/근무표작성/휴무신청)
+     ========================================== -->
+
+<!-- 공지사항 등록 -->
 <div id="page-notice-create" style="display: none;" class="fixed inset-0 w-full max-w-md mx-auto bg-[#FAF9F5] z-[200] flex-col">
     <div class="pt-12 pb-4 bg-[#FAF9F5] flex-shrink-0 relative flex flex-col items-center">
         <button onclick="closeNoticeCreate()" class="absolute right-6 top-14 text-[#999] p-2"><i data-lucide="x" class="w-6 h-6"></i></button>
-        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Patek_Philippe_logo.svg/512px-Patek_Philippe_logo.svg.png" alt="Patek Philippe" class="w-20 h-auto object-contain mt-2 mb-4" />
+        <img src="log.png" alt="Patek Philippe" class="w-32 h-auto object-contain mt-2 mb-4" />
         <h2 class="text-2xl font-serif font-bold mb-2 text-[#333]">공지사항 등록</h2>
     </div>
 
@@ -2169,17 +2312,19 @@
     </div>
 </div>
 
+<!-- 공지사항 뷰어/수정 화면 -->
 <div id="page-notice-detail" style="display: none;" class="fixed inset-0 w-full max-w-md mx-auto bg-[#FAF9F5] z-[200] flex-col">
     <div class="pt-12 pb-4 bg-[#FAF9F5] flex-shrink-0 relative flex flex-col items-center">
         <button id="notice-detail-edit-btn" onclick="enterNoticeEditMode()" class="absolute left-6 top-14 text-[#8B7355] p-2 active:scale-95">
             <i data-lucide="pencil" class="w-5 h-5"></i>
         </button>
         <button onclick="closeNoticeDetail()" class="absolute right-6 top-14 text-[#999] p-2"><i data-lucide="x" class="w-6 h-6"></i></button>
-        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Patek_Philippe_logo.svg/512px-Patek_Philippe_logo.svg.png" alt="Patek Philippe" class="w-20 h-auto object-contain mt-2 mb-3" />
+        <img src="log.png" alt="Patek Philippe" class="w-32 h-auto object-contain mt-2 mb-3" />
         <h2 id="notice-detail-modal-title" class="text-2xl font-serif font-bold text-[#333]">공지사항</h2>
     </div>
 
     <div class="flex-1 overflow-y-auto p-6 pb-40 bg-[#FAF9F5]">
+        <!-- Viewer mode -->
         <div id="notice-detail-view-area" class="space-y-5">
             <div class="flex items-center justify-between">
                 <span id="view-notice-category" class="inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-sm font-bold">매장</span>
@@ -2217,6 +2362,7 @@
             </div>
         </div>
 
+        <!-- Edit mode -->
         <div id="notice-detail-edit-area" class="space-y-5" style="display:none;">
             <div>
                 <label class="block text-sm font-semibold text-[#666] mb-3">Category</label>
@@ -2266,21 +2412,27 @@
     </div>
 </div>
 
+<!-- 앨범 업로드/수정 모달 -->
 <div id="page-album-modal" style="display: none;" class="fixed inset-0 w-full max-w-md mx-auto bg-[#FAF9F5] z-[210] flex-col font-sans">
+    
+    <!-- 모달 헤더 (배경 매칭 완료) -->
     <div class="flex justify-between items-center px-5 pt-12 pb-4 bg-[#FAF9F5] sticky top-0 z-20 shrink-0">
         <button onclick="closeAlbumModal()" class="text-[#8A847E] text-[15px] hover:text-[#4A443F] py-2">취소</button>
         <div class="absolute left-1/2 -translate-x-1/2 flex flex-col items-center top-10">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Patek_Philippe_logo.svg/512px-Patek_Philippe_logo.svg.png" alt="Logo" class="w-16 h-auto object-contain mb-1" />
+            <img src="log.png" alt="Logo" class="w-24 h-auto object-contain mb-1" />
             <span id="album-modal-title" class="font-serif text-[18px] text-[#3A3532]">Upload Photo</span>
         </div>
         <button onclick="submitAlbumForm()" class="text-[#8B7355] text-[15px] font-medium hover:text-[#6B5335] py-2">완료</button>
     </div>
 
     <div class="flex-1 overflow-y-auto px-5 pb-8 mt-12 no-scrollbar">
+        <!-- 숨겨진 실물 파일 인풋 -->
         <input type="file" id="album-file-input" multiple accept="image/*" class="hidden" onchange="window.handleAlbumFileChange(event)" />
 
+        <!-- 이미지 미리보기 가로 스크롤 영역 -->
         <div id="album-preview-list" class="flex overflow-x-auto gap-3 no-scrollbar mb-6 pb-2 px-1"></div>
 
+        <!-- 카테고리 태그 선택 -->
         <div class="flex gap-2 mb-6 justify-center">
             <button data-category="착용샷" onclick="setFormCategory('착용샷')" class="album-form-cat-btn flex-1 py-2.5 rounded-[8px] text-[13px] font-sans whitespace-nowrap transition-colors border shadow-sm bg-white text-[#8A847E] border-[#E8E4DB]">
                 착용샷
@@ -2293,6 +2445,7 @@
             </button>
         </div>
 
+        <!-- 데이터 입력 카드 폼 -->
         <div class="bg-white border border-[#E8E4DB] rounded-[14px] p-5 shadow-[0_2px_10px_rgba(0,0,0,0.02)] mb-8">
             <div class="flex flex-col py-3 border-b border-[#F2EFE8]">
                 <span class="text-[13px] text-[#2C2724] font-semibold mb-1.5 ml-1">사진명</span>
@@ -2308,6 +2461,7 @@
             </div>
         </div>
 
+        <!-- 단일 앨범 삭제 (수정 시에만 노출) -->
         <div id="album-delete-btn-container" style="display: none;">
             <button onclick="deleteSingleAlbum()" class="w-full py-4 mt-2 mb-8 bg-white border border-[#E8D8D8] text-[#A06C6C] rounded-[14px] font-sans font-semibold text-sm tracking-wide hover:bg-[#FFF5F5] transition-colors shadow-sm">
                 이 사진 삭제하기
@@ -2316,27 +2470,32 @@
     </div>
 </div>
 
+<!-- 근무표 편집 모달 (작성 모달) -->
 <div id="page-schedule-edit-modal" style="display: none;" class="fixed inset-0 w-full max-w-md mx-auto bg-[#FAF9F5] z-[200] flex-col font-sans">
     <div class="pt-12 pb-4 bg-[#FAF9F5] flex-shrink-0 relative flex flex-col items-center">
         <button onclick="closeScheduleEdit()" class="absolute right-6 top-14 text-[#999] p-2"><i data-lucide="x" class="w-6 h-6"></i></button>
-        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Patek_Philippe_logo.svg/512px-Patek_Philippe_logo.svg.png" alt="Patek Philippe" class="w-20 h-auto object-contain mt-2 mb-4" />
+        <img src="log.png" alt="Patek Philippe" class="w-32 h-auto object-contain mt-2 mb-4" />
         <h2 id="edit-schedule-title" class="text-2xl font-serif text-[#333]">근무표 작성</h2>
     </div>
     <div id="edit-staff-rows-container" class="flex-1 overflow-y-auto p-6 space-y-4 pb-32">
+        <!-- 직원별 스케줄 로우 드롭다운 리스트 동적 삽입 -->
     </div>
     <div class="absolute bottom-0 w-full p-6 bg-white border-t border-[#F0EFEA] pb-8">
         <button onclick="saveScheduleSheet()" class="w-full bg-[#B4975A] text-white py-4 rounded-xl text-[17px] font-bold shadow-md active:scale-95 transition-transform">저장하기</button>
     </div>
 </div>
 
+<!-- 휴무 신청 캘린더 모달 (사진 6 완벽 복제) -->
 <div id="page-leave-calendar-modal" style="display: none;" class="fixed inset-0 w-full max-w-md mx-auto bg-[#FAF9F5] z-[200] flex-col font-sans">
     <div class="pt-12 pb-4 bg-[#FAF9F5] flex-shrink-0 relative flex flex-col items-center">
         <button onclick="closeLeaveCalendarModal()" class="absolute right-6 top-14 text-[#999] p-2"><i data-lucide="x" class="w-6 h-6"></i></button>
-        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Patek_Philippe_logo.svg/512px-Patek_Philippe_logo.svg.png" alt="Patek Philippe" class="w-20 h-auto object-contain mt-2 mb-2" />
+        <img src="log.png" alt="Patek Philippe" class="w-32 h-auto object-contain mt-2 mb-2" />
         <h2 class="text-2xl font-serif text-[#333]">휴무 신청</h2>
+        <!-- 삭제 요청된 텍스트 제거 완료 -->
     </div>
 
     <div class="flex-1 overflow-y-auto px-5 pb-32 no-scrollbar">
+        <!-- 연월 조정 바 & 네이티브 달력 선택기 융합 -->
         <div class="flex justify-between items-center bg-white border border-[#E8E4DB] rounded-xl p-3 mb-4 shadow-sm">
             <button onclick="adjustScheduleMonth(-1)" class="p-1 hover:bg-[#F2EFE8] rounded"><i data-lucide="chevron-left" class="w-4 h-4 text-[#8B7355]"></i></button>
             <div class="relative flex items-center justify-center bg-slate-50 px-3 py-1.5 rounded-lg cursor-pointer border border-[#E8E4DB]">
@@ -2347,13 +2506,17 @@
             <button onclick="adjustScheduleMonth(1)" class="p-1 hover:bg-[#F2EFE8] rounded"><i data-lucide="chevron-right" class="w-4 h-4 text-[#8B7355]"></i></button>
         </div>
 
+        <!-- 요일 헤더 -->
         <div class="grid grid-cols-7 gap-1 text-center font-bold text-xs text-[#666] mb-1">
             <div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div class="text-blue-500">토</div><div class="text-red-500">일</div>
         </div>
 
+        <!-- 달력 본체 그리드 -->
         <div id="leave-calendar-grid" class="grid grid-cols-7 gap-1 bg-white border border-[#F0EFEA] rounded-xl p-1 shadow-sm mb-4 overflow-hidden">
+            <!-- JS 렌더링 -->
         </div>
 
+        <!-- 6번 이미지 시안 범례 표시 완벽 구현 -->
         <div class="flex flex-wrap justify-center items-center gap-4 text-[10px] font-bold text-[#666] mb-6">
             <div class="flex items-center gap-1.5"><span class="w-3.5 h-3.5 bg-[#DDEBFF] border border-[#A0C4FF] rounded-sm"></span><span>휴무 신청</span></div>
             <div class="flex items-center gap-1.5"><span class="w-3.5 h-3.5 bg-[#E2F0D9] border border-[#A9D18E] rounded-sm"></span><span>정기휴점</span></div>
@@ -2361,11 +2524,13 @@
             <div class="flex items-center gap-1.5"><span class="w-3.5 h-3.5 border-2 border-amber-500 rounded-sm"></span><span>행사</span></div>
         </div>
 
+        <!-- 입력란: 사유 & 지역 -->
         <div class="space-y-4">
             <div>
                 <label class="block text-xs font-bold text-[#666] mb-1.5 ml-1">휴무 사유 (선택 사항)</label>
                 <input id="leave-reason-input" type="text" placeholder="예: 정기 검진, 연차 등" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-3 outline-none text-xs font-semibold" />
             </div>
+            <!-- 3일 이상 연휴인 경우 노출되는 지역 필수 입력란 -->
             <div id="leave-region-container" style="display: none;">
                 <label class="block text-xs font-bold text-red-600 mb-1.5 ml-1">지역 (3일 이상 휴무 시 필수 입력)</label>
                 <input id="leave-region-input" type="text" placeholder="예: 일본, 제주도 등" class="w-full bg-white border-2 border-[#B4975A] rounded-xl p-3 outline-none text-xs font-bold text-[#333]" />
@@ -2373,6 +2538,7 @@
         </div>
     </div>
 
+    <!-- 푸터 단추들 (휴무 신청하기 / 신청 내역 보기) -->
     <div class="absolute bottom-0 w-full p-4 bg-white border-t border-[#F0EFEA] pb-6 flex flex-col gap-2">
         <button onclick="submitLeaveRequest()" class="w-full bg-[#B4975A] text-white py-3.5 rounded-xl text-[15px] font-bold shadow-md active:scale-95 transition-all">
             휴무 신청하기
@@ -2383,16 +2549,24 @@
     </div>
 </div>
 
+<!-- 휴무 신청 내역 리스트 모달 -->
 <div id="page-leave-history-modal" style="display: none;" class="fixed inset-0 w-full max-w-md mx-auto bg-[#FAF9F5] z-[220] flex-col font-sans">
     <div class="pt-12 pb-4 bg-[#FAF9F5] flex-shrink-0 relative flex flex-col items-center">
         <button onclick="closeLeaveHistoryModal()" class="absolute right-6 top-14 text-[#999] p-2"><i data-lucide="x" class="w-6 h-6"></i></button>
-        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Patek_Philippe_logo.svg/512px-Patek_Philippe_logo.svg.png" alt="Patek Philippe" class="w-20 h-auto object-contain mt-2 mb-4" />
+        <img src="log.png" alt="Patek Philippe" class="w-32 h-auto object-contain mt-2 mb-4" />
         <h2 class="text-2xl font-serif text-[#333]">휴무 신청 내역</h2>
     </div>
     <div id="leave-history-list" class="flex-1 overflow-y-auto p-6 space-y-3 pb-24 no-scrollbar">
+        <!-- 내역 리스트 주입 -->
     </div>
 </div>
 
+
+<!-- ==========================================
+     커스텀 모달 다이얼로그 (Alert / Confirm)
+     ========================================== -->
+
+<!-- 커스텀 알림 모달 (Alert) -->
 <div id="custom-alert" style="display: none;" class="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center p-6 z-[200000]">
     <div class="bg-[#FCFBF9] rounded-xl p-6 w-full max-w-[280px] shadow-2xl border border-[#E8E4DB] flex flex-col items-center">
         <div class="w-12 h-12 rounded-full bg-[#FDFBF7] border border-[#E8E4DB] flex items-center justify-center mb-4 text-[#8B7355]">
@@ -2403,6 +2577,7 @@
     </div>
 </div>
 
+<!-- 커스텀 확인 모달 (Confirm) -->
 <div id="custom-confirm" style="display: none;" class="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center p-6 z-[200000]">
     <div class="bg-[#FCFBF9] rounded-xl p-6 w-full max-w-[280px] shadow-2xl border border-[#E8E4DB] flex flex-col items-center">
         <div id="custom-confirm-icon-wrap" class="w-12 h-12 rounded-full bg-[#FFF5F5] border border-[#E8D8D8] flex items-center justify-center mb-4 text-[#A06C6C]">
@@ -2415,6 +2590,7 @@
         </div>
     </div>
 </div>
+
 
 <script>
     window.__customConfirmCallback = null;
