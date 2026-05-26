@@ -15,7 +15,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- Babel (React 코드를 브라우저가 읽을 수 있게 변환) -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js">ㅁ</script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
     <style>
         /* 스크롤바 숨기기 */
@@ -45,16 +45,18 @@
         } from 'https://esm.sh/lucide-react@0.344.0';
 
         // ==========================================
-        // 1. Firebase 설정 (이 부분을 본인의 설정으로 변경하세요)
+        // 1. Firebase 설정
+        // ⭐️ 주의: 아래 값을 반드시 'patek-s' 프로젝트의 설정값으로 채워주세요! ⭐️
+        // (이전에 mymoneyapp 값이 들어가 있어서 도메인 오류가 발생했습니다)
         // ==========================================
         const IS_CANVAS = typeof __firebase_config !== 'undefined';
         let firebaseConfig = {
-          apiKey: "AIzaSyBAGzTOYqnVFysfHvKKAw7KNX1QOnEXWmU",
-          authDomain: "mymoneyapp-e6ef9.firebaseapp.com",
-          projectId: "mymoneyapp-e6ef9",
-          storageBucket: "mymoneyapp-e6ef9.firebasestorage.app",
-          messagingSenderId: "461181649829",
-          appId: "1:461181649829:web:ca70e6ed2ef0ed18a8de4c"
+          apiKey: "여기에_patek-s_apiKey를_넣으세요",
+          authDomain: "patek-s.firebaseapp.com",
+          projectId: "patek-s",
+          storageBucket: "patek-s.appspot.com",
+          messagingSenderId: "여기에_patek-s_messagingSenderId를_넣으세요",
+          appId: "여기에_patek-s_appId를_넣으세요"
         };
 
         if (IS_CANVAS) {
@@ -64,6 +66,14 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
+
+        // ⭐️ 가계부 앱과 100% 동일한 리다이렉트 처리 로직 (최상단 실행)
+        getRedirectResult(auth).catch(error => {
+            console.error("Redirect Error:", error);
+            if (error.code === 'auth/unauthorized-domain') {
+                alert("구글 로그인 정책: 현재 Vercel 주소가 patek-s 파이어베이스의 승인된 도메인에 등록되지 않았습니다.");
+            }
+        });
 
         const getAppId = () => typeof __app_id !== 'undefined' ? __app_id : 'patek-s';
         const getBaseCollection = (collectionName) => {
@@ -311,7 +321,7 @@
           const [user, setUser] = useState(null);
           const [userData, setUserData] = useState(null);
           const [authLoading, setAuthLoading] = useState(true); // 초기 앱 로딩용
-          const [isLoggingIn, setIsLoggingIn] = useState(false); // 버튼 클릭 시 로그인 진행 상태용
+          const [isLoggingIn, setIsLoggingIn] = useState(false); // 버튼 클릭 시 로딩용
           const [currentTab, setCurrentTab] = useState('calendar');
 
           useEffect(() => {
@@ -328,18 +338,7 @@
             };
             initAuth();
 
-            // 모바일/PWA 리다이렉트 로그인 결과 처리
-            getRedirectResult(auth).then((result) => {
-              if (result && result.user) {
-                setUser(result.user);
-              }
-              setIsLoggingIn(false);
-            }).catch((err) => {
-              console.error("Redirect Error:", err);
-              setIsLoggingIn(false);
-            });
-
-            // 인증 상태 변화 감지
+            // ⭐️ 가계부 앱과 동일하게 onAuthStateChanged 로 감시 ⭐️
             const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
               setUser(currentUser);
               if (currentUser) {
@@ -362,7 +361,7 @@
                     }
                   } catch (e) {
                     console.error("Firestore Error:", e);
-                    alert("데이터베이스 연결에 문제가 발생했습니다.");
+                    alert("데이터베이스 연결 오류");
                   }
                 } else {
                   // Canvas 시뮬레이터 가상 로그인 시 기본 승인 상태 처리
@@ -377,43 +376,35 @@
             return () => unsubscribe();
           }, []);
 
-          // 첨부해주신 로그인 로직 완벽 반영 (에러 방어 코드 추가)
+          // ⭐️ 가계부 앱과 동일한 로그인 로직 ⭐️
           const handleGoogleLogin = async () => {
             if (!auth) return;
             if (IS_CANVAS) return;
 
-            setIsLoggingIn(true); // 버튼의 상태만 "로그인 중..."으로 변경
+            setIsLoggingIn(true);
             try {
               const provider = new GoogleAuthProvider();
-              // 계정 선택 화면을 강제로 띄우는 옵션 추가
-              provider.setCustomParameters({ prompt: 'select_account' });
               
               const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
               const isPWA    = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
 
               if (isMobile || isPWA) {
-                // 모바일 또는 PWA 환경에서는 리다이렉션 로그인 수행
                 await signInWithRedirect(auth, provider);
               } else {
-                // PC 환경에서는 즉시 로그인 팝업 호출
                 await signInWithPopup(auth, provider);
               }
             } catch (error) {
               console.error("Google Login Error:", error);
-              
-              // 팝업이 바로 꺼지는 가장 큰 원인: Vercel 도메인이 Firebase에 미등록된 경우 안내창 표시
               if (error.code === 'auth/unauthorized-domain') {
-                  alert("에러: Firebase 승인된 도메인에 Vercel 주소가 등록되지 않았습니다. Firebase 콘솔(Authentication -> Settings -> Authorized domains)에서 현재 주소를 추가해주세요.");
+                  alert("구글 로그인 정책: 현재 주소가 승인된 도메인이 아닙니다.");
               } else if (error.code !== 'auth/popup-closed-by-user') {
-                  alert("로그인 에러: " + error.message);
+                  alert("로그인 중 오류가 발생했습니다.\n" + error.message);
               }
-              
-              // 에러 발생 시 무한 로딩 해제
               setIsLoggingIn(false);
             }
           };
 
-          // 초기 인증 상태 확인 중에만 띄우는 로딩
+          // 초기 로딩 화면
           if (authLoading) return <div className="h-screen flex items-center justify-center bg-[#FAF9F5] text-[#B4975A]">로딩중...</div>;
 
           // 로그인 화면
