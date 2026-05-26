@@ -155,11 +155,11 @@
 
     let currentUser = null;
     let unsubscribeNotices = null;
-    let unsubscribeApproval = null;
+    let unsubscribeApproval = null; // 승인 감시용
     let unsubscribeAlbums = null;
     let unsubscribeSchedules = null;
     let unsubscribeLeaveRequests = null;
-    
+
     window.appNotices = [];
     window.noticeSearchQuery = '';
     window.noticeCategoryFilter = '전체';
@@ -175,9 +175,9 @@
     // 근무표 및 휴무 신청 상태값
     window.scheduleYear = 2026;
     window.scheduleMonth = 5;
-    window.schedulesData = {}; // Firestore에서 가져온 월별 원시 근무표 데이터
-    window.leaveRequests = []; // Firestore에서 가져온 휴무 리스트
-    window.storeStaffs = ['옥영세', '엄인주', '장용석', '최혜지', '이승범', '형영지']; // 기본 직원 매핑
+    window.schedulesData = {};
+    window.leaveRequests = [];
+    window.storeStaffs = ['옥영세', '엄인주', '장용석', '최혜지', '이승범', '형영지'];
     window.leaveRangeStart = null;
     window.leaveRangeEnd = null;
 
@@ -190,7 +190,7 @@
 
     const APP_ID = 'patek-s';
 
-    // 모바일 등 환경을 위한 리다이렉트 처리
+    // 모바일 등 환경을 위한 리다이렉트 처리 - 첨부해주신 가계부 앱 방식 그대로
     getRedirectResult(auth).catch(console.error);
 
     onAuthStateChanged(auth, (user) => {
@@ -199,7 +199,7 @@
             document.getElementById('login-page').style.display = 'none';
             document.getElementById('loading-overlay').style.display = 'flex';
             
-            // 로그인 성공 후 승인 여부 확인
+            // 바로 데이터를 부르지 않고, 가입 승인 여부를 먼저 확인합니다.
             checkApproval(user);
         } else {
             currentUser = null;
@@ -215,7 +215,7 @@
             // 로그아웃 상태면 무조건 로그인 페이지만 띄움
             document.getElementById('loading-overlay').style.display = 'none';
             document.getElementById('pending-page').style.display = 'none';
-            document.querySelector('.app-container').style.display = 'none';
+            document.getElementById('app-container').style.display = 'none';
             document.getElementById('page-notice-create').style.display = 'none';
             document.getElementById('page-notice-detail').style.display = 'none';
             document.getElementById('page-album-modal').style.display = 'none';
@@ -223,49 +223,33 @@
         }
     });
 
-    // 가입 승인 확인 로직
+    // 가입 승인 확인 로직 - 첨부해주신 가계부 앱 구조를 patek-s APP_ID에 맞춰 그대로 사용
     function checkApproval(user) {
-        const artifactUserDocRef = doc(db, 'artifacts', APP_ID, 'users', user.uid);
-        const rootUserDocRef = doc(db, 'users', user.uid);
+        const userDocRef = doc(db, 'artifacts', APP_ID, 'users', user.uid);
         
-        unsubscribeApproval = onSnapshot(artifactUserDocRef, async (docSnap) => {
-            let isApproved = false;
-            let userData = null;
-
+        unsubscribeApproval = onSnapshot(userDocRef, (docSnap) => {
             if (docSnap.exists()) {
-                userData = docSnap.data();
-                isApproved = userData.isApproved === true || userData.approved === true;
-            } else {
-                // 기존 patek-s 앱에서 이미 승인된 사용자가 있을 수 있어 root users도 함께 확인
-                try {
-                    const rootSnap = await getDoc(rootUserDocRef);
-                    if (rootSnap.exists()) {
-                        const rootData = rootSnap.data();
-                        isApproved = rootData.isApproved === true || rootData.approved === true;
-                        userData = rootData;
-                    }
-                } catch(e) {
-                    console.error('root users 승인 확인 실패:', e);
+                const data = docSnap.data();
+                if (data.isApproved === true || data.approved === true) {
+                    // [1] 관리자가 승인한 경우 -> 정상 앱 접속
+                    document.getElementById('loading-overlay').style.display = 'none';
+                    document.getElementById('pending-page').style.display = 'none';
+                    document.getElementById('app-container').style.display = 'flex';
+                    
+                    fetchNotices();
+                    fetchAlbums(user);
+                    fetchSchedules();
+                    fetchLeaveRequests();
+                    lucide.createIcons();
+                } else {
+                    // [2] 로그인 이력은 있으나 아직 관리자가 승인 안 한 경우
+                    document.getElementById('loading-overlay').style.display = 'none';
+                    document.getElementById('app-container').style.display = 'none';
+                    document.getElementById('pending-page').style.display = 'flex';
                 }
-            }
-
-            if (isApproved === true) {
-                document.getElementById('loading-overlay').style.display = 'none';
-                document.getElementById('pending-page').style.display = 'none';
-                document.querySelector('.app-container').style.display = 'flex';
-                
-                fetchNotices();
-                fetchAlbums(user);
-                fetchSchedules();
-                fetchLeaveRequests();
-                lucide.createIcons();
-            } else if (docSnap.exists()) {
-                document.getElementById('loading-overlay').style.display = 'none';
-                document.querySelector('.app-container').style.display = 'none';
-                document.getElementById('pending-page').style.display = 'flex';
             } else {
-                // 처음 로그인한 사용자 문서 생성: 가계부 앱 방식과 호환되도록 artifacts 경로에 생성
-                setDoc(artifactUserDocRef, {
+                // [3] 처음 앱에 로그인한 사용자 -> 데이터베이스에 대기(false) 상태로 문서 만들기
+                setDoc(userDocRef, {
                     isApproved: false,
                     approved: false,
                     email: user.email || '',
@@ -274,7 +258,7 @@
                     createdAt: new Date().toISOString()
                 }, { merge: true }).then(() => {
                     document.getElementById('loading-overlay').style.display = 'none';
-                    document.querySelector('.app-container').style.display = 'none';
+                    document.getElementById('app-container').style.display = 'none';
                     document.getElementById('pending-page').style.display = 'flex';
                 }).catch(e => {
                     console.error("문서 생성 실패", e);
@@ -316,14 +300,14 @@
     };
 
     window.logout = function() {
-        window.showCustomConfirm("로그아웃 하시겠습니까?", () => {
+        if(confirm("정말 로그아웃 하시겠습니까?")) {
             if(unsubscribeNotices) unsubscribeNotices();
             if(unsubscribeApproval) unsubscribeApproval();
             if(unsubscribeAlbums) unsubscribeAlbums();
             if(unsubscribeSchedules) unsubscribeSchedules();
             if(unsubscribeLeaveRequests) unsubscribeLeaveRequests();
             signOut(auth);
-        });
+        }
     };
 
     // ==========================================
