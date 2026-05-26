@@ -2,7 +2,8 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <!-- 핀치 줌을 허용하도록 maximum-scale 늘리고 user-scalable을 yes로 변경 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
     <title>Patek-S</title>
     
     <!-- iOS 홈 화면 추가를 위한 PWA 메타 태그 -->
@@ -74,16 +75,25 @@
         .spinner { border: 3px solid #E8E4DB; border-top: 3px solid #B4975A; border-radius: 50%; width: 36px; height: 36px; animation: spin 1s linear infinite; margin-bottom: 16px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        /* 테이블 스크롤 및 극도로 섬세한 텍스트 가독성 최적화 */
+        /* 테이블 스크롤 및 극도로 섬세한 텍스트 가독성 최적화 (한 화면에 다 들어오도록 크기 축소) */
+        .schedule-table {
+            table-layout: fixed;
+            width: 100%;
+        }
         .schedule-table th, .schedule-table td {
             border: 1px solid #E2E0D9;
             text-align: center;
             vertical-align: middle;
-            font-size: 9px;
-            padding: 6px 1px;
-            min-width: 22px;
-            line-height: 1.1;
+            font-size: 7.5px;
+            padding: 3px 0;
+            line-height: 1;
+            overflow: hidden;
+            word-break: keep-all;
         }
+        /* 첫 두 열(연차, 성명) 넓이 고정 */
+        .schedule-table th:nth-child(1), .schedule-table td:nth-child(1) { width: 18px; }
+        .schedule-table th:nth-child(2), .schedule-table td:nth-child(2) { width: 26px; }
+        
         .schedule-table th {
             background-color: #F8F6F0;
             font-weight: 700;
@@ -92,12 +102,6 @@
         .holiday-sun { background-color: #FDE2E4 !important; color: #E63946 !important; }
         .holiday-sat { background-color: #E2EFFF !important; color: #1D3557 !important; }
         .holiday-pub { background-color: #FFD6E8 !important; color: #D81B60 !important; }
-
-        /* 확대/축소 지원 래퍼 */
-        .zoom-container {
-            transform-origin: top left;
-            transition: transform 0.15s ease-out;
-        }
     </style>
 </head>
 <body>
@@ -155,9 +159,6 @@
     window.storeStaffs = ['옥영세', '엄인주', '장용석', '최혜지', '이승범', '형영지']; // 기본 직원 매핑
     window.leaveRangeStart = null;
     window.leaveRangeEnd = null;
-
-    // 근무표 줌(확대) 배율 값
-    window.scheduleZoomScale = 1.0;
 
     // 공휴일 정보 (2026년 기준 예시 데이터)
     const PUBLIC_HOLIDAYS_2026 = {
@@ -935,8 +936,35 @@
             window.scheduleMonth = 12;
             window.scheduleYear -= 1;
         }
-        document.getElementById('schedule-month-text').innerText = `${window.scheduleYear}년 ${window.scheduleMonth}월`;
-        document.getElementById('leave-month-text').innerText = `${window.scheduleYear}년 ${window.scheduleMonth}월`;
+        
+        // 날짜 텍스트 업데이트
+        const textVal = `${window.scheduleYear}년 ${window.scheduleMonth}월`;
+        document.getElementById('schedule-month-text').innerText = textVal;
+        document.getElementById('leave-month-text').innerText = textVal;
+        
+        // 내부 date input 값 동기화
+        const monthVal = `${window.scheduleYear}-${String(window.scheduleMonth).padStart(2, '0')}`;
+        document.getElementById('schedule-month-picker').value = monthVal;
+        document.getElementById('leave-month-picker').value = monthVal;
+        
+        window.renderScheduleSheet();
+        window.renderLeaveCalendar();
+    };
+    
+    // 네이티브 달력 월 선택 연동
+    window.handleMonthPicker = function(val) {
+        if(!val) return;
+        const [year, month] = val.split('-');
+        window.scheduleYear = parseInt(year);
+        window.scheduleMonth = parseInt(month);
+        
+        const textVal = `${window.scheduleYear}년 ${window.scheduleMonth}월`;
+        document.getElementById('schedule-month-text').innerText = textVal;
+        document.getElementById('leave-month-text').innerText = textVal;
+        
+        document.getElementById('schedule-month-picker').value = val;
+        document.getElementById('leave-month-picker').value = val;
+        
         window.renderScheduleSheet();
         window.renderLeaveCalendar();
     };
@@ -957,7 +985,7 @@
         const headerWeeksTr = document.getElementById('sheet-header-weeks');
         if (!headerDaysTr || !headerWeeksTr) return;
 
-        headerDaysTr.innerHTML = '<th rowspan="2" class="font-sans text-xs">연차</th><th rowspan="2" class="font-sans text-xs min-w-[50px]">성명</th>';
+        headerDaysTr.innerHTML = '<th rowspan="2" class="font-sans text-[7.5px]">연차</th><th rowspan="2" class="font-sans text-[7.5px]">성명</th>';
         headerWeeksTr.innerHTML = '';
 
         for (let d = 1; d <= totalDays; d++) {
@@ -970,14 +998,14 @@
             else if (dayOfWeek === 0) dayClass = "holiday-sun";
             else if (dayOfWeek === 6) dayClass = "holiday-sat";
 
-            headerDaysTr.innerHTML += `<th class="${dayClass} font-sans text-[9px]">${d}</th>`;
+            headerDaysTr.innerHTML += `<th class="${dayClass} font-sans text-[7.5px]">${d}</th>`;
             
             const weekChars = ['일', '월', '화', '수', '목', '금', '토'];
-            headerWeeksTr.innerHTML += `<th class="${dayClass} font-sans text-[9px]">${weekChars[dayOfWeek]}</th>`;
+            headerWeeksTr.innerHTML += `<th class="${dayClass} font-sans text-[7.5px]">${weekChars[dayOfWeek]}</th>`;
         }
 
         // 끝 통계 칼럼 추가
-        headerDaysTr.innerHTML += '<th rowspan="2" class="font-sans text-[9px]">DO</th><th rowspan="2" class="font-sans text-[9px]">A</th><th rowspan="2" class="font-sans text-[9px]">B</th><th rowspan="2" class="font-sans text-[9px]">C</th><th rowspan="2" class="font-sans text-[9px] bg-green-50 text-green-700">사용</th><th rowspan="2" class="font-sans text-[9px]">남은</th>';
+        headerDaysTr.innerHTML += '<th rowspan="2" class="font-sans text-[7.5px]">DO</th><th rowspan="2" class="font-sans text-[7.5px]">A</th><th rowspan="2" class="font-sans text-[7.5px]">B</th><th rowspan="2" class="font-sans text-[7.5px]">C</th><th rowspan="2" class="font-sans text-[7.5px] bg-green-50 text-green-700">사용</th><th rowspan="2" class="font-sans text-[7.5px]">남은</th>';
 
         // 바디 렌더 (직원별 스케줄 테이블 행 채우기)
         const tbody = document.getElementById('sheet-body-staffs');
@@ -1016,7 +1044,7 @@
 
             let rowHtml = `<tr>`;
             rowHtml += `<td class="font-semibold text-center text-[#666] bg-[#FAF9F5]">${initialBalance.toFixed(1)}</td>`;
-            rowHtml += `<td class="font-semibold text-center text-[#333] bg-white sticky left-0 z-10">${staffName}</td>`;
+            rowHtml += `<td class="font-semibold text-center text-[#333] bg-white">${staffName}</td>`;
 
             for (let d = 1; d <= totalDays; d++) {
                 // 당일에 신청한 개인 휴무가 있는지 탐색
@@ -1039,60 +1067,22 @@
                     countDO++;
                 }
 
-                rowHtml += `<td class="font-sans font-medium text-center">${code}</td>`;
+                rowHtml += `<td class="font-sans font-semibold text-[#4A443F] text-center">${code}</td>`;
             }
 
             // 남은 연차 자동 산정
             const remainBalance = initialBalance - usedLeaves;
 
-            rowHtml += `<td class="font-semibold text-center">${countDO}</td>`;
+            rowHtml += `<td class="font-bold text-center">${countDO}</td>`;
             rowHtml += `<td class="font-semibold text-[#4A443F]">${countA}</td>`;
             rowHtml += `<td class="font-semibold text-[#4A443F]">${countB}</td>`;
             rowHtml += `<td class="font-semibold text-[#4A443F]">${countC}</td>`;
             rowHtml += `<td class="font-bold text-green-700 bg-green-50">${usedLeaves.toFixed(1)}</td>`;
-            rowHtml += `<td class="font-semibold text-center">${remainBalance.toFixed(1)}</td>`;
+            rowHtml += `<td class="font-bold text-center">${remainBalance.toFixed(1)}</td>`;
             rowHtml += `</tr>`;
 
             tbody.innerHTML += rowHtml;
         });
-
-        // 줌 레이아웃 비율 제어 트리거 실행
-        window.applyScheduleZoom();
-    };
-
-    // 근무표 확대 비율 슬라이더 및 자동 맞춤 구현
-    window.applyScheduleZoom = function(val) {
-        if (val !== undefined) {
-            window.scheduleZoomScale = parseFloat(val);
-            document.getElementById('schedule-zoom-label').innerText = `${Math.round(window.scheduleZoomScale * 100)}%`;
-        }
-        const container = document.getElementById('schedule-table-zoom-wrapper');
-        if (container) {
-            container.style.transform = `scale(${window.scheduleZoomScale})`;
-            
-            // scale 적용에 따른 외부 컨테이너의 높이를 확보하기 위한 보정
-            const tableElement = container.querySelector('table');
-            if (tableElement) {
-                const scaledHeight = tableElement.offsetHeight * window.scheduleZoomScale;
-                container.style.height = `${scaledHeight}px`;
-                
-                const scaledWidth = tableElement.offsetWidth * window.scheduleZoomScale;
-                container.style.width = `${scaledWidth}px`;
-            }
-        }
-    };
-
-    // 가로 100% 한눈에 화면에 맞춤 자동 계산 기능
-    window.fitScheduleToWidth = function() {
-        const viewportWidth = document.getElementById('page-schedule').offsetWidth - 32; // 패딩값 제외
-        const tableElement = document.querySelector('#schedule-table-zoom-wrapper table');
-        if (tableElement && viewportWidth > 0) {
-            const tableRealWidth = tableElement.offsetWidth;
-            const optimalScale = Math.min(1.0, viewportWidth / tableRealWidth);
-            window.scheduleZoomScale = Math.max(0.4, optimalScale); // 최소 40% 보호선
-            document.getElementById('schedule-zoom-slider').value = window.scheduleZoomScale;
-            window.applyScheduleZoom(window.scheduleZoomScale);
-        }
     };
 
     // 근무표 수정 모달 열기 (직원별 슬라이더 수정용 시트 제공)
@@ -1421,13 +1411,6 @@
         });
     };
 
-    // 가로 넓이 리사이징 대응
-    window.addEventListener('resize', () => {
-        if (document.getElementById('page-schedule').classList.contains('active')) {
-            window.fitScheduleToWidth();
-        }
-    });
-
 </script>
 
 <!-- ==========================================
@@ -1503,15 +1486,14 @@
             <div id="notice-list-content" class="space-y-3 mt-4"></div>
         </div>
 
-        <!-- [탭] 신규: 매장 근무표 화면 (완벽한 가운데 정렬 및 줌 기능 통합) -->
+        <!-- [탭] 신규: 매장 근무표 화면 -->
         <div id="page-schedule" class="page bg-[#FAF9F5] no-scrollbar px-4 pt-4">
             
             <!-- 1번 이미지 시안 반영: 정밀한 대칭형 가운데 정렬 헤더 -->
             <div class="flex flex-col items-center mb-6 w-full text-center">
-                <div class="flex justify-center items-center gap-4 w-full max-w-[280px] relative mb-4">
-                    <!-- 보정 가상 공간 확보 후 정중앙 배치 -->
-                    <h2 class="text-2xl font-serif text-[#3A3532] font-semibold text-center ml-12">매장 근무표</h2>
-                    <div class="flex gap-1 ml-auto">
+                <div class="flex items-center justify-center w-full relative mb-4 h-10">
+                    <h2 class="text-2xl font-serif text-[#3A3532] font-semibold absolute left-1/2 -translate-x-1/2 whitespace-nowrap">매장 근무표</h2>
+                    <div class="flex gap-1.5 absolute right-0">
                         <button onclick="openScheduleEdit()" class="w-9 h-9 bg-white border border-[#E8E4DB] rounded-xl flex items-center justify-center text-[#B4975A] shadow-sm active:scale-95">
                             <i data-lucide="plus" class="w-4.5 h-4.5"></i>
                         </button>
@@ -1521,11 +1503,15 @@
                     </div>
                 </div>
 
-                <!-- 1번 이미지 연월 제어 바 완벽 매칭 -->
+                <!-- 연월 제어 바 & 네이티브 달력 선택기 융합 -->
                 <div class="w-full bg-white p-3 rounded-2xl border border-[#F0EFEA] shadow-sm flex justify-between items-center text-sm">
                     <div class="flex items-center gap-3">
                         <button onclick="adjustScheduleMonth(-1)" class="p-1 hover:bg-[#F2EFE8] rounded"><i data-lucide="chevron-left" class="w-4 h-4 text-[#8B7355]"></i></button>
-                        <span id="schedule-month-text" class="text-sm font-bold text-[#3A3532] tracking-wide">2026년 5월</span>
+                        <div class="relative flex items-center justify-center">
+                            <span id="schedule-month-text" class="text-sm font-bold text-[#3A3532] tracking-wide pointer-events-none">2026년 5월</span>
+                            <!-- 터치 시 OS 기본 월 선택기 팝업 -->
+                            <input type="month" id="schedule-month-picker" onchange="handleMonthPicker(this.value)" class="absolute inset-0 opacity-0 w-full h-full cursor-pointer" />
+                        </div>
                         <button onclick="adjustScheduleMonth(1)" class="p-1 hover:bg-[#F2EFE8] rounded"><i data-lucide="chevron-right" class="w-4 h-4 text-[#8B7355]"></i></button>
                     </div>
                     <div class="flex flex-col items-end">
@@ -1535,42 +1521,16 @@
                 </div>
             </div>
 
-            <!-- 확대 / 축소 컨트롤 슬라이더 바 (세로잘림 없이 보기 유틸 기능) -->
-            <div class="mb-4 bg-white p-3 rounded-xl border border-[#E8E4DB] flex items-center justify-between gap-4 shadow-sm text-xs">
-                <div class="flex items-center gap-1.5 text-[#8B7355] font-semibold">
-                    <i data-lucide="zoom-in" class="w-4 h-4"></i>
-                    <span>크기 제어</span>
-                </div>
-                <input 
-                    id="schedule-zoom-slider" 
-                    type="range" 
-                    min="0.5" 
-                    max="1.5" 
-                    step="0.05" 
-                    value="1.0" 
-                    oninput="window.applyScheduleZoom(this.value)" 
-                    class="flex-1 accent-[#8B7355] h-1 bg-slate-100 rounded-lg cursor-pointer"
-                />
-                <div class="flex gap-2 items-center">
-                    <span id="schedule-zoom-label" class="font-bold text-[#333] min-w-[32px] text-right">100%</span>
-                    <button onclick="window.fitScheduleToWidth()" class="bg-[#FAF9F5] border border-[#E8E4DB] hover:bg-slate-50 rounded px-2 py-1 text-[10px] font-bold text-[#8B7355] shadow-xs">화면맞춤</button>
-                </div>
+            <!-- 스크롤 필요없이 뷰포트 내에 모두 보이도록 최적화된 근무표 (핀치 줌 허용) -->
+            <div class="w-full border border-[#E5E5E5] rounded-xl bg-white p-1">
+                <table class="schedule-table">
+                    <thead>
+                        <tr id="sheet-header-days"></tr>
+                        <tr id="sheet-header-weeks"></tr>
+                    </thead>
+                    <tbody id="sheet-body-staffs"></tbody>
+                </table>
             </div>
-
-            <!-- 스크롤 및 줌 스케일링이 통합된 유연한 근무표 스프레드시트 컨테이너 -->
-            <div class="w-full overflow-auto border border-[#E5E5E5] rounded-xl bg-white no-scrollbar p-1" style="max-height: 520px;">
-                <div id="schedule-table-zoom-wrapper" class="zoom-container">
-                    <table class="schedule-table w-full border-collapse">
-                        <thead>
-                            <tr id="sheet-header-days"></tr>
-                            <tr id="sheet-header-weeks"></tr>
-                        </thead>
-                        <tbody id="sheet-body-staffs"></tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- 2번 사진 (평일/주말 안내 가이드표) 완벽 제거 완료 -->
 
         </div>
 
@@ -1819,14 +1779,17 @@
         <button onclick="closeLeaveCalendarModal()" class="absolute right-6 top-14 text-[#999] p-2"><i data-lucide="x" class="w-6 h-6"></i></button>
         <img src="log.png" alt="Patek Philippe" class="w-32 h-auto object-contain mt-2 mb-2" />
         <h2 class="text-2xl font-serif text-[#333]">휴무 신청</h2>
-        <p class="text-[11px] text-[#888] font-semibold tracking-wide">날짜를 선택해 휴무를 신청하세요</p>
+        <!-- 삭제 요청된 텍스트 제거 완료 -->
     </div>
 
     <div class="flex-1 overflow-y-auto px-5 pb-32 no-scrollbar">
-        <!-- 연월 조정 바 -->
+        <!-- 연월 조정 바 & 네이티브 달력 선택기 융합 -->
         <div class="flex justify-between items-center bg-white border border-[#E8E4DB] rounded-xl p-3 mb-4 shadow-sm">
             <button onclick="adjustScheduleMonth(-1)" class="p-1 hover:bg-[#F2EFE8] rounded"><i data-lucide="chevron-left" class="w-4 h-4 text-[#8B7355]"></i></button>
-            <span id="leave-month-text" class="text-base font-bold text-[#3A3532]">2026년 6월</span>
+            <div class="relative flex items-center justify-center">
+                <span id="leave-month-text" class="text-base font-bold text-[#3A3532] pointer-events-none">2026년 6월</span>
+                <input type="month" id="leave-month-picker" onchange="handleMonthPicker(this.value)" class="absolute inset-0 opacity-0 w-full h-full cursor-pointer" />
+            </div>
             <button onclick="adjustScheduleMonth(1)" class="p-1 hover:bg-[#F2EFE8] rounded"><i data-lucide="chevron-right" class="w-4 h-4 text-[#8B7355]"></i></button>
         </div>
 
