@@ -131,6 +131,7 @@
     window.noticeCategoryFilter = '전체';
     window.noticeSortType = 'registerDesc';
     window.selectedNoticeId = null;
+    window.noticeEditCategory = '';
     window.albums = [];
     window.selectedAlbumIds = [];
     window.albumFilter = '전체';
@@ -545,24 +546,54 @@
         const editBtn = document.getElementById('notice-detail-edit-btn');
         const saveBtn = document.getElementById('notice-detail-save-btn');
         const completeBtn = document.getElementById('notice-detail-complete-btn');
+        const modalTitle = document.getElementById('notice-detail-modal-title');
 
         if (!viewArea || !editArea) return;
 
         if (mode === 'edit') {
             viewArea.style.display = 'none';
             editArea.style.display = 'block';
+            if (modalTitle) modalTitle.innerText = 'Edit Announcement';
             if (editBtn) editBtn.style.display = 'none';
             if (saveBtn) saveBtn.style.display = 'block';
             if (completeBtn) completeBtn.style.display = 'none';
+            applyEditCategoryStyles();
         } else {
             viewArea.style.display = 'block';
             editArea.style.display = 'none';
+            if (modalTitle) modalTitle.innerText = 'Announcement';
             if (editBtn) editBtn.style.display = 'flex';
             if (saveBtn) saveBtn.style.display = 'none';
             if (completeBtn) completeBtn.style.display = 'block';
         }
         lucide.createIcons();
     }
+
+    function applyEditCategoryStyles() {
+        document.querySelectorAll('.detail-cat-btn').forEach(btn => {
+            const catName = btn.dataset.category;
+            const theme = CATEGORIES[catName] || { bg: '#F2EFE8', text: '#8A847E' };
+            const isActive = window.noticeEditCategory === catName;
+
+            btn.className = 'detail-cat-btn h-11 w-full rounded-xl text-sm font-semibold border transition-all duration-150 whitespace-nowrap';
+            if (isActive) {
+                btn.style.backgroundColor = theme.bg;
+                btn.style.color = theme.text;
+                btn.style.border = `1.5px solid ${theme.text}`;
+                btn.style.boxShadow = '0 1px 2px rgba(0,0,0,0.06)';
+            } else {
+                btn.style.backgroundColor = '#FFFFFF';
+                btn.style.color = '#8A847E';
+                btn.style.border = '1px solid #E5E5E5';
+                btn.style.boxShadow = 'none';
+            }
+        });
+    }
+
+    window.selectEditNoticeCategory = function(catName) {
+        window.noticeEditCategory = catName;
+        applyEditCategoryStyles();
+    };
 
     window.enterNoticeEditMode = function() {
         setNoticeDetailMode('edit');
@@ -601,7 +632,8 @@
             : 'text-xs font-bold text-[#B4975A] bg-[#F8F3E7] px-2 py-1 rounded-md';
 
         // Edit form
-        document.getElementById('detail-edit-category').value = notice.category || '매장';
+        window.noticeEditCategory = notice.category || '매장';
+        applyEditCategoryStyles();
         document.getElementById('detail-edit-title').value = notice.title || '';
         document.getElementById('detail-edit-register-date').value = registerDate === '-' ? '' : registerDate;
         document.getElementById('detail-edit-deadline-date').value = deadlineDate === '-' ? '' : deadlineDate;
@@ -627,7 +659,7 @@
     window.saveNoticeEdit = async function() {
         if (!window.selectedNoticeId) return;
 
-        const category = document.getElementById('detail-edit-category').value;
+        const category = window.noticeEditCategory;
         const registerDate = document.getElementById('detail-edit-register-date').value;
         const deadlineDate = document.getElementById('detail-edit-deadline-date').value;
         const title = document.getElementById('detail-edit-title').value.trim();
@@ -663,7 +695,7 @@
     window.completeNotice = function() {
         if (!window.selectedNoticeId) return;
 
-        window.showCustomConfirm('이 공지사항을 완료 처리하시겠습니까?\n완료된 공지는 기본 리스트에서 숨겨지고, 검색 시에만 표시됩니다.', async () => {
+        window.showCustomConfirm('완료 처리하겠습니까?', async () => {
             document.getElementById('loading-overlay').style.display = 'flex';
             try {
                 await updateDoc(doc(db, 'notices', window.selectedNoticeId), {
@@ -671,7 +703,6 @@
                     completedAt: new Date().toISOString(),
                     completedBy: currentUser.uid
                 });
-                window.showCustomAlert('완료 처리되었습니다.');
                 closeNoticeDetail();
             } catch(e) {
                 console.error(e);
@@ -679,6 +710,15 @@
             } finally {
                 document.getElementById('loading-overlay').style.display = 'none';
             }
+        }, {
+            cancelText: '아니오',
+            okText: '네',
+            okBg: '#4A443F',
+            okHoverBg: '#2A2522',
+            icon: 'check-circle',
+            iconBg: '#F8F3E7',
+            iconBorder: '#E8E4DB',
+            iconColor: '#4A443F'
         });
     };
 
@@ -1744,7 +1784,7 @@
         <div id="page-notice" class="page p-6 no-scrollbar">
             <div class="flex justify-between items-center mb-5 relative">
                 <div class="w-10"></div>
-                <h2 class="text-[26px] font-serif font-extrabold text-[#333]">Team Announcements</h2>
+                <h2 class="text-2xl font-serif font-bold text-[#333]">Team Announcements</h2>
                 <button onclick="openNoticeCreate()" class="w-10 h-10 flex items-center justify-center border border-[#E5E5E5] rounded-xl text-[#B4975A] bg-white shadow-sm active:scale-95">
                     <i data-lucide="plus" class="w-5 h-5"></i>
                 </button>
@@ -1946,7 +1986,7 @@
     <div class="pt-12 pb-4 bg-[#FAF9F5] flex-shrink-0 relative flex flex-col items-center">
         <button onclick="closeNoticeCreate()" class="absolute right-6 top-14 text-[#999] p-2"><i data-lucide="x" class="w-6 h-6"></i></button>
         <img src="log.png" alt="Patek Philippe" class="w-32 h-auto object-contain mt-2 mb-4" />
-        <h2 class="text-2xl font-serif mb-2 text-[#333]">New Announcement</h2>
+        <h2 class="text-2xl font-serif font-bold mb-2 text-[#333]">New Announcement</h2>
     </div>
 
     <div class="flex-1 overflow-y-auto p-6 space-y-6 pb-32">
@@ -1999,7 +2039,7 @@
     <div class="pt-12 pb-4 bg-[#FAF9F5] flex-shrink-0 relative flex flex-col items-center">
         <button onclick="closeNoticeDetail()" class="absolute right-6 top-14 text-[#999] p-2"><i data-lucide="x" class="w-6 h-6"></i></button>
         <img src="log.png" alt="Patek Philippe" class="w-32 h-auto object-contain mt-2 mb-3" />
-        <h2 class="text-2xl font-serif font-bold text-[#333]">Announcement</h2>
+        <h2 id="notice-detail-modal-title" class="text-2xl font-serif font-bold text-[#333]">Announcement</h2>
     </div>
 
     <div class="flex-1 overflow-y-auto p-6 pb-40 bg-[#FAF9F5]">
@@ -2029,7 +2069,7 @@
 
                 <div class="mb-5">
                     <div class="text-[12px] font-bold text-[#999] mb-2">Title</div>
-                    <div id="view-notice-title" class="text-[20px] font-extrabold text-[#333] leading-snug break-words"></div>
+                    <div id="view-notice-title" class="text-[18px] font-bold text-[#333] leading-snug break-words"></div>
                 </div>
 
                 <div>
@@ -2047,14 +2087,14 @@
         <!-- Edit mode -->
         <div id="notice-detail-edit-area" class="space-y-5" style="display:none;">
             <div>
-                <label class="block text-sm font-semibold text-[#666] mb-2">Category</label>
-                <select id="detail-edit-category" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-3.5 outline-none font-medium">
-                    <option value="매장">매장</option>
-                    <option value="본사">본사</option>
-                    <option value="PP">PP</option>
-                    <option value="백화점">백화점</option>
-                    <option value="행사">행사</option>
-                </select>
+                <label class="block text-sm font-semibold text-[#666] mb-3">Category</label>
+                <div class="grid grid-cols-5 gap-2">
+                    <button type="button" data-category="매장" onclick="selectEditNoticeCategory('매장')" class="detail-cat-btn">매장</button>
+                    <button type="button" data-category="본사" onclick="selectEditNoticeCategory('본사')" class="detail-cat-btn">본사</button>
+                    <button type="button" data-category="PP" onclick="selectEditNoticeCategory('PP')" class="detail-cat-btn">PP</button>
+                    <button type="button" data-category="백화점" onclick="selectEditNoticeCategory('백화점')" class="detail-cat-btn">백화점</button>
+                    <button type="button" data-category="행사" onclick="selectEditNoticeCategory('행사')" class="detail-cat-btn">행사</button>
+                </div>
             </div>
 
             <div class="grid grid-cols-2 gap-3">
@@ -2259,17 +2299,78 @@
 <!-- 커스텀 확인 모달 (Confirm) -->
 <div id="custom-confirm" style="display: none;" class="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center p-6 z-[200000]">
     <div class="bg-[#FCFBF9] rounded-xl p-6 w-full max-w-[280px] shadow-2xl border border-[#E8E4DB] flex flex-col items-center">
-        <div class="w-12 h-12 rounded-full bg-[#FFF5F5] border border-[#E8D8D8] flex items-center justify-center mb-4 text-[#A06C6C]">
-            <i data-lucide="trash-2" class="w-6 h-6"></i>
+        <div id="custom-confirm-icon-wrap" class="w-12 h-12 rounded-full bg-[#FFF5F5] border border-[#E8D8D8] flex items-center justify-center mb-4 text-[#A06C6C]">
+            <i id="custom-confirm-icon" data-lucide="trash-2" class="w-6 h-6"></i>
         </div>
         <p id="custom-confirm-message" class="text-[#3A3532] text-[15px] font-sans text-center font-medium leading-relaxed mb-6 whitespace-pre-wrap">정말 삭제하시겠습니까?</p>
         <div class="flex gap-3 w-full">
-            <button onclick="window.closeCustomConfirm()" class="flex-1 bg-white hover:bg-[#F2EFE8] text-[#8A847E] font-serif tracking-widest py-3 rounded-md transition-colors text-[13px] border border-[#E8E4DB]">취소</button>
+            <button id="custom-confirm-cancel-btn" onclick="window.closeCustomConfirm()" class="flex-1 bg-white hover:bg-[#F2EFE8] text-[#8A847E] font-serif tracking-widest py-3 rounded-md transition-colors text-[13px] border border-[#E8E4DB]">취소</button>
             <button id="custom-confirm-ok-btn" class="flex-1 bg-[#FF3B30] hover:bg-[#D93025] text-white font-serif tracking-widest py-3 rounded-md transition-colors text-[13px]">삭제</button>
         </div>
     </div>
 </div>
 
-<script>lucide.createIcons();</script>
+
+<script>
+    window.__customConfirmCallback = null;
+
+    window.showCustomAlert = function(message) {
+        const modal = document.getElementById('custom-alert');
+        const msg = document.getElementById('custom-alert-message');
+        if (msg) msg.innerText = message || '';
+        if (modal) modal.style.display = 'flex';
+        lucide.createIcons();
+    };
+
+    window.closeCustomAlert = function() {
+        const modal = document.getElementById('custom-alert');
+        if (modal) modal.style.display = 'none';
+    };
+
+    window.showCustomConfirm = function(message, onConfirm, options = {}) {
+        const modal = document.getElementById('custom-confirm');
+        const msg = document.getElementById('custom-confirm-message');
+        const okBtn = document.getElementById('custom-confirm-ok-btn');
+        const cancelBtn = document.getElementById('custom-confirm-cancel-btn');
+        const iconWrap = document.getElementById('custom-confirm-icon-wrap');
+        const icon = document.getElementById('custom-confirm-icon');
+
+        window.__customConfirmCallback = onConfirm;
+
+        if (msg) msg.innerText = message || '';
+        if (cancelBtn) cancelBtn.innerText = options.cancelText || '취소';
+        if (okBtn) {
+            okBtn.innerText = options.okText || '확인';
+            okBtn.style.backgroundColor = options.okBg || '#FF3B30';
+            okBtn.style.color = '#FFFFFF';
+            okBtn.onmouseenter = () => { okBtn.style.backgroundColor = options.okHoverBg || options.okBg || '#D93025'; };
+            okBtn.onmouseleave = () => { okBtn.style.backgroundColor = options.okBg || '#FF3B30'; };
+            okBtn.onclick = async () => {
+                const callback = window.__customConfirmCallback;
+                window.closeCustomConfirm();
+                if (typeof callback === 'function') await callback();
+            };
+        }
+        if (iconWrap) {
+            iconWrap.style.backgroundColor = options.iconBg || '#FFF5F5';
+            iconWrap.style.borderColor = options.iconBorder || '#E8D8D8';
+            iconWrap.style.color = options.iconColor || '#A06C6C';
+        }
+        if (icon) {
+            icon.setAttribute('data-lucide', options.icon || 'trash-2');
+        }
+
+        if (modal) modal.style.display = 'flex';
+        lucide.createIcons();
+    };
+
+    window.closeCustomConfirm = function() {
+        const modal = document.getElementById('custom-confirm');
+        if (modal) modal.style.display = 'none';
+        window.__customConfirmCallback = null;
+    };
+
+    lucide.createIcons();
+</script>
 </body>
 </html>
