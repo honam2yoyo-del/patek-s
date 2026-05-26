@@ -9,8 +9,8 @@
     <!-- iOS 홈 화면 추가를 위한 PWA 메타 태그 -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="Patek-S">
-    <link class="rounded-full" rel="apple-touch-icon" href="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Patek_Philippe_logo.svg/512px-Patek_Philippe_logo.svg.png">
+    <meta name="apple-mobile-web-app-title" content="PATEK">
+    <link class="rounded-full" rel="apple-touch-icon" href="log.png">
 
     <!-- Tailwind CSS 및 아이콘 -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -217,6 +217,7 @@
             document.getElementById('page-notice-create').style.display = 'none';
             document.getElementById('page-notice-detail').style.display = 'none';
             document.getElementById('page-album-modal').style.display = 'none';
+            document.getElementById('page-settings-modal').style.display = 'none';
             
             document.getElementById('login-page').style.display = 'flex';
         }
@@ -310,6 +311,21 @@
             signOut(auth);
         });
     };
+
+    // 환경 설정 / 유저 모달
+    window.openSettings = function() {
+        if (currentUser) {
+            document.getElementById('settings-user-name').innerText = currentUser.displayName || '미인증 사용자';
+            document.getElementById('settings-user-email').innerText = currentUser.email || '';
+        }
+        document.getElementById('page-settings-modal').style.display = 'flex';
+        lucide.createIcons();
+    };
+
+    window.closeSettings = function() {
+        document.getElementById('page-settings-modal').style.display = 'none';
+    };
+
 
     // ==========================================
     // 앱 데이터 및 화면 로직
@@ -1558,19 +1574,17 @@
         const monthText = document.getElementById('schedule-month-text');
         const monthPicker = document.getElementById('schedule-month-picker');
         if (monthText) monthText.innerText = `${year}년 ${month}월`;
-        const cardMonthText = document.getElementById('schedule-card-month-text');
-        if (cardMonthText) cardMonthText.innerText = `${year}년 ${month}월`;
         if (monthPicker) monthPicker.value = currentMonthKey;
 
         const metaInfo = document.getElementById('schedule-meta-info');
         if (metaInfo) {
             if (monthScheduleDoc.lastUpdated) {
                 metaInfo.innerHTML = `
-                    <span class="schedule-meta-line">마지막 수정일 ${monthScheduleDoc.lastUpdated}</span>
-                    <span class="schedule-meta-line mt-1">수정자 ${monthScheduleDoc.updatedBy || '시스템'}</span>
+                    <span class="schedule-meta-line text-[9px] text-[#8A847E]">수정일: ${monthScheduleDoc.lastUpdated.split(' ')[0]}</span>
+                    <span class="schedule-meta-line text-[9px] text-[#8A847E] mt-0.5 w-[65px] truncate">수정자: ${monthScheduleDoc.updatedBy || '시스템'}</span>
                 `;
             } else {
-                metaInfo.innerHTML = '<span class="schedule-meta-line">근무표가 등록되지 않았습니다.</span>';
+                metaInfo.innerHTML = '<span class="schedule-meta-line text-[9px] text-[#A8A29D]">근무표 없음</span>';
             }
         }
 
@@ -2032,9 +2046,14 @@
 <div id="app-container" style="display: none;" class="w-full max-w-md mx-auto h-screen relative overflow-hidden bg-[#FAF9F5] flex-col">
     
     <!-- 공통 헤더 로고 -->
-    <div class="pt-12 pb-4 bg-[#FAF9F5] flex-shrink-0 z-10 relative flex flex-col items-center justify-center">
-        <img src="log.png" alt="Patek Philippe" class="w-40 h-auto object-contain" />
-        <div class="w-[80%] flex items-center justify-center mt-4 opacity-50">
+    <div class="pt-6 pb-3 bg-[#FAF9F5] flex-shrink-0 z-10 relative flex flex-col items-center justify-center w-full">
+        <!-- 톱니바퀴 및 새로고침 버튼 추가 -->
+        <div class="absolute right-5 top-5 flex gap-4">
+            <button onclick="location.reload()" class="text-[#8A847E] hover:text-[#4A443F] active:scale-95 transition-all"><i data-lucide="rotate-cw" class="w-5 h-5"></i></button>
+            <button onclick="openSettings()" class="text-[#8A847E] hover:text-[#4A443F] active:scale-95 transition-all"><i data-lucide="settings" class="w-5 h-5"></i></button>
+        </div>
+        <img src="log.png" alt="Patek Philippe" class="w-32 h-auto object-contain mt-1" />
+        <div class="w-[80%] flex items-center justify-center mt-3 opacity-50">
             <div class="h-[1px] w-full bg-[#B4975A]"></div>
             <div class="w-1.5 h-1.5 rotate-45 bg-[#B4975A] mx-2 flex-shrink-0"></div>
             <div class="h-[1px] w-full bg-[#B4975A]"></div>
@@ -2106,56 +2125,57 @@
         <!-- [탭] 신규: 매장 근무표 화면 -->
         <div id="page-schedule" class="page bg-[#FAF9F5] no-scrollbar px-4 pt-4">
             <div class="flex flex-col items-center mb-5 w-full text-center">
-                <div class="flex items-center justify-center w-full relative mb-4 h-10">
-                    <h2 class="text-2xl font-serif text-[#3A3532] font-semibold absolute left-1/2 -translate-x-1/2 whitespace-nowrap">매장 근무표</h2>
+                
+                <!-- 수정일/타이틀/버튼 헤더 -->
+                <div class="flex items-center justify-between w-full relative mb-4 h-10">
+                    <div id="schedule-meta-info" class="absolute left-0 flex flex-col items-start justify-center h-full text-left leading-tight w-[35%] overflow-hidden">
+                        <span class="text-[9px] text-[#999]">로딩 중...</span>
+                    </div>
+
+                    <h2 class="text-xl font-serif text-[#3A3532] font-semibold absolute left-1/2 -translate-x-1/2 whitespace-nowrap">매장 근무표</h2>
+                    
                     <div class="flex gap-1.5 absolute right-0">
-                        <button onclick="triggerScheduleExcelUpload()" class="w-9 h-9 bg-white border border-[#E8E4DB] rounded-xl flex items-center justify-center text-[#B4975A] shadow-sm active:scale-95">
-                            <i data-lucide="plus" class="w-4.5 h-4.5"></i>
+                        <button onclick="triggerScheduleExcelUpload()" class="w-8 h-8 bg-white border border-[#E8E4DB] rounded-lg flex items-center justify-center text-[#B4975A] shadow-sm active:scale-95">
+                            <i data-lucide="plus" class="w-4 h-4"></i>
                         </button>
                         <input type="file" id="schedule-excel-input" accept=".xlsx,.xls" class="hidden" onchange="handleScheduleExcelUpload(event)" />
-                        <button onclick="openLeaveCalendarModal()" class="w-9 h-9 bg-white border border-[#E8E4DB] rounded-xl flex items-center justify-center text-[#B4975A] shadow-sm active:scale-95">
-                            <i data-lucide="calendar-days" class="w-4.5 h-4.5"></i>
+                        <button onclick="openLeaveCalendarModal()" class="w-8 h-8 bg-white border border-[#E8E4DB] rounded-lg flex items-center justify-center text-[#B4975A] shadow-sm active:scale-95">
+                            <i data-lucide="calendar-days" class="w-4 h-4"></i>
                         </button>
                     </div>
                 </div>
 
-                <!-- 2번 사진 느낌의 월 선택/수정 정보 바 -->
-                <div class="w-full flex items-center justify-between gap-3">
-                    <div class="relative shrink-0 flex items-center rounded-xl border border-[#D8B98B] bg-[#FFFDF8] shadow-sm overflow-hidden h-12">
-                        <button onclick="adjustScheduleMonth(-1)" class="w-11 h-full flex items-center justify-center text-[#B17A2A] active:bg-[#F8EFE3]">
-                            <i data-lucide="chevron-left" class="w-5 h-5"></i>
+                <!-- 2번째 줄: 월 선택 및 우측 범례 -->
+                <div class="w-full flex items-center justify-between gap-2 mb-2">
+                    <div class="relative shrink-0 flex items-center rounded-xl border border-[#D8B98B] bg-[#FFFDF8] shadow-sm overflow-hidden h-10">
+                        <button onclick="adjustScheduleMonth(-1)" class="w-9 h-full flex items-center justify-center text-[#B17A2A] active:bg-[#F8EFE3]">
+                            <i data-lucide="chevron-left" class="w-4 h-4"></i>
                         </button>
-                        <button type="button" onclick="openScheduleMonthPicker()" class="relative h-full flex items-center justify-center px-3 min-w-[120px] cursor-pointer active:bg-[#F8EFE3] bg-transparent border-0">
-                            <span id="schedule-month-text" class="text-[18px] font-medium text-[#2F2924] pointer-events-none whitespace-nowrap">2026년 5월</span>
+                        <button type="button" onclick="openScheduleMonthPicker()" class="relative h-full flex items-center justify-center px-2 min-w-[100px] cursor-pointer active:bg-[#F8EFE3] bg-transparent border-0">
+                            <span id="schedule-month-text" class="text-[15px] font-bold text-[#2F2924] pointer-events-none whitespace-nowrap">2026년 5월</span>
                         </button>
                         <input type="month" id="schedule-month-picker" onchange="handleMonthPicker(this.value)" class="absolute opacity-0 pointer-events-none w-1 h-1" />
-                        <button onclick="adjustScheduleMonth(1)" class="w-11 h-full flex items-center justify-center text-[#B17A2A] active:bg-[#F8EFE3]">
-                            <i data-lucide="chevron-right" class="w-5 h-5"></i>
+                        <button onclick="adjustScheduleMonth(1)" class="w-9 h-full flex items-center justify-center text-[#B17A2A] active:bg-[#F8EFE3]">
+                            <i data-lucide="chevron-right" class="w-4 h-4"></i>
                         </button>
                     </div>
 
-                    <div class="flex-1 min-w-0 flex flex-col items-end text-right">
-                        <div id="schedule-meta-info" class="text-[11px] text-[#4A443F] font-medium leading-tight max-w-full">근무표 불러오는 중...</div>
-                        <span id="schedule-holiday-info" class="text-[11px] text-[#6E2626] font-semibold mt-2">(법정공휴일 : 0개)</span>
+                    <div class="flex flex-wrap justify-end gap-1 max-w-[60%]">
+                        <span class="inline-flex items-center gap-0.5 text-[10px] font-bold text-[#6E2626] bg-[#FAD7D5] border border-[#F0B9B7] rounded px-1.5 py-0.5"><span class="w-2 h-2 rounded-sm bg-[#E87979]"></span>A</span>
+                        <span class="inline-flex items-center gap-0.5 text-[10px] font-bold text-[#234B7A] bg-[#D9E7FA] border border-[#BFD2EF] rounded px-1.5 py-0.5"><span class="w-2 h-2 rounded-sm bg-[#6793D8]"></span>B</span>
+                        <span class="inline-flex items-center gap-0.5 text-[10px] font-bold text-[#7A4F14] bg-[#FFE7B8] border border-[#F4D08C] rounded px-1.5 py-0.5"><span class="w-2 h-2 rounded-sm bg-[#F0B64D]"></span>C</span>
+                        <span class="inline-flex items-center gap-0.5 text-[10px] font-bold text-[#4A443F] bg-[#EEEEEA] border border-[#DDDDD8] rounded px-1.5 py-0.5"><span class="w-2 h-2 rounded-sm bg-[#C8C8C0]"></span>휴무</span>
                     </div>
+                </div>
+                
+                <div class="w-full text-left pl-1">
+                    <span id="schedule-holiday-info" class="text-[10px] text-[#D81B60] font-semibold">(법정공휴일 : 0개)</span>
                 </div>
             </div>
 
             <!-- 달력형 근무표 -->
-            <div class="w-full bg-[#FFFDF8] border border-[#E8D8BD] rounded-2xl shadow-[0_8px_28px_rgba(139,115,85,0.12)] overflow-hidden mb-8">
-                <div class="flex items-center justify-between px-5 py-4 border-b border-[#E8D8BD] bg-[#FFFDF8]">
-                    <div class="flex items-center gap-3">
-                        <i data-lucide="calendar-days" class="w-6 h-6 text-[#B4975A]"></i>
-                        <span id="schedule-card-month-text" class="text-[18px] font-bold text-[#2F2924]"></span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <span class="inline-flex items-center gap-1 text-[12px] font-bold text-[#6E2626] bg-[#FAD7D5] border border-[#F0B9B7] rounded-md px-2 py-1"><span class="w-2.5 h-2.5 rounded-sm bg-[#E87979]"></span>A</span>
-                        <span class="inline-flex items-center gap-1 text-[12px] font-bold text-[#234B7A] bg-[#D9E7FA] border border-[#BFD2EF] rounded-md px-2 py-1"><span class="w-2.5 h-2.5 rounded-sm bg-[#6793D8]"></span>B</span>
-                        <span class="inline-flex items-center gap-1 text-[12px] font-bold text-[#7A4F14] bg-[#FFE7B8] border border-[#F4D08C] rounded-md px-2 py-1"><span class="w-2.5 h-2.5 rounded-sm bg-[#F0B64D]"></span>C</span>
-                        <span class="inline-flex items-center gap-1 text-[12px] font-bold text-[#4A443F] bg-[#EEEEEA] border border-[#DDDDD8] rounded-md px-2 py-1"><span class="w-2.5 h-2.5 rounded-sm bg-[#C8C8C0]"></span>휴무</span>
-                    </div>
-                </div>
-                <div id="schedule-calendar-grid" class="grid grid-cols-7"></div>
+            <div class="w-full bg-[#FFFDF8] border border-[#E8D8BD] rounded-2xl shadow-[0_8px_28px_rgba(139,115,85,0.12)] overflow-hidden mb-8 mt-2">
+                <div id="schedule-calendar-grid" class="grid grid-cols-7 border-t border-[#E8D8BD]"></div>
             </div>
         </div>
 
@@ -2255,6 +2275,30 @@
         <div class="nav-item flex flex-col items-center justify-center gap-1 text-[#A0A0A0] w-full cursor-pointer" onclick="window.switchTab('album', this)"><i data-lucide="image" class="w-[22px] h-[22px]"></i><span class="text-[11.5px] font-bold">앨범</span></div>
     </div>
 </div>
+
+<!-- ==========================================
+     환경 설정(사용자 정보/로그아웃) 모달 추가 
+     ========================================== -->
+<div id="page-settings-modal" style="display: none;" class="fixed inset-0 w-full max-w-md mx-auto bg-black/40 backdrop-blur-[2px] z-[300] flex-col items-center justify-center p-6">
+    <div class="bg-[#FCFBF9] rounded-2xl w-full max-w-[320px] shadow-2xl border border-[#E8E4DB] flex flex-col overflow-hidden relative pt-6 pb-2">
+        <button onclick="closeSettings()" class="absolute right-4 top-4 text-[#999] p-1 active:scale-95"><i data-lucide="x" class="w-5 h-5"></i></button>
+        
+        <div class="flex flex-col items-center px-6 pt-2 pb-6 border-b border-[#F0EFEA]">
+            <div class="w-14 h-14 rounded-full bg-[#F2EFE8] flex items-center justify-center mb-3 text-[#8B7355]">
+                <i data-lucide="user" class="w-7 h-7"></i>
+            </div>
+            <div class="text-[16px] font-bold text-[#3A3532] mb-1" id="settings-user-name">사용자</div>
+            <div class="text-[12px] text-[#8A847E]" id="settings-user-email">email@example.com</div>
+        </div>
+
+        <div class="p-4">
+            <button onclick="logout()" class="w-full bg-white hover:bg-[#FFF5F5] border border-[#FAD7D5] text-[#D81B60] py-3 rounded-xl text-[14px] font-bold shadow-sm transition-colors flex items-center justify-center gap-2 active:scale-95">
+                <i data-lucide="log-out" class="w-4 h-4"></i> 로그아웃
+            </button>
+        </div>
+    </div>
+</div>
+
 
 <!-- 근무표 월 선택 모달 -->
 <div id="schedule-month-modal" style="display:none;" class="fixed inset-0 bg-black/35 z-[260] items-end justify-center">
