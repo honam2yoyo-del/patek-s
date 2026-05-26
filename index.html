@@ -89,14 +89,16 @@
         .schedule-pill {
             width: 100%;
             border: 1px solid;
-            border-radius: 5px;
-            padding: 3px 2px;
-            font-size: 8.5px;
-            font-weight: 700;
-            line-height: 1.15;
+            border-radius: 4px;
+            padding: 2.5px 1px;
+            font-size: 7.5px; /* 글씨 크기 축소 */
+            letter-spacing: -0.5px; /* 자간 축소 */
+            font-weight: 800;
+            line-height: 1.1;
             text-align: center;
-            word-break: keep-all;
-            white-space: normal; /* 이름이 여러개일 때 잘리지 않고 여러 줄로 표기되게 변경 */
+            white-space: nowrap; /* 무조건 가로로 한 줄 고정 */
+            overflow: hidden;
+            text-overflow: clip; /* 좁으면 ... 대신 잘리도록 (최대한 보이게) */
             box-sizing: border-box;
             box-shadow: inset 0 1px 0 rgba(255,255,255,0.45);
         }
@@ -1659,7 +1661,8 @@
             const pills = Object.keys(codeMeta).map(code => {
                 if (!groups[code] || groups[code].length === 0) return '';
                 const meta = codeMeta[code];
-                return `<div class="schedule-pill" style="background:${meta.bg}; color:${meta.text}; border-color:${meta.border};">${groups[code].join(', ')}</div>`;
+                // 콤마 뒤 공백 제거하여 한줄 나열 시 불필요한 줄바꿈 방지
+                return `<div class="schedule-pill" style="background:${meta.bg}; color:${meta.text}; border-color:${meta.border};">${groups[code].join(',')}</div>`;
             }).join('');
 
             grid.innerHTML += `
@@ -2046,18 +2049,13 @@
 <div id="app-container" style="display: none;" class="w-full max-w-md mx-auto h-screen relative overflow-hidden bg-[#FAF9F5] flex-col">
     
     <!-- 공통 헤더 로고 -->
-    <div class="pt-6 pb-3 bg-[#FAF9F5] flex-shrink-0 z-10 relative flex flex-col items-center justify-center w-full">
+    <div class="pt-5 pb-2 bg-[#FAF9F5] flex-shrink-0 z-10 relative flex items-center justify-center w-full">
         <!-- 톱니바퀴 및 새로고침 버튼 추가 -->
-        <div class="absolute right-5 top-5 flex gap-4">
+        <div class="absolute right-5 flex gap-4">
             <button onclick="location.reload()" class="text-[#8A847E] hover:text-[#4A443F] active:scale-95 transition-all"><i data-lucide="rotate-cw" class="w-5 h-5"></i></button>
             <button onclick="openSettings()" class="text-[#8A847E] hover:text-[#4A443F] active:scale-95 transition-all"><i data-lucide="settings" class="w-5 h-5"></i></button>
         </div>
-        <img src="log.png" alt="Patek Philippe" class="w-32 h-auto object-contain mt-1" />
-        <div class="w-[80%] flex items-center justify-center mt-3 opacity-50">
-            <div class="h-[1px] w-full bg-[#B4975A]"></div>
-            <div class="w-1.5 h-1.5 rotate-45 bg-[#B4975A] mx-2 flex-shrink-0"></div>
-            <div class="h-[1px] w-full bg-[#B4975A]"></div>
-        </div>
+        <img src="log.png" alt="Patek Philippe" class="w-28 h-auto object-contain" />
     </div>
 
     <!-- 완전히 독립된 탭 컨테이너 -->
@@ -2124,10 +2122,10 @@
 
         <!-- [탭] 신규: 매장 근무표 화면 -->
         <div id="page-schedule" class="page bg-[#FAF9F5] no-scrollbar px-4 pt-4">
-            <div class="flex flex-col items-center mb-5 w-full text-center">
+            <div class="flex flex-col items-center mb-2 w-full text-center">
                 
                 <!-- 수정일/타이틀/버튼 헤더 -->
-                <div class="flex items-center justify-between w-full relative mb-4 h-10">
+                <div class="flex items-center justify-between w-full relative mb-3 h-10">
                     <div id="schedule-meta-info" class="absolute left-0 flex flex-col items-start justify-center h-full text-left leading-tight w-[35%] overflow-hidden">
                         <span class="text-[9px] text-[#999]">로딩 중...</span>
                     </div>
@@ -2145,8 +2143,8 @@
                     </div>
                 </div>
 
-                <!-- 2번째 줄: 월 선택 및 우측 범례 -->
-                <div class="w-full flex items-center justify-between gap-2 mb-2">
+                <!-- 2번째 줄: 월 선택 및 우측 범례/법정공휴일 -->
+                <div class="w-full flex items-start justify-between gap-2">
                     <div class="relative shrink-0 flex items-center rounded-xl border border-[#D8B98B] bg-[#FFFDF8] shadow-sm overflow-hidden h-10">
                         <button onclick="adjustScheduleMonth(-1)" class="w-9 h-full flex items-center justify-center text-[#B17A2A] active:bg-[#F8EFE3]">
                             <i data-lucide="chevron-left" class="w-4 h-4"></i>
@@ -2160,22 +2158,23 @@
                         </button>
                     </div>
 
-                    <div class="flex flex-wrap justify-end gap-1 max-w-[60%]">
-                        <span class="inline-flex items-center gap-0.5 text-[10px] font-bold text-[#6E2626] bg-[#FAD7D5] border border-[#F0B9B7] rounded px-1.5 py-0.5"><span class="w-2 h-2 rounded-sm bg-[#E87979]"></span>A</span>
-                        <span class="inline-flex items-center gap-0.5 text-[10px] font-bold text-[#234B7A] bg-[#D9E7FA] border border-[#BFD2EF] rounded px-1.5 py-0.5"><span class="w-2 h-2 rounded-sm bg-[#6793D8]"></span>B</span>
-                        <span class="inline-flex items-center gap-0.5 text-[10px] font-bold text-[#7A4F14] bg-[#FFE7B8] border border-[#F4D08C] rounded px-1.5 py-0.5"><span class="w-2 h-2 rounded-sm bg-[#F0B64D]"></span>C</span>
-                        <span class="inline-flex items-center gap-0.5 text-[10px] font-bold text-[#4A443F] bg-[#EEEEEA] border border-[#DDDDD8] rounded px-1.5 py-0.5"><span class="w-2 h-2 rounded-sm bg-[#C8C8C0]"></span>휴무</span>
+                    <div class="flex flex-col items-end gap-1 max-w-[60%] pt-0.5">
+                        <div class="flex flex-wrap justify-end gap-1">
+                            <span class="inline-flex items-center gap-0.5 text-[10px] font-bold text-[#6E2626] bg-[#FAD7D5] border border-[#F0B9B7] rounded px-1.5 py-0.5"><span class="w-2 h-2 rounded-sm bg-[#E87979]"></span>A</span>
+                            <span class="inline-flex items-center gap-0.5 text-[10px] font-bold text-[#234B7A] bg-[#D9E7FA] border border-[#BFD2EF] rounded px-1.5 py-0.5"><span class="w-2 h-2 rounded-sm bg-[#6793D8]"></span>B</span>
+                            <span class="inline-flex items-center gap-0.5 text-[10px] font-bold text-[#7A4F14] bg-[#FFE7B8] border border-[#F4D08C] rounded px-1.5 py-0.5"><span class="w-2 h-2 rounded-sm bg-[#F0B64D]"></span>C</span>
+                            <span class="inline-flex items-center gap-0.5 text-[10px] font-bold text-[#4A443F] bg-[#EEEEEA] border border-[#DDDDD8] rounded px-1.5 py-0.5"><span class="w-2 h-2 rounded-sm bg-[#C8C8C0]"></span>휴무</span>
+                        </div>
+                        <div class="w-full text-right pr-1">
+                            <span id="schedule-holiday-info" class="text-[9px] text-[#D81B60] font-semibold tracking-tighter">(법정공휴일 : 0개)</span>
+                        </div>
                     </div>
-                </div>
-                
-                <div class="w-full text-left pl-1">
-                    <span id="schedule-holiday-info" class="text-[10px] text-[#D81B60] font-semibold">(법정공휴일 : 0개)</span>
                 </div>
             </div>
 
             <!-- 달력형 근무표 -->
-            <div class="w-full bg-[#FFFDF8] border border-[#E8D8BD] rounded-2xl shadow-[0_8px_28px_rgba(139,115,85,0.12)] overflow-hidden mb-8 mt-2">
-                <div id="schedule-calendar-grid" class="grid grid-cols-7 border-t border-[#E8D8BD]"></div>
+            <div class="w-full bg-[#FFFDF8] border border-[#E8D8BD] rounded-2xl shadow-[0_8px_28px_rgba(139,115,85,0.12)] overflow-hidden mb-8 mt-1">
+                <div id="schedule-calendar-grid" class="grid grid-cols-7 border-t-0"></div>
             </div>
         </div>
 
