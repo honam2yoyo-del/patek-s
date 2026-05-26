@@ -114,7 +114,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, collection, onSnapshot, doc, setDoc, getDoc, addDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     // ⭐️ patek-s 프로젝트 설정값
@@ -262,28 +262,38 @@
     }
 
     // 로그인 함수
-    window.loginWithGoogle = function() {
+    window.loginWithGoogle = async function() {
         const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
         const isPWA = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
 
         document.getElementById('loading-overlay').style.display = 'flex';
 
-        if (isMobile || isPWA) {
-            signInWithRedirect(auth, provider).catch(error => {
-                console.error("로그인 에러:", error);
+        try {
+            if (isMobile || isPWA) {
+                await signInWithRedirect(auth, provider);
+            } else {
+                await signInWithPopup(auth, provider);
+            }
+        } catch (error) {
+            console.error("로그인 에러:", error);
+            
+            // Fallback: 커스텀 토큰 또는 익명 로그인 (Safari 등 제약 환경 우회)
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (fallbackError) {
+                console.error("Fallback 로그인 에러:", fallbackError);
                 document.getElementById('loading-overlay').style.display = 'none';
-                window.showCustomAlert("로그인 실패: " + error.message);
-            });
-        } else {
-            signInWithPopup(auth, provider).catch(error => {
-                console.error("로그인 에러:", error);
-                document.getElementById('loading-overlay').style.display = 'none';
+                
                 if (error.code === 'auth/unauthorized-domain') {
                     window.showCustomAlert("구글 로그인 정책: 현재 주소가 승인된 도메인이 아닙니다.");
                 } else if (error.code !== 'auth/popup-closed-by-user') {
                     window.showCustomAlert("로그인 중 오류가 발생했습니다.\n" + error.message);
                 }
-            });
+            }
         }
     };
 
