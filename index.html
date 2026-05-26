@@ -9,7 +9,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Patek-S">
-    <link rel="apple-touch-icon" href="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Patek_Philippe_logo.svg/512px-Patek_Philippe_logo.svg.png">
+    <link class="rounded-full" rel="apple-touch-icon" href="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Patek_Philippe_logo.svg/512px-Patek_Philippe_logo.svg.png">
 
     <!-- Tailwind CSS 및 아이콘 -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -36,7 +36,7 @@
             position: absolute; /* 부모 relative 컨테이너에 꽉 차게 설정 */
             top: 0; left: 0; right: 0; bottom: 0;
             overflow-y: auto;
-            padding-bottom: 120px; /* 하단 네비게이션 공간 확보 */
+            padding-bottom: 180px; /* 2줄 하단 네비게이션 공간 충분히 확보 */
             animation: fadeIn 0.2s ease-out;
         }
         .page.active { display: block; }
@@ -46,21 +46,24 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* 하단 네비게이션 */
+        /* 하단 네비게이션 (4x2 그리드 배열로 변경) */
         .bottom-nav {
             position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); 
             width: 100%; max-width: 480px; background-color: #ffffff; 
-            border-top: 1px solid #F0EFEA; display: flex; justify-content: space-around; 
-            padding: 12px 0 calc(24px + env(safe-area-inset-bottom)); z-index: 90;
-            box-shadow: 0 -4px 20px rgba(0,0,0,0.03);
+            border-top: 1px solid #F0EFEA; 
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 12px 4px;
+            padding: 16px 12px calc(20px + env(safe-area-inset-bottom)); z-index: 90;
+            box-shadow: 0 -8px 30px rgba(0,0,0,0.04);
             border-radius: 24px 24px 0 0;
         }
         .nav-item { 
-            display: flex; flex-direction: column; align-items: center; gap: 6px; 
-            color: #A0A0A0; cursor: pointer; flex: 1; transition: color 0.2s;
+            display: flex; flex-direction: column; align-items: center; gap: 4px; 
+            color: #A0A0A0; cursor: pointer; transition: color 0.2s;
         }
-        .nav-item svg { width: 24px; height: 24px; }
-        .nav-item span { font-size: 0.65rem; font-weight: 600; }
+        .nav-item svg { width: 22px; height: 22px; }
+        .nav-item span { font-size: 0.72rem; font-weight: 600; }
         .nav-item.active { color: #B4975A; }
 
         /* 로딩 및 모달 */
@@ -74,7 +77,7 @@
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, collection, onSnapshot, doc, setDoc, getDoc, addDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getFirestore, collection, onSnapshot, doc, setDoc, getDoc, addDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     // ⭐️ patek-s 프로젝트 설정값
     const firebaseConfig = {
@@ -105,14 +108,21 @@
     let currentUser = null;
     let unsubscribeNotices = null;
     let unsubscribeApproval = null;
+    let unsubscribeAlbums = null;
+    
     window.appNotices = [];
+    window.albums = [];
+    window.selectedAlbumIds = [];
+    window.albumFilter = '전체';
+    window.albumSearchQuery = '';
+    window.albumForm = { id: '', files: [], category: '기타', title: '', ref: '', memo: '', imageUrl: '' };
 
     // 리다이렉트 처리 (오류 방지 핵심)
     getRedirectResult(auth).catch(error => {
         console.error("로그인 에러:", error);
         document.getElementById('loading-overlay').style.display = 'none';
         if (error.code === 'auth/unauthorized-domain') {
-            alert("구글 로그인 정책: 현재 주소가 승인된 도메인이 아닙니다.");
+            window.showCustomAlert("구글 로그인 정책: 현재 주소가 승인된 도메인이 아닙니다.");
         }
     });
 
@@ -125,14 +135,18 @@
         } else {
             currentUser = null;
             window.appNotices = [];
+            window.albums = [];
+            window.selectedAlbumIds = [];
             if(unsubscribeNotices) unsubscribeNotices();
             if(unsubscribeApproval) unsubscribeApproval();
+            if(unsubscribeAlbums) unsubscribeAlbums();
             
             document.getElementById('loading-overlay').style.display = 'none';
             document.getElementById('pending-page').style.display = 'none';
             document.getElementById('app-container').style.display = 'none';
             document.getElementById('page-notice-create').style.display = 'none';
             document.getElementById('page-notice-detail').style.display = 'none';
+            document.getElementById('page-album-modal').style.display = 'none';
             
             document.getElementById('login-page').style.display = 'flex';
         }
@@ -147,10 +161,10 @@
                 if (data.approved === true) {
                     document.getElementById('loading-overlay').style.display = 'none';
                     document.getElementById('pending-page').style.display = 'none';
-                    // 플렉스 박스로 디스플레이 설정
                     document.getElementById('app-container').style.display = 'flex'; 
                     
                     fetchNotices(); // 공지사항 데이터 불러오기
+                    fetchAlbums(user); // 개인 앨범 실시간 데이터 불러오기
                     lucide.createIcons();
                 } else {
                     document.getElementById('loading-overlay').style.display = 'none';
@@ -171,13 +185,13 @@
                 }).catch(err => {
                     console.error("데이터베이스 저장 오류:", err);
                     document.getElementById('loading-overlay').style.display = 'none';
-                    alert("가입 처리에 실패했습니다. 다시 로그인해주세요.");
+                    window.showCustomAlert("가입 처리에 실패했습니다. 다시 로그인해주세요.");
                 });
             }
         }, (error) => {
             console.error("Firestore Error:", error);
             document.getElementById('loading-overlay').style.display = 'none';
-            alert("데이터베이스 권한 오류가 발생했습니다.");
+            window.showCustomAlert("데이터베이스 권한 오류가 발생했습니다.");
         });
     }
 
@@ -191,20 +205,22 @@
         if (isMobile || isPWA) {
             signInWithRedirect(auth, provider).catch(error => {
                 document.getElementById('loading-overlay').style.display = 'none';
-                alert("로그인 실패: " + error.message);
+                window.showCustomAlert("로그인 실패: " + error.message);
             });
         } else {
             signInWithPopup(auth, provider).catch(error => {
                 document.getElementById('loading-overlay').style.display = 'none';
                 if (error.code !== 'auth/popup-closed-by-user') {
-                    alert("로그인 중 오류가 발생했습니다.\n" + error.message);
+                    window.showCustomAlert("로그인 중 오류가 발생했습니다.\n" + error.message);
                 }
             });
         }
     };
 
     window.logout = function() {
-        if(confirm("로그아웃 하시겠습니까?")) signOut(auth);
+        window.showCustomConfirm("로그아웃 하시겠습니까?", () => {
+            signOut(auth);
+        });
     };
 
     // ==========================================
@@ -221,6 +237,7 @@
 
     window.renderNotices = function() {
         const list = document.getElementById('notice-list-content');
+        if (!list) return;
         list.innerHTML = '';
         
         if (window.appNotices.length === 0) {
@@ -294,7 +311,7 @@
     // 공지사항 저장
     window.submitNotice = async function() {
         if (!window.selectedCategory || !document.getElementById('input-title').value) {
-            alert("카테고리와 제목을 입력해주세요."); return;
+            window.showCustomAlert("카테고리와 제목을 입력해주세요."); return;
         }
         document.getElementById('loading-overlay').style.display = 'flex';
         try {
@@ -309,7 +326,7 @@
             });
             closeNoticeCreate();
         } catch(e) {
-            console.error(e); alert("등록 실패");
+            console.error(e); window.showCustomAlert("등록 실패");
         } finally {
             document.getElementById('loading-overlay').style.display = 'none';
         }
@@ -352,6 +369,507 @@
         document.getElementById('page-notice-detail').style.display = 'none';
         document.getElementById('bottom-nav-bar').style.display = 'flex';
     };
+
+
+    // ==========================================
+    // 앨범 로직 (개별 관리 연동)
+    // ==========================================
+    
+    // 이미지 압축 (최대 1000x1000, JPEG 60%)
+    const compressImage = (file) => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = (event) => {
+                const img = new Image();
+                img.src = event.target.result;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    const MAX_WIDTH = 1000, MAX_HEIGHT = 1000;
+                    let width = img.width, height = img.height;
+                    if (width > height) {
+                        if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+                    } else {
+                        if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
+                    }
+                    canvas.width = width;
+                    canvas.height = height;
+                    ctx.drawImage(img, 0, 0, width, height);
+                    resolve(canvas.toDataURL('image/jpeg', 0.6));
+                };
+                img.onerror = (error) => reject(error);
+            };
+            reader.onerror = (error) => reject(error);
+        });
+    };
+
+    // base64 → File 변환 (네이티브 공유용)
+    const base64ToFile = async (dataUrl, filename) => {
+        const res = await fetch(dataUrl);
+        const blob = await res.blob();
+        return new File([blob], filename, { type: blob.type });
+    };
+
+    function fetchAlbums(user) {
+        if (!db) return;
+        // RULE 1에 따른 개인 전용 앨범 참조 설정
+        const colRef = collection(db, 'artifacts', 'patek-s', 'users', user.uid, 'albums');
+        unsubscribeAlbums = onSnapshot(colRef, (snapshot) => {
+            window.albums = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            window.albums.sort((a, b) => new Date(b.date) - new Date(a.date));
+            window.renderAlbums();
+        }, (error) => {
+            console.error("Album Load Error:", error);
+        });
+    }
+
+    // 앨범 필터링 변경
+    window.setAlbumFilter = function(category, btnElement) {
+        window.albumFilter = category;
+        document.querySelectorAll('.album-filter-btn').forEach(btn => {
+            btn.className = "album-filter-btn flex-1 py-2 rounded-lg text-[13px] font-sans whitespace-nowrap transition-colors border shadow-sm bg-white text-[#8A847E] border-[#E8E4DB]";
+        });
+        btnElement.className = "album-filter-btn flex-1 py-2 rounded-lg text-[13px] font-sans whitespace-nowrap transition-colors border shadow-sm bg-[#8B7355] text-white border-[#8B7355] font-medium";
+        window.renderAlbums();
+    };
+
+    // 앨범 검색 인풋 제어
+    document.addEventListener('DOMContentLoaded', () => {
+        const searchInput = document.getElementById('album-search-input');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                window.albumSearchQuery = e.target.value;
+                const clearBtn = document.getElementById('album-search-clear');
+                if (window.albumSearchQuery) {
+                    clearBtn.style.display = 'block';
+                } else {
+                    clearBtn.style.display = 'none';
+                }
+                window.renderAlbums();
+            });
+        }
+    });
+
+    window.clearAlbumSearch = function() {
+        document.getElementById('album-search-input').value = '';
+        window.albumSearchQuery = '';
+        document.getElementById('album-search-clear').style.display = 'none';
+        window.renderAlbums();
+    };
+
+    // 앨범 렌더링
+    window.renderAlbums = function() {
+        const list = document.getElementById('album-grid-content');
+        if (!list) return;
+        list.innerHTML = '';
+
+        const safeQuery = String(window.albumSearchQuery || '').toLowerCase().replace(/[\s-]/g, '');
+        let filtered = window.albums.filter(a => window.albumFilter === '전체' || a.category === window.albumFilter);
+        
+        if (safeQuery) {
+            filtered = filtered.filter(a => {
+                const matchTitle = String(a.title || '').toLowerCase().replace(/[\s-]/g, '').includes(safeQuery);
+                const matchRef = String(a.ref || '').toLowerCase().replace(/[\s-]/g, '').includes(safeQuery);
+                return matchTitle || matchRef;
+            });
+        }
+
+        if (filtered.length === 0) {
+            list.innerHTML = `<div class="col-span-2 flex flex-col items-center justify-center py-20 text-[#A8A29D] font-serif text-sm">등록된 사진이 없습니다.</div>`;
+            return;
+        }
+
+        filtered.forEach(album => {
+            const isSelected = window.selectedAlbumIds.includes(album.id);
+            const card = document.createElement('div');
+            card.className = `relative rounded-xl overflow-hidden bg-white shadow-sm border flex flex-col transition-all cursor-pointer ${isSelected ? 'border-[#8B7355] ring-1 ring-[#8B7355]' : 'border-[#E8E4DB]'}`;
+            
+            // 카드 바디 클릭 핸들러 (선택 모드면 선택 처리, 아니면 수정 모달 오픈)
+            card.onclick = (e) => {
+                if (e.target.closest('.no-card-trigger')) return; // 체크버튼이나 공유버튼 영역 클릭 시 예외
+                if (window.selectedAlbumIds.length > 0) {
+                    window.toggleAlbumSelection(album.id);
+                } else {
+                    window.openEditAlbum(album);
+                }
+            };
+
+            card.innerHTML = `
+                <div class="relative w-full aspect-[4/3] bg-[#F2EFE8]">
+                    <img src="${album.imageUrl}" alt="${album.title}" class="w-full h-full object-cover" />
+                    <div class="absolute top-2 left-2 px-2.5 py-1 bg-white/95 backdrop-blur-sm rounded-md text-[10px] text-[#4A443F] font-bold shadow-sm">
+                        ${album.category}
+                    </div>
+                    <button class="no-card-trigger absolute top-2 right-2 w-7 h-7 bg-white/95 backdrop-blur-sm rounded-full flex items-center justify-center shadow-sm text-[#4A443F] hover:text-[#8B7355] transition-colors" onclick="window.shareSingleAlbum('${album.id}', event)">
+                        <i data-lucide="share-2" class="w-3.5 h-3.5"></i>
+                    </button>
+                </div>
+                <div class="flex justify-between items-center p-2.5 bg-white">
+                    <div class="flex flex-col min-w-0 flex-1 leading-tight">
+                        <span class="text-[12px] font-semibold font-sans text-[#3A3532] truncate">${album.title}</span>
+                        ${album.ref ? `<span class="text-[10px] font-sans text-[#999] truncate mt-0.5">${album.ref}</span>` : ''}
+                    </div>
+                    <button class="no-card-trigger ml-2 shrink-0" onclick="window.toggleAlbumSelection('${album.id}')">
+                        ${isSelected 
+                            ? `<div class="text-[#8B7355]"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"></path></svg></div>`
+                            : `<div class="text-[#DCD6CC]"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle></svg></div>`
+                        }
+                    </button>
+                </div>
+            `;
+            list.appendChild(card);
+        });
+        lucide.createIcons();
+    };
+
+    // 다중 선택 관리
+    window.toggleAlbumSelection = function(id) {
+        if (window.selectedAlbumIds.includes(id)) {
+            window.selectedAlbumIds = window.selectedAlbumIds.filter(v => v !== id);
+        } else {
+            window.selectedAlbumIds.push(id);
+        }
+        window.updateMultiSelectActionBar();
+        window.renderAlbums();
+    };
+
+    window.clearAlbumSelection = function() {
+        window.selectedAlbumIds = [];
+        window.updateMultiSelectActionBar();
+        window.renderAlbums();
+    };
+
+    window.updateMultiSelectActionBar = function() {
+        const bar = document.getElementById('album-multi-action-bar');
+        if (window.selectedAlbumIds.length > 0) {
+            document.getElementById('album-selected-count-text').innerText = `${window.selectedAlbumIds.length}장 선택됨`;
+            bar.style.display = 'flex';
+        } else {
+            bar.style.display = 'none';
+        }
+    };
+
+    // 사진 등록 모달 열기
+    window.openCreateAlbum = function() {
+        window.albumForm = { id: '', files: [], category: '기타', title: '', ref: '', memo: '', imageUrl: '' };
+        document.getElementById('album-modal-title').innerText = 'Upload Photo';
+        document.getElementById('album-delete-btn-container').style.display = 'none';
+        document.getElementById('album-form-title').value = '';
+        document.getElementById('album-form-ref').value = '';
+        document.getElementById('album-form-memo').value = '';
+        
+        window.setFormCategory('기타');
+        window.renderAlbumFormPreviews();
+        
+        document.getElementById('page-album-modal').style.display = 'flex';
+    };
+
+    // 사진 수정 모달 열기
+    window.openEditAlbum = function(album) {
+        window.albumForm = { 
+            id: album.id, 
+            files: [], 
+            category: album.category, 
+            title: album.title, 
+            ref: album.ref || '', 
+            memo: album.memo || '', 
+            imageUrl: album.imageUrl 
+        };
+        document.getElementById('album-modal-title').innerText = 'Edit Photo';
+        document.getElementById('album-delete-btn-container').style.display = 'block';
+        document.getElementById('album-form-title').value = window.albumForm.title;
+        document.getElementById('album-form-ref').value = window.albumForm.ref;
+        document.getElementById('album-form-memo').value = window.albumForm.memo;
+        
+        window.setFormCategory(window.albumForm.category);
+        window.renderAlbumFormPreviews();
+        
+        document.getElementById('page-album-modal').style.display = 'flex';
+    };
+
+    window.closeAlbumModal = function() {
+        document.getElementById('page-album-modal').style.display = 'none';
+    };
+
+    window.setFormCategory = function(cat) {
+        window.albumForm.category = cat;
+        document.querySelectorAll('.album-form-cat-btn').forEach(btn => {
+            if (btn.dataset.category === cat) {
+                btn.className = "album-form-cat-btn flex-1 py-2.5 rounded-[8px] text-[13px] font-sans whitespace-nowrap transition-colors border shadow-sm bg-[#8B7355] text-white border-[#8B7355] font-medium";
+            } else {
+                btn.className = "album-form-cat-btn flex-1 py-2.5 rounded-[8px] text-[13px] font-sans whitespace-nowrap transition-colors border shadow-sm bg-white text-[#8A847E] border-[#E8E4DB]";
+            }
+        });
+    };
+
+    window.triggerAlbumFileSelect = function() {
+        document.getElementById('album-file-input').click();
+    };
+
+    window.handleAlbumFileChange = async function(e) {
+        const files = Array.from(e.target.files);
+        const currentFiles = window.albumForm.files || [];
+        const combined = [...currentFiles, ...files];
+        
+        if (combined.length > 10) {
+            window.showCustomAlert("최대 10장까지만 업로드 가능합니다.");
+            window.albumForm.files = combined.slice(0, 10);
+        } else {
+            window.albumForm.files = combined;
+        }
+        e.target.value = '';
+        window.renderAlbumFormPreviews();
+    };
+
+    window.removeFormFile = function(index) {
+        window.albumForm.files.splice(index, 1);
+        window.renderAlbumFormPreviews();
+    };
+
+    // 사진 폼 미리보기 UI 렌더
+    window.renderAlbumFormPreviews = function() {
+        const list = document.getElementById('album-preview-list');
+        list.innerHTML = '';
+
+        // 수정 모드에서 기존 이미지만 있을 때
+        if (window.albumForm.id && window.albumForm.imageUrl && (!window.albumForm.files || window.albumForm.files.length === 0)) {
+            const wrapper = document.createElement('div');
+            wrapper.className = "relative w-full h-[180px] shrink-0 rounded-[14px] overflow-hidden border border-[#E8E4DB]";
+            wrapper.innerHTML = `<img src="${window.albumForm.imageUrl}" class="h-full w-full object-contain bg-[#FDFBF7]" alt="preview" />`;
+            list.appendChild(wrapper);
+            return;
+        }
+
+        // 새로 선택한 파일들 있을 때
+        if (window.albumForm.files && window.albumForm.files.length > 0) {
+            window.albumForm.files.forEach((file, idx) => {
+                const url = URL.createObjectURL(file);
+                const item = document.createElement('div');
+                item.className = "relative w-28 h-28 shrink-0 rounded-[14px] overflow-hidden shadow-sm border border-[#E8E4DB]";
+                item.innerHTML = `
+                    <img src="${url}" class="w-full h-full object-cover" alt="preview" />
+                    <button type="button" onclick="window.removeFormFile(${idx})" class="absolute top-1.5 right-1.5 bg-black/60 text-white rounded-full p-1 leading-none flex items-center justify-center w-5 h-5">
+                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                    </button>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        // 추가 버튼 홀더 노출
+        if (!window.albumForm.id && (!window.albumForm.files || window.albumForm.files.length < 10)) {
+            const addBtn = document.createElement('div');
+            const isFirst = !window.albumForm.files || window.albumForm.files.length === 0;
+            addBtn.className = `shrink-0 border-[1.5px] border-dashed border-[#C2BDB5] rounded-[14px] flex flex-col items-center justify-center cursor-pointer hover:bg-[#FDFBF7] transition-colors ${isFirst ? 'w-full h-[180px]' : 'w-28 h-28'}`;
+            addBtn.onclick = window.triggerAlbumFileSelect;
+            addBtn.innerHTML = `
+                <i data-lucide="camera" class="${isFirst ? 'w-11 h-11' : 'w-7 h-7'} text-[#8B7355] mb-2"></i>
+                <p class="text-[#8A847E] font-sans text-[12px]">추가</p>
+            `;
+            list.appendChild(addBtn);
+        }
+        lucide.createIcons();
+    };
+
+    // 사진 폼 저장 제출
+    window.submitAlbumForm = async function() {
+        if (!currentUser) return;
+
+        const titleInput = document.getElementById('album-form-title').value.trim();
+        const refInput = document.getElementById('album-form-ref').value.trim();
+        const memoInput = document.getElementById('album-form-memo').value.trim();
+
+        if (!titleInput) {
+            window.showCustomAlert("사진명(제목)을 입력해주세요.");
+            return;
+        }
+
+        document.getElementById('loading-overlay').style.display = 'flex';
+        try {
+            // 수정 저장 처리
+            if (window.albumForm.id) {
+                let finalUrl = window.albumForm.imageUrl;
+                if (window.albumForm.files && window.albumForm.files.length > 0) {
+                    finalUrl = await compressImage(window.albumForm.files[0]);
+                }
+                const docRef = doc(db, 'artifacts', 'patek-s', 'users', currentUser.uid, 'albums', window.albumForm.id);
+                await updateDoc(docRef, {
+                    title: titleInput,
+                    ref: refInput,
+                    memo: memoInput,
+                    category: window.albumForm.category,
+                    imageUrl: finalUrl
+                });
+                window.closeAlbumModal();
+                window.showCustomAlert("사진이 수정되었습니다.");
+            } else {
+                // 신규 업로드 처리 (멀티 장수 대응)
+                if (!window.albumForm.files || window.albumForm.files.length === 0) {
+                    window.showCustomAlert("사진을 추가해 주세요.");
+                    document.getElementById('loading-overlay').style.display = 'none';
+                    return;
+                }
+
+                const promises = window.albumForm.files.map(async (file) => {
+                    const base64Url = await compressImage(file);
+                    const payload = {
+                        imageUrl: base64Url,
+                        category: window.albumForm.category,
+                        title: titleInput,
+                        ref: refInput,
+                        memo: memoInput,
+                        date: new Date().toISOString().split('T')[0]
+                    };
+                    const colRef = collection(db, 'artifacts', 'patek-s', 'users', currentUser.uid, 'albums');
+                    await addDoc(colRef, payload);
+                });
+                await Promise.all(promises);
+                window.closeAlbumModal();
+                window.showCustomAlert(`${window.albumForm.files.length}장의 사진이 저장되었습니다.`);
+            }
+        } catch (err) {
+            console.error(err);
+            window.showCustomAlert("저장 중 오류가 발생했습니다.");
+        } finally {
+            document.getElementById('loading-overlay').style.display = 'none';
+        }
+    };
+
+    // 개별 사진 삭제
+    window.deleteSingleAlbum = function() {
+        window.showCustomConfirm("이 사진을 정말 삭제하시겠습니까?", async () => {
+            document.getElementById('loading-overlay').style.display = 'flex';
+            try {
+                const docRef = doc(db, 'artifacts', 'patek-s', 'users', currentUser.uid, 'albums', window.albumForm.id);
+                await deleteDoc(docRef);
+                window.closeAlbumModal();
+                window.showCustomAlert("사진이 삭제되었습니다.");
+            } catch(e) {
+                console.error(e);
+                window.showCustomAlert("삭제 실패");
+            } finally {
+                document.getElementById('loading-overlay').style.display = 'none';
+            }
+        });
+    };
+
+    // 다중 선택 사진 일괄 삭제
+    window.deleteSelectedAlbums = function() {
+        window.showCustomConfirm(`선택하신 ${window.selectedAlbumIds.length}장의 사진을 삭제하시겠습니까?`, async () => {
+            document.getElementById('loading-overlay').style.display = 'flex';
+            try {
+                const promises = window.selectedAlbumIds.map(id => {
+                    const docRef = doc(db, 'artifacts', 'patek-s', 'users', currentUser.uid, 'albums', id);
+                    return deleteDoc(docRef);
+                });
+                await Promise.all(promises);
+                window.selectedAlbumIds = [];
+                window.updateMultiSelectActionBar();
+                window.showCustomAlert("사진이 일괄 삭제되었습니다.");
+            } catch(e) {
+                console.error(e);
+                window.showCustomAlert("삭제 중 오류가 발생했습니다.");
+            } finally {
+                document.getElementById('loading-overlay').style.display = 'none';
+            }
+        });
+    };
+
+    // 사진 네이티브 공유 및 저장 다운로드
+    window.shareSelectedAlbums = async function() {
+        if (window.selectedAlbumIds.length === 0) return;
+        document.getElementById('loading-overlay').style.display = 'flex';
+        try {
+            const filesArray = [];
+            for (const id of window.selectedAlbumIds) {
+                const album = window.albums.find(a => a.id === id);
+                if (album && album.imageUrl) {
+                    const file = await base64ToFile(album.imageUrl, `patek_${id}.jpg`);
+                    filesArray.push(file);
+                }
+            }
+            document.getElementById('loading-overlay').style.display = 'none';
+            if (navigator.canShare && navigator.canShare({ files: filesArray })) {
+                await navigator.share({ files: filesArray });
+                window.selectedAlbumIds = [];
+                window.updateMultiSelectActionBar();
+                window.renderAlbums();
+            } else {
+                throw new Error("공유 미지원");
+            }
+        } catch (error) {
+            document.getElementById('loading-overlay').style.display = 'none';
+            if (error.name === 'AbortError') return;
+
+            // 다운로드 Fallback 개별 다운로드 처리
+            window.selectedAlbumIds.forEach(id => {
+                const album = window.albums.find(a => a.id === id);
+                if (album) {
+                    const link = document.createElement('a');
+                    link.href = album.imageUrl;
+                    link.download = `patek_${id}.jpg`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                }
+            });
+            window.showCustomAlert("기본 방식으로 사진 다운로드를 시작했습니다.\n(갤러리 또는 파일 앱 확인)");
+            window.selectedAlbumIds = [];
+            window.updateMultiSelectActionBar();
+            window.renderAlbums();
+        }
+    };
+
+    window.shareSingleAlbum = async function(id, e) {
+        e.stopPropagation();
+        document.getElementById('loading-overlay').style.display = 'flex';
+        try {
+            const album = window.albums.find(a => a.id === id);
+            if (album && album.imageUrl) {
+                const file = await base64ToFile(album.imageUrl, `patek_${id}.jpg`);
+                document.getElementById('loading-overlay').style.display = 'none';
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    await navigator.share({ files: [file] });
+                } else {
+                    const link = document.createElement('a');
+                    link.href = album.imageUrl;
+                    link.download = `patek_${id}.jpg`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                }
+            }
+        } catch (error) {
+            document.getElementById('loading-overlay').style.display = 'none';
+        }
+    };
+
+    // ==========================================
+    // 커스텀 다이얼로그 (alert/confirm 방지)
+    // ==========================================
+    window.showCustomAlert = function(msg) {
+        document.getElementById('custom-alert-message').innerText = msg;
+        document.getElementById('custom-alert').style.display = 'flex';
+        lucide.createIcons();
+    };
+    window.closeCustomAlert = function() {
+        document.getElementById('custom-alert').style.display = 'none';
+    };
+
+    window.showCustomConfirm = function(msg, onConfirmCallback) {
+        document.getElementById('custom-confirm-message').innerText = msg;
+        document.getElementById('custom-confirm').style.display = 'flex';
+        document.getElementById('custom-confirm-ok-btn').onclick = function() {
+            document.getElementById('custom-confirm').style.display = 'none';
+            if (onConfirmCallback) onConfirmCallback();
+        };
+        lucide.createIcons();
+    };
+    window.closeCustomConfirm = function() {
+        document.getElementById('custom-confirm').style.display = 'none';
+    };
+
 </script>
 
 <!-- ==========================================
@@ -394,8 +912,8 @@
 <!-- 3. 메인 앱 컨테이너 -->
 <div id="app-container" style="display: none;" class="w-full max-w-md mx-auto h-screen relative overflow-hidden bg-[#FAF9F5] flex-col">
     
-    <!-- 공통 헤더 로고 -->
-    <div class="pt-12 pb-4 bg-white flex-shrink-0 rounded-b-3xl shadow-sm z-10 relative flex flex-col items-center justify-center">
+    <!-- 공통 헤더 로고 (누끼 자연스럽게 배경 통일 bg-[#FAF9F5]) -->
+    <div class="pt-12 pb-4 bg-[#FAF9F5] flex-shrink-0 z-10 relative flex flex-col items-center justify-center">
         <img src="log.png" alt="Patek Philippe" class="w-40 h-auto object-contain" />
         <div class="w-[80%] flex items-center justify-center mt-4 opacity-50">
             <div class="h-[1px] w-full bg-[#B4975A]"></div>
@@ -430,21 +948,97 @@
             <div id="notice-list-content" class="space-y-3"></div>
         </div>
 
+        <!-- [탭] 개인용 앨범 화면 -->
+        <div id="page-album" class="page bg-[#FAF9F5] no-scrollbar">
+            <div class="flex flex-col items-center pt-4 pb-2 shrink-0">
+                <h2 class="text-2xl font-serif text-[#333] tracking-wider mb-5">앨범</h2>
+
+                <!-- 검색창 -->
+                <div class="w-full px-5 flex gap-2 relative">
+                    <div class="flex-1 min-w-0 bg-white border border-[#E8E4DB] rounded-[12px] px-3 py-2.5 flex items-center shadow-sm relative">
+                        <i data-lucide="search" class="text-[#8A847E] mr-2 shrink-0 w-[18px] h-[18px]"></i>
+                        <input
+                            id="album-search-input"
+                            type="text"
+                            placeholder="사진명 또는 REF 검색"
+                            class="flex-1 min-w-0 bg-transparent outline-none font-sans text-[13px] text-[#4A443F] placeholder-[#C2BDB5] pr-6"
+                        />
+                        <button id="album-search-clear" onclick="clearAlbumSearch()" class="absolute right-2 text-[#C2BDB5] hover:text-[#8A847E] p-1" style="display: none;">
+                            <i data-lucide="x" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 카테고리 필터 탭 -->
+                <div class="w-full px-5 mt-4 flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                    <button data-category="전체" onclick="setAlbumFilter('전체', this)" class="album-filter-btn flex-1 py-2 rounded-lg text-[13px] font-sans whitespace-nowrap transition-colors border shadow-sm bg-[#8B7355] text-white border-[#8B7355] font-medium">
+                        전체
+                    </button>
+                    <button data-category="착용샷" onclick="setAlbumFilter('착용샷', this)" class="album-filter-btn flex-1 py-2 rounded-lg text-[13px] font-sans whitespace-nowrap transition-colors border shadow-sm bg-white text-[#8A847E] border-[#E8E4DB]">
+                        착용샷
+                    </button>
+                    <button data-category="실물" onclick="setAlbumFilter('실물', this)" class="album-filter-btn flex-1 py-2 rounded-lg text-[13px] font-sans whitespace-nowrap transition-colors border shadow-sm bg-white text-[#8A847E] border-[#E8E4DB]">
+                        실물
+                    </button>
+                    <button data-category="기타" onclick="setAlbumFilter('기타', this)" class="album-filter-btn flex-1 py-2 rounded-lg text-[13px] font-sans whitespace-nowrap transition-colors border shadow-sm bg-white text-[#8A847E] border-[#E8E4DB]">
+                        기타
+                    </button>
+                </div>
+            </div>
+
+            <!-- 사진 앨범 그리드 영역 -->
+            <div class="px-5 pt-2 pb-10">
+                <div id="album-grid-content" class="grid grid-cols-2 gap-x-3 gap-y-4"></div>
+            </div>
+
+            <!-- 다중선택 하단 플로팅 컨트롤 바 -->
+            <div id="album-multi-action-bar" style="display: none;" class="absolute bottom-[20px] left-5 right-5 rounded-2xl bg-[#3A3532] text-white px-6 py-4 flex justify-between items-center z-[95] shadow-2xl">
+                <div class="flex items-center gap-3">
+                    <button onclick="clearAlbumSelection()" class="text-[#DCD6CC] hover:text-white transition-colors">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                    <span id="album-selected-count-text" class="font-sans font-bold text-[13px]">0장 선택됨</span>
+                </div>
+                <div class="flex gap-5">
+                    <!-- 선택 삭제 -->
+                    <button onclick="deleteSelectedAlbums()" class="flex flex-col items-center gap-1 text-[#FF453A] hover:text-[#FF6961] transition-colors">
+                        <i data-lucide="trash-2" class="w-[20px] h-[20px]"></i>
+                        <span class="text-[10px] font-sans">삭제</span>
+                    </button>
+                    <!-- 네이티브 공유 및 기기 저장 -->
+                    <button onclick="shareSelectedAlbums()" class="flex flex-col items-center gap-1 hover:text-[#DCD6CC] transition-colors">
+                        <i data-lucide="share-2" class="w-[20px] h-[20px]"></i>
+                        <span class="text-[10px] font-sans">공유</span>
+                    </button>
+                    <button onclick="shareSelectedAlbums()" class="flex flex-col items-center gap-1 hover:text-[#DCD6CC] transition-colors">
+                        <i data-lucide="download" class="w-[20px] h-[20px]"></i>
+                        <span class="text-[10px] font-sans">저장</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 사진 추가 Floating Action Button -->
+            <button onclick="openCreateAlbum()" class="absolute bottom-[24px] right-6 w-14 h-14 bg-[#3A3532] text-[#F3EFE8] rounded-full flex items-center justify-center shadow-[0_8px_20px_rgba(58,53,50,0.3)] active:scale-95 z-40 border border-[#2A2522]">
+                <i data-lucide="plus" class="w-7 h-7" stroke-width="1.5"></i>
+            </button>
+        </div>
+
         <!-- [탭] 임시 화면들 -->
         <div id="page-schedule" class="page p-6 no-scrollbar"><div class="h-full flex items-center justify-center text-[#999]">근무표 준비중입니다.</div></div>
         <div id="page-sales" class="page p-6 no-scrollbar"><div class="h-full flex items-center justify-center text-[#999]">매출 준비중입니다.</div></div>
         <div id="page-inventory" class="page p-6 no-scrollbar"><div class="h-full flex items-center justify-center text-[#999]">재고 준비중입니다.</div></div>
         <div id="page-as" class="page p-6 no-scrollbar"><div class="h-full flex items-center justify-center text-[#999]">A/S 준비중입니다.</div></div>
         <div id="page-sp" class="page p-6 no-scrollbar"><div class="h-full flex items-center justify-center text-[#999]">SP 준비중입니다.</div></div>
-        <div id="page-album" class="page p-6 no-scrollbar"><div class="h-full flex items-center justify-center text-[#999]">앨범 준비중입니다.</div></div>
     </div>
 
-    <!-- 하단 네비게이션 (고정) -->
-    <div id="bottom-nav-bar" class="bottom-nav grid grid-cols-4 gap-y-6 gap-x-2 px-2">
+    <!-- 하단 네비게이션 (4x2 그리드 구조 적용) -->
+    <div id="bottom-nav-bar" class="bottom-nav">
+        <!-- 첫 번째 줄 -->
         <div class="nav-item" onclick="switchTab('notice', this)"><i data-lucide="megaphone"></i><span>공지사항</span></div>
         <div class="nav-item" onclick="switchTab('schedule', this)"><i data-lucide="calendar-days"></i><span>근무표</span></div>
         <div class="nav-item active" onclick="switchTab('calendar', this)"><i data-lucide="calendar"></i><span>캘린더</span></div>
         <div class="nav-item" onclick="switchTab('sales', this)"><i data-lucide="bar-chart-3"></i><span>매출</span></div>
+        <!-- 두 번째 줄 -->
         <div class="nav-item" onclick="switchTab('inventory', this)"><i data-lucide="package"></i><span>재고</span></div>
         <div class="nav-item" onclick="switchTab('as', this)"><i data-lucide="wrench"></i><span>A/S</span></div>
         <div class="nav-item" onclick="switchTab('sp', this)"><i data-lucide="star"></i><span>SP</span></div>
@@ -453,12 +1047,13 @@
 </div>
 
 <!-- ==========================================
-     전체화면 모달 영역 (공지사항 등록/상세)
+     전체화면 모달 영역 (공지사항 등록/상세/앨범)
      ========================================== -->
 
 <!-- 공지사항 등록 -->
 <div id="page-notice-create" style="display: none;" class="fixed inset-0 w-full max-w-md mx-auto bg-[#FAF9F5] z-[200] flex-col">
-    <div class="pt-12 pb-4 bg-white flex-shrink-0 relative border-b border-[#F0EFEA] flex flex-col items-center">
+    <!-- 헤더 배경 투명 통합 -->
+    <div class="pt-12 pb-4 bg-[#FAF9F5] flex-shrink-0 relative flex flex-col items-center">
         <button onclick="closeNoticeCreate()" class="absolute right-6 top-14 text-[#999] p-2"><i data-lucide="x" class="w-6 h-6"></i></button>
         <img src="log.png" alt="Patek Philippe" class="w-32 h-auto object-contain mt-2 mb-4" />
         <h2 class="text-2xl font-serif mb-2 text-[#333]">공지사항 등록</h2>
@@ -490,7 +1085,7 @@
             <textarea id="input-content" rows="4" placeholder="내용을 입력하세요" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-3.5 outline-none font-medium resize-none"></textarea>
         </div>
         
-        <!-- 열람 카운트 디자인 심플하게 변경 -->
+        <!-- 열람 카운트 텍스트 완벽히 지우고 오직 아이콘과 0/6만 제공 -->
         <div class="bg-[#FCFBF8] border border-[#F2EFE8] rounded-xl p-4 flex items-center justify-center gap-3 text-[#B4975A]">
             <i data-lucide="eye" class="w-6 h-6"></i>
             <span class="font-bold text-xl">0 / 6</span>
@@ -503,7 +1098,7 @@
 
 <!-- 공지사항 상세 보기 -->
 <div id="page-notice-detail" style="display: none;" class="fixed inset-0 w-full max-w-md mx-auto bg-[#FAF9F5] z-[200] flex-col">
-    <div class="pt-12 pb-4 bg-white flex-shrink-0 relative border-b border-[#F0EFEA] flex flex-col items-center">
+    <div class="pt-12 pb-4 bg-[#FAF9F5] flex-shrink-0 relative flex flex-col items-center">
         <button onclick="closeNoticeDetail()" class="absolute right-6 top-14 text-[#999] p-2"><i data-lucide="x" class="w-6 h-6"></i></button>
         <img src="log.png" alt="Patek Philippe" class="w-32 h-auto object-contain mt-2" />
     </div>
@@ -517,6 +1112,94 @@
             </div>
         </div>
         <div id="detail-content" class="text-[#444] whitespace-pre-wrap leading-relaxed text-[15.5px] font-medium">내용</div>
+    </div>
+</div>
+
+<!-- 앨범 업로드/수정 모달 -->
+<div id="page-album-modal" style="display: none;" class="fixed inset-0 w-full max-w-md mx-auto bg-[#FAF9F5] z-[210] flex-col font-sans">
+    
+    <!-- 모달 헤더 (배경 매칭 완료) -->
+    <div class="flex justify-between items-center px-5 pt-12 pb-4 bg-[#FAF9F5] sticky top-0 z-20 shrink-0">
+        <button onclick="closeAlbumModal()" class="text-[#8A847E] text-[15px] hover:text-[#4A443F] py-2">취소</button>
+        <div class="absolute left-1/2 -translate-x-1/2 flex flex-col items-center top-10">
+            <img src="log.png" alt="Logo" class="w-24 h-auto object-contain mb-1" />
+            <span id="album-modal-title" class="font-serif text-[18px] text-[#3A3532]">Upload Photo</span>
+        </div>
+        <button onclick="submitAlbumForm()" class="text-[#8B7355] text-[15px] font-medium hover:text-[#6B5335] py-2">완료</button>
+    </div>
+
+    <div class="flex-1 overflow-y-auto px-5 pb-8 mt-12 no-scrollbar">
+        <!-- 숨겨진 실물 파일 인풋 -->
+        <input type="file" id="album-file-input" multiple accept="image/*" class="hidden" onchange="window.handleAlbumFileChange(event)" />
+
+        <!-- 이미지 미리보기 가로 스크롤 영역 -->
+        <div id="album-preview-list" class="flex overflow-x-auto gap-3 no-scrollbar mb-6 pb-2 px-1"></div>
+
+        <!-- 카테고리 태그 선택 -->
+        <div class="flex gap-2 mb-6 justify-center">
+            <button data-category="착용샷" onclick="setFormCategory('착용샷')" class="album-form-cat-btn flex-1 py-2.5 rounded-[8px] text-[13px] font-sans whitespace-nowrap transition-colors border shadow-sm bg-white text-[#8A847E] border-[#E8E4DB]">
+                착용샷
+            </button>
+            <button data-category="실물" onclick="setFormCategory('실물')" class="album-form-cat-btn flex-1 py-2.5 rounded-[8px] text-[13px] font-sans whitespace-nowrap transition-colors border shadow-sm bg-white text-[#8A847E] border-[#E8E4DB]">
+                실물
+            </button>
+            <button data-category="기타" onclick="setFormCategory('기타')" class="album-form-cat-btn flex-1 py-2.5 rounded-[8px] text-[13px] font-sans whitespace-nowrap transition-colors border shadow-sm bg-[#8B7355] text-white border-[#8B7355] font-medium">
+                기타
+            </button>
+        </div>
+
+        <!-- 데이터 입력 카드 폼 -->
+        <div class="bg-white border border-[#E8E4DB] rounded-[14px] p-5 shadow-[0_2px_10px_rgba(0,0,0,0.02)] mb-8">
+            <div class="flex flex-col py-3 border-b border-[#F2EFE8]">
+                <span class="text-[13px] text-[#2C2724] font-semibold mb-1.5 ml-1">사진명</span>
+                <input id="album-form-title" type="text" class="bg-transparent outline-none text-[#4A443F] w-full text-sm px-1 py-1 font-medium" placeholder="제목을 입력하세요" />
+            </div>
+            <div class="flex flex-col py-3 border-b border-[#F2EFE8]">
+                <span class="text-[13px] text-[#2C2724] font-semibold mb-1.5 ml-1">REF.</span>
+                <input id="album-form-ref" type="text" class="bg-transparent outline-none text-[#4A443F] w-full text-sm px-1 py-1 font-medium" placeholder="레퍼런스 넘버 입력" />
+            </div>
+            <div class="flex flex-col pt-3 pb-1">
+                <span class="text-[13px] text-[#2C2724] font-semibold mb-2 ml-1">메모</span>
+                <textarea id="album-form-memo" class="bg-transparent outline-none text-[#4A443F] w-full text-sm resize-none h-[70px] px-1 font-medium" placeholder="메모를 입력하세요"></textarea>
+            </div>
+        </div>
+
+        <!-- 단일 앨범 삭제 (수정 시에만 노출) -->
+        <div id="album-delete-btn-container" style="display: none;">
+            <button onclick="deleteSingleAlbum()" class="w-full py-4 mt-2 mb-8 bg-white border border-[#E8D8D8] text-[#A06C6C] rounded-[14px] font-sans font-semibold text-sm tracking-wide hover:bg-[#FFF5F5] transition-colors shadow-sm">
+                이 사진 삭제하기
+            </button>
+        </div>
+    </div>
+</div>
+
+
+<!-- ==========================================
+     커스텀 모달 다이얼로그 (Alert / Confirm)
+     ========================================== -->
+
+<!-- 커스텀 알림 모달 (Alert) -->
+<div id="custom-alert" style="display: none;" class="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center p-6 z-[200000]">
+    <div class="bg-[#FCFBF9] rounded-xl p-6 w-full max-w-[280px] shadow-2xl border border-[#E8E4DB] flex flex-col items-center">
+        <div class="w-12 h-12 rounded-full bg-[#FDFBF7] border border-[#E8E4DB] flex items-center justify-center mb-4 text-[#8B7355]">
+            <i data-lucide="info" class="w-6 h-6"></i>
+        </div>
+        <p id="custom-alert-message" class="text-[#3A3532] text-[15px] font-sans text-center font-medium leading-relaxed mb-6 whitespace-pre-wrap">알림 메시지</p>
+        <button onclick="window.closeCustomAlert()" class="w-full bg-[#3A3532] hover:bg-[#2A2522] text-[#F3EFE8] font-serif tracking-widest py-3 rounded-md transition-colors text-[13px]">확인</button>
+    </div>
+</div>
+
+<!-- 커스텀 확인 모달 (Confirm) -->
+<div id="custom-confirm" style="display: none;" class="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center p-6 z-[200000]">
+    <div class="bg-[#FCFBF9] rounded-xl p-6 w-full max-w-[280px] shadow-2xl border border-[#E8E4DB] flex flex-col items-center">
+        <div class="w-12 h-12 rounded-full bg-[#FFF5F5] border border-[#E8D8D8] flex items-center justify-center mb-4 text-[#A06C6C]">
+            <i data-lucide="trash-2" class="w-6 h-6"></i>
+        </div>
+        <p id="custom-confirm-message" class="text-[#3A3532] text-[15px] font-sans text-center font-medium leading-relaxed mb-6 whitespace-pre-wrap">정말 삭제하시겠습니까?</p>
+        <div class="flex gap-3 w-full">
+            <button onclick="window.closeCustomConfirm()" class="flex-1 bg-white hover:bg-[#F2EFE8] text-[#8A847E] font-serif tracking-widest py-3 rounded-md transition-colors text-[13px] border border-[#E8E4DB]">취소</button>
+            <button id="custom-confirm-ok-btn" class="flex-1 bg-[#FF3B30] hover:bg-[#D93025] text-white font-serif tracking-widest py-3 rounded-md transition-colors text-[13px]">삭제</button>
+        </div>
     </div>
 </div>
 
