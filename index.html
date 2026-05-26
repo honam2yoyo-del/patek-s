@@ -84,6 +84,21 @@
         .holiday-sun { background-color: #FDE2E4 !important; color: #E63946 !important; }
         .holiday-sat { background-color: #E2EFFF !important; color: #1D3557 !important; }
         .holiday-pub { background-color: #FFD6E8 !important; color: #D81B60 !important; }
+
+        .schedule-pill {
+            width: 100%;
+            border: 1px solid;
+            border-radius: 6px;
+            padding: 5px 3px;
+            font-size: 11px;
+            font-weight: 700;
+            line-height: 1.15;
+            text-align: center;
+            word-break: keep-all;
+            white-space: normal;
+            box-sizing: border-box;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.45);
+        }
     </style>
 </head>
 <body>
@@ -559,7 +574,7 @@
         if (mode === 'edit') {
             viewArea.style.display = 'none';
             editArea.style.display = 'block';
-            if (modalTitle) modalTitle.innerText = 'Edit Announcement';
+            if (modalTitle) modalTitle.innerText = '공지사항 수정';
             if (editBtn) editBtn.style.display = 'none';
             if (saveBtn) saveBtn.style.display = 'block';
             if (completeBtn) completeBtn.style.display = 'none';
@@ -567,7 +582,7 @@
         } else {
             viewArea.style.display = 'block';
             editArea.style.display = 'none';
-            if (modalTitle) modalTitle.innerText = 'Announcement';
+            if (modalTitle) modalTitle.innerText = '공지사항';
             if (editBtn) editBtn.style.display = 'flex';
             if (saveBtn) saveBtn.style.display = 'none';
             if (completeBtn) completeBtn.style.display = 'block';
@@ -1251,13 +1266,17 @@
         
         // 날짜 텍스트 업데이트
         const textVal = `${window.scheduleYear}년 ${window.scheduleMonth}월`;
-        document.getElementById('schedule-month-text').innerText = textVal;
-        document.getElementById('leave-month-text').innerText = textVal;
-        
-        // 내부 date input 값 동기화
         const monthVal = `${window.scheduleYear}-${String(window.scheduleMonth).padStart(2, '0')}`;
-        document.getElementById('schedule-month-picker').value = monthVal;
-        document.getElementById('leave-month-picker').value = monthVal;
+
+        const scheduleMonthText = document.getElementById('schedule-month-text');
+        const leaveMonthText = document.getElementById('leave-month-text');
+        const scheduleMonthPicker = document.getElementById('schedule-month-picker');
+        const leaveMonthPicker = document.getElementById('leave-month-picker');
+
+        if (scheduleMonthText) scheduleMonthText.innerText = textVal;
+        if (leaveMonthText) leaveMonthText.innerText = textVal;
+        if (scheduleMonthPicker) scheduleMonthPicker.value = monthVal;
+        if (leaveMonthPicker) leaveMonthPicker.value = monthVal;
         
         window.renderScheduleSheet();
         window.renderLeaveCalendar();
@@ -1271,11 +1290,15 @@
         window.scheduleMonth = parseInt(month);
         
         const textVal = `${window.scheduleYear}년 ${window.scheduleMonth}월`;
-        document.getElementById('schedule-month-text').innerText = textVal;
-        document.getElementById('leave-month-text').innerText = textVal;
-        
-        document.getElementById('schedule-month-picker').value = val;
-        document.getElementById('leave-month-picker').value = val;
+        const scheduleMonthText = document.getElementById('schedule-month-text');
+        const leaveMonthText = document.getElementById('leave-month-text');
+        const scheduleMonthPicker = document.getElementById('schedule-month-picker');
+        const leaveMonthPicker = document.getElementById('leave-month-picker');
+
+        if (scheduleMonthText) scheduleMonthText.innerText = textVal;
+        if (leaveMonthText) leaveMonthText.innerText = textVal;
+        if (scheduleMonthPicker) scheduleMonthPicker.value = val;
+        if (leaveMonthPicker) leaveMonthPicker.value = val;
         
         window.renderScheduleSheet();
         window.renderLeaveCalendar();
@@ -1286,115 +1309,113 @@
         return new Date(year, month, 0).getDate();
     }
 
-    // 연월 선택에 따른 실시간 매장 근무표 렌더 (사진 3)
+    // 연월 선택에 따른 실시간 매장 근무표 렌더 (달력형)
     window.renderScheduleSheet = function() {
         const year = window.scheduleYear;
         const month = window.scheduleMonth;
         const totalDays = getDaysInMonth(year, month);
-        
-        // 헤더 일자 & 요일 렌더
-        const headerDaysTr = document.getElementById('sheet-header-days');
-        const headerWeeksTr = document.getElementById('sheet-header-weeks');
-        if (!headerDaysTr || !headerWeeksTr) return;
-
-        headerDaysTr.innerHTML = '<th rowspan="2" class="font-sans text-[7.5px]">연차</th><th rowspan="2" class="font-sans text-[7.5px]">성명</th>';
-        headerWeeksTr.innerHTML = '';
-
-        for (let d = 1; d <= totalDays; d++) {
-            const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-            const dayOfWeek = new Date(year, month - 1, d).getDay(); // 0:일, 6:토
-            const isHoliday = PUBLIC_HOLIDAYS_2026[dateStr] !== undefined;
-
-            let dayClass = "";
-            if (isHoliday) dayClass = "holiday-pub";
-            else if (dayOfWeek === 0) dayClass = "holiday-sun";
-            else if (dayOfWeek === 6) dayClass = "holiday-sat";
-
-            headerDaysTr.innerHTML += `<th class="${dayClass} font-sans text-[7.5px]">${d}</th>`;
-            
-            const weekChars = ['일', '월', '화', '수', '목', '금', '토'];
-            headerWeeksTr.innerHTML += `<th class="${dayClass} font-sans text-[7.5px]">${weekChars[dayOfWeek]}</th>`;
-        }
-
-        // 끝 통계 칼럼 추가
-        headerDaysTr.innerHTML += '<th rowspan="2" class="font-sans text-[7.5px]">DO</th><th rowspan="2" class="font-sans text-[7.5px]">A</th><th rowspan="2" class="font-sans text-[7.5px]">B</th><th rowspan="2" class="font-sans text-[7.5px]">C</th><th rowspan="2" class="font-sans text-[7.5px] bg-green-50 text-green-700">사용</th><th rowspan="2" class="font-sans text-[7.5px]">남은</th>';
-
-        // 바디 렌더 (직원별 스케줄 테이블 행 채우기)
-        const tbody = document.getElementById('sheet-body-staffs');
-        tbody.innerHTML = '';
-
         const currentMonthKey = `${year}-${String(month).padStart(2, '0')}`;
         const monthScheduleDoc = window.schedulesData[currentMonthKey] || {};
         const staffData = monthScheduleDoc.staffs || {};
 
-        // 수정 정보 동기화
-        if (monthScheduleDoc.lastUpdated) {
-            document.getElementById('schedule-meta-info').innerText = `마지막 수정일 ${monthScheduleDoc.lastUpdated} / 수정자 ${monthScheduleDoc.updatedBy || '시스템'}`;
-        } else {
-            document.getElementById('schedule-meta-info').innerText = '근무표가 등록되지 않았습니다.';
+        const monthText = document.getElementById('schedule-month-text');
+        const monthPicker = document.getElementById('schedule-month-picker');
+        if (monthText) monthText.innerText = `${year}년 ${month}월`;
+        const cardMonthText = document.getElementById('schedule-card-month-text');
+        if (cardMonthText) cardMonthText.innerText = `${year}년 ${month}월`;
+        if (monthPicker) monthPicker.value = currentMonthKey;
+
+        const metaInfo = document.getElementById('schedule-meta-info');
+        if (metaInfo) {
+            if (monthScheduleDoc.lastUpdated) {
+                metaInfo.innerText = `마지막 수정일 ${monthScheduleDoc.lastUpdated} / 수정자 ${monthScheduleDoc.updatedBy || '시스템'}`;
+            } else {
+                metaInfo.innerText = '근무표가 등록되지 않았습니다.';
+            }
         }
 
-        // 기본 제공하는 직원별 기본 연차 세팅 정보
-        const initialLeaveBalances = {
-            '옥영세': 15.0,
-            '엄인주': 13.5,
-            '장용석': 10.5,
-            '최혜지': 17.0,
-            '이승범': 6.0,
-            '형영지': 9.0
+        const holidayInfo = document.getElementById('schedule-holiday-info');
+        if (holidayInfo) {
+            let holidayCount = 0;
+            for (let d = 1; d <= totalDays; d++) {
+                const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                const dayOfWeek = new Date(year, month - 1, d).getDay();
+                if (dayOfWeek === 0 || dayOfWeek === 6 || PUBLIC_HOLIDAYS_2026[dateStr]) holidayCount++;
+            }
+            holidayInfo.innerText = `(법정공휴일 : ${holidayCount}개)`;
+        }
+
+        const grid = document.getElementById('schedule-calendar-grid');
+        if (!grid) return;
+        grid.innerHTML = '';
+
+        const weekLabels = ['월', '화', '수', '목', '금', '토', '일'];
+        weekLabels.forEach(label => {
+            grid.innerHTML += `<div class="h-11 flex items-center justify-center text-[14px] font-bold text-[#6B5335] border-b border-r border-[#E8D8BD] last:border-r-0 bg-[#FFFDF8]">${label}</div>`;
+        });
+
+        const firstDay = new Date(year, month - 1, 1).getDay();
+        const firstDayShift = firstDay === 0 ? 6 : firstDay - 1; // 월요일 시작
+        const totalCells = Math.ceil((firstDayShift + totalDays) / 7) * 7;
+
+        const codeMeta = {
+            'A': { label: 'A', bg: '#FAD7D5', text: '#6E2626', border: '#F0B9B7' },
+            'B': { label: 'B', bg: '#D9E7FA', text: '#234B7A', border: '#BFD2EF' },
+            'C': { label: 'C', bg: '#FFE7B8', text: '#7A4F14', border: '#F4D08C' },
+            '휴무': { label: '휴무', bg: '#EEEEEA', text: '#4A443F', border: '#DDDDD8' }
         };
 
-        window.storeStaffs.forEach(staffName => {
-            const userDays = staffData[staffName] || {};
-            const initialBalance = initialLeaveBalances[staffName] || 15.0;
+        function compactName(name) {
+            return String(name || '').trim().replace(/^옥/, '').replace(/^엄/, '').replace(/^장/, '').replace(/^최/, '').replace(/^이/, '').replace(/^형/, '');
+        }
 
-            let countDO = 0;
-            let countA = 0;
-            let countB = 0;
-            let countC = 0;
-            let usedLeaves = 0.0;
+        function getDayGroups(day) {
+            const groups = { A: [], B: [], C: [], '휴무': [] };
+            const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 
-            let rowHtml = `<tr>`;
-            rowHtml += `<td class="font-semibold text-center text-[#666] bg-[#FAF9F5]">${initialBalance.toFixed(1)}</td>`;
-            rowHtml += `<td class="font-semibold text-center text-[#333] bg-white">${staffName}</td>`;
-
-            for (let d = 1; d <= totalDays; d++) {
-                // 당일에 신청한 개인 휴무가 있는지 탐색
-                const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+            window.storeStaffs.forEach(staffName => {
+                const userDays = staffData[staffName] || {};
+                let code = userDays[day] || userDays[String(day)] || '';
                 const hasLeave = window.leaveRequests.some(r => r.name === staffName && dateStr >= r.startDate && dateStr <= r.endDate);
+                if (hasLeave && !code) code = '휴무';
+                if (code === '/' || code === '휴') code = '휴무';
+                if (groups[code]) groups[code].push(compactName(staffName));
+            });
+            return groups;
+        }
 
-                // 당일 근무 타입 획득
-                let code = userDays[d] || '';
-                
-                // 만약 공식 휴무 신청이 승인되어 있고 별도 수동 근무 코드가 비어 있다면 자동 휴무'/' 표기
-                if (hasLeave && !code) {
-                    code = '/';
-                }
-
-                // 통계 합산
-                if (code === 'A') countA++;
-                else if (code === 'B') countB++;
-                else if (code === 'C') countC++;
-                else if (code === '/' || code === '휴') {
-                    countDO++;
-                }
-
-                rowHtml += `<td class="font-sans font-semibold text-[#4A443F] text-center">${code}</td>`;
+        for (let cell = 0; cell < totalCells; cell++) {
+            const day = cell - firstDayShift + 1;
+            if (day < 1 || day > totalDays) {
+                grid.innerHTML += `<div class="min-h-[116px] border-r border-b border-[#E8D8BD] bg-[#FFFDF8]/60"></div>`;
+                continue;
             }
 
-            // 남은 연차 자동 산정
-            const remainBalance = initialBalance - usedLeaves;
+            const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const dayOfWeek = new Date(year, month - 1, day).getDay();
+            const isSunday = dayOfWeek === 0;
+            const isSaturday = dayOfWeek === 6;
+            const isHoliday = PUBLIC_HOLIDAYS_2026[dateStr] !== undefined;
+            const dateColor = isHoliday || isSunday ? 'text-[#B35C5C]' : (isSaturday ? 'text-[#4F74A8]' : 'text-[#2F2924]');
+            const groups = getDayGroups(day);
 
-            rowHtml += `<td class="font-bold text-center">${countDO}</td>`;
-            rowHtml += `<td class="font-semibold text-[#4A443F]">${countA}</td>`;
-            rowHtml += `<td class="font-semibold text-[#4A443F]">${countB}</td>`;
-            rowHtml += `<td class="font-semibold text-[#4A443F]">${countC}</td>`;
-            rowHtml += `<td class="font-bold text-green-700 bg-green-50">${usedLeaves.toFixed(1)}</td>`;
-            rowHtml += `<td class="font-bold text-center">${remainBalance.toFixed(1)}</td>`;
-            rowHtml += `</tr>`;
+            const pills = Object.keys(codeMeta).map(code => {
+                if (!groups[code] || groups[code].length === 0) return '';
+                const meta = codeMeta[code];
+                return `<div class="schedule-pill" style="background:${meta.bg}; color:${meta.text}; border-color:${meta.border};">${groups[code].join(', ')}</div>`;
+            }).join('');
 
-            tbody.innerHTML += rowHtml;
-        });
+            grid.innerHTML += `
+                <div class="min-h-[116px] p-2 border-r border-b border-[#E8D8BD] bg-[#FFFDF8] overflow-hidden">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-[15px] font-semibold ${dateColor}">${day}</span>
+                        ${isHoliday ? `<span class="text-[9px] font-bold text-[#B35C5C] truncate ml-1">${PUBLIC_HOLIDAYS_2026[dateStr]}</span>` : ''}
+                    </div>
+                    <div class="space-y-1.5">${pills}</div>
+                </div>
+            `;
+        }
+        lucide.createIcons();
     };
 
     // 근무표 수정 모달 열기 (직원별 슬라이더 수정용 시트 제공)
@@ -1790,7 +1811,7 @@
         <div id="page-notice" class="page p-6 no-scrollbar">
             <div class="flex justify-between items-center mb-5 relative">
                 <div class="w-10"></div>
-                <h2 class="text-2xl font-serif font-bold text-[#333]">Team Announcements</h2>
+                <h2 class="text-2xl font-serif font-bold text-[#333]">공지사항</h2>
                 <button onclick="openNoticeCreate()" class="w-10 h-10 flex items-center justify-center border border-[#E5E5E5] rounded-xl text-[#B4975A] bg-white shadow-sm active:scale-95">
                     <i data-lucide="plus" class="w-5 h-5"></i>
                 </button>
@@ -1839,9 +1860,7 @@
 
         <!-- [탭] 신규: 매장 근무표 화면 -->
         <div id="page-schedule" class="page bg-[#FAF9F5] no-scrollbar px-4 pt-4">
-            
-            <!-- 1번 이미지 시안 반영: 정밀한 대칭형 가운데 정렬 헤더 -->
-            <div class="flex flex-col items-center mb-6 w-full text-center">
+            <div class="flex flex-col items-center mb-5 w-full text-center">
                 <div class="flex items-center justify-center w-full relative mb-4 h-10">
                     <h2 class="text-2xl font-serif text-[#3A3532] font-semibold absolute left-1/2 -translate-x-1/2 whitespace-nowrap">매장 근무표</h2>
                     <div class="flex gap-1.5 absolute right-0">
@@ -1854,36 +1873,44 @@
                     </div>
                 </div>
 
-                <!-- 연월 제어 바 & 네이티브 달력 선택기 융합 -->
-                <div class="w-full bg-white p-3 rounded-2xl border border-[#F0EFEA] shadow-sm flex justify-between items-center text-sm">
-                    <div class="flex items-center gap-3">
-                        <button onclick="adjustScheduleMonth(-1)" class="p-1 hover:bg-[#F2EFE8] rounded"><i data-lucide="chevron-left" class="w-4 h-4 text-[#8B7355]"></i></button>
-                        <div class="relative flex items-center justify-center bg-slate-50 px-3 py-1.5 rounded-lg cursor-pointer border border-[#E8E4DB]">
-                            <span id="schedule-month-text" class="text-[15px] font-bold text-[#3A3532] tracking-wide pointer-events-none mr-1.5">2026년 5월</span>
-                            <i data-lucide="calendar-days" class="w-4 h-4 text-[#8B7355] pointer-events-none"></i>
-                            <!-- 터치 시 OS 기본 월 선택기 팝업 -->
+                <!-- 2번 사진 느낌의 월 선택/수정 정보 바 -->
+                <div class="w-full flex items-center justify-between gap-3">
+                    <div class="relative shrink-0 flex items-center rounded-xl border border-[#D8B98B] bg-[#FFFDF8] shadow-sm overflow-hidden h-12">
+                        <button onclick="adjustScheduleMonth(-1)" class="w-11 h-full flex items-center justify-center text-[#B17A2A] active:bg-[#F8EFE3]">
+                            <i data-lucide="chevron-left" class="w-5 h-5"></i>
+                        </button>
+                        <div class="relative h-full flex items-center justify-center px-3 min-w-[120px] cursor-pointer active:bg-[#F8EFE3]">
+                            <span id="schedule-month-text" class="text-[18px] font-medium text-[#2F2924] pointer-events-none whitespace-nowrap">2026년 5월</span>
                             <input type="month" id="schedule-month-picker" onchange="handleMonthPicker(this.value)" class="absolute inset-0 opacity-0 w-full h-full cursor-pointer" />
                         </div>
-                        <button onclick="adjustScheduleMonth(1)" class="p-1 hover:bg-[#F2EFE8] rounded"><i data-lucide="chevron-right" class="w-4 h-4 text-[#8B7355]"></i></button>
+                        <button onclick="adjustScheduleMonth(1)" class="w-11 h-full flex items-center justify-center text-[#B17A2A] active:bg-[#F8EFE3]">
+                            <i data-lucide="chevron-right" class="w-5 h-5"></i>
+                        </button>
                     </div>
-                    <div class="flex flex-col items-end">
-                        <span id="schedule-meta-info" class="text-[9px] text-[#999] font-medium leading-none">근무표 불러오는 중...</span>
-                        <span class="text-[9px] text-[#A06C6C] font-semibold mt-1.5">(법정공휴일 : 13개)</span>
+
+                    <div class="flex-1 min-w-0 flex flex-col items-end text-right">
+                        <span id="schedule-meta-info" class="text-[11px] text-[#4A443F] font-medium leading-tight truncate max-w-full">근무표 불러오는 중...</span>
+                        <span id="schedule-holiday-info" class="text-[11px] text-[#6E2626] font-semibold mt-2">(법정공휴일 : 0개)</span>
                     </div>
                 </div>
             </div>
 
-            <!-- 스크롤 필요없이 뷰포트 내에 모두 보이도록 최적화된 근무표 (핀치 줌 허용) -->
-            <div class="w-full border border-[#E5E5E5] rounded-xl bg-white p-1">
-                <table class="schedule-table">
-                    <thead>
-                        <tr id="sheet-header-days"></tr>
-                        <tr id="sheet-header-weeks"></tr>
-                    </thead>
-                    <tbody id="sheet-body-staffs"></tbody>
-                </table>
+            <!-- 달력형 근무표 -->
+            <div class="w-full bg-[#FFFDF8] border border-[#E8D8BD] rounded-2xl shadow-[0_8px_28px_rgba(139,115,85,0.12)] overflow-hidden mb-8">
+                <div class="flex items-center justify-between px-5 py-4 border-b border-[#E8D8BD] bg-[#FFFDF8]">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="calendar-days" class="w-6 h-6 text-[#B4975A]"></i>
+                        <span id="schedule-card-month-text" class="text-[18px] font-bold text-[#2F2924]"></span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="inline-flex items-center gap-1 text-[12px] font-bold text-[#6E2626] bg-[#FAD7D5] border border-[#F0B9B7] rounded-md px-2 py-1"><span class="w-2.5 h-2.5 rounded-sm bg-[#E87979]"></span>A</span>
+                        <span class="inline-flex items-center gap-1 text-[12px] font-bold text-[#234B7A] bg-[#D9E7FA] border border-[#BFD2EF] rounded-md px-2 py-1"><span class="w-2.5 h-2.5 rounded-sm bg-[#6793D8]"></span>B</span>
+                        <span class="inline-flex items-center gap-1 text-[12px] font-bold text-[#7A4F14] bg-[#FFE7B8] border border-[#F4D08C] rounded-md px-2 py-1"><span class="w-2.5 h-2.5 rounded-sm bg-[#F0B64D]"></span>C</span>
+                        <span class="inline-flex items-center gap-1 text-[12px] font-bold text-[#4A443F] bg-[#EEEEEA] border border-[#DDDDD8] rounded-md px-2 py-1"><span class="w-2.5 h-2.5 rounded-sm bg-[#C8C8C0]"></span>휴무</span>
+                    </div>
+                </div>
+                <div id="schedule-calendar-grid" class="grid grid-cols-7"></div>
             </div>
-
         </div>
 
         <!-- [탭] 개인용 앨범 화면 -->
@@ -1992,7 +2019,7 @@
     <div class="pt-12 pb-4 bg-[#FAF9F5] flex-shrink-0 relative flex flex-col items-center">
         <button onclick="closeNoticeCreate()" class="absolute right-6 top-14 text-[#999] p-2"><i data-lucide="x" class="w-6 h-6"></i></button>
         <img src="log.png" alt="Patek Philippe" class="w-32 h-auto object-contain mt-2 mb-4" />
-        <h2 class="text-2xl font-serif font-bold mb-2 text-[#333]">New Announcement</h2>
+        <h2 class="text-2xl font-serif font-bold mb-2 text-[#333]">공지사항 등록</h2>
     </div>
 
     <div class="flex-1 overflow-y-auto p-6 space-y-6 pb-32">
@@ -2036,7 +2063,7 @@
     </div>
 
     <div class="absolute bottom-0 w-full p-6 bg-white border-t border-[#F0EFEA] pb-8">
-        <button onclick="submitNotice()" class="w-full bg-[#B4975A] text-white py-4 rounded-xl text-[17px] font-bold shadow-md active:scale-95 transition-transform">Save</button>
+        <button onclick="submitNotice()" class="w-full bg-[#B4975A] text-white py-4 rounded-xl text-[17px] font-bold shadow-md active:scale-95 transition-transform">저장</button>
     </div>
 </div>
 
@@ -2048,7 +2075,7 @@
         </button>
         <button onclick="closeNoticeDetail()" class="absolute right-6 top-14 text-[#999] p-2"><i data-lucide="x" class="w-6 h-6"></i></button>
         <img src="log.png" alt="Patek Philippe" class="w-32 h-auto object-contain mt-2 mb-3" />
-        <h2 id="notice-detail-modal-title" class="text-2xl font-serif font-bold text-[#333]">Announcement</h2>
+        <h2 id="notice-detail-modal-title" class="text-2xl font-serif font-bold text-[#333]">공지사항</h2>
     </div>
 
     <div class="flex-1 overflow-y-auto p-6 pb-40 bg-[#FAF9F5]">
@@ -2132,8 +2159,8 @@
     </div>
 
     <div class="absolute bottom-0 w-full p-6 bg-white border-t border-[#F0EFEA] pb-8">
-        <button id="notice-detail-save-btn" onclick="saveNoticeEdit()" style="display:none;" class="w-full bg-[#B4975A] text-white py-4 rounded-xl text-[16px] font-bold shadow-md active:scale-95 transition-transform">Save Changes</button>
-        <button id="notice-detail-complete-btn" onclick="completeNotice()" class="w-full bg-[#4A443F] text-white py-4 rounded-xl text-[16px] font-bold shadow-md active:scale-95 transition-transform">Complete</button>
+        <button id="notice-detail-save-btn" onclick="saveNoticeEdit()" style="display:none;" class="w-full bg-[#B4975A] text-white py-4 rounded-xl text-[16px] font-bold shadow-md active:scale-95 transition-transform">저장</button>
+        <button id="notice-detail-complete-btn" onclick="completeNotice()" class="w-full bg-[#4A443F] text-white py-4 rounded-xl text-[16px] font-bold shadow-md active:scale-95 transition-transform">완료</button>
     </div>
 </div>
 
