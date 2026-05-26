@@ -351,22 +351,28 @@
                 ? `<span class="text-[10px] font-bold text-[#777] bg-[#EFEFEF] px-2 py-0.5 rounded-md shrink-0">완료</span>`
                 : '';
 
+            const cardBgClass = notice.completed === true ? 'bg-[#EEEEEE]' : 'bg-white';
+            const cardBorderClass = notice.completed === true ? 'border-[#D8D8D8]' : 'border-[#F0EFEA]';
+            const titleTextClass = notice.completed === true ? 'text-[#777]' : 'text-[#333]';
+            const metaTextClass = notice.completed === true ? 'text-[#888]' : 'text-[#999]';
+            const countTextClass = notice.completed === true ? 'text-[#777]' : (isRead ? 'text-[#B4975A]' : 'text-[#999]');
+
             list.innerHTML += `
-                <div onclick="openNoticeDetail('${notice.id}')" class="bg-white p-4 rounded-2xl border border-[#F0EFEA] shadow-sm cursor-pointer active:scale-[0.98] transition-transform mb-3">
+                <div onclick="openNoticeDetail('${notice.id}')" class="${cardBgClass} p-4 rounded-2xl border ${cardBorderClass} shadow-sm cursor-pointer active:scale-[0.98] transition-transform mb-3">
                     <div class="flex items-center gap-3">
-                        <div class="px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap" style="background-color: ${catStyle.bg}; color: ${catStyle.text};">
+                        <div class="px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap" style="background-color: ${notice.completed === true ? '#DDDDDD' : catStyle.bg}; color: ${notice.completed === true ? '#666666' : catStyle.text};">
                             ${notice.category || '매장'}
                         </div>
                         <div class="flex-1 min-w-0">
                             <div class="flex items-center gap-2 min-w-0">
-                                <div class="truncate text-[15px] font-semibold text-[#333]">${notice.title || ''}</div>
+                                <div class="truncate text-[15px] font-semibold ${titleTextClass}">${notice.title || ''}</div>
                                 ${completedBadge}
                             </div>
-                            <div class="text-[11px] text-[#999] mt-1 font-medium truncate">등록 ${registerDate} · 마감 ${deadlineDate}</div>
+                            <div class="text-[11px] ${metaTextClass} mt-1 font-medium truncate">등록 ${registerDate} · 마감 ${deadlineDate}</div>
                         </div>
                         <div class="flex items-center gap-2 shrink-0">
-                            <span class="text-xs font-semibold ${isRead ? 'text-[#B4975A]' : 'text-[#999]'}">${readCount} / ${MAX_READERS}</span>
-                            <i data-lucide="chevron-right" class="w-4 h-4 text-[#CCC]"></i>
+                            <span class="text-xs font-semibold ${countTextClass}">${readCount} / ${MAX_READERS}</span>
+                            <i data-lucide="chevron-right" class="w-4 h-4 text-[#AAA]"></i>
                         </div>
                     </div>
                 </div>
@@ -1818,9 +1824,9 @@
 
             <!-- 정렬 -->
             <div class="flex items-center justify-between mb-4 px-1">
-                <div id="notice-result-count" class="text-[15px] text-[#4A443F] font-medium">전체 0</div>
+                <div id="notice-result-count" class="text-[13px] text-[#4A443F] font-medium">전체 0</div>
                 <div class="relative flex items-center">
-                    <select id="notice-sort-select" onchange="setNoticeSortType(this.value)" class="appearance-none bg-transparent outline-none text-[15px] text-[#4A443F] font-medium pr-5 cursor-pointer text-center" style="text-align-last:center; text-align:center;">
+                    <select id="notice-sort-select" onchange="setNoticeSortType(this.value)" class="appearance-none bg-transparent outline-none text-[13px] text-[#4A443F] font-medium pr-5 cursor-pointer text-center" style="text-align-last:center; text-align:center;">
                         <option value="registerDesc">등록순</option>
                         <option value="deadlineAsc">마감순</option>
                     </select>
@@ -2037,6 +2043,9 @@
 <!-- 공지사항 뷰어/수정 화면 -->
 <div id="page-notice-detail" style="display: none;" class="fixed inset-0 w-full max-w-md mx-auto bg-[#FAF9F5] z-[200] flex-col">
     <div class="pt-12 pb-4 bg-[#FAF9F5] flex-shrink-0 relative flex flex-col items-center">
+        <button id="notice-detail-edit-btn" onclick="enterNoticeEditMode()" class="absolute left-6 top-14 text-[#8B7355] p-2 active:scale-95">
+            <i data-lucide="pencil" class="w-5 h-5"></i>
+        </button>
         <button onclick="closeNoticeDetail()" class="absolute right-6 top-14 text-[#999] p-2"><i data-lucide="x" class="w-6 h-6"></i></button>
         <img src="log.png" alt="Patek Philippe" class="w-32 h-auto object-contain mt-2 mb-3" />
         <h2 id="notice-detail-modal-title" class="text-2xl font-serif font-bold text-[#333]">Announcement</h2>
@@ -2049,9 +2058,6 @@
                 <span id="view-notice-category" class="inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-sm font-bold">매장</span>
                 <div class="flex items-center gap-2">
                     <span id="view-notice-status" class="text-xs font-bold text-[#B4975A] bg-[#F8F3E7] px-2 py-1 rounded-md">진행 중인 공지</span>
-                    <button id="notice-detail-edit-btn" onclick="enterNoticeEditMode()" class="w-8 h-8 rounded-full bg-white border border-[#E8E4DB] flex items-center justify-center text-[#8B7355] shadow-sm active:scale-95">
-                        <i data-lucide="pencil" class="w-4 h-4"></i>
-                    </button>
                 </div>
             </div>
 
@@ -2069,7 +2075,7 @@
 
                 <div class="mb-5">
                     <div class="text-[12px] font-bold text-[#999] mb-2">Title</div>
-                    <div id="view-notice-title" class="text-[18px] font-bold text-[#333] leading-snug break-words"></div>
+                    <div id="view-notice-title" class="text-[13px] font-semibold text-[#333] leading-snug break-words"></div>
                 </div>
 
                 <div>
