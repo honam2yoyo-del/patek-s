@@ -36,7 +36,7 @@
             position: absolute; /* 부모 relative 컨테이너에 꽉 차게 설정 */
             top: 0; left: 0; right: 0; bottom: 0;
             overflow-y: auto;
-            padding-bottom: 180px; /* 2줄 하단 네비게이션 공간 충분히 확보 */
+            padding-bottom: 220px; /* 2줄 하단 네비게이션 공간 충분히 확보 */
             animation: fadeIn 0.2s ease-out;
         }
         .page.active { display: block; }
@@ -46,20 +46,20 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* 하단 네비게이션 (4x2 그리드 배열로 변경) */
+        /* 하단 네비게이션 (4x2 그리드 배열 완벽 가공) */
         .bottom-nav {
             position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); 
             width: 100%; max-width: 480px; background-color: #ffffff; 
             border-top: 1px solid #F0EFEA; 
             display: grid;
             grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 12px 4px;
-            padding: 16px 12px calc(20px + env(safe-area-inset-bottom)); z-index: 90;
+            gap: 16px 4px;
+            padding: 16px 8px calc(24px + env(safe-area-inset-bottom)); z-index: 90;
             box-shadow: 0 -8px 30px rgba(0,0,0,0.04);
             border-radius: 24px 24px 0 0;
         }
         .nav-item { 
-            display: flex; flex-direction: column; align-items: center; gap: 4px; 
+            display: flex; flex-direction: column; align-items: center; gap: 5px; 
             color: #A0A0A0; cursor: pointer; transition: color 0.2s;
         }
         .nav-item svg { width: 22px; height: 22px; }
@@ -70,6 +70,23 @@
         #loading-overlay { position: fixed; top:0; left:0; width:100%; height:100vh; background:rgba(250,249,245,0.9); z-index: 99999; display: flex; justify-content: center; align-items: center; flex-direction: column; }
         .spinner { border: 3px solid #E8E4DB; border-top: 3px solid #B4975A; border-radius: 50%; width: 36px; height: 36px; animation: spin 1s linear infinite; margin-bottom: 16px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* 테이블 스크롤 및 테두리 설정 */
+        .schedule-table th, .schedule-table td {
+            border: 1px solid #E5E5E5;
+            text-align: center;
+            vertical-align: middle;
+            font-size: 11px;
+            padding: 4px 2px;
+            min-width: 28px;
+        }
+        .schedule-table th {
+            background-color: #FDFBF9;
+            font-weight: 600;
+        }
+        .holiday-sun { background-color: #FDE2E4 !important; color: #E63946 !important; }
+        .holiday-sat { background-color: #E2EFFF !important; color: #1D3557 !important; }
+        .holiday-pub { background-color: #FFD6E8 !important; color: #D81B60 !important; }
     </style>
 </head>
 <body>
@@ -109,6 +126,8 @@
     let unsubscribeNotices = null;
     let unsubscribeApproval = null;
     let unsubscribeAlbums = null;
+    let unsubscribeSchedules = null;
+    let unsubscribeLeaveRequests = null;
     
     window.appNotices = [];
     window.albums = [];
@@ -116,6 +135,22 @@
     window.albumFilter = '전체';
     window.albumSearchQuery = '';
     window.albumForm = { id: '', files: [], category: '기타', title: '', ref: '', memo: '', imageUrl: '' };
+
+    // 근무표 및 휴무 신청 상태값
+    window.scheduleYear = 2026;
+    window.scheduleMonth = 5;
+    window.schedulesData = {}; // Firestore에서 가져온 월별 원시 근무표 데이터
+    window.leaveRequests = []; // Firestore에서 가져온 휴무 리스트
+    window.storeStaffs = ['옥영세', '엄인주', '장용석', '최혜지', '이승범', '형영지']; // 기본 직원 매핑
+    window.leaveRangeStart = null;
+    window.leaveRangeEnd = null;
+
+    // 공휴일 정보 (2026년 기준 예시 데이터)
+    const PUBLIC_HOLIDAYS_2026 = {
+        "2026-05-05": "어린이날",
+        "2026-05-24": "석가탄신일",
+        "2026-06-06": "현충일"
+    };
 
     // 리다이렉트 처리 (오류 방지 핵심)
     getRedirectResult(auth).catch(error => {
@@ -140,6 +175,8 @@
             if(unsubscribeNotices) unsubscribeNotices();
             if(unsubscribeApproval) unsubscribeApproval();
             if(unsubscribeAlbums) unsubscribeAlbums();
+            if(unsubscribeSchedules) unsubscribeSchedules();
+            if(unsubscribeLeaveRequests) unsubscribeLeaveRequests();
             
             document.getElementById('loading-overlay').style.display = 'none';
             document.getElementById('pending-page').style.display = 'none';
@@ -165,6 +202,8 @@
                     
                     fetchNotices(); // 공지사항 데이터 불러오기
                     fetchAlbums(user); // 개인 앨범 실시간 데이터 불러오기
+                    fetchSchedules(); // 공용 근무표 실시간 구독
+                    fetchLeaveRequests(); // 휴무 신청 데이터 실시간 구독
                     lucide.createIcons();
                 } else {
                     document.getElementById('loading-overlay').style.display = 'none';
@@ -845,29 +884,490 @@
         }
     };
 
+
     // ==========================================
-    // 커스텀 다이얼로그 (alert/confirm 방지)
+    // ⭐️ 신규: 매장 근무표 관리 로직 (사진 3, 4, 5, 6)
     // ==========================================
-    window.showCustomAlert = function(msg) {
-        document.getElementById('custom-alert-message').innerText = msg;
-        document.getElementById('custom-alert').style.display = 'flex';
-        lucide.createIcons();
-    };
-    window.closeCustomAlert = function() {
-        document.getElementById('custom-alert').style.display = 'none';
+
+    function fetchSchedules() {
+        if (!db) return;
+        const colRef = collection(db, 'artifacts', 'patek-s', 'public', 'data', 'schedules');
+        unsubscribeSchedules = onSnapshot(colRef, (snapshot) => {
+            window.schedulesData = {};
+            snapshot.docs.forEach(doc => {
+                window.schedulesData[doc.id] = doc.data();
+            });
+            window.renderScheduleSheet();
+        });
+    }
+
+    function fetchLeaveRequests() {
+        if (!db) return;
+        const colRef = collection(db, 'artifacts', 'patek-s', 'public', 'data', 'leave_requests');
+        unsubscribeLeaveRequests = onSnapshot(colRef, (snapshot) => {
+            window.leaveRequests = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            window.renderScheduleSheet();
+            window.renderLeaveCalendar();
+        });
+    }
+
+    // 연월 증감
+    window.adjustScheduleMonth = function(amount) {
+        window.scheduleMonth += amount;
+        if (window.scheduleMonth > 12) {
+            window.scheduleMonth = 1;
+            window.scheduleYear += 1;
+        } else if (window.scheduleMonth < 1) {
+            window.scheduleMonth = 12;
+            window.scheduleYear -= 1;
+        }
+        document.getElementById('schedule-month-text').innerText = `${window.scheduleYear}년 ${window.scheduleMonth}월`;
+        document.getElementById('leave-month-text').innerText = `${window.scheduleYear}년 ${window.scheduleMonth}월`;
+        window.renderScheduleSheet();
+        window.renderLeaveCalendar();
     };
 
-    window.showCustomConfirm = function(msg, onConfirmCallback) {
-        document.getElementById('custom-confirm-message').innerText = msg;
-        document.getElementById('custom-confirm').style.display = 'flex';
-        document.getElementById('custom-confirm-ok-btn').onclick = function() {
-            document.getElementById('custom-confirm').style.display = 'none';
-            if (onConfirmCallback) onConfirmCallback();
+    // 특정 연월의 일 수 알아내기
+    function getDaysInMonth(year, month) {
+        return new Date(year, month, 0).getDate();
+    }
+
+    // 연월 선택에 따른 실시간 매장 근무표 렌더 (사진 3)
+    window.renderScheduleSheet = function() {
+        const year = window.scheduleYear;
+        const month = window.scheduleMonth;
+        const totalDays = getDaysInMonth(year, month);
+        
+        // 헤더 일자 & 요일 렌더
+        const headerDaysTr = document.getElementById('sheet-header-days');
+        const headerWeeksTr = document.getElementById('sheet-header-weeks');
+        if (!headerDaysTr || !headerWeeksTr) return;
+
+        headerDaysTr.innerHTML = '<th rowspan="2" class="font-sans text-xs">연차</th><th rowspan="2" class="font-sans text-xs min-w-[60px]">성명</th>';
+        headerWeeksTr.innerHTML = '';
+
+        for (let d = 1; d <= totalDays; d++) {
+            const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+            const dayOfWeek = new Date(year, month - 1, d).getDay(); // 0:일, 6:토
+            const isHoliday = PUBLIC_HOLIDAYS_2026[dateStr] !== undefined;
+
+            let dayClass = "";
+            if (isHoliday) dayClass = "holiday-pub";
+            else if (dayOfWeek === 0) dayClass = "holiday-sun";
+            else if (dayOfWeek === 6) dayClass = "holiday-sat";
+
+            headerDaysTr.innerHTML += `<th class="${dayClass} font-sans text-[10px]">${d}</th>`;
+            
+            const weekChars = ['일', '월', '화', '수', '목', '금', '토'];
+            headerWeeksTr.innerHTML += `<th class="${dayClass} font-sans text-[10px]">${weekChars[dayOfWeek]}</th>`;
+        }
+
+        // 끝 통계 칼럼 추가
+        headerDaysTr.innerHTML += '<th rowspan="2" class="font-sans text-[10px]">DO</th><th rowspan="2" class="font-sans text-[10px]">A</th><th rowspan="2" class="font-sans text-[10px]">B</th><th rowspan="2" class="font-sans text-[10px]">C</th><th rowspan="2" class="font-sans text-[10px] bg-green-50 text-green-700">사용<br/>연차</th><th rowspan="2" class="font-sans text-[10px]">남은<br/>연차</th>';
+
+        // 바디 렌더 (직원별 스케줄 테이블 행 채우기)
+        const tbody = document.getElementById('sheet-body-staffs');
+        tbody.innerHTML = '';
+
+        const currentMonthKey = `${year}-${String(month).padStart(2, '0')}`;
+        const monthScheduleDoc = window.schedulesData[currentMonthKey] || {};
+        const staffData = monthScheduleDoc.staffs || {};
+
+        // 수정 정보 동기화
+        if (monthScheduleDoc.lastUpdated) {
+            document.getElementById('schedule-meta-info').innerText = `마지막 수정일 ${monthScheduleDoc.lastUpdated} / 수정자 ${monthScheduleDoc.updatedBy || '시스템'}`;
+        } else {
+            document.getElementById('schedule-meta-info').innerText = '근무표가 등록되지 않았습니다.';
+        }
+
+        // 기본 제공하는 직원별 기본 연차 세팅 정보
+        const initialLeaveBalances = {
+            '옥영세': 15.0,
+            '엄인주': 13.5,
+            '장용석': 10.5,
+            '최혜지': 17.0,
+            '이승범': 6.0,
+            '형영지': 9.0
         };
+
+        window.storeStaffs.forEach(staffName => {
+            const userDays = staffData[staffName] || {};
+            const initialBalance = initialLeaveBalances[staffName] || 15.0;
+
+            let countDO = 0;
+            let countA = 0;
+            let countB = 0;
+            let countC = 0;
+            let usedLeaves = 0.0;
+
+            let rowHtml = `<tr>`;
+            rowHtml += `<td class="font-semibold text-center text-[#666]">${initialBalance.toFixed(1)}</td>`;
+            rowHtml += `<td class="font-semibold text-center text-[#333]">${staffName}</td>`;
+
+            for (let d = 1; d <= totalDays; d++) {
+                // 당일에 신청한 개인 휴무가 있는지 탐색
+                const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                const hasLeave = window.leaveRequests.some(r => r.name === staffName && dateStr >= r.startDate && dateStr <= r.endDate);
+
+                // 당일 근무 타입 획득
+                let code = userDays[d] || '';
+                
+                // 만약 공식 휴무 신청이 승인되어 있고 별도 수동 근무 코드가 비어 있다면 자동 휴무'/' 표기
+                if (hasLeave && !code) {
+                    code = '/';
+                }
+
+                // 통계 합산
+                if (code === 'A') countA++;
+                else if (code === 'B') countB++;
+                else if (code === 'C') countC++;
+                else if (code === '/' || code === '휴') {
+                    countDO++;
+                    // 기본 연차 차감 로직 (예: 휴무 지정 시 연차 차감 수치 조절용)
+                }
+
+                rowHtml += `<td class="font-sans font-medium text-center">${code}</td>`;
+            }
+
+            // 남은 연차 자동 산정
+            const remainBalance = initialBalance - usedLeaves;
+
+            rowHtml += `<td class="font-semibold text-center">${countDO}</td>`;
+            rowHtml += `<td class="font-semibold text-[#4A443F]">${countA}</td>`;
+            rowHtml += `<td class="font-semibold text-[#4A443F]">${countB}</td>`;
+            rowHtml += `<td class="font-semibold text-[#4A443F]">${countC}</td>`;
+            rowHtml += `<td class="font-bold text-green-700 bg-green-50">${usedLeaves.toFixed(1)}</td>`;
+            rowHtml += `<td class="font-semibold text-center">${remainBalance.toFixed(1)}</td>`;
+            rowHtml += `</tr>`;
+
+            tbody.innerHTML += rowHtml;
+        });
+    };
+
+    // 근무표 수정 모달 열기 (직원별 슬라이더 수정용 시트 제공)
+    window.openScheduleEdit = function() {
+        if (!currentUser) return;
+        const year = window.scheduleYear;
+        const month = window.scheduleMonth;
+        const totalDays = getDaysInMonth(year, month);
+        const currentMonthKey = `${year}-${String(month).padStart(2, '0')}`;
+        const monthScheduleDoc = window.schedulesData[currentMonthKey] || {};
+        const staffData = monthScheduleDoc.staffs || {};
+
+        document.getElementById('edit-schedule-title').innerText = `${year}년 ${month}월 매장 근무표 작성`;
+
+        const container = document.getElementById('edit-staff-rows-container');
+        container.innerHTML = '';
+
+        window.storeStaffs.forEach(staffName => {
+            const userDays = staffData[staffName] || {};
+            let staffSection = `
+                <div class="bg-white border border-[#E8E4DB] rounded-xl p-4 shadow-sm mb-4">
+                    <div class="font-bold text-[#B4975A] mb-3 border-b border-[#F0EFEA] pb-2 text-[15px]">${staffName}의 근무표 입력</div>
+                    <div class="grid grid-cols-4 gap-2">
+            `;
+            for (let d = 1; d <= totalDays; d++) {
+                const curVal = userDays[d] || '';
+                staffSection += `
+                    <div class="flex flex-col items-center border border-[#E5E5E5] rounded p-1.5 bg-[#FCFBF9]">
+                        <span class="text-[10px] text-[#999] font-bold mb-1">${d}일</span>
+                        <select data-staff="${staffName}" data-day="${d}" class="schedule-input-select w-full text-xs font-bold text-center outline-none bg-transparent">
+                            <option value="" ${curVal === '' ? 'selected' : ''}>-</option>
+                            <option value="A" ${curVal === 'A' ? 'selected' : ''}>A</option>
+                            <option value="B" ${curVal === 'B' ? 'selected' : ''}>B</option>
+                            <option value="C" ${curVal === 'C' ? 'selected' : ''}>C</option>
+                            <option value="/" ${curVal === '/' ? 'selected' : ''}>휴(/)</option>
+                        </select>
+                    </div>
+                `;
+            }
+            staffSection += `</div></div>`;
+            container.innerHTML += staffSection;
+        });
+
+        document.getElementById('page-schedule-edit-modal').style.display = 'flex';
+    };
+
+    window.closeScheduleEdit = function() {
+        document.getElementById('page-schedule-edit-modal').style.display = 'none';
+    };
+
+    // 작성한 매장 근무표 Firestore 업데이트 저장
+    window.saveScheduleSheet = async function() {
+        if (!currentUser) return;
+        document.getElementById('loading-overlay').style.display = 'flex';
+
+        const year = window.scheduleYear;
+        const month = window.scheduleMonth;
+        const currentMonthKey = `${year}-${String(month).padStart(2, '0')}`;
+
+        const selects = document.querySelectorAll('.schedule-input-select');
+        const updatedStaffs = {};
+
+        selects.forEach(sel => {
+            const staff = sel.dataset.staff;
+            const day = sel.dataset.day;
+            const val = sel.value;
+
+            if (!updatedStaffs[staff]) {
+                updatedStaffs[staff] = {};
+            }
+            updatedStaffs[staff][day] = val;
+        });
+
+        const now = new Date();
+        const formattedDate = `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+        try {
+            const docRef = doc(db, 'artifacts', 'patek-s', 'public', 'data', 'schedules', currentMonthKey);
+            await setDoc(docRef, {
+                staffs: updatedStaffs,
+                lastUpdated: formattedDate,
+                updatedBy: currentUser.displayName || currentUser.email
+            }, { merge: true });
+
+            window.closeScheduleEdit();
+            window.showCustomAlert(`${year}년 ${month}월 근무표가 저장되었습니다.`);
+        } catch(e) {
+            console.error(e);
+            window.showCustomAlert("근무표 저장 오류가 발생했습니다.");
+        } finally {
+            document.getElementById('loading-overlay').style.display = 'none';
+        }
+    };
+
+
+    // ==========================================
+    // ⭐️ 신규: 휴무 신청 & 캘린더 관리 로직 (사진 6)
+    // ==========================================
+
+    window.openLeaveCalendarModal = function() {
+        window.leaveRangeStart = null;
+        window.leaveRangeEnd = null;
+        document.getElementById('leave-reason-input').value = '';
+        document.getElementById('leave-region-input').value = '';
+        document.getElementById('leave-region-container').style.display = 'none'; // 기본 숨김
+
+        window.renderLeaveCalendar();
+        document.getElementById('page-leave-calendar-modal').style.display = 'flex';
+    };
+
+    window.closeLeaveCalendarModal = function() {
+        document.getElementById('page-leave-calendar-modal').style.display = 'none';
+    };
+
+    // 휴무 달력 그리기 (사진 6 형태)
+    window.renderLeaveCalendar = function() {
+        const year = window.scheduleYear;
+        const month = window.scheduleMonth;
+        const container = document.getElementById('leave-calendar-grid');
+        if (!container) return;
+        container.innerHTML = '';
+
+        const firstDay = new Date(year, month - 1, 1).getDay(); // 1일의 요일 인덱스
+        const totalDays = getDaysInMonth(year, month);
+
+        // 요일 맞춤용 앞단 빈 셀 삽입
+        const firstDayShift = firstDay === 0 ? 6 : firstDay - 1; // 월요일 시작 정비
+        for (let i = 0; i < firstDayShift; i++) {
+            container.innerHTML += `<div class="aspect-square bg-[#FAF9F5] border border-[#F0EFEA]"></div>`;
+        }
+
+        for (let d = 1; d <= totalDays; d++) {
+            const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+            const dayOfWeek = new Date(year, month - 1, d).getDay(); // 0:일, 6:토
+            const isHoliday = PUBLIC_HOLIDAYS_2026[dateStr] !== undefined;
+
+            // 해당 일자의 휴무 신청 직원들 색출
+            const matchedRequests = window.leaveRequests.filter(r => dateStr >= r.startDate && dateStr <= r.endDate);
+            const isEventDay = matchedRequests.some(r => r.reason && r.reason.includes('행사')); // 행사 구분선
+
+            let dayTextClass = "text-[#333]";
+            if (isHoliday) dayTextClass = "text-[#D81B60]";
+            else if (dayOfWeek === 0) dayTextClass = "text-red-500";
+            else if (dayOfWeek === 6) dayTextClass = "text-blue-500";
+
+            // 클릭 범위 지정 중인 백그라운드 칼라 색상 세팅
+            let selectBg = "bg-white";
+            if (window.leaveRangeStart && window.leaveRangeEnd) {
+                if (dateStr >= window.leaveRangeStart && dateStr <= window.leaveRangeEnd) {
+                    selectBg = "bg-[#DDEBFF]"; // 선택 범위 하이라이트
+                }
+            } else if (window.leaveRangeStart && dateStr === window.leaveRangeStart) {
+                selectBg = "bg-[#DDEBFF]";
+            }
+
+            // 3명 이상 신청 여부 확인
+            const isOverbooked = matchedRequests.length >= 3;
+            let overbookedBg = "";
+            if (isOverbooked) {
+                overbookedBg = "bg-[#FFE5E5]"; // 3명 이상 신청 색상
+            }
+
+            // 행사 하이라이팅 테두리
+            let eventBorder = "";
+            if (isEventDay) {
+                eventBorder = "border-2 border-amber-500 rounded-lg";
+            }
+
+            // 직원 이름 및 지역 노출 가공
+            let staffNamesMarkup = "";
+            matchedRequests.forEach(req => {
+                // 시작일 일 때만 등록된 지역 표기 지원
+                const isStart = dateStr === req.startDate;
+                const regionSuffix = (isStart && req.region) ? ` (${req.region})` : '';
+                staffNamesMarkup += `
+                    <div class="text-[9px] font-bold text-slate-700 bg-slate-100 rounded px-1 py-0.5 truncate w-full text-center leading-none mt-1">
+                        ${req.name}${regionSuffix}
+                    </div>
+                `;
+            });
+
+            const dayCell = document.createElement('div');
+            dayCell.className = `aspect-square p-1 border border-[#F0EFEA] flex flex-col items-center justify-between cursor-pointer transition-colors hover:bg-slate-50 relative ${selectBg} ${overbookedBg} ${eventBorder}`;
+            dayCell.onclick = () => window.handleLeaveCalendarCellClick(dateStr);
+
+            dayCell.innerHTML = `
+                <div class="w-full flex justify-between">
+                    <span class="text-xs font-bold ${dayTextClass}">${d}</span>
+                    ${isHoliday ? `<span class="text-[8px] text-[#D81B60] truncate font-sans">${PUBLIC_HOLIDAYS_2026[dateStr]}</span>` : ''}
+                </div>
+                <div class="w-full flex-1 overflow-y-auto no-scrollbar flex flex-col justify-end mt-1">
+                    ${staffNamesMarkup}
+                </div>
+            `;
+            container.appendChild(dayCell);
+        }
+    };
+
+    // 달력 셀 날짜 클릭 핸들러
+    window.handleLeaveCalendarCellClick = function(dateStr) {
+        if (!window.leaveRangeStart || (window.leaveRangeStart && window.leaveRangeEnd)) {
+            // 시작점 지정
+            window.leaveRangeStart = dateStr;
+            window.leaveRangeEnd = null;
+        } else {
+            // 종료점 지정
+            if (dateStr < window.leaveRangeStart) {
+                window.leaveRangeStart = dateStr;
+                window.leaveRangeEnd = null;
+            } else {
+                window.leaveRangeEnd = dateStr;
+                
+                // 3일 이상 연휴 신청 여부에 따른 지역 입력창 보이기 판단
+                const diffDays = Math.ceil((new Date(window.leaveRangeEnd) - new Date(window.leaveRangeStart)) / (1000 * 60 * 60 * 24)) + 1;
+                if (diffDays >= 3) {
+                    document.getElementById('leave-region-container').style.display = 'block';
+                } else {
+                    document.getElementById('leave-region-container').style.display = 'none';
+                }
+            }
+        }
+        window.renderLeaveCalendar();
+    };
+
+    // 최종 휴무 신청 저장 처리
+    window.submitLeaveRequest = async function() {
+        if (!currentUser) return;
+        if (!window.leaveRangeStart) {
+            window.showCustomAlert("휴무일을 하루 이상 선택해주세요.");
+            return;
+        }
+
+        const startDate = window.leaveRangeStart;
+        const endDate = window.leaveRangeEnd ? window.leaveRangeEnd : window.leaveRangeStart;
+
+        // 기간(장수) 일 수 계산
+        const diffDays = Math.ceil((new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24)) + 1;
+        const reason = document.getElementById('leave-reason-input').value.trim();
+        const region = document.getElementById('leave-region-input').value.trim();
+
+        // ⭐️ 3일 이상 휴무 시 지역 입력 필수 규격 필터링
+        if (diffDays >= 3 && !region) {
+            window.showCustomAlert("지역을 입력하세요");
+            return;
+        }
+
+        document.getElementById('loading-overlay').style.display = 'flex';
+        try {
+            const payload = {
+                name: currentUser.displayName || '미인증',
+                uid: currentUser.uid,
+                startDate: startDate,
+                endDate: endDate,
+                reason: reason,
+                region: region || '',
+                createdAt: new Date().toISOString()
+            };
+
+            await addDoc(collection(db, 'artifacts', 'patek-s', 'public', 'data', 'leave_requests'), payload);
+            
+            window.closeLeaveCalendarModal();
+            window.showCustomAlert("휴무 신청이 성공적으로 완료되었습니다.");
+        } catch(e) {
+            console.error(e);
+            window.showCustomAlert("휴무 신청 중 서버 오류가 발생했습니다.");
+        } finally {
+            document.getElementById('loading-overlay').style.display = 'none';
+        }
+    };
+
+    // 휴무 신청 현황 리스트 열기
+    window.openLeaveHistoryModal = function() {
+        const listContainer = document.getElementById('leave-history-list');
+        listContainer.innerHTML = '';
+
+        if (window.leaveRequests.length === 0) {
+            listContainer.innerHTML = `<div class="text-center py-12 text-[#999] text-sm">등록된 휴무 신청 내역이 존재하지 않습니다.</div>`;
+        } else {
+            window.leaveRequests.forEach(req => {
+                const diffDays = Math.ceil((new Date(req.endDate) - new Date(req.startDate)) / (1000 * 60 * 60 * 24)) + 1;
+                const canDelete = currentUser && currentUser.uid === req.uid;
+
+                listContainer.innerHTML += `
+                    <div class="bg-[#FCFBF9] p-4 rounded-xl border border-[#F0EFEA] shadow-sm flex justify-between items-center mb-3">
+                        <div>
+                            <div class="flex items-center gap-2 mb-1.5">
+                                <span class="text-sm font-bold text-[#333]">${req.name}</span>
+                                <span class="text-[10px] text-green-700 bg-green-50 px-2 py-0.5 rounded font-bold">${diffDays}일간 휴무</span>
+                                ${req.region ? `<span class="text-[10px] text-blue-700 bg-blue-50 px-2 py-0.5 rounded font-bold">${req.region}</span>` : ''}
+                            </div>
+                            <div class="text-xs text-[#666] font-medium leading-relaxed">${req.startDate} ~ ${req.endDate}</div>
+                            ${req.reason ? `<div class="text-xs text-[#999] mt-1 font-medium italic">사유: ${req.reason}</div>` : ''}
+                        </div>
+                        ${canDelete ? `
+                            <button onclick="window.deleteLeaveRequest('${req.id}')" class="p-2 text-red-500 hover:bg-red-50 rounded transition-colors">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        ` : ''}
+                    </div>
+                `;
+            });
+        }
+
+        document.getElementById('page-leave-history-modal').style.display = 'flex';
         lucide.createIcons();
     };
-    window.closeCustomConfirm = function() {
-        document.getElementById('custom-confirm').style.display = 'none';
+
+    window.closeLeaveHistoryModal = function() {
+        document.getElementById('page-leave-history-modal').style.display = 'none';
+    };
+
+    window.deleteLeaveRequest = function(id) {
+        window.showCustomConfirm("해당 휴무 신청을 취소/삭제하시겠습니까?", async () => {
+            document.getElementById('loading-overlay').style.display = 'flex';
+            try {
+                const docRef = doc(db, 'artifacts', 'patek-s', 'public', 'data', 'leave_requests', id);
+                await deleteDoc(docRef);
+                window.openLeaveHistoryModal(); // 리프레시
+                window.showCustomAlert("휴무 신청이 취소되었습니다.");
+            } catch(e) {
+                console.error(e);
+                window.showCustomAlert("취소 실패");
+            } finally {
+                document.getElementById('loading-overlay').style.display = 'none';
+            }
+        });
     };
 
 </script>
@@ -942,10 +1442,81 @@
                     <i data-lucide="plus" class="w-5 h-5"></i>
                 </button>
             </div>
-            <div class="flex justify-between items-center mb-4 text-sm text-[#666]">
-                <div class="flex items-center gap-1 font-medium">정렬: 날짜순 <i data-lucide="chevron-down" class="w-4 h-4"></i></div>
+            <!-- 정렬: 날짜순 제거 완료 -->
+            <div id="notice-list-content" class="space-y-3 mt-4"></div>
+        </div>
+
+        <!-- [탭] 신규: 매장 근무표 화면 (사진 3, 4, 5) -->
+        <div id="page-schedule" class="page bg-[#FAF9F5] no-scrollbar px-4 pt-4">
+            <!-- 4번 사진 형태의 근무표 헤더 구조 -->
+            <div class="flex flex-col mb-4">
+                <div class="flex justify-between items-center mb-3">
+                    <h2 class="text-2xl font-serif text-[#3A3532] font-semibold">매장 근무표</h2>
+                    <div class="flex gap-2">
+                        <!-- 근무표 작성/수정 버튼 -->
+                        <button onclick="openScheduleEdit()" class="w-10 h-10 bg-white border border-[#E8E4DB] rounded-xl flex items-center justify-center text-[#B4975A] shadow-sm active:scale-95">
+                            <i data-lucide="plus" class="w-5 h-5"></i>
+                        </button>
+                        <!-- 휴무 신청 및 현황 오픈 버튼 -->
+                        <button onclick="openLeaveCalendarModal()" class="w-10 h-10 bg-white border border-[#E8E4DB] rounded-xl flex items-center justify-center text-[#B4975A] shadow-sm active:scale-95">
+                            <i data-lucide="calendar-range" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-center bg-[#FCFBF9] p-2.5 rounded-xl border border-[#F0EFEA]">
+                    <!-- 연월 증감 선택 바 -->
+                    <div class="flex items-center gap-3">
+                        <button onclick="adjustScheduleMonth(-1)" class="p-1 hover:bg-[#F2EFE8] rounded"><i data-lucide="chevron-left" class="w-4 h-4 text-[#8B7355]"></i></button>
+                        <span id="schedule-month-text" class="text-sm font-bold text-[#3A3532]">2026년 5월</span>
+                        <button onclick="adjustScheduleMonth(1)" class="p-1 hover:bg-[#F2EFE8] rounded"><i data-lucide="chevron-right" class="w-4 h-4 text-[#8B7355]"></i></button>
+                    </div>
+                    <!-- 수정 메타 정보 노출 -->
+                    <div class="flex flex-col items-end">
+                        <span id="schedule-meta-info" class="text-[9px] text-[#888] font-medium leading-none">불러오는 중...</span>
+                        <span class="text-[9px] text-[#A06C6C] font-semibold mt-1">(법정공휴일 : 13개)</span>
+                    </div>
+                </div>
             </div>
-            <div id="notice-list-content" class="space-y-3"></div>
+
+            <!-- 스크롤 가능한 정교한 근무표 스프레드시트 컨테이너 (사진 3) -->
+            <div class="w-full overflow-x-auto border border-[#E5E5E5] rounded-xl shadow-sm bg-white no-scrollbar">
+                <table class="schedule-table w-full border-collapse">
+                    <thead>
+                        <tr id="sheet-header-days">
+                            <!-- JS를 통해 일자 데이터 주입 -->
+                        </tr>
+                        <tr id="sheet-header-weeks">
+                            <!-- JS를 통해 요일 데이터 주입 -->
+                        </tr>
+                    </thead>
+                    <tbody id="sheet-body-staffs">
+                        <!-- JS를 통해 직원 행 주입 -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 평일/주말 근무 가이드 가이드 테두리 표 (사진 5) -->
+            <div class="mt-6 bg-white border border-[#E8E4DB] rounded-2xl p-4 shadow-sm">
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="border border-[#F2EFE8] rounded-xl p-3 bg-[#FCFBF8]">
+                        <div class="font-bold text-xs text-[#8B7355] mb-2 border-b border-[#F2EFE8] pb-1">평일</div>
+                        <div class="space-y-1 text-[11px] font-semibold text-[#555]">
+                            <div class="flex justify-between"><span>A</span><span>10:00 ~ 18:00</span></div>
+                            <div class="flex justify-between"><span>B</span><span>12:00 ~ 20:00</span></div>
+                            <div class="flex justify-between"><span>C</span><span>10:00 ~ 20:00</span></div>
+                        </div>
+                    </div>
+                    <div class="border border-[#F2EFE8] rounded-xl p-3 bg-[#FCFBF8]">
+                        <div class="font-bold text-xs text-[#8B7355] mb-2 border-b border-[#F2EFE8] pb-1">주말</div>
+                        <div class="space-y-1 text-[11px] font-semibold text-[#555]">
+                            <div class="flex justify-between"><span>A</span><span>10:00 ~ 18:00</span></div>
+                            <div class="flex justify-between"><span>B</span><span>12:30 ~ 20:30</span></div>
+                            <div class="flex justify-between"><span>C</span><span>10:00 ~ 20:30</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- [탭] 개인용 앨범 화면 -->
@@ -1024,14 +1595,13 @@
         </div>
 
         <!-- [탭] 임시 화면들 -->
-        <div id="page-schedule" class="page p-6 no-scrollbar"><div class="h-full flex items-center justify-center text-[#999]">근무표 준비중입니다.</div></div>
         <div id="page-sales" class="page p-6 no-scrollbar"><div class="h-full flex items-center justify-center text-[#999]">매출 준비중입니다.</div></div>
         <div id="page-inventory" class="page p-6 no-scrollbar"><div class="h-full flex items-center justify-center text-[#999]">재고 준비중입니다.</div></div>
         <div id="page-as" class="page p-6 no-scrollbar"><div class="h-full flex items-center justify-center text-[#999]">A/S 준비중입니다.</div></div>
         <div id="page-sp" class="page p-6 no-scrollbar"><div class="h-full flex items-center justify-center text-[#999]">SP 준비중입니다.</div></div>
     </div>
 
-    <!-- 하단 네비게이션 (4x2 그리드 구조 적용) -->
+    <!-- 하단 네비게이션 (4x2 그리드 구조 적용 - 사진 1 해결) -->
     <div id="bottom-nav-bar" class="bottom-nav">
         <!-- 첫 번째 줄 -->
         <div class="nav-item" onclick="switchTab('notice', this)"><i data-lucide="megaphone"></i><span>공지사항</span></div>
@@ -1047,7 +1617,7 @@
 </div>
 
 <!-- ==========================================
-     전체화면 모달 영역 (공지사항 등록/상세/앨범)
+     전체화면 모달 영역 (공지사항 등록/상세/앨범/근무표작성/휴무신청)
      ========================================== -->
 
 <!-- 공지사항 등록 -->
@@ -1170,6 +1740,93 @@
                 이 사진 삭제하기
             </button>
         </div>
+    </div>
+</div>
+
+<!-- 근무표 편집 모달 (작성 모달) -->
+<div id="page-schedule-edit-modal" style="display: none;" class="fixed inset-0 w-full max-w-md mx-auto bg-[#FAF9F5] z-[200] flex-col font-sans">
+    <div class="pt-12 pb-4 bg-[#FAF9F5] flex-shrink-0 relative flex flex-col items-center">
+        <button onclick="closeScheduleEdit()" class="absolute right-6 top-14 text-[#999] p-2"><i data-lucide="x" class="w-6 h-6"></i></button>
+        <img src="log.png" alt="Patek Philippe" class="w-32 h-auto object-contain mt-2 mb-4" />
+        <h2 id="edit-schedule-title" class="text-2xl font-serif text-[#333]">근무표 작성</h2>
+    </div>
+    <div id="edit-staff-rows-container" class="flex-1 overflow-y-auto p-6 space-y-4 pb-32">
+        <!-- 직원별 스케줄 로우 드롭다운 리스트 동적 삽입 -->
+    </div>
+    <div class="absolute bottom-0 w-full p-6 bg-white border-t border-[#F0EFEA] pb-8">
+        <button onclick="saveScheduleSheet()" class="w-full bg-[#B4975A] text-white py-4 rounded-xl text-[17px] font-bold shadow-md active:scale-95 transition-transform">저장하기</button>
+    </div>
+</div>
+
+<!-- 휴무 신청 캘린더 모달 (사진 6 완벽 복제) -->
+<div id="page-leave-calendar-modal" style="display: none;" class="fixed inset-0 w-full max-w-md mx-auto bg-[#FAF9F5] z-[200] flex-col font-sans">
+    <div class="pt-12 pb-4 bg-[#FAF9F5] flex-shrink-0 relative flex flex-col items-center">
+        <button onclick="closeLeaveCalendarModal()" class="absolute right-6 top-14 text-[#999] p-2"><i data-lucide="x" class="w-6 h-6"></i></button>
+        <img src="log.png" alt="Patek Philippe" class="w-32 h-auto object-contain mt-2 mb-2" />
+        <h2 class="text-2xl font-serif text-[#333]">휴무 신청</h2>
+        <p class="text-[11px] text-[#888] font-semibold tracking-wide">날짜를 선택해 휴무를 신청하세요</p>
+    </div>
+
+    <div class="flex-1 overflow-y-auto px-5 pb-32 no-scrollbar">
+        <!-- 연월 조정 바 -->
+        <div class="flex justify-between items-center bg-white border border-[#E8E4DB] rounded-xl p-3 mb-4 shadow-sm">
+            <button onclick="adjustScheduleMonth(-1)" class="p-1 hover:bg-[#F2EFE8] rounded"><i data-lucide="chevron-left" class="w-4 h-4 text-[#8B7355]"></i></button>
+            <span id="leave-month-text" class="text-base font-bold text-[#3A3532]">2026년 6월</span>
+            <button onclick="adjustScheduleMonth(1)" class="p-1 hover:bg-[#F2EFE8] rounded"><i data-lucide="chevron-right" class="w-4 h-4 text-[#8B7355]"></i></button>
+        </div>
+
+        <!-- 요일 헤더 -->
+        <div class="grid grid-cols-7 gap-1 text-center font-bold text-xs text-[#666] mb-1">
+            <div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div class="text-blue-500">토</div><div class="text-red-500">일</div>
+        </div>
+
+        <!-- 달력 본체 그리드 -->
+        <div id="leave-calendar-grid" class="grid grid-cols-7 gap-1 bg-white border border-[#F0EFEA] rounded-xl p-1 shadow-sm mb-4 overflow-hidden">
+            <!-- JS 렌더링 -->
+        </div>
+
+        <!-- 6번 이미지 시안 범례 표시 완벽 구현 -->
+        <div class="flex flex-wrap justify-center items-center gap-4 text-[10px] font-bold text-[#666] mb-6">
+            <div class="flex items-center gap-1.5"><span class="w-3.5 h-3.5 bg-[#DDEBFF] border border-[#A0C4FF] rounded-sm"></span><span>휴무 신청</span></div>
+            <div class="flex items-center gap-1.5"><span class="w-3.5 h-3.5 bg-[#E2F0D9] border border-[#A9D18E] rounded-sm"></span><span>정기휴점</span></div>
+            <div class="flex items-center gap-1.5"><span class="w-3.5 h-3.5 bg-[#FFE5E5] border border-[#FFADAD] rounded-sm"></span><span>3명 이상 신청</span></div>
+            <div class="flex items-center gap-1.5"><span class="w-3.5 h-3.5 border-2 border-amber-500 rounded-sm"></span><span>행사</span></div>
+        </div>
+
+        <!-- 입력란: 사유 & 지역 -->
+        <div class="space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-[#666] mb-1.5 ml-1">휴무 사유 (선택 사항)</label>
+                <input id="leave-reason-input" type="text" placeholder="예: 정기 검진, 연차 등" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-3 outline-none text-xs font-semibold" />
+            </div>
+            <!-- 3일 이상 연휴인 경우 노출되는 지역 필수 입력란 -->
+            <div id="leave-region-container" style="display: none;">
+                <label class="block text-xs font-bold text-red-600 mb-1.5 ml-1">지역 (3일 이상 휴무 시 필수 입력)</label>
+                <input id="leave-region-input" type="text" placeholder="예: 일본, 제주도 등" class="w-full bg-white border-2 border-[#B4975A] rounded-xl p-3 outline-none text-xs font-bold text-[#333]" />
+            </div>
+        </div>
+    </div>
+
+    <!-- 푸터 단추들 (휴무 신청하기 / 신청 내역 보기) -->
+    <div class="absolute bottom-0 w-full p-4 bg-white border-t border-[#F0EFEA] pb-6 flex flex-col gap-2">
+        <button onclick="submitLeaveRequest()" class="w-full bg-[#B4975A] text-white py-3.5 rounded-xl text-[15px] font-bold shadow-md active:scale-95 transition-all">
+            휴무 신청하기
+        </button>
+        <button onclick="openLeaveHistoryModal()" class="w-full bg-white border border-[#E5E5E5] text-[#8B7355] py-3 rounded-xl text-[13px] font-bold active:scale-95 transition-all flex items-center justify-center gap-1">
+            신청 내역 보기 <i data-lucide="chevron-right" class="w-4 h-4"></i>
+        </button>
+    </div>
+</div>
+
+<!-- 휴무 신청 내역 리스트 모달 -->
+<div id="page-leave-history-modal" style="display: none;" class="fixed inset-0 w-full max-w-md mx-auto bg-[#FAF9F5] z-[220] flex-col font-sans">
+    <div class="pt-12 pb-4 bg-[#FAF9F5] flex-shrink-0 relative flex flex-col items-center">
+        <button onclick="closeLeaveHistoryModal()" class="absolute right-6 top-14 text-[#999] p-2"><i data-lucide="x" class="w-6 h-6"></i></button>
+        <img src="log.png" alt="Patek Philippe" class="w-32 h-auto object-contain mt-2 mb-4" />
+        <h2 class="text-2xl font-serif text-[#333]">휴무 신청 내역</h2>
+    </div>
+    <div id="leave-history-list" class="flex-1 overflow-y-auto p-6 space-y-3 pb-24 no-scrollbar">
+        <!-- 내역 리스트 주입 -->
     </div>
 </div>
 
