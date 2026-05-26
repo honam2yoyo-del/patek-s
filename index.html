@@ -275,12 +275,17 @@
     }
 
     window.loginWithGoogle = function() {
-        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        const ua = navigator.userAgent || '';
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(ua);
+        const isIPadDesktopMode = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
         const isPWA = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+        const isSafari = /^((?!chrome|android|crios|fxios|edgios|kakaotalk|naver|instagram).)*safari/i.test(ua);
 
         document.getElementById('loading-overlay').style.display = 'flex';
         
-        if (isMobile || isPWA) {
+        // Safari는 모바일/PC/iPad 데스크톱 모드 모두 팝업 대신 redirect를 사용합니다.
+        // Safari에서 popup 방식이 막히거나 아무 창도 안 뜨는 문제를 방지하기 위함입니다.
+        if (isMobile || isIPadDesktopMode || isPWA || isSafari) {
             signInWithRedirect(auth, provider).catch(error => {
                 console.error("로그인 에러:", error);
                 document.getElementById('loading-overlay').style.display = 'none';
