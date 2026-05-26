@@ -124,7 +124,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, signInWithRedirect, getRedirectResult } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, collection, onSnapshot, doc, setDoc, getDoc, addDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     // ⭐️ patek-s 프로젝트 설정값
@@ -188,6 +188,8 @@
         "2026-06-06": "현충일"
     };
 
+    const APP_ID = 'patek-s';
+
     // 모바일 등 환경을 위한 리다이렉트 처리
     getRedirectResult(auth).catch(console.error);
 
@@ -196,6 +198,8 @@
             currentUser = user;
             document.getElementById('login-page').style.display = 'none';
             document.getElementById('loading-overlay').style.display = 'flex';
+            
+            // 로그인 성공 후 승인 여부 확인
             checkApproval(user);
         } else {
             currentUser = null;
@@ -207,10 +211,11 @@
             if(unsubscribeAlbums) unsubscribeAlbums();
             if(unsubscribeSchedules) unsubscribeSchedules();
             if(unsubscribeLeaveRequests) unsubscribeLeaveRequests();
-
+            
+            // 로그아웃 상태면 무조건 로그인 페이지만 띄움
             document.getElementById('loading-overlay').style.display = 'none';
             document.getElementById('pending-page').style.display = 'none';
-            document.getElementById('app-container').style.display = 'none';
+            document.querySelector('.app-container').style.display = 'none';
             document.getElementById('page-notice-create').style.display = 'none';
             document.getElementById('page-notice-detail').style.display = 'none';
             document.getElementById('page-album-modal').style.display = 'none';
@@ -218,29 +223,50 @@
         }
     });
 
+    // 가입 승인 확인 로직
     function checkApproval(user) {
-        const userDocRef = doc(db, 'users', user.uid);
+        const artifactUserDocRef = doc(db, 'artifacts', APP_ID, 'users', user.uid);
+        const rootUserDocRef = doc(db, 'users', user.uid);
         
-        unsubscribeApproval = onSnapshot(userDocRef, (docSnap) => {
+        unsubscribeApproval = onSnapshot(artifactUserDocRef, async (docSnap) => {
+            let isApproved = false;
+            let userData = null;
+
             if (docSnap.exists()) {
-                const data = docSnap.data();
-                if (data.approved === true) {
-                    document.getElementById('loading-overlay').style.display = 'none';
-                    document.getElementById('pending-page').style.display = 'none';
-                    document.getElementById('app-container').style.display = 'flex'; 
-                    
-                    fetchNotices(); // 공지사항 데이터 불러오기
-                    fetchAlbums(user); // 개인 앨범 실시간 데이터 불러오기
-                    fetchSchedules(); // 공용 근무표 실시간 구독
-                    fetchLeaveRequests(); // 휴무 신청 데이터 실시간 구독
-                    lucide.createIcons();
-                } else {
-                    document.getElementById('loading-overlay').style.display = 'none';
-                    document.getElementById('app-container').style.display = 'none';
-                    document.getElementById('pending-page').style.display = 'flex';
-                }
+                userData = docSnap.data();
+                isApproved = userData.isApproved === true || userData.approved === true;
             } else {
-                setDoc(userDocRef, {
+                // 기존 patek-s 앱에서 이미 승인된 사용자가 있을 수 있어 root users도 함께 확인
+                try {
+                    const rootSnap = await getDoc(rootUserDocRef);
+                    if (rootSnap.exists()) {
+                        const rootData = rootSnap.data();
+                        isApproved = rootData.isApproved === true || rootData.approved === true;
+                        userData = rootData;
+                    }
+                } catch(e) {
+                    console.error('root users 승인 확인 실패:', e);
+                }
+            }
+
+            if (isApproved === true) {
+                document.getElementById('loading-overlay').style.display = 'none';
+                document.getElementById('pending-page').style.display = 'none';
+                document.querySelector('.app-container').style.display = 'flex';
+                
+                fetchNotices();
+                fetchAlbums(user);
+                fetchSchedules();
+                fetchLeaveRequests();
+                lucide.createIcons();
+            } else if (docSnap.exists()) {
+                document.getElementById('loading-overlay').style.display = 'none';
+                document.querySelector('.app-container').style.display = 'none';
+                document.getElementById('pending-page').style.display = 'flex';
+            } else {
+                // 처음 로그인한 사용자 문서 생성: 가계부 앱 방식과 호환되도록 artifacts 경로에 생성
+                setDoc(artifactUserDocRef, {
+                    isApproved: false,
                     approved: false,
                     email: user.email || '',
                     name: user.displayName || '',
@@ -248,18 +274,19 @@
                     createdAt: new Date().toISOString()
                 }, { merge: true }).then(() => {
                     document.getElementById('loading-overlay').style.display = 'none';
-                    document.getElementById('app-container').style.display = 'none';
+                    document.querySelector('.app-container').style.display = 'none';
                     document.getElementById('pending-page').style.display = 'flex';
-                }).catch(err => {
-                    console.error("데이터베이스 저장 오류:", err);
+                }).catch(e => {
+                    console.error("문서 생성 실패", e);
                     document.getElementById('loading-overlay').style.display = 'none';
-                    window.showCustomAlert("가입 처리에 실패했습니다. 다시 로그인해주세요.");
+                    alert("정보 등록에 실패했습니다. 새로고침 해주세요.");
                 });
             }
         }, (error) => {
-            console.error("Firestore Error:", error);
+            console.error("승인 체크 오류:", error);
             document.getElementById('loading-overlay').style.display = 'none';
-            window.showCustomAlert("데이터베이스 권한 오류가 발생했습니다.");
+            alert("보안 정책으로 인해 접속할 수 없습니다.");
+            signOut(auth);
         });
     }
 
@@ -290,6 +317,11 @@
 
     window.logout = function() {
         window.showCustomConfirm("로그아웃 하시겠습니까?", () => {
+            if(unsubscribeNotices) unsubscribeNotices();
+            if(unsubscribeApproval) unsubscribeApproval();
+            if(unsubscribeAlbums) unsubscribeAlbums();
+            if(unsubscribeSchedules) unsubscribeSchedules();
+            if(unsubscribeLeaveRequests) unsubscribeLeaveRequests();
             signOut(auth);
         });
     };
@@ -2012,7 +2044,7 @@
 </div>
 
 <!-- 3. 메인 앱 컨테이너 -->
-<div id="app-container" style="display: none;" class="w-full max-w-md mx-auto h-screen relative overflow-hidden bg-[#FAF9F5] flex-col">
+<div id="app-container" style="display: none;" class="app-container w-full max-w-md mx-auto h-screen relative overflow-hidden bg-[#FAF9F5] flex-col">
     
     <!-- 공통 헤더 로고 -->
     <div class="pt-12 pb-4 bg-[#FAF9F5] flex-shrink-0 z-10 relative flex flex-col items-center justify-center">
