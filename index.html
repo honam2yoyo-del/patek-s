@@ -188,78 +188,33 @@
         "2026-06-06": "현충일"
     };
 
-    function showLoginState() {
-        currentUser = null;
-        window.appNotices = [];
-        window.albums = [];
-        window.selectedAlbumIds = [];
-        if(unsubscribeNotices) unsubscribeNotices();
-        if(unsubscribeApproval) unsubscribeApproval();
-        if(unsubscribeAlbums) unsubscribeAlbums();
-        if(unsubscribeSchedules) unsubscribeSchedules();
-        if(unsubscribeLeaveRequests) unsubscribeLeaveRequests();
-
-        document.getElementById('loading-overlay').style.display = 'none';
-        document.getElementById('pending-page').style.display = 'none';
-        document.getElementById('app-container').style.display = 'none';
-        document.getElementById('page-notice-create').style.display = 'none';
-        document.getElementById('page-notice-detail').style.display = 'none';
-        document.getElementById('page-album-modal').style.display = 'none';
-        document.getElementById('login-page').style.display = 'flex';
-    }
-
-    function handleSignedInUser(user) {
-        if (!user) return;
-        currentUser = user;
-        sessionStorage.removeItem('patekAuthRedirecting');
-        document.getElementById('login-page').style.display = 'none';
-        document.getElementById('loading-overlay').style.display = 'flex';
-        checkApproval(user);
-    }
-
-    // 모바일 Safari 리다이렉트 복귀 처리
-    // onAuthStateChanged가 null을 먼저 반환하는 경우가 있어, redirect 확인 전에는 로그인 화면으로 되돌리지 않습니다.
-    let redirectCheckDone = false;
-    let pendingNullAuth = false;
-
-    const redirectCheckPromise = getRedirectResult(auth)
-        .then((result) => {
-            redirectCheckDone = true;
-            if (result && result.user) {
-                handleSignedInUser(result.user);
-                return;
-            }
-            if (pendingNullAuth && !auth.currentUser) {
-                sessionStorage.removeItem('patekAuthRedirecting');
-                showLoginState();
-            }
-        })
-        .catch((error) => {
-            console.error('Redirect 로그인 에러:', error);
-            redirectCheckDone = true;
-            sessionStorage.removeItem('patekAuthRedirecting');
-            document.getElementById('loading-overlay').style.display = 'none';
-            window.showCustomAlert('로그인 실패: ' + error.message);
-            showLoginState();
-        });
+    // 모바일 등 환경을 위한 리다이렉트 처리
+    getRedirectResult(auth).catch(console.error);
 
     onAuthStateChanged(auth, (user) => {
         if (user) {
-            handleSignedInUser(user);
+            currentUser = user;
+            document.getElementById('login-page').style.display = 'none';
+            document.getElementById('loading-overlay').style.display = 'flex';
+            checkApproval(user);
         } else {
-            if (!redirectCheckDone || sessionStorage.getItem('patekAuthRedirecting') === '1') {
-                pendingNullAuth = true;
-                document.getElementById('login-page').style.display = 'none';
-                document.getElementById('loading-overlay').style.display = 'flex';
-                redirectCheckPromise.finally(() => {
-                    if (!auth.currentUser && pendingNullAuth) {
-                        sessionStorage.removeItem('patekAuthRedirecting');
-                        showLoginState();
-                    }
-                });
-                return;
-            }
-            showLoginState();
+            currentUser = null;
+            window.appNotices = [];
+            window.albums = [];
+            window.selectedAlbumIds = [];
+            if(unsubscribeNotices) unsubscribeNotices();
+            if(unsubscribeApproval) unsubscribeApproval();
+            if(unsubscribeAlbums) unsubscribeAlbums();
+            if(unsubscribeSchedules) unsubscribeSchedules();
+            if(unsubscribeLeaveRequests) unsubscribeLeaveRequests();
+
+            document.getElementById('loading-overlay').style.display = 'none';
+            document.getElementById('pending-page').style.display = 'none';
+            document.getElementById('app-container').style.display = 'none';
+            document.getElementById('page-notice-create').style.display = 'none';
+            document.getElementById('page-notice-detail').style.display = 'none';
+            document.getElementById('page-album-modal').style.display = 'none';
+            document.getElementById('login-page').style.display = 'flex';
         }
     });
 
@@ -308,11 +263,8 @@
         });
     }
 
-    // 로그인 함수: 첨부해주신 가계부 앱과 동일하게 모바일/PWA는 redirect, PC는 popup 사용
     window.loginWithGoogle = function() {
-        const ua = navigator.userAgent || '';
-        const isIpadOS = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
-        const isMobile = /iPhone|iPad|iPod|Android/i.test(ua) || isIpadOS;
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
         const isPWA = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
 
         document.getElementById('loading-overlay').style.display = 'flex';
@@ -321,16 +273,16 @@
             signInWithRedirect(auth, provider).catch(error => {
                 console.error("로그인 에러:", error);
                 document.getElementById('loading-overlay').style.display = 'none';
-                window.showCustomAlert("로그인 실패: " + error.message);
+                alert("로그인 실패: " + error.message);
             });
         } else {
             signInWithPopup(auth, provider).catch(error => {
                 console.error("로그인 에러:", error);
                 document.getElementById('loading-overlay').style.display = 'none';
                 if (error.code === 'auth/unauthorized-domain') {
-                    window.showCustomAlert("구글 로그인 정책: 현재 주소가 승인된 도메인이 아닙니다.");
-                } else if (error.code !== 'auth/popup-closed-by-user') {
-                    window.showCustomAlert("로그인 중 오류가 발생했습니다.\n" + error.message);
+                    alert("구글 로그인 정책: 현재 주소가 승인된 도메인이 아닙니다.");
+                } else {
+                    alert("로그인 중 오류가 발생했습니다.\n" + error.message);
                 }
             });
         }
