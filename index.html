@@ -123,12 +123,12 @@
 <body>
 
 <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, signInWithRedirect, getRedirectResult } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, collection, onSnapshot, doc, setDoc, getDoc, addDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+    import { getFirestore, collection, onSnapshot, doc, setDoc, getDoc, addDoc, updateDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
     // ⭐️ patek-s 프로젝트 설정값
-    const firebaseConfig = {
+    const YOUR_FIREBASE_CONFIG = {
       apiKey: "AIzaSyCt7aQXA5eFdnDTMHlRhjPAkyH4b8UB6HY",
       authDomain: "patek-s.firebaseapp.com",
       projectId: "patek-s",
@@ -138,10 +138,20 @@
       measurementId: "G-QZQYBJMFH8"
     };
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-    const provider = new GoogleAuthProvider();
+    const firebaseConfig = typeof __firebase_config !== 'undefined' && __firebase_config
+      ? JSON.parse(__firebase_config)
+      : YOUR_FIREBASE_CONFIG;
+
+    let app = null, auth = null, db = null;
+    try {
+      if (firebaseConfig && firebaseConfig.apiKey) {
+        app = initializeApp(firebaseConfig);
+        auth = getAuth(app);
+        db = getFirestore(app);
+      }
+    } catch(e) {
+      console.warn("Firebase 초기화 안됨.", e);
+    }
 
     // 카테고리 색상 데이터
     const CATEGORIES = {
@@ -190,38 +200,49 @@
 
     const APP_ID = 'patek-s';
 
-    // 모바일 등 환경을 위한 리다이렉트 처리 - 첨부해주신 가계부 앱 방식 그대로
-    getRedirectResult(auth).catch(console.error);
-
-    onAuthStateChanged(auth, (user) => {
-        if (user) {
-            currentUser = user;
-            document.getElementById('login-page').style.display = 'none';
-            document.getElementById('loading-overlay').style.display = 'flex';
-            
-            // 바로 데이터를 부르지 않고, 가입 승인 여부를 먼저 확인합니다.
-            checkApproval(user);
-        } else {
-            currentUser = null;
-            window.appNotices = [];
-            window.albums = [];
-            window.selectedAlbumIds = [];
-            if(unsubscribeNotices) unsubscribeNotices();
-            if(unsubscribeApproval) unsubscribeApproval();
-            if(unsubscribeAlbums) unsubscribeAlbums();
-            if(unsubscribeSchedules) unsubscribeSchedules();
-            if(unsubscribeLeaveRequests) unsubscribeLeaveRequests();
-            
-            // 로그아웃 상태면 무조건 로그인 페이지만 띄움
+    // 모바일/PWA 리다이렉트 결과 처리 - 사용자가 제공한 로그인 코드 구조 반영
+    if (auth) {
+        getRedirectResult(auth).then((result) => {
+            if (result && result.user) {
+                currentUser = result.user;
+                document.getElementById('login-page').style.display = 'none';
+                document.getElementById('loading-overlay').style.display = 'flex';
+                checkApproval(result.user);
+            }
+        }).catch((err) => {
+            console.error("Redirect Error:", err);
             document.getElementById('loading-overlay').style.display = 'none';
-            document.getElementById('pending-page').style.display = 'none';
-            document.getElementById('app-container').style.display = 'none';
-            document.getElementById('page-notice-create').style.display = 'none';
-            document.getElementById('page-notice-detail').style.display = 'none';
-            document.getElementById('page-album-modal').style.display = 'none';
-            document.getElementById('login-page').style.display = 'flex';
-        }
-    });
+        });
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                document.getElementById('login-page').style.display = 'none';
+                document.getElementById('loading-overlay').style.display = 'flex';
+
+                // 바로 데이터를 부르지 않고, 가입 승인 여부를 먼저 확인합니다.
+                checkApproval(user);
+            } else {
+                currentUser = null;
+                window.appNotices = [];
+                window.albums = [];
+                window.selectedAlbumIds = [];
+                if(unsubscribeNotices) unsubscribeNotices();
+                if(unsubscribeApproval) unsubscribeApproval();
+                if(unsubscribeAlbums) unsubscribeAlbums();
+                if(unsubscribeSchedules) unsubscribeSchedules();
+                if(unsubscribeLeaveRequests) unsubscribeLeaveRequests();
+
+                document.getElementById('loading-overlay').style.display = 'none';
+                document.getElementById('pending-page').style.display = 'none';
+                document.getElementById('app-container').style.display = 'none';
+                document.getElementById('page-notice-create').style.display = 'none';
+                document.getElementById('page-notice-detail').style.display = 'none';
+                document.getElementById('page-album-modal').style.display = 'none';
+                document.getElementById('login-page').style.display = 'flex';
+            }
+        });
+    }
 
     // 가입 승인 확인 로직 - 첨부해주신 가계부 앱 구조를 patek-s APP_ID에 맞춰 그대로 사용
     function checkApproval(user) {
@@ -270,65 +291,44 @@
             console.error("승인 체크 오류:", error);
             document.getElementById('loading-overlay').style.display = 'none';
             alert("보안 정책으로 인해 접속할 수 없습니다.");
-            signOut(auth);
+            if(auth) signOut(auth);
         });
     }
 
-    window.loginWithGoogle = function() {
-        const ua = navigator.userAgent || '';
-        const isMobile = /iPhone|iPad|iPod|Android/i.test(ua);
-        const isIPadDesktopMode = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
-        const isPWA = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-        const isKakaoOrInApp = /KAKAOTALK|FBAN|FBAV|Instagram|NAVER|Line|wv/i.test(ua);
-        const isSafari = /Safari/i.test(ua) && !/Chrome|CriOS|FxiOS|EdgiOS|OPiOS|KAKAOTALK|NAVER|Instagram/i.test(ua);
-
-        provider.setCustomParameters({ prompt: 'select_account' });
-        if (auth.useDeviceLanguage) auth.useDeviceLanguage();
-
-        // Safari에서는 redirect가 구글 화면을 띄우지 않고 돌아오는 경우가 있어 popup을 먼저 사용합니다.
-        // popup 호출 전에 로딩 오버레이를 띄우지 않아야 Safari가 사용자 클릭으로 인식합니다.
-        if ((isSafari || isIPadDesktopMode) && !isPWA && !isKakaoOrInApp) {
-            signInWithPopup(auth, provider).catch(error => {
-                console.error("로그인 에러:", error);
-                if (error.code === 'auth/popup-blocked' || error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request') {
-                    document.getElementById('loading-overlay').style.display = 'flex';
-                    signInWithRedirect(auth, provider).catch(redirectError => {
-                        console.error("리다이렉트 로그인 에러:", redirectError);
-                        document.getElementById('loading-overlay').style.display = 'none';
-                        alert("로그인 실패: " + redirectError.message);
-                    });
-                    return;
-                }
-                document.getElementById('loading-overlay').style.display = 'none';
-                if (error.code === 'auth/unauthorized-domain') {
-                    alert("구글 로그인 정책: 현재 주소가 승인된 도메인이 아닙니다.");
-                } else {
-                    alert("로그인 중 오류가 발생했습니다.
-" + error.message);
-                }
-            });
+    window.loginWithGoogle = async function() {
+        if (!auth) {
+            alert("Firebase DB 오류: 인증 정보를 확인할 수 없습니다.");
             return;
         }
 
         document.getElementById('loading-overlay').style.display = 'flex';
 
-        if (isMobile || isPWA || isKakaoOrInApp) {
-            signInWithRedirect(auth, provider).catch(error => {
-                console.error("로그인 에러:", error);
-                document.getElementById('loading-overlay').style.display = 'none';
-                alert("로그인 실패: " + error.message);
-            });
-        } else {
-            signInWithPopup(auth, provider).catch(error => {
-                console.error("로그인 에러:", error);
-                document.getElementById('loading-overlay').style.display = 'none';
-                if (error.code === 'auth/unauthorized-domain') {
-                    alert("구글 로그인 정책: 현재 주소가 승인된 도메인이 아닙니다.");
+        try {
+            const provider = new GoogleAuthProvider();
+            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+            const isPWA = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+
+            if (isMobile || isPWA) {
+                await signInWithRedirect(auth, provider); // 모바일/PWA → 리다이렉트
+            } else {
+                await signInWithPopup(auth, provider);    // PC → 팝업
+            }
+        } catch (err) {
+            console.error("Google Login Error:", err);
+            document.getElementById('loading-overlay').style.display = 'none';
+
+            // Fallback: 커스텀 토큰 또는 익명 로그인
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
                 } else {
-                    alert("로그인 중 오류가 발생했습니다.
-" + error.message);
+                    await signInAnonymously(auth);
                 }
-            });
+            } catch (fallbackErr) {
+                console.error("Fallback Login Error:", fallbackErr);
+                alert("로그인 중 오류가 발생했습니다.
+" + fallbackErr.message);
+            }
         }
     };
 
@@ -339,7 +339,7 @@
             if(unsubscribeAlbums) unsubscribeAlbums();
             if(unsubscribeSchedules) unsubscribeSchedules();
             if(unsubscribeLeaveRequests) unsubscribeLeaveRequests();
-            signOut(auth);
+            if(auth) signOut(auth);
         }
     };
 
