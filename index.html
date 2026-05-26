@@ -179,12 +179,18 @@
     };
 
     // 모바일 Safari/PWA 환경을 위한 리다이렉트 로그인 결과 처리
-    getRedirectResult(auth).catch(error => {
+    getRedirectResult(auth).then((result) => {
+        if (result && result.user) {
+            document.getElementById('loading-overlay').style.display = 'flex';
+        }
+    }).catch(error => {
         console.error("로그인 에러:", error);
         const loading = document.getElementById('loading-overlay');
         if (loading) loading.style.display = 'none';
         if (error.code === 'auth/unauthorized-domain') {
             window.showCustomAlert("구글 로그인 정책: 현재 주소가 승인된 도메인이 아닙니다.");
+        } else {
+            window.showCustomAlert("로그인 처리에 실패했습니다.\n" + error.message);
         }
     });
 
@@ -266,6 +272,7 @@
         const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
         const isPWA = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
 
+        // Safari 등에서 팝업/리다이렉트 차단 방지를 위해 로딩 표시 후 즉시 실행합니다.
         document.getElementById('loading-overlay').style.display = 'flex';
 
         try {
@@ -276,23 +283,12 @@
             }
         } catch (error) {
             console.error("로그인 에러:", error);
+            document.getElementById('loading-overlay').style.display = 'none';
             
-            // Fallback: 커스텀 토큰 또는 익명 로그인 (Safari 등 제약 환경 우회)
-            try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-            } catch (fallbackError) {
-                console.error("Fallback 로그인 에러:", fallbackError);
-                document.getElementById('loading-overlay').style.display = 'none';
-                
-                if (error.code === 'auth/unauthorized-domain') {
-                    window.showCustomAlert("구글 로그인 정책: 현재 주소가 승인된 도메인이 아닙니다.");
-                } else if (error.code !== 'auth/popup-closed-by-user') {
-                    window.showCustomAlert("로그인 중 오류가 발생했습니다.\n" + error.message);
-                }
+            if (error.code === 'auth/unauthorized-domain') {
+                window.showCustomAlert("구글 로그인 정책: 현재 주소가 승인된 도메인이 아닙니다.");
+            } else if (error.code !== 'auth/popup-closed-by-user') {
+                window.showCustomAlert("로그인 중 오류가 발생했습니다.\n" + error.message);
             }
         }
     };
