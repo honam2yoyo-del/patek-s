@@ -1637,6 +1637,11 @@
 
         function getDayGroups(day) {
             const groups = { A: [], B: [], C: [], '휴무': [] };
+
+            // ⭐️ 근무표가 등록되지 않은 달이면 빈 그룹을 그대로 반환 (전원 휴무 표시 방지)
+            const hasSchedule = monthScheduleDoc && monthScheduleDoc.staffs && Object.keys(monthScheduleDoc.staffs).length > 0;
+            if (!hasSchedule) return groups;
+
             const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 
             const scheduleStaffs = monthScheduleDoc.staffNames || window.storeStaffs;
