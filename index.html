@@ -10,8 +10,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="PATEK">
-    <!-- 홈 화면 추가 시 아이콘 log2.png 로 설정 -->
-    <link class="rounded-full" rel="apple-touch-icon" href="log2.png">
+    <link class="rounded-full" rel="apple-touch-icon" href="log.png">
 
     <!-- Tailwind CSS 및 아이콘 -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -110,25 +109,6 @@
             white-space: normal;
         }
 
-        /* 폼 입력창 스타일 */
-        .form-input {
-            width: 100%;
-            box-sizing: border-box;
-            background-color: #FFFFFF;
-            border: 1px solid #E5E5E5;
-            border-radius: 12px;
-            padding: 12px 14px;
-            outline: none;
-            font-size: 14px;
-            font-weight: 500;
-            color: #333;
-            transition: border-color 0.2s;
-            text-align: left;
-            -webkit-appearance: none;
-            appearance: none;
-        }
-        .form-input:focus { border-color: #B4975A; }
-        .form-input[type="date"]::-webkit-date-and-time-value { text-align: left; }
     </style>
 </head>
 <body>
@@ -165,8 +145,6 @@
     const MAX_READERS = 6;
 
     let currentUser = null;
-    window.currentUserData = null; // 유저 프로필 데이터 저장용
-
     let unsubscribeNotices = null;
     let unsubscribeApproval = null;
     let unsubscribeAlbums = null;
@@ -184,6 +162,7 @@
     window.albumFilter = '전체';
     window.albumSearchQuery = '';
     window.albumForm = { id: '', files: [], category: '기타', title: '', ref: '', memo: '', imageUrl: '' };
+    window.currentUserProfile = null; // Firestore users/{uid} 프로필 캐시 (수정자 이름 표시용)
 
     // 근무표 및 휴무 신청 상태값
     window.scheduleYear = 2026;
@@ -194,33 +173,11 @@
     window.leaveRangeStart = null;
     window.leaveRangeEnd = null;
 
-    // 프로필 이미지 임시 저장소
-    window.regProfileImageData = '';
-    window.editProfileImageData = '';
-
-    // 2026년 법정공휴일 및 선거일 완벽 세팅
+    // 공휴일 정보 (2026년 기준 예시 데이터)
     const PUBLIC_HOLIDAYS_2026 = {
-        "2026-01-01": "신정",
-        "2026-02-16": "설날 연휴",
-        "2026-02-17": "설날",
-        "2026-02-18": "설날 연휴",
-        "2026-03-01": "삼일절",
-        "2026-03-02": "대체공휴일",
         "2026-05-05": "어린이날",
-        "2026-05-24": "부처님오신날",
-        "2026-05-25": "대체공휴일",
-        "2026-06-03": "전국동시지방선거",
-        "2026-06-06": "현충일",
-        "2026-08-15": "광복절",
-        "2026-08-17": "대체공휴일",
-        "2026-09-24": "추석 연휴",
-        "2026-09-25": "추석",
-        "2026-09-26": "추석 연휴",
-        "2026-09-28": "대체공휴일",
-        "2026-10-03": "개천절",
-        "2026-10-05": "대체공휴일",
-        "2026-10-09": "한글날",
-        "2026-12-25": "기독탄신일"
+        "2026-05-24": "석가탄신일",
+        "2026-06-06": "현충일"
     };
 
     // 모바일 Safari/PWA 환경을 위한 리다이렉트 로그인 결과 처리
@@ -242,12 +199,11 @@
     onAuthStateChanged(auth, (user) => {
         if (user) {
             currentUser = user;
-            hideAllPages();
+            document.getElementById('login-page').style.display = 'none';
             document.getElementById('loading-overlay').style.display = 'flex';
             checkApproval(user);
         } else {
             currentUser = null;
-            window.currentUserData = null;
             window.appNotices = [];
             window.albums = [];
             window.selectedAlbumIds = [];
@@ -257,22 +213,17 @@
             if(unsubscribeSchedules) unsubscribeSchedules();
             if(unsubscribeLeaveRequests) unsubscribeLeaveRequests();
             
-            hideAllPages();
+            document.getElementById('loading-overlay').style.display = 'none';
+            document.getElementById('pending-page').style.display = 'none';
+            document.getElementById('app-container').style.display = 'none';
+            document.getElementById('page-notice-create').style.display = 'none';
+            document.getElementById('page-notice-detail').style.display = 'none';
+            document.getElementById('page-album-modal').style.display = 'none';
+            document.getElementById('page-settings-modal').style.display = 'none';
+            
             document.getElementById('login-page').style.display = 'flex';
         }
     });
-
-    function hideAllPages() {
-        document.getElementById('loading-overlay').style.display = 'none';
-        document.getElementById('login-page').style.display = 'none';
-        document.getElementById('register-page').style.display = 'none';
-        document.getElementById('pending-page').style.display = 'none';
-        document.getElementById('app-container').style.display = 'none';
-        document.getElementById('page-notice-create').style.display = 'none';
-        document.getElementById('page-notice-detail').style.display = 'none';
-        document.getElementById('page-album-modal').style.display = 'none';
-        document.getElementById('page-profile-modal').style.display = 'none';
-    }
 
     function checkApproval(user) {
         const userDocRef = doc(db, 'users', user.uid);
@@ -280,136 +231,65 @@
         unsubscribeApproval = onSnapshot(userDocRef, (docSnap) => {
             if (docSnap.exists()) {
                 const data = docSnap.data();
-                window.currentUserData = data;
-
-                if (!data.name || !data.empId) {
-                    // 프로필 정보가 없는 신규/기존 유저 -> 등록 화면
-                    hideAllPages();
-                    document.getElementById('register-page').style.display = 'flex';
-                    window.regProfileImageData = '';
-                    document.getElementById('reg-profile-img-preview').classList.add('hidden');
-                    document.getElementById('reg-profile-img-icon').classList.remove('hidden');
-                } else if (data.approved === true) {
-                    // 승인 완료된 정상 유저 -> 메인 앱 
-                    hideAllPages();
+                if (data.approved === true) {
+                    window.currentUserProfile = data; // 프로필 정보 캐싱 (수정자 표시용)
+                    document.getElementById('loading-overlay').style.display = 'none';
+                    document.getElementById('pending-page').style.display = 'none';
                     document.getElementById('app-container').style.display = 'flex'; 
                     
-                    fetchNotices(); 
-                    fetchAlbums(user); 
-                    fetchSchedules(); 
-                    fetchLeaveRequests(); 
+                    fetchNotices(); // 공지사항 데이터 불러오기
+                    fetchAlbums(user); // 개인 앨범 실시간 데이터 불러오기
+                    fetchSchedules(); // 공용 근무표 실시간 구독
+                    fetchLeaveRequests(); // 휴무 신청 데이터 실시간 구독
                     lucide.createIcons();
                 } else {
-                    // 가입은 했으나 미승인 상태 -> 대기 화면
-                    hideAllPages();
+                    document.getElementById('loading-overlay').style.display = 'none';
+                    document.getElementById('app-container').style.display = 'none';
                     document.getElementById('pending-page').style.display = 'flex';
                 }
             } else {
-                // 문서 자체가 없는 완전 신규 -> 등록 화면
-                hideAllPages();
-                document.getElementById('register-page').style.display = 'flex';
-                window.regProfileImageData = '';
+                setDoc(userDocRef, {
+                    approved: false,
+                    email: user.email || '',
+                    name: user.displayName || '',
+                    role: 'user',
+                    createdAt: new Date().toISOString()
+                }, { merge: true }).then(() => {
+                    document.getElementById('loading-overlay').style.display = 'none';
+                    document.getElementById('app-container').style.display = 'none';
+                    document.getElementById('pending-page').style.display = 'flex';
+                }).catch(err => {
+                    console.error("데이터베이스 저장 오류:", err);
+                    document.getElementById('loading-overlay').style.display = 'none';
+                    window.showCustomAlert("가입 처리에 실패했습니다. 다시 로그인해주세요.");
+                });
             }
         }, (error) => {
             console.error("Firestore Error:", error);
-            hideAllPages();
+            document.getElementById('loading-overlay').style.display = 'none';
             window.showCustomAlert("데이터베이스 권한 오류가 발생했습니다.");
         });
     }
-
-    // 휴대폰 번호 자동 하이픈 기능
-    window.autoHyphenPhone = function(target) {
-        let val = target.value.replace(/[^0-9]/g, '');
-        let res = '';
-        if(val.length < 4) {
-            res = val;
-        } else if(val.length < 7) {
-            res = val.substr(0, 3) + '-' + val.substr(3);
-        } else if(val.length < 11) {
-            res = val.substr(0, 3) + '-' + val.substr(3, 3) + '-' + val.substr(6);
-        } else {
-            res = val.substr(0, 3) + '-' + val.substr(3, 4) + '-' + val.substr(7);
-        }
-        target.value = res;
-    };
-
-    // 프로필 이미지 선택 및 미리보기
-    window.previewProfileImage = async function(input, previewId, iconId) {
-        if (input.files && input.files[0]) {
-            try {
-                const base64Url = await compressImage(input.files[0]);
-                const preview = document.getElementById(previewId);
-                const icon = document.getElementById(iconId);
-                preview.src = base64Url;
-                preview.classList.remove('hidden');
-                if(icon) icon.classList.add('hidden');
-                
-                if (previewId === 'reg-profile-img-preview') window.regProfileImageData = base64Url;
-                if (previewId === 'edit-profile-img-preview') window.editProfileImageData = base64Url;
-            } catch (err) {
-                console.error("이미지 압축 실패:", err);
-                window.showCustomAlert("이미지를 처리할 수 없습니다.");
-            }
-        }
-    };
-
-    // 가입(프로필 등록) 취소
-    window.cancelRegistration = function() {
-        signOut(auth).then(() => {
-            hideAllPages();
-            document.getElementById('login-page').style.display = 'flex';
-        });
-    };
-
-    // 신규 프로필 등록 제출
-    window.submitRegistration = async function() {
-        const name = document.getElementById('reg-name').value.trim();
-        const empId = document.getElementById('reg-emp-id').value.trim();
-        const birth = document.getElementById('reg-birth').value.trim();
-        const phone = document.getElementById('reg-phone').value.trim();
-        const emergency = document.getElementById('reg-emergency').value.trim();
-        const relation = document.getElementById('reg-relation').value.trim();
-
-        if (!name || !empId || !phone || !emergency || !relation) {
-            window.showCustomAlert("모든 필수 항목(이름, 사번, 전화번호, 비상연락망, 관계)을 입력해 주세요.");
-            return;
-        }
-
-        document.getElementById('loading-overlay').style.display = 'flex';
-        try {
-            await setDoc(doc(db, 'users', currentUser.uid), {
-                approved: false, // 최초 가입 시 미승인
-                email: currentUser.email || '',
-                name: name,
-                empId: empId,
-                birth: birth,
-                phone: phone,
-                emergency: emergency,
-                relation: relation,
-                photoUrl: window.regProfileImageData || '',
-                role: 'user',
-                createdAt: new Date().toISOString()
-            }, { merge: true });
-            // onSnapshot이 반응하여 pending-page로 자동 이동됨
-        } catch (e) {
-            console.error(e);
-            window.showCustomAlert("프로필 등록 중 오류가 발생했습니다.");
-            document.getElementById('loading-overlay').style.display = 'none';
-        }
-    };
 
     // 로그인 함수 (Vercel 도메인 + 모바일 Safari ITP 해결을 위해 Popup 기본 사용)
     window.loginWithGoogle = async function() {
         document.getElementById('loading-overlay').style.display = 'flex';
 
         try {
+            // Safari 크로스 도메인(Vercel <-> Firebase) 보안 정책(ITP) 이슈로 인해
+            // signInWithRedirect 실행 시 쿠키가 유실되어 바로 튕기는 현상을 방지하고자
+            // signInWithPopup을 기본 방식으로 사용합니다.
             await signInWithPopup(auth, provider);
         } catch (error) {
             console.error("로그인 에러:", error);
+            
+            // 사용자가 팝업 창을 임의로 닫은 경우 무시
             if (error.code === 'auth/popup-closed-by-user') {
                 document.getElementById('loading-overlay').style.display = 'none';
                 return;
             }
+
+            // 만약 브라우저 설정에 의해 팝업이 강제로 차단된 경우에만 리다이렉트로 폴백(Fallback) 실행
             if (error.code === 'auth/popup-blocked') {
                 try {
                     await signInWithRedirect(auth, provider);
@@ -419,6 +299,7 @@
                 }
                 return;
             }
+
             document.getElementById('loading-overlay').style.display = 'none';
             if (error.code === 'auth/unauthorized-domain') {
                 window.showCustomAlert("구글 로그인 정책: 현재 주소가 승인된 도메인이 아닙니다.");
@@ -434,71 +315,18 @@
         });
     };
 
-    // 프로필 정보 보기 및 수정
-    window.openProfile = function() {
-        if (window.currentUserData) {
-            document.getElementById('profile-name').value = window.currentUserData.name || '';
-            document.getElementById('profile-emp-id').value = window.currentUserData.empId || '';
-            document.getElementById('profile-birth').value = window.currentUserData.birth || '';
-            document.getElementById('profile-phone').value = window.currentUserData.phone || '';
-            document.getElementById('profile-emergency').value = window.currentUserData.emergency || '';
-            document.getElementById('profile-relation').value = window.currentUserData.relation || '';
-            
-            const preview = document.getElementById('edit-profile-img-preview');
-            const icon = document.getElementById('edit-profile-img-icon');
-            if (window.currentUserData.photoUrl) {
-                preview.src = window.currentUserData.photoUrl;
-                preview.classList.remove('hidden');
-                icon.classList.add('hidden');
-                window.editProfileImageData = window.currentUserData.photoUrl;
-            } else {
-                preview.src = '';
-                preview.classList.add('hidden');
-                icon.classList.remove('hidden');
-                window.editProfileImageData = '';
-            }
+    // 환경 설정 / 유저 모달
+    window.openSettings = function() {
+        if (currentUser) {
+            document.getElementById('settings-user-name').innerText = currentUser.displayName || '미인증 사용자';
+            document.getElementById('settings-user-email').innerText = currentUser.email || '';
         }
-        document.getElementById('page-profile-modal').style.display = 'flex';
+        document.getElementById('page-settings-modal').style.display = 'flex';
         lucide.createIcons();
     };
 
-    window.closeProfile = function() {
-        document.getElementById('page-profile-modal').style.display = 'none';
-    };
-
-    window.submitProfileEdit = async function() {
-        const name = document.getElementById('profile-name').value.trim();
-        const empId = document.getElementById('profile-emp-id').value.trim();
-        const birth = document.getElementById('profile-birth').value.trim();
-        const phone = document.getElementById('profile-phone').value.trim();
-        const emergency = document.getElementById('profile-emergency').value.trim();
-        const relation = document.getElementById('profile-relation').value.trim();
-
-        if (!name || !empId || !phone || !emergency || !relation) {
-            window.showCustomAlert("이름, 사번, 전화번호, 비상연락망, 관계는 필수입니다.");
-            return;
-        }
-
-        document.getElementById('loading-overlay').style.display = 'flex';
-        try {
-            await updateDoc(doc(db, 'users', currentUser.uid), {
-                name: name,
-                empId: empId,
-                birth: birth,
-                phone: phone,
-                emergency: emergency,
-                relation: relation,
-                photoUrl: window.editProfileImageData || '',
-                updatedAt: new Date().toISOString()
-            });
-            window.showCustomAlert("프로필이 수정되었습니다.");
-            closeProfile();
-        } catch (e) {
-            console.error(e);
-            window.showCustomAlert("수정 중 오류가 발생했습니다.");
-        } finally {
-            document.getElementById('loading-overlay').style.display = 'none';
-        }
+    window.closeSettings = function() {
+        document.getElementById('page-settings-modal').style.display = 'none';
     };
 
 
@@ -765,7 +593,6 @@
                 title,
                 content,
                 author: currentUser.uid,
-                authorName: window.currentUserData?.name || '관리자',
                 createdAt: new Date().toISOString(),
                 readers: [],
                 completed: false,
@@ -1699,11 +1526,12 @@
             window.storeStaffs = staffNames;
 
             const docRef = doc(db, 'artifacts', 'patek-s', 'public', 'data', 'schedules', currentMonthKey);
+            const profileName = (window.currentUserProfile && window.currentUserProfile.name) || currentUser.displayName || currentUser.email;
             await setDoc(docRef, {
                 staffs: updatedStaffs,
                 staffNames,
                 lastUpdated: formattedDate,
-                updatedBy: window.currentUserData?.name || currentUser.displayName || currentUser.email,
+                updatedBy: profileName,
                 sourceFileName: file.name
             }, { merge: true });
 
@@ -1731,11 +1559,11 @@
             return;
         }
 
-        window.showCustomConfirm("해당 월의 근무표 전체 데이터를 삭제하시겠습니까?", async () => {
+        window.showCustomConfirm("근무표를 삭제하시겠습니까?", async () => {
             document.getElementById('loading-overlay').style.display = 'flex';
             try {
                 await deleteDoc(doc(db, 'artifacts', 'patek-s', 'public', 'data', 'schedules', currentMonthKey));
-                window.showCustomAlert("근무표가 완전 삭제되었습니다.");
+                window.showCustomAlert("근무표가 삭제되었습니다.");
             } catch(e) {
                 console.error(e);
                 window.showCustomAlert("삭제 실패");
@@ -1751,8 +1579,8 @@
         const month = window.scheduleMonth;
         const totalDays = getDaysInMonth(year, month);
         const currentMonthKey = `${year}-${String(month).padStart(2, '0')}`;
-        const monthScheduleDoc = window.schedulesData[currentMonthKey]; // undefined일 경우를 판별하기 위해 기본값 {} 제거
-        const staffData = monthScheduleDoc ? monthScheduleDoc.staffs : {};
+        const monthScheduleDoc = window.schedulesData[currentMonthKey] || {};
+        const staffData = monthScheduleDoc.staffs || {};
 
         const monthText = document.getElementById('schedule-month-text');
         const monthPicker = document.getElementById('schedule-month-picker');
@@ -1761,7 +1589,7 @@
 
         const metaInfo = document.getElementById('schedule-meta-info');
         if (metaInfo) {
-            if (monthScheduleDoc && monthScheduleDoc.lastUpdated) {
+            if (monthScheduleDoc.lastUpdated) {
                 metaInfo.innerHTML = `
                     <span class="schedule-meta-line text-[9px] text-[#8A847E]">수정일: ${monthScheduleDoc.lastUpdated.split(' ')[0]}</span>
                     <span class="schedule-meta-line text-[9px] text-[#8A847E] mt-0.5 w-[65px] truncate">수정자: ${monthScheduleDoc.updatedBy || '시스템'}</span>
@@ -1809,24 +1637,16 @@
 
         function getDayGroups(day) {
             const groups = { A: [], B: [], C: [], '휴무': [] };
-            
-            // 데이터가 아예 없는 경우 텅 빈 채로 리턴 (모두 휴무 처리 안함)
-            if (!staffData || Object.keys(staffData).length === 0) {
-                return groups; 
-            }
-
             const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-            const scheduleStaffs = monthScheduleDoc.staffNames || window.storeStaffs;
 
+            const scheduleStaffs = monthScheduleDoc.staffNames || window.storeStaffs;
             scheduleStaffs.forEach(staffName => {
                 const userDays = staffData[staffName] || {};
                 let code = userDays[day] || userDays[String(day)] || '';
                 const hasLeave = window.leaveRequests.some(r => r.name === staffName && dateStr >= r.startDate && dateStr <= r.endDate);
-                
                 if (!code || hasLeave) code = code || '휴무';
                 if (code === '/' || code === '휴' || code === '연' || code === '경') code = '휴무';
                 if (String(code).includes('반')) code = String(code).charAt(0);
-                
                 if (groups[code]) groups[code].push(compactName(staffName));
             });
             return groups;
@@ -1850,8 +1670,19 @@
             const pills = Object.keys(codeMeta).map(code => {
                 if (!groups[code] || groups[code].length === 0) return '';
                 const meta = codeMeta[code];
-                // 콤마 뒤 공백 제거하여 한줄 나열 시 불필요한 줄바꿈 방지
-                return `<div class="schedule-pill" style="background:${meta.bg}; color:${meta.text}; border-color:${meta.border};">${groups[code].join(',')}</div>`;
+                const names = groups[code];
+                let content;
+                if (names.length >= 3) {
+                    // 3명 이상이면 2명씩 묶어서 줄바꿈 (예: 영지,영세 / 인주,용석)
+                    const lines = [];
+                    for (let i = 0; i < names.length; i += 2) {
+                        lines.push(names.slice(i, i + 2).join(','));
+                    }
+                    content = lines.join('<br>');
+                } else {
+                    content = names.join(',');
+                }
+                return `<div class="schedule-pill" style="background:${meta.bg}; color:${meta.text}; border-color:${meta.border};">${content}</div>`;
             }).join('');
 
             grid.innerHTML += `
@@ -1943,10 +1774,11 @@
 
         try {
             const docRef = doc(db, 'artifacts', 'patek-s', 'public', 'data', 'schedules', currentMonthKey);
+            const profileName = (window.currentUserProfile && window.currentUserProfile.name) || currentUser.displayName || currentUser.email;
             await setDoc(docRef, {
                 staffs: updatedStaffs,
                 lastUpdated: formattedDate,
-                updatedBy: window.currentUserData?.name || currentUser.displayName || currentUser.email
+                updatedBy: profileName
             }, { merge: true });
 
             window.closeScheduleEdit();
@@ -2116,7 +1948,7 @@
         document.getElementById('loading-overlay').style.display = 'flex';
         try {
             const payload = {
-                name: window.currentUserData?.name || currentUser.displayName || '미인증',
+                name: currentUser.displayName || '미인증',
                 uid: currentUser.uid,
                 startDate: startDate,
                 endDate: endDate,
@@ -2201,10 +2033,10 @@
      화면 UI 영역
      ========================================== -->
 
-<!-- 1. 로그인 화면 (카드 제거 및 배경 통합, 로고 변경) -->
-<div id="login-page" style="display: flex;" class="w-full max-w-md mx-auto h-screen bg-[#FAF9F5] flex-col justify-center items-center px-6 font-sans z-[100000] relative">
-    <div class="w-full flex flex-col items-center justify-center relative">
-        <img src="log2.png" alt="Patek Philippe" class="w-56 h-auto mb-16 object-contain" />
+<!-- 1. 로그인 화면 -->
+<div id="login-page" style="display: flex;" class="w-full max-w-md mx-auto h-screen bg-[#DCD6CC] flex-col justify-center items-center px-4 font-sans z-[100000] relative">
+    <div class="w-full max-w-md bg-[#FCFBF9] shadow-2xl flex flex-col items-center justify-center relative px-6 rounded-3xl h-[85vh]">
+        <img src="log.png" alt="Patek Philippe" class="w-56 h-auto mb-16 object-contain" />
         
         <button onclick="loginWithGoogle()" class="flex items-center gap-4 bg-white border border-[#E8E4DB] px-6 py-4 rounded-full shadow-sm transition-all active:scale-95 w-full justify-center">
             <svg width="20" height="20" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -2214,59 +2046,6 @@
                 <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
             </svg>
             <span class="text-[15px] font-semibold text-[#4A443F]">Google 계정으로 시작하기</span>
-        </button>
-    </div>
-</div>
-
-<!-- 1.5 프로필 등록 화면 (신규 가입용) -->
-<div id="register-page" style="display: none;" class="w-full max-w-md mx-auto h-screen bg-[#FAF9F5] flex-col font-sans z-[100000] relative">
-    <div class="flex items-center justify-center pt-[calc(20px+env(safe-area-inset-top))] pb-3 bg-[#FAF9F5] flex-shrink-0 relative w-full px-5">
-        <h2 class="text-xl font-serif font-bold text-[#333]">프로필</h2>
-        <button onclick="cancelRegistration()" class="absolute right-5 text-[#999] p-1 active:scale-95">
-            <i data-lucide="x" class="w-5 h-5"></i>
-        </button>
-    </div>
-
-    <div class="flex-1 overflow-y-auto px-6 pt-2 space-y-4 no-scrollbar pb-10">
-        
-        <!-- 프로필 사진 업로드 영역 -->
-        <div class="flex justify-center mt-2 mb-4">
-            <div class="relative w-24 h-24 rounded-full bg-[#E8E4DB] flex items-center justify-center overflow-hidden cursor-pointer border-2 border-[#D8B98B]" onclick="document.getElementById('reg-profile-img-input').click()">
-                <img id="reg-profile-img-preview" src="" class="w-full h-full object-cover hidden" />
-                <i id="reg-profile-img-icon" data-lucide="camera" class="w-8 h-8 text-[#8A847E]"></i>
-                <input type="file" id="reg-profile-img-input" class="hidden" accept="image/*" onchange="window.previewProfileImage(this, 'reg-profile-img-preview', 'reg-profile-img-icon')" />
-            </div>
-        </div>
-
-        <div>
-            <label class="block text-sm font-semibold text-[#4A443F] mb-1.5 ml-1">이름</label>
-            <input type="text" id="reg-name" class="form-input" placeholder="이름을 입력하세요">
-        </div>
-        <div>
-            <label class="block text-sm font-semibold text-[#4A443F] mb-1.5 ml-1">사번</label>
-            <input type="text" id="reg-emp-id" class="form-input" placeholder="사원번호 입력">
-        </div>
-        <div>
-            <label class="block text-sm font-semibold text-[#4A443F] mb-1.5 ml-1">생년월일</label>
-            <input type="date" id="reg-birth" class="form-input text-left w-full">
-        </div>
-        <div>
-            <label class="block text-sm font-semibold text-[#4A443F] mb-1.5 ml-1">전화번호</label>
-            <input type="tel" id="reg-phone" class="form-input" placeholder="010-0000-0000" oninput="window.autoHyphenPhone(this)">
-        </div>
-        <div>
-            <label class="block text-sm font-semibold text-[#4A443F] mb-1.5 ml-1">비상연락망</label>
-            <input type="tel" id="reg-emergency" class="form-input" placeholder="비상 시 연락처 입력" oninput="window.autoHyphenPhone(this)">
-        </div>
-        <div>
-            <label class="block text-sm font-semibold text-[#4A443F] mb-1.5 ml-1">관계</label>
-            <input type="text" id="reg-relation" class="form-input" placeholder="예: 부, 모, 배우자 등">
-        </div>
-    </div>
-
-    <div class="p-6 bg-white border-t border-[#F0EFEA] pb-[calc(20px+env(safe-area-inset-bottom))] shrink-0">
-        <button onclick="submitRegistration()" class="w-full bg-[#B4975A] text-white py-3.5 rounded-xl text-[16px] font-bold shadow-md active:scale-95 transition-transform">
-            등록 신청하기
         </button>
     </div>
 </div>
@@ -2293,9 +2072,9 @@
     <!-- 공통 헤더 로고 -->
     <div class="pb-1 bg-[#FAF9F5] flex-shrink-0 z-10 relative flex items-center justify-center w-full px-5" style="padding-top: max(4px, env(safe-area-inset-top));">
         <!-- 톱니바퀴 및 새로고침 버튼 추가 -->
-        <div class="absolute right-5 flex gap-4 mt-1">
+        <div class="absolute right-5 flex gap-4">
             <button onclick="location.reload()" class="text-[#8A847E] hover:text-[#4A443F] active:scale-95 transition-all"><i data-lucide="rotate-cw" class="w-[18px] h-[18px]"></i></button>
-            <button onclick="openProfile()" class="text-[#8A847E] hover:text-[#4A443F] active:scale-95 transition-all"><i data-lucide="settings" class="w-[18px] h-[18px]"></i></button>
+            <button onclick="openSettings()" class="text-[#8A847E] hover:text-[#4A443F] active:scale-95 transition-all"><i data-lucide="settings" class="w-[18px] h-[18px]"></i></button>
         </div>
         <img src="log.png" alt="Patek Philippe" class="w-24 h-auto object-contain" />
     </div>
@@ -2523,52 +2302,19 @@
 <!-- ==========================================
      환경 설정(사용자 정보/로그아웃) 모달 추가 
      ========================================== -->
-<div id="page-profile-modal" style="display: none;" class="fixed inset-0 w-full max-w-md mx-auto bg-black/40 backdrop-blur-[2px] z-[300] flex-col items-center justify-center p-6">
+<div id="page-settings-modal" style="display: none;" class="fixed inset-0 w-full max-w-md mx-auto bg-black/40 backdrop-blur-[2px] z-[300] flex-col items-center justify-center p-6">
     <div class="bg-[#FCFBF9] rounded-2xl w-full max-w-[320px] shadow-2xl border border-[#E8E4DB] flex flex-col overflow-hidden relative pt-6 pb-2">
-        <button onclick="closeProfile()" class="absolute right-4 top-4 text-[#999] p-1 active:scale-95"><i data-lucide="x" class="w-5 h-5"></i></button>
+        <button onclick="closeSettings()" class="absolute right-4 top-4 text-[#999] p-1 active:scale-95"><i data-lucide="x" class="w-5 h-5"></i></button>
         
-        <div class="flex flex-col items-center px-6 pt-2 pb-5 border-b border-[#F0EFEA]">
-            <div class="relative w-16 h-16 rounded-full bg-[#E8E4DB] flex items-center justify-center overflow-hidden cursor-pointer border border-[#D8B98B] mb-2" onclick="document.getElementById('edit-profile-img-input').click()">
-                <img id="edit-profile-img-preview" src="" class="w-full h-full object-cover hidden" />
-                <i id="edit-profile-img-icon" data-lucide="camera" class="w-6 h-6 text-[#8A847E]"></i>
-                <input type="file" id="edit-profile-img-input" class="hidden" accept="image/*" onchange="window.previewProfileImage(this, 'edit-profile-img-preview', 'edit-profile-img-icon')" />
+        <div class="flex flex-col items-center px-6 pt-2 pb-6 border-b border-[#F0EFEA]">
+            <div class="w-14 h-14 rounded-full bg-[#F2EFE8] flex items-center justify-center mb-3 text-[#8B7355]">
+                <i data-lucide="user" class="w-7 h-7"></i>
             </div>
-            
-            <div class="text-[16px] font-bold text-[#3A3532] mb-0.5">내 프로필 설정</div>
-            <div class="text-[11px] text-[#8A847E]">사진 변경 및 정보 수정이 가능합니다.</div>
+            <div class="text-[16px] font-bold text-[#3A3532] mb-1" id="settings-user-name">사용자</div>
+            <div class="text-[12px] text-[#8A847E]" id="settings-user-email">email@example.com</div>
         </div>
 
-        <div class="p-5 space-y-3 flex-1 overflow-y-auto max-h-[60vh] no-scrollbar pb-10">
-            <div>
-                <label class="block text-[11px] font-bold text-[#666] mb-1.5 ml-1">이름</label>
-                <input id="profile-name" type="text" class="form-input text-xs py-2.5">
-            </div>
-            <div>
-                <label class="block text-[11px] font-bold text-[#666] mb-1.5 ml-1">사번</label>
-                <input id="profile-emp-id" type="text" class="form-input text-xs py-2.5">
-            </div>
-            <div>
-                <label class="block text-[11px] font-bold text-[#666] mb-1.5 ml-1">생년월일</label>
-                <input id="profile-birth" type="date" class="form-input text-xs py-2.5 text-left w-full">
-            </div>
-            <div>
-                <label class="block text-[11px] font-bold text-[#666] mb-1.5 ml-1">전화번호</label>
-                <input id="profile-phone" type="tel" class="form-input text-xs py-2.5" oninput="window.autoHyphenPhone(this)">
-            </div>
-            <div>
-                <label class="block text-[11px] font-bold text-[#666] mb-1.5 ml-1">비상연락망</label>
-                <input id="profile-emergency" type="tel" class="form-input text-xs py-2.5" oninput="window.autoHyphenPhone(this)">
-            </div>
-            <div>
-                <label class="block text-[11px] font-bold text-[#666] mb-1.5 ml-1">관계</label>
-                <input id="profile-relation" type="text" class="form-input text-xs py-2.5" placeholder="예: 부, 모, 배우자 등">
-            </div>
-        </div>
-
-        <div class="p-5 border-t border-[#F0EFEA] flex flex-col gap-2 bg-white shrink-0">
-            <button onclick="submitProfileEdit()" class="w-full bg-[#B4975A] text-white py-3 rounded-xl text-[14px] font-bold shadow-sm active:scale-95 transition-colors">
-                저장하기
-            </button>
+        <div class="p-4">
             <button onclick="logout()" class="w-full bg-white hover:bg-[#FFF5F5] border border-[#FAD7D5] text-[#D81B60] py-3 rounded-xl text-[14px] font-bold shadow-sm transition-colors flex items-center justify-center gap-2 active:scale-95">
                 <i data-lucide="log-out" class="w-4 h-4"></i> 로그아웃
             </button>
