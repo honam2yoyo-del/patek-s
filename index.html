@@ -532,6 +532,11 @@
             let cursorClass = isMe ? 'cursor-pointer active:scale-[0.98]' : '';
             let chevron = isMe ? `<div class="ml-1 shrink-0"><i data-lucide="chevron-right" class="w-4 h-4 text-[#AAA]"></i></div>` : '';
 
+            // 프로필 사진(사용자 업로드 사진) 마크업 추가
+            const profileImgHtml = staff.photoUrl 
+                ? `<img src="${staff.photoUrl}" class="w-11 h-11 rounded-full object-cover border border-[#E8E4DB] shrink-0 ml-1 shadow-sm" />`
+                : `<div class="w-11 h-11 rounded-full bg-[#F8F6F0] border border-[#E8E4DB] flex items-center justify-center shrink-0 ml-1 text-[#C2BDB5] shadow-sm"><i data-lucide="user" class="w-5 h-5"></i></div>`;
+
             // 잘림(...) 없이 모두 보이도록 폰트 크기 및 여백 극한 최적화
             container.innerHTML += `
                 <div ${clickHandler} class="bg-white rounded-[14px] border border-[#F0EFEA] p-2.5 flex items-center shadow-sm transition-transform ${cursorClass}">
@@ -571,6 +576,9 @@
                             <span class="font-medium text-[#333] whitespace-nowrap tracking-tighter">${staff.relation || '-'}</span>
                         </div>
                     </div>
+                    
+                    <!-- 우측 프로필 사진 -->
+                    ${profileImgHtml}
                     
                     ${chevron}
                 </div>
