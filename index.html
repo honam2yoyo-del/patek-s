@@ -2251,9 +2251,28 @@
                 // 시작일 일 때만 등록된 지역 표기 지원
                 const isStart = dateStr === req.startDate;
                 const regionSuffix = (isStart && req.region) ? ` (${req.region})` : '';
+                
+                // 사유에 따른 휴무/근무 색상 분기
+                let bgColor = '#FFE146'; // 기본 휴무 신청 컬러
+                let textColor = '#333333';
+                const reasonStr = String(req.reason || '').trim();
+                
+                if (reasonStr.includes('A반차')) { bgColor = '#FFC8CD'; }
+                else if (reasonStr.includes('A조') || reasonStr === 'A') { bgColor = '#FFAAAF'; }
+                else if (reasonStr.includes('B반차')) { bgColor = '#6EE0FF'; }
+                else if (reasonStr.includes('B조') || reasonStr === 'B') { bgColor = '#32BBFF'; }
+                else if (reasonStr.includes('정기휴무') || reasonStr.includes('정기휴점')) { bgColor = '#A0A0A0'; textColor = '#FFFFFF'; }
+                else if (reasonStr.includes('행사')) { bgColor = '#96F56E'; }
+
+                // 성을 제외하고 이름 2글자만 추출 (이름이 3글자 이상인 경우 뒤 2글자 사용)
+                let shortName = String(req.name || '').trim();
+                if (shortName.length >= 3) {
+                    shortName = shortName.slice(-2);
+                }
+
                 staffNamesMarkup += `
-                    <div class="text-[9px] font-bold text-slate-700 bg-slate-100 rounded px-1 py-[2px] truncate w-full text-center leading-none mt-[2px]">
-                        ${req.name}${regionSuffix}
+                    <div class="text-[9px] font-bold rounded px-1 py-[2px] truncate w-full text-center leading-none mt-[2px] shadow-sm" style="background-color: ${bgColor}; color: ${textColor};">
+                        ${shortName}${regionSuffix}
                     </div>
                 `;
             });
@@ -3097,11 +3116,14 @@
         </div>
 
         <!-- 범례 표시 -->
-        <div class="flex flex-wrap justify-center items-center gap-3 text-[9px] font-bold text-[#666] mb-5">
-            <div class="flex items-center gap-1"><span class="w-3 h-3 bg-[#DDEBFF] border border-[#A0C4FF] rounded-sm"></span><span>휴무 신청</span></div>
-            <div class="flex items-center gap-1"><span class="w-3 h-3 bg-[#E2F0D9] border border-[#A9D18E] rounded-sm"></span><span>정기휴점</span></div>
-            <div class="flex items-center gap-1"><span class="w-3 h-3 bg-[#FFE5E5] border border-[#FFADAD] rounded-sm"></span><span>3명 이상 신청</span></div>
-            <div class="flex items-center gap-1"><span class="w-3 h-3 border border-amber-500 rounded-sm"></span><span>행사</span></div>
+        <div class="flex flex-wrap justify-center items-center gap-2.5 text-[9px] font-bold text-[#666] mb-5">
+            <div class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm shadow-sm" style="background-color: #FFE146;"></span><span>휴무</span></div>
+            <div class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm shadow-sm" style="background-color: #FFAAAF;"></span><span>A조</span></div>
+            <div class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm shadow-sm" style="background-color: #FFC8CD;"></span><span>A반차</span></div>
+            <div class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm shadow-sm" style="background-color: #32BBFF;"></span><span>B조</span></div>
+            <div class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm shadow-sm" style="background-color: #6EE0FF;"></span><span>B반차</span></div>
+            <div class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm shadow-sm" style="background-color: #A0A0A0;"></span><span>정기휴무</span></div>
+            <div class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm shadow-sm" style="background-color: #96F56E;"></span><span>행사</span></div>
         </div>
 
         <!-- 입력란: 사유 & 지역 -->
