@@ -113,6 +113,7 @@
         /* 폼 입력창 스타일 */
         .form-input {
             width: 100%;
+            box-sizing: border-box;
             background-color: #FFFFFF;
             border: 1px solid #E5E5E5;
             border-radius: 12px;
@@ -122,8 +123,12 @@
             font-weight: 500;
             color: #333;
             transition: border-color 0.2s;
+            text-align: left;
+            -webkit-appearance: none;
+            appearance: none;
         }
         .form-input:focus { border-color: #B4975A; }
+        .form-input[type="date"]::-webkit-date-and-time-value { text-align: left; }
     </style>
 </head>
 <body>
@@ -346,6 +351,14 @@
                 window.showCustomAlert("이미지를 처리할 수 없습니다.");
             }
         }
+    };
+
+    // 가입(프로필 등록) 취소
+    window.cancelRegistration = function() {
+        signOut(auth).then(() => {
+            hideAllPages();
+            document.getElementById('login-page').style.display = 'flex';
+        });
     };
 
     // 신규 프로필 등록 제출
@@ -2207,12 +2220,14 @@
 
 <!-- 1.5 프로필 등록 화면 (신규 가입용) -->
 <div id="register-page" style="display: none;" class="w-full max-w-md mx-auto h-screen bg-[#FAF9F5] flex-col font-sans z-[100000] relative">
-    <div class="pt-[calc(20px+env(safe-area-inset-top))] px-6 pb-2 bg-[#FAF9F5] flex-shrink-0">
-        <h2 class="text-2xl font-serif font-bold text-[#333] mb-1">프로필 등록</h2>
-        <p class="text-[#8A847E] text-[13px]">앱 사용을 위해 기본 정보를 입력해 주세요.</p>
+    <div class="flex items-center justify-center pt-[calc(20px+env(safe-area-inset-top))] pb-3 bg-[#FAF9F5] flex-shrink-0 relative w-full px-5">
+        <h2 class="text-xl font-serif font-bold text-[#333]">프로필</h2>
+        <button onclick="cancelRegistration()" class="absolute right-5 text-[#999] p-1 active:scale-95">
+            <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
     </div>
 
-    <div class="flex-1 overflow-y-auto px-6 py-2 space-y-4 no-scrollbar pb-10">
+    <div class="flex-1 overflow-y-auto px-6 pt-2 space-y-4 no-scrollbar pb-10">
         
         <!-- 프로필 사진 업로드 영역 -->
         <div class="flex justify-center mt-2 mb-4">
@@ -2233,7 +2248,7 @@
         </div>
         <div>
             <label class="block text-sm font-semibold text-[#4A443F] mb-1.5 ml-1">생년월일</label>
-            <input type="date" id="reg-birth" class="form-input">
+            <input type="date" id="reg-birth" class="form-input text-left w-full">
         </div>
         <div>
             <label class="block text-sm font-semibold text-[#4A443F] mb-1.5 ml-1">전화번호</label>
@@ -2289,7 +2304,7 @@
     <div class="flex-1 relative w-full h-full bg-[#FAF9F5]">
         
         <!-- [탭] 캘린더 (메인 화면) -->
-        <div id="page-calendar" class="page active px-5 pt-3 no-scrollbar">
+        <div id="page-calendar" class="page active px-5 pt-1 no-scrollbar">
             <h2 class="text-xl font-serif text-center mb-4 text-[#333]">캘린더</h2>
             <div class="bg-white rounded-2xl shadow-sm border border-[#F0EFEA] p-4 h-[400px] flex items-center justify-center text-[#999]">
                 달력 컴포넌트 영역
@@ -2297,7 +2312,7 @@
         </div>
 
         <!-- [탭] 공지사항 리스트 -->
-        <div id="page-notice" class="page px-5 pt-3 no-scrollbar">
+        <div id="page-notice" class="page px-5 pt-1 no-scrollbar">
             <div class="flex justify-between items-center mb-3 relative">
                 <div class="w-10"></div>
                 <h2 class="text-xl font-serif font-bold text-[#333]">공지사항</h2>
@@ -2348,11 +2363,11 @@
         </div>
 
         <!-- [탭] 신규: 매장 근무표 화면 -->
-        <div id="page-schedule" class="page bg-[#FAF9F5] no-scrollbar px-3 pt-2">
-            <div class="flex flex-col items-center mb-1 w-full text-center">
+        <div id="page-schedule" class="page bg-[#FAF9F5] no-scrollbar px-3 pt-1">
+            <div class="flex flex-col items-center w-full text-center">
                 
                 <!-- 수정일/타이틀/버튼 헤더 -->
-                <div class="flex items-center justify-between w-full relative mb-2 h-8">
+                <div class="flex items-center justify-between w-full relative mb-1.5 h-8">
                     <div id="schedule-meta-info" class="absolute left-0 flex flex-col items-start justify-center h-full text-left leading-tight w-[35%] overflow-hidden">
                         <span class="text-[9px] text-[#999]">로딩 중...</span>
                     </div>
@@ -2410,7 +2425,7 @@
 
         <!-- [탭] 개인용 앨범 화면 -->
         <div id="page-album" class="page bg-[#FAF9F5] no-scrollbar">
-            <div class="flex flex-col items-center pt-2 pb-1 shrink-0">
+            <div class="flex flex-col items-center pt-1 pb-1 shrink-0">
                 <h2 class="text-xl font-serif text-[#333] tracking-wider mb-2">앨범</h2>
 
                 <!-- 검색창 -->
@@ -2534,7 +2549,7 @@
             </div>
             <div>
                 <label class="block text-[11px] font-bold text-[#666] mb-1.5 ml-1">생년월일</label>
-                <input id="profile-birth" type="date" class="form-input text-xs py-2.5">
+                <input id="profile-birth" type="date" class="form-input text-xs py-2.5 text-left w-full">
             </div>
             <div>
                 <label class="block text-[11px] font-bold text-[#666] mb-1.5 ml-1">전화번호</label>
