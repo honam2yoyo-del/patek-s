@@ -194,6 +194,7 @@
     window.storeStaffs = ['옥영세', '엄인주', '장용석', '최혜지', '이승범', '형영지']; // 기본 직원 매핑
     window.leaveRangeStart = null;
     window.leaveRangeEnd = null;
+    window.leaveType = '휴무'; // 신청 종류 상태
 
     // 프로필 이미지 임시 저장소 및 직급 정보
     window.regProfileImageData = '';
@@ -2007,6 +2008,8 @@
             scheduleStaffs.forEach(staffName => {
                 const userDays = staffData[staffName] || {};
                 let code = userDays[day] || userDays[String(day)] || '';
+                
+                // 해당 일자에 어떤 종류의 휴무든 신청되어 있으면 '휴무'로 취급
                 const hasLeave = window.leaveRequests.some(r => r.name === staffName && dateStr >= r.startDate && dateStr <= r.endDate);
                 
                 if (hasLeave) {
@@ -2182,6 +2185,7 @@
         document.getElementById('leave-reason-input').value = '';
         document.getElementById('leave-region-input').value = '';
         document.getElementById('leave-region-container').style.display = 'none'; // 기본 숨김
+        window.setLeaveType('휴무'); // 모달 열 때 기본값 세팅
 
         window.renderLeaveCalendar();
         document.getElementById('page-leave-calendar-modal').style.display = 'flex';
@@ -2189,6 +2193,33 @@
 
     window.closeLeaveCalendarModal = function() {
         document.getElementById('page-leave-calendar-modal').style.display = 'none';
+    };
+
+    // 휴무 종류 선택 헬퍼 함수
+    window.setLeaveType = function(type) {
+        window.leaveType = type;
+        const colors = {
+            '휴무': {bg: '#FFE146', text: '#333333'},
+            'A조': {bg: '#FFAAAF', text: '#333333'},
+            'A반차': {bg: '#FFC8CD', text: '#333333'},
+            'B조': {bg: '#32BBFF', text: '#333333'},
+            'B반차': {bg: '#6EE0FF', text: '#333333'},
+            '정기휴무': {bg: '#A0A0A0', text: '#FFFFFF'},
+            '행사': {bg: '#96F56E', text: '#333333'}
+        };
+
+        document.querySelectorAll('.leave-type-btn').forEach(btn => {
+            const btnType = btn.innerText.trim();
+            if (btnType === type) {
+                btn.style.backgroundColor = colors[btnType].bg;
+                btn.style.color = colors[btnType].text;
+                btn.style.borderColor = colors[btnType].bg;
+            } else {
+                btn.style.backgroundColor = '#FFFFFF';
+                btn.style.color = '#666666';
+                btn.style.borderColor = '#E5E5E5';
+            }
+        });
     };
 
     // 휴무 달력 그리기 (사진 6 형태)
@@ -2215,7 +2246,7 @@
 
             // 해당 일자의 휴무 신청 직원들 색출
             const matchedRequests = window.leaveRequests.filter(r => dateStr >= r.startDate && dateStr <= r.endDate);
-            const isEventDay = matchedRequests.some(r => r.reason && r.reason.includes('행사')); // 행사 구분선
+            const isEventDay = matchedRequests.some(r => r.type === '행사'); // 행사 구분선
 
             let dayTextClass = "text-[#333]";
             if (isHoliday) dayTextClass = "text-[#D81B60]";
@@ -2252,27 +2283,33 @@
                 const isStart = dateStr === req.startDate;
                 const regionSuffix = (isStart && req.region) ? ` (${req.region})` : '';
                 
-                // 사유에 따른 휴무/근무 색상 분기
+                // 사유에 따른 배경색 지정
                 let bgColor = '#FFE146'; // 기본 휴무 신청 컬러
                 let textColor = '#333333';
-                const reasonStr = String(req.reason || '').trim();
                 
-                if (reasonStr.includes('A반차')) { bgColor = '#FFC8CD'; }
-                else if (reasonStr.includes('A조') || reasonStr === 'A') { bgColor = '#FFAAAF'; }
-                else if (reasonStr.includes('B반차')) { bgColor = '#6EE0FF'; }
-                else if (reasonStr.includes('B조') || reasonStr === 'B') { bgColor = '#32BBFF'; }
-                else if (reasonStr.includes('정기휴무') || reasonStr.includes('정기휴점')) { bgColor = '#A0A0A0'; textColor = '#FFFFFF'; }
-                else if (reasonStr.includes('행사')) { bgColor = '#96F56E'; }
+                if (req.type === 'A반차') { bgColor = '#FFC8CD'; }
+                else if (req.type === 'A조') { bgColor = '#FFAAAF'; }
+                else if (req.type === 'B반차') { bgColor = '#6EE0FF'; }
+                else if (req.type === 'B조') { bgColor = '#32BBFF'; }
+                else if (req.type === '정기휴무') { bgColor = '#A0A0A0'; textColor = '#FFFFFF'; }
+                else if (req.type === '행사') { bgColor = '#96F56E'; }
 
-                // 성을 제외하고 이름 2글자만 추출 (이름이 3글자 이상인 경우 뒤 2글자 사용)
-                let shortName = String(req.name || '').trim();
-                if (shortName.length >= 3) {
-                    shortName = shortName.slice(-2);
+                let displayText = '';
+                // 정기휴무, 행사는 입력한 사유를 보여주고 이름은 보여주지 않음
+                if (req.type === '정기휴무' || req.type === '행사') {
+                    displayText = req.reason || req.type; 
+                } else {
+                    // 성을 제외하고 이름 2글자만 추출 (이름이 3글자 이상인 경우 뒤 2글자 사용)
+                    let shortName = String(req.name || '').trim();
+                    if (shortName.length >= 3) {
+                        shortName = shortName.slice(-2);
+                    }
+                    displayText = shortName + regionSuffix;
                 }
 
                 staffNamesMarkup += `
                     <div class="text-[9px] font-bold rounded px-1 py-[2px] truncate w-full text-center leading-none mt-[2px] shadow-sm" style="background-color: ${bgColor}; color: ${textColor};">
-                        ${shortName}${regionSuffix}
+                        ${displayText}
                     </div>
                 `;
             });
@@ -2330,12 +2367,19 @@
             return;
         }
 
+        const reason = document.getElementById('leave-reason-input').value.trim();
+        
+        // 정기휴무 또는 행사는 이름이 안나오는 대신 사유를 필수 표시해야 하므로 입력값 검증
+        if ((window.leaveType === '정기휴무' || window.leaveType === '행사') && !reason) {
+            window.showCustomAlert(window.leaveType + "의 경우 달력에 표시될 사유를 반드시 입력해주세요.");
+            return;
+        }
+
         const startDate = window.leaveRangeStart;
         const endDate = window.leaveRangeEnd ? window.leaveRangeEnd : window.leaveRangeStart;
 
         // 기간(장수) 일 수 계산
         const diffDays = Math.ceil((new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24)) + 1;
-        const reason = document.getElementById('leave-reason-input').value.trim();
         const region = document.getElementById('leave-region-input').value.trim();
 
         // ⭐️ 3일 이상 휴무 시 지역 입력 필수 규격 필터링
@@ -2351,6 +2395,7 @@
                 uid: currentUser.uid,
                 startDate: startDate,
                 endDate: endDate,
+                type: window.leaveType, // 선택된 종류 (휴무, A조 등)
                 reason: reason,
                 region: region || '',
                 createdAt: new Date().toISOString()
@@ -2376,23 +2421,36 @@
         if (window.leaveRequests.length === 0) {
             listContainer.innerHTML = `<div class="text-center py-12 text-[#999] text-sm">등록된 휴무 신청 내역이 존재하지 않습니다.</div>`;
         } else {
+            const typeBadgeColors = {
+                '휴무': 'bg-[#FFE146] text-[#333]',
+                'A조': 'bg-[#FFAAAF] text-[#333]',
+                'A반차': 'bg-[#FFC8CD] text-[#333]',
+                'B조': 'bg-[#32BBFF] text-[#333]',
+                'B반차': 'bg-[#6EE0FF] text-[#333]',
+                '정기휴무': 'bg-[#A0A0A0] text-white',
+                '행사': 'bg-[#96F56E] text-[#333]'
+            };
+
             window.leaveRequests.forEach(req => {
                 const diffDays = Math.ceil((new Date(req.endDate) - new Date(req.startDate)) / (1000 * 60 * 60 * 24)) + 1;
+                // 각자 등록한 것만 삭제할 수 있는 권한 확인 (본인 UID 일치 여부)
                 const canDelete = currentUser && currentUser.uid === req.uid;
+                const badgeClass = typeBadgeColors[req.type || '휴무'] || 'bg-gray-200 text-gray-800';
 
                 listContainer.innerHTML += `
                     <div class="bg-[#FCFBF9] p-4 rounded-xl border border-[#F0EFEA] shadow-sm flex justify-between items-center mb-3">
-                        <div>
-                            <div class="flex items-center gap-2 mb-1.5">
+                        <div class="min-w-0 flex-1 pr-2">
+                            <div class="flex items-center gap-2 mb-1.5 flex-wrap">
                                 <span class="text-sm font-bold text-[#333]">${req.name}</span>
-                                <span class="text-[10px] text-green-700 bg-green-50 px-2 py-0.5 rounded font-bold">${diffDays}일간 휴무</span>
+                                <span class="text-[10px] px-2 py-0.5 rounded font-bold ${badgeClass}">${req.type || '휴무'}</span>
+                                <span class="text-[10px] text-green-700 bg-green-50 px-2 py-0.5 rounded font-bold">${diffDays}일간</span>
                                 ${req.region ? `<span class="text-[10px] text-blue-700 bg-blue-50 px-2 py-0.5 rounded font-bold">${req.region}</span>` : ''}
                             </div>
                             <div class="text-xs text-[#666] font-medium leading-relaxed">${req.startDate} ~ ${req.endDate}</div>
                             ${req.reason ? `<div class="text-xs text-[#999] mt-1 font-medium italic">사유: ${req.reason}</div>` : ''}
                         </div>
                         ${canDelete ? `
-                            <button onclick="window.deleteLeaveRequest('${req.id}')" class="p-2 text-red-500 hover:bg-red-50 rounded transition-colors">
+                            <button onclick="window.deleteLeaveRequest('${req.id}')" class="p-2.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors border border-red-100 flex-shrink-0 bg-white shadow-sm active:scale-95" title="삭제">
                                 <i data-lucide="trash-2" class="w-4 h-4"></i>
                             </button>
                         ` : ''}
@@ -2409,14 +2467,15 @@
         document.getElementById('page-leave-history-modal').style.display = 'none';
     };
 
+    // 내역에서 삭제 진행
     window.deleteLeaveRequest = function(id) {
-        window.showCustomConfirm("해당 휴무 신청을 취소/삭제하시겠습니까?", async () => {
+        window.showCustomConfirm("해당 신청을 취소/삭제하시겠습니까?", async () => {
             document.getElementById('loading-overlay').style.display = 'flex';
             try {
                 const docRef = doc(db, 'artifacts', 'patek-s', 'public', 'data', 'leave_requests', id);
                 await deleteDoc(docRef);
-                window.openLeaveHistoryModal(); // 리프레시
-                window.showCustomAlert("휴무 신청이 취소되었습니다.");
+                window.openLeaveHistoryModal(); // 삭제 후 모달 내역 즉시 리프레시
+                window.showCustomAlert("신청이 취소되었습니다.");
             } catch(e) {
                 console.error(e);
                 window.showCustomAlert("취소 실패");
@@ -3095,14 +3154,19 @@
 
     <div class="flex-1 overflow-y-auto px-5 pb-32 no-scrollbar">
         <!-- 연월 조정 바 & 네이티브 달력 선택기 융합 -->
-        <div class="flex justify-between items-center bg-white border border-[#E8E4DB] rounded-xl p-2.5 mb-3 shadow-sm">
-            <button onclick="adjustScheduleMonth(-1)" class="p-1 hover:bg-[#F2EFE8] rounded"><i data-lucide="chevron-left" class="w-4 h-4 text-[#8B7355]"></i></button>
-            <div class="relative flex items-center justify-center bg-slate-50 px-3 py-1 rounded-lg cursor-pointer border border-[#E8E4DB]">
-                <span id="leave-month-text" class="text-[14px] font-bold text-[#3A3532] pointer-events-none mr-1.5">2026년 6월</span>
-                <i data-lucide="calendar-days" class="w-4 h-4 text-[#8B7355] pointer-events-none"></i>
-                <input type="month" id="leave-month-picker" onchange="handleMonthPicker(this.value)" class="absolute inset-0 opacity-0 w-full h-full cursor-pointer" />
+        <div class="w-full flex items-start justify-center gap-2 mb-3">
+            <div class="relative shrink-0 flex items-center rounded-xl border border-[#D8B98B] bg-[#FFFDF8] shadow-sm overflow-hidden h-9">
+                <button onclick="adjustScheduleMonth(-1)" class="w-9 h-full flex items-center justify-center text-[#B17A2A] active:bg-[#F8EFE3]">
+                    <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                </button>
+                <button type="button" onclick="openScheduleMonthPicker()" class="relative h-full flex items-center justify-center px-2 min-w-[90px] cursor-pointer active:bg-[#F8EFE3] bg-transparent border-0">
+                    <span id="leave-month-text" class="text-[14px] font-bold text-[#2F2924] pointer-events-none whitespace-nowrap">2026년 5월</span>
+                </button>
+                <input type="month" id="leave-month-picker" onchange="handleMonthPicker(this.value)" class="absolute opacity-0 pointer-events-none w-1 h-1" />
+                <button onclick="adjustScheduleMonth(1)" class="w-9 h-full flex items-center justify-center text-[#B17A2A] active:bg-[#F8EFE3]">
+                    <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                </button>
             </div>
-            <button onclick="adjustScheduleMonth(1)" class="p-1 hover:bg-[#F2EFE8] rounded"><i data-lucide="chevron-right" class="w-4 h-4 text-[#8B7355]"></i></button>
         </div>
 
         <!-- 요일 헤더 -->
@@ -3126,10 +3190,22 @@
             <div class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm shadow-sm" style="background-color: #96F56E;"></span><span>행사</span></div>
         </div>
 
-        <!-- 입력란: 사유 & 지역 -->
-        <div class="space-y-3">
+        <!-- 입력란: 종류, 사유 & 지역 -->
+        <div class="space-y-4">
             <div>
-                <label class="block text-[11px] font-bold text-[#666] mb-1.5 ml-1">휴무 사유 (선택 사항)</label>
+                <label class="block text-[11px] font-bold text-[#666] mb-1.5 ml-1">신청 종류</label>
+                <div class="flex flex-wrap gap-2" id="leave-type-container">
+                    <button type="button" onclick="setLeaveType('휴무')" class="leave-type-btn px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-colors bg-white text-[#666] border-[#E5E5E5]">휴무</button>
+                    <button type="button" onclick="setLeaveType('A조')" class="leave-type-btn px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-colors bg-white text-[#666] border-[#E5E5E5]">A조</button>
+                    <button type="button" onclick="setLeaveType('A반차')" class="leave-type-btn px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-colors bg-white text-[#666] border-[#E5E5E5]">A반차</button>
+                    <button type="button" onclick="setLeaveType('B조')" class="leave-type-btn px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-colors bg-white text-[#666] border-[#E5E5E5]">B조</button>
+                    <button type="button" onclick="setLeaveType('B반차')" class="leave-type-btn px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-colors bg-white text-[#666] border-[#E5E5E5]">B반차</button>
+                    <button type="button" onclick="setLeaveType('정기휴무')" class="leave-type-btn px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-colors bg-white text-[#666] border-[#E5E5E5]">정기휴무</button>
+                    <button type="button" onclick="setLeaveType('행사')" class="leave-type-btn px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-colors bg-white text-[#666] border-[#E5E5E5]">행사</button>
+                </div>
+            </div>
+            <div>
+                <label class="block text-[11px] font-bold text-[#666] mb-1.5 ml-1">상세 사유 (정기휴무/행사 시 필수 표시)</label>
                 <input id="leave-reason-input" type="text" placeholder="예: 정기 검진, 연차 등" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-2.5 outline-none text-xs font-semibold" />
             </div>
             <!-- 3일 이상 연휴인 경우 노출되는 지역 필수 입력란 -->
