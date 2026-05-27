@@ -1796,13 +1796,17 @@
 
     function normalizeScheduleCode(value) {
         const raw = String(value ?? '').trim().toUpperCase();
-        // 비어있는(미등록) 값은 그대로 빈칸으로 반환하여 데이터가 없도록 처리
+        // 비어있는 값은 화면에서 '휴무'로 처리하기 위해 우선 DB에는 빈칸('')으로 저장합니다.
         if (!raw) return ''; 
         if (raw.startsWith('A')) return 'A';
         if (raw.startsWith('B')) return 'B';
         if (raw.startsWith('C')) return 'C';
-        if (['/', '휴', '휴무', '연', '연차', '경'].includes(raw)) return '휴무';
-        return ''; // 매칭 안되면 빈칸
+        
+        // 연차 계산을 위해 연/연차는 고유하게 '연차' 값으로 저장
+        if (['연', '연차'].includes(raw)) return '연차'; 
+        
+        if (['/', '휴', '휴무', '경'].includes(raw)) return '휴무';
+        return '';
     }
 
     function parseScheduleYearMonth(workbook, sheetName, rows) {
@@ -1991,7 +1995,7 @@
         function getDayGroups(day) {
             const groups = { A: [], B: [], C: [], '휴무': [] };
             
-            // 데이터가 아예 없는 경우 텅 빈 채로 리턴 (모두 휴무 처리 안함)
+            // 데이터가 아예 없는 경우 텅 빈 채로 리턴
             if (!staffData || Object.keys(staffData).length === 0) {
                 return groups; 
             }
@@ -2008,11 +2012,13 @@
                 if (hasLeave) {
                     code = '휴무';
                 } else if (!code || String(code).trim() === '') {
-                    // 미지정 상태(빈칸)이면 그룹에 넣지 않고 무시하여 화면에 표시 안 함
-                    return; 
+                    // 미지정 상태(빈칸)인 경우 화면상 '휴무'로 표시
+                    code = '휴무';
                 }
                 
-                if (code === '/' || code === '휴' || code === '연' || code === '경') code = '휴무';
+                // 기타 휴무/연차 대체 코드들도 화면에는 통합하여 표시
+                if (code === '/' || code === '휴' || code === '연' || code === '연차' || code === '경') code = '휴무';
+                
                 if (String(code).includes('반')) code = String(code).charAt(0);
                 
                 if (groups[code]) groups[code].push(compactName(staffName));
@@ -2096,11 +2102,13 @@
                     <div class="flex flex-col items-center border border-[#E5E5E5] rounded p-1.5 bg-[#FCFBF9]">
                         <span class="text-[10px] text-[#999] font-bold mb-1">${d}일</span>
                         <select data-staff="${staffName}" data-day="${d}" class="schedule-input-select w-full text-xs font-bold text-center outline-none bg-transparent">
-                            <option value="" ${curVal === '' ? 'selected' : ''}>-</option>
+                            <!-- 빈칸 선택 시 DB에는 '' 이 저장되며 화면엔 휴무로 나타남을 표시 -->
+                            <option value="" ${curVal === '' ? 'selected' : ''}>- (휴무)</option>
                             <option value="A" ${curVal === 'A' ? 'selected' : ''}>A</option>
                             <option value="B" ${curVal === 'B' ? 'selected' : ''}>B</option>
                             <option value="C" ${curVal === 'C' ? 'selected' : ''}>C</option>
-                            <option value="/" ${curVal === '/' ? 'selected' : ''}>휴(/)</option>
+                            <option value="휴무" ${['/', '휴', '휴무'].includes(curVal) ? 'selected' : ''}>휴(/)</option>
+                            <option value="연차" ${curVal === '연' || curVal === '연차' ? 'selected' : ''}>연차</option>
                         </select>
                     </div>
                 `;
