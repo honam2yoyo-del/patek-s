@@ -1551,16 +1551,36 @@
         const month = window.scheduleMonth;
         const currentMonthKey = `${year}-${String(month).padStart(2, '0')}`;
         
-        if (!window.schedulesData[currentMonthKey] || Object.keys(window.schedulesData[currentMonthKey]).length === 0) {
-            window.showCustomAlert("삭제할 근무표가 없습니다.");
+        const monthStart = `${currentMonthKey}-01`;
+        const lastDay = getDaysInMonth(year, month);
+        const monthEnd = `${currentMonthKey}-${String(lastDay).padStart(2, '0')}`;
+
+        const leavesToDelete = window.leaveRequests.filter(req => {
+            return req.startDate <= monthEnd && req.endDate >= monthStart;
+        });
+
+        const hasSchedule = window.schedulesData[currentMonthKey] && Object.keys(window.schedulesData[currentMonthKey]).length > 0;
+
+        if (!hasSchedule && leavesToDelete.length === 0) {
+            window.showCustomAlert("삭제할 근무표 및 휴무 데이터가 없습니다.");
             return;
         }
 
-        window.showCustomConfirm("근무표를 삭제하시겠습니까?", async () => {
+        window.showCustomConfirm("해당 월의 근무표와 휴무 데이터를 모두 삭제하시겠습니까?", async () => {
             document.getElementById('loading-overlay').style.display = 'flex';
             try {
-                await deleteDoc(doc(db, 'artifacts', 'patek-s', 'public', 'data', 'schedules', currentMonthKey));
-                window.showCustomAlert("근무표가 삭제되었습니다.");
+                const promises = [];
+                // Delete schedule if it exists
+                if (hasSchedule) {
+                    promises.push(deleteDoc(doc(db, 'artifacts', 'patek-s', 'public', 'data', 'schedules', currentMonthKey)));
+                }
+                // Delete overlapping leaves
+                leavesToDelete.forEach(req => {
+                    promises.push(deleteDoc(doc(db, 'artifacts', 'patek-s', 'public', 'data', 'leave_requests', req.id)));
+                });
+
+                await Promise.all(promises);
+                window.showCustomAlert("근무표 및 휴무 데이터가 모두 삭제되었습니다.");
             } catch(e) {
                 console.error(e);
                 window.showCustomAlert("삭제 실패");
