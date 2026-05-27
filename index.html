@@ -506,6 +506,26 @@
         document.getElementById('page-staff-modal').style.display = 'none';
     };
 
+    // 이미지 크게 보기 모달 제어
+    window.openImageViewer = function(url, e) {
+        if (e) e.stopPropagation(); // 클릭 시 프로필 설정창 열리는 것 방지
+        const modal = document.getElementById('image-viewer-modal');
+        const img = document.getElementById('image-viewer-img');
+        if (modal && img && url) {
+            img.src = url;
+            modal.style.display = 'flex';
+        }
+    };
+
+    window.closeImageViewer = function() {
+        const modal = document.getElementById('image-viewer-modal');
+        const img = document.getElementById('image-viewer-img');
+        if (modal && img) {
+            modal.style.display = 'none';
+            img.src = '';
+        }
+    };
+
     // 직원 정보 리스트 렌더링
     window.renderStaffList = function() {
         const container = document.getElementById('staff-list-content');
@@ -532,10 +552,10 @@
             let cursorClass = isMe ? 'cursor-pointer active:scale-[0.98]' : '';
             let chevron = isMe ? `<div class="ml-1 shrink-0"><i data-lucide="chevron-right" class="w-4 h-4 text-[#AAA]"></i></div>` : '';
 
-            // 프로필 사진(사용자 업로드 사진) 마크업 추가
+            // 프로필 사진 마크업: 크기 확대(w-14 h-14) 및 클릭 시 확대 기능 추가
             const profileImgHtml = staff.photoUrl 
-                ? `<img src="${staff.photoUrl}" class="w-11 h-11 rounded-full object-cover border border-[#E8E4DB] shrink-0 ml-1 shadow-sm" />`
-                : `<div class="w-11 h-11 rounded-full bg-[#F8F6F0] border border-[#E8E4DB] flex items-center justify-center shrink-0 ml-1 text-[#C2BDB5] shadow-sm"><i data-lucide="user" class="w-5 h-5"></i></div>`;
+                ? `<img src="${staff.photoUrl}" onclick="window.openImageViewer('${staff.photoUrl}', event)" class="w-14 h-14 rounded-full object-cover border border-[#E8E4DB] shrink-0 ml-1 shadow-sm cursor-pointer active:scale-95 transition-transform" />`
+                : `<div class="w-14 h-14 rounded-full bg-[#F8F6F0] border border-[#E8E4DB] flex items-center justify-center shrink-0 ml-1 text-[#C2BDB5] shadow-sm"><i data-lucide="user" class="w-6 h-6"></i></div>`;
 
             // 잘림(...) 없이 모두 보이도록 폰트 크기 및 여백 극한 최적화
             container.innerHTML += `
@@ -3144,6 +3164,13 @@
     </div>
 </div>
 
+<!-- 이미지 확대 보기 모달 -->
+<div id="image-viewer-modal" style="display: none;" class="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-[300000]" onclick="window.closeImageViewer()">
+    <button class="absolute top-6 right-6 text-white p-2 bg-black/50 rounded-full active:scale-95 transition-transform" onclick="window.closeImageViewer()">
+        <i data-lucide="x" class="w-6 h-6"></i>
+    </button>
+    <img id="image-viewer-img" src="" class="max-w-[90%] max-h-[80%] object-contain rounded-lg shadow-2xl" />
+</div>
 
 <script>
     window.__customConfirmCallback = null;
