@@ -1132,7 +1132,6 @@
         const firstDayShift = new Date(year, month - 1, 1).getDay();
         const totalCells = Math.ceil((firstDayShift + totalDays) / 7) * 7;
         
-        // 휴무 제거됨
         const codeMeta = {
             'A': { bg: '#FAD7D5', text: '#6E2626', border: '#F0B9B7' },
             'B': { bg: '#D9E7FA', text: '#234B7A', border: '#BFD2EF' },
@@ -1180,7 +1179,6 @@
                 }
             });
 
-            // 정렬 로직 (영세, 인주, 용석, 혜지, 승범, 영지 순)
             ['A', 'B', 'C'].forEach(c => {
                 groups[c].sort((a, b) => {
                     let idxA = staffOrder.indexOf(a.name);
@@ -1299,7 +1297,6 @@
         const now = new Date();
         const formattedDate = `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
         
-        // 저장자 이름은 프로필 이름 우선
         const updaterName = window.currentUserData?.name || (currentUser ? (currentUser.displayName || currentUser.email) : '알 수 없음');
 
         try {
@@ -1559,12 +1556,18 @@
             <div id="notice-list-content" class="space-y-3 mt-3"></div>
         </div>
 
+        <!-- ⭐️ 수정: 연필 모양 아이콘 추가 -->
         <div id="page-schedule" class="page bg-[#FAF9F5] no-scrollbar px-3 pt-1">
             <div class="flex flex-col items-center w-full text-center">
                 <div class="flex items-center justify-between w-full relative mb-1.5 h-8">
                     <div id="schedule-meta-info" class="absolute left-0 flex flex-col items-start justify-center h-full text-left leading-tight w-[35%] overflow-hidden"><span class="text-[9px] text-[#999]">로딩 중...</span></div>
                     <h2 class="text-xl font-serif text-[#3A3532] font-semibold absolute left-1/2 -translate-x-1/2 whitespace-nowrap">근무표</h2>
-                    <div class="flex gap-1.5 absolute right-0"><button onclick="triggerScheduleExcelUpload()" class="w-7 h-7 bg-white border border-[#E8E4DB] rounded-lg flex items-center justify-center text-[#B4975A] shadow-sm active:scale-95"><i data-lucide="plus" class="w-4 h-4"></i></button><input type="file" id="schedule-excel-input" accept=".xlsx,.xls" class="hidden" onchange="handleScheduleExcelUpload(event)" /><button onclick="openLeaveCalendarModal()" class="w-7 h-7 bg-white border border-[#E8E4DB] rounded-lg flex items-center justify-center text-[#B4975A] shadow-sm active:scale-95"><i data-lucide="calendar-days" class="w-4 h-4"></i></button></div>
+                    <div class="flex gap-1.5 absolute right-0">
+                        <button onclick="openScheduleEdit()" class="w-7 h-7 bg-white border border-[#E8E4DB] rounded-lg flex items-center justify-center text-[#B4975A] shadow-sm active:scale-95"><i data-lucide="pencil" class="w-4 h-4"></i></button>
+                        <button onclick="triggerScheduleExcelUpload()" class="w-7 h-7 bg-white border border-[#E8E4DB] rounded-lg flex items-center justify-center text-[#B4975A] shadow-sm active:scale-95"><i data-lucide="plus" class="w-4 h-4"></i></button>
+                        <input type="file" id="schedule-excel-input" accept=".xlsx,.xls" class="hidden" onchange="handleScheduleExcelUpload(event)" />
+                        <button onclick="openLeaveCalendarModal()" class="w-7 h-7 bg-white border border-[#E8E4DB] rounded-lg flex items-center justify-center text-[#B4975A] shadow-sm active:scale-95"><i data-lucide="calendar-days" class="w-4 h-4"></i></button>
+                    </div>
                 </div>
                 <div class="w-full flex items-start justify-between gap-2">
                     <div class="relative shrink-0 flex items-center rounded-xl border border-[#D8B98B] bg-[#FFFDF8] shadow-sm overflow-hidden h-9">
