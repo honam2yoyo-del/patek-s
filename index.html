@@ -165,12 +165,14 @@
 
     let currentUser = null;
     window.currentUserData = null; // 유저 프로필 데이터 저장용
+    window.staffList = []; // 전체 직원 정보 리스트
 
     let unsubscribeNotices = null;
     let unsubscribeApproval = null;
     let unsubscribeAlbums = null;
     let unsubscribeSchedules = null;
     let unsubscribeLeaveRequests = null;
+    let unsubscribeStaffs = null;
     
     window.appNotices = [];
     window.noticeSearchQuery = '';
@@ -193,9 +195,11 @@
     window.leaveRangeStart = null;
     window.leaveRangeEnd = null;
 
-    // 프로필 이미지 임시 저장소
+    // 프로필 이미지 임시 저장소 및 직급 정보
     window.regProfileImageData = '';
     window.editProfileImageData = '';
+    window.regPosition = '사원';
+    window.editPosition = '사원';
 
     // 2026년 법정공휴일 및 선거일 완벽 세팅
     const PUBLIC_HOLIDAYS_2026 = {
@@ -247,6 +251,7 @@
         } else {
             currentUser = null;
             window.currentUserData = null;
+            window.staffList = [];
             window.appNotices = [];
             window.albums = [];
             window.selectedAlbumIds = [];
@@ -255,6 +260,7 @@
             if(unsubscribeAlbums) unsubscribeAlbums();
             if(unsubscribeSchedules) unsubscribeSchedules();
             if(unsubscribeLeaveRequests) unsubscribeLeaveRequests();
+            if(unsubscribeStaffs) unsubscribeStaffs();
             
             hideAllPages();
             document.getElementById('login-page').style.display = 'flex';
@@ -271,6 +277,7 @@
         document.getElementById('page-notice-detail').style.display = 'none';
         document.getElementById('page-album-modal').style.display = 'none';
         document.getElementById('page-profile-modal').style.display = 'none';
+        document.getElementById('page-staff-modal').style.display = 'none';
     }
 
     function checkApproval(user) {
@@ -286,6 +293,8 @@
                     hideAllPages();
                     document.getElementById('register-page').style.display = 'flex';
                     window.regProfileImageData = '';
+                    window.regPosition = '사원';
+                    window.renderRegPosition();
                     document.getElementById('reg-profile-img-preview').classList.add('hidden');
                     document.getElementById('reg-profile-img-icon').classList.remove('hidden');
                 } else if (data.approved === true) {
@@ -293,6 +302,7 @@
                     hideAllPages();
                     document.getElementById('app-container').style.display = 'flex'; 
                     
+                    fetchStaffs(); // 승인된 전체 직원 목록 로드
                     fetchNotices(); 
                     fetchAlbums(user); 
                     fetchSchedules(); 
@@ -308,11 +318,24 @@
                 hideAllPages();
                 document.getElementById('register-page').style.display = 'flex';
                 window.regProfileImageData = '';
+                window.regPosition = '사원';
+                window.renderRegPosition();
             }
         }, (error) => {
             console.error("Firestore Error:", error);
             hideAllPages();
             window.showCustomAlert("데이터베이스 권한 오류가 발생했습니다.");
+        });
+    }
+
+    // 직원 전체 목록 실시간 동기화
+    function fetchStaffs() {
+        const colRef = collection(db, 'users');
+        unsubscribeStaffs = onSnapshot(colRef, (snapshot) => {
+            window.staffList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter(s => s.approved === true);
+            if (document.getElementById('page-staff-modal').style.display === 'flex') {
+                window.renderStaffList();
+            }
         });
     }
 
@@ -330,6 +353,45 @@
             res = val.substr(0, 3) + '-' + val.substr(3, 4) + '-' + val.substr(7);
         }
         target.value = res;
+    };
+
+    // 직급 테마 설정
+    window.getPositionTheme = function(pos) {
+        if (pos === '점장') return { bg: '#45362E', text: '#FFFFFF', border: '#45362E' };
+        if (pos === '부점장') return { bg: '#9A7B66', text: '#FFFFFF', border: '#9A7B66' };
+        return { bg: '#FDFCFB', text: '#3A3532', border: '#D8D3CE' }; // 사원 및 기타
+    };
+
+    window.renderRegPosition = function() {
+        document.querySelectorAll('.reg-pos-btn').forEach(btn => {
+            const pos = btn.dataset.pos;
+            const theme = window.getPositionTheme(pos);
+            if (window.regPosition === pos) {
+                btn.style.backgroundColor = theme.bg;
+                btn.style.color = theme.text;
+                btn.style.borderColor = theme.border;
+            } else {
+                btn.style.backgroundColor = '#FFFFFF';
+                btn.style.color = '#8A847E';
+                btn.style.borderColor = '#E5E5E5';
+            }
+        });
+    };
+
+    window.renderEditPosition = function() {
+        document.querySelectorAll('.edit-pos-btn').forEach(btn => {
+            const pos = btn.dataset.pos;
+            const theme = window.getPositionTheme(pos);
+            if (window.editPosition === pos) {
+                btn.style.backgroundColor = theme.bg;
+                btn.style.color = theme.text;
+                btn.style.borderColor = theme.border;
+            } else {
+                btn.style.backgroundColor = '#FFFFFF';
+                btn.style.color = '#8A847E';
+                btn.style.borderColor = '#E5E5E5';
+            }
+        });
     };
 
     // 프로필 이미지 선택 및 미리보기
@@ -381,6 +443,7 @@
                 email: currentUser.email || '',
                 name: name,
                 empId: empId,
+                position: window.regPosition || '사원',
                 birth: birth,
                 phone: phone,
                 emergency: emergency,
@@ -397,7 +460,7 @@
         }
     };
 
-    // 로그인 함수 (Vercel 도메인 + 모바일 Safari ITP 해결을 위해 Popup 기본 사용)
+    // 로그인 함수
     window.loginWithGoogle = async function() {
         document.getElementById('loading-overlay').style.display = 'flex';
 
@@ -433,7 +496,83 @@
         });
     };
 
-    // 프로필 정보 보기 및 수정
+    // 직원 정보 리스트 모달
+    window.openStaffList = function() {
+        window.renderStaffList();
+        document.getElementById('page-staff-modal').style.display = 'flex';
+    };
+
+    window.closeStaffList = function() {
+        document.getElementById('page-staff-modal').style.display = 'none';
+    };
+
+    window.renderStaffList = function() {
+        const container = document.getElementById('staff-list-content');
+        const countEl = document.getElementById('staff-count');
+        container.innerHTML = '';
+        
+        // 직급에 따른 정렬
+        const posOrder = { '점장': 1, '부점장': 2, '사원': 3 };
+        const sorted = [...window.staffList].sort((a, b) => {
+            const orderA = posOrder[a.position] || 99;
+            const orderB = posOrder[b.position] || 99;
+            if (orderA !== orderB) return orderA - orderB;
+            return (a.name || '').localeCompare(b.name || '');
+        });
+
+        if (countEl) countEl.innerText = `총 ${sorted.length}명`;
+
+        sorted.forEach(staff => {
+            const isMe = currentUser && staff.id === currentUser.uid;
+            const theme = window.getPositionTheme(staff.position || '사원');
+            
+            // 본인 카드 클릭 시 정보 수정창 열기
+            let clickHandler = isMe ? `onclick="openProfile()"` : '';
+            let cursorClass = isMe ? 'cursor-pointer active:scale-[0.98]' : '';
+            let chevron = isMe ? `<div class="ml-2 pl-2"><i data-lucide="chevron-right" class="w-5 h-5 text-[#AAA]"></i></div>` : '<div class="ml-2 pl-2 w-5"></div>';
+
+            container.innerHTML += `
+                <div ${clickHandler} class="bg-white rounded-[14px] border border-[#F0EFEA] p-4 flex items-center shadow-sm transition-transform ${cursorClass}">
+                    <!-- 직급 -->
+                    <div class="w-[60px] shrink-0 flex justify-center mr-3">
+                        <span class="inline-flex items-center justify-center px-2 py-1.5 rounded-lg text-[13px] font-bold w-full shadow-sm tracking-widest border" style="background-color: ${theme.bg}; color: ${theme.text}; border-color: ${theme.border};">
+                            ${staff.position || '사원'}
+                        </span>
+                    </div>
+                    
+                    <!-- 이름, 사번 -->
+                    <div class="w-20 shrink-0 border-r border-[#F0EFEA] pr-3 mr-3 flex flex-col justify-center gap-0.5">
+                        <div class="text-[16px] font-bold text-[#333] whitespace-nowrap">${staff.name || '-'}</div>
+                        <div class="text-[12px] text-[#888] font-medium whitespace-nowrap">${staff.empId || '-'}</div>
+                    </div>
+                    
+                    <!-- 상세 정보 -->
+                    <div class="flex-1 text-[11px] text-[#555] space-y-1.5 min-w-0 flex flex-col justify-center">
+                        <div class="flex items-center gap-1.5">
+                            <i data-lucide="calendar" class="w-[14px] h-[14px] text-[#888] shrink-0"></i>
+                            <span class="w-12 shrink-0 text-[#888]">생년월일</span>
+                            <span class="font-medium text-[#333] truncate">${staff.birth || '-'}</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <i data-lucide="phone" class="w-[14px] h-[14px] text-[#888] shrink-0"></i>
+                            <span class="w-12 shrink-0 text-[#888]">전화번호</span>
+                            <span class="font-medium text-[#333] truncate">${staff.phone || '-'}</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <i data-lucide="user" class="w-[14px] h-[14px] text-[#888] shrink-0"></i>
+                            <span class="w-12 shrink-0 text-[#888]">비상연락망</span>
+                            <span class="font-medium text-[#333] truncate">${staff.emergency || '-'}</span>
+                        </div>
+                    </div>
+                    
+                    ${chevron}
+                </div>
+            `;
+        });
+        lucide.createIcons();
+    };
+
+    // 프로필 정보 보기 및 수정 (내 설정)
     window.openProfile = function() {
         if (window.currentUserData) {
             document.getElementById('profile-name').value = window.currentUserData.name || '';
@@ -443,6 +582,9 @@
             document.getElementById('profile-emergency').value = window.currentUserData.emergency || '';
             document.getElementById('profile-relation').value = window.currentUserData.relation || '';
             
+            window.editPosition = window.currentUserData.position || '사원';
+            window.renderEditPosition();
+
             const preview = document.getElementById('edit-profile-img-preview');
             const icon = document.getElementById('edit-profile-img-icon');
             if (window.currentUserData.photoUrl) {
@@ -483,6 +625,7 @@
             await updateDoc(doc(db, 'users', currentUser.uid), {
                 name: name,
                 empId: empId,
+                position: window.editPosition || '사원',
                 birth: birth,
                 phone: phone,
                 emergency: emergency,
@@ -2265,6 +2408,14 @@
         </div>
 
         <div>
+            <label class="block text-sm font-semibold text-[#4A443F] mb-1.5 ml-1">직급</label>
+            <div class="flex gap-2">
+                <button type="button" data-pos="점장" onclick="window.regPosition='점장'; window.renderRegPosition();" class="reg-pos-btn flex-1 py-2.5 rounded-xl border font-bold text-[14px] transition-all shadow-sm">점장</button>
+                <button type="button" data-pos="부점장" onclick="window.regPosition='부점장'; window.renderRegPosition();" class="reg-pos-btn flex-1 py-2.5 rounded-xl border font-bold text-[14px] transition-all shadow-sm">부점장</button>
+                <button type="button" data-pos="사원" onclick="window.regPosition='사원'; window.renderRegPosition();" class="reg-pos-btn flex-1 py-2.5 rounded-xl border font-bold text-[14px] transition-all shadow-sm">사원</button>
+            </div>
+        </div>
+        <div>
             <label class="block text-sm font-semibold text-[#4A443F] mb-1.5 ml-1">이름</label>
             <input type="text" id="reg-name" class="form-input" placeholder="이름을 입력하세요">
         </div>
@@ -2318,10 +2469,9 @@
     
     <!-- 공통 헤더 로고 -->
     <div class="pb-1 bg-[#FAF9F5] flex-shrink-0 z-10 relative flex items-center justify-center w-full px-5" style="padding-top: max(4px, env(safe-area-inset-top));">
-        <!-- 톱니바퀴 및 새로고침 버튼 추가 -->
+        <!-- 직원정보 버튼(프로필 아이콘) 추가 -->
         <div class="absolute right-5 flex gap-4 mt-1">
-            <button onclick="location.reload()" class="text-[#8A847E] hover:text-[#4A443F] active:scale-95 transition-all"><i data-lucide="rotate-cw" class="w-[18px] h-[18px]"></i></button>
-            <button onclick="openProfile()" class="text-[#8A847E] hover:text-[#4A443F] active:scale-95 transition-all"><i data-lucide="settings" class="w-[18px] h-[18px]"></i></button>
+            <button onclick="openStaffList()" class="text-[#8A847E] hover:text-[#4A443F] active:scale-95 transition-all"><i data-lucide="user" class="w-[20px] h-[20px]"></i></button>
         </div>
         <img src="log.png" alt="Patek Philippe" class="w-24 h-auto object-contain" />
     </div>
@@ -2531,9 +2681,9 @@
         <div id="page-sp" class="page px-5 pt-3 no-scrollbar"><div class="h-full flex items-center justify-center text-[#999]">SP 준비중입니다.</div></div>
     </div>
 
-    <!-- 하단 네비게이션 (시안 3 완벽 매칭: 4x2 격자 그리드 형태 최적화 교정 완료) -->
+    <!-- 하단 네비게이션 -->
     <div id="bottom-nav-bar" class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] bg-white border-t border-[#F0EFEA] grid grid-cols-4 gap-y-3 gap-x-2 px-3 pt-3 z-[90] shadow-[0_-8px_30px_rgba(0,0,0,0.04)] rounded-t-[20px]" style="padding-bottom: max(4px, env(safe-area-inset-bottom));">
-        <!-- 첫 번째 줄 (정밀 정렬 및 아이콘-라벨 분배) -->
+        <!-- 첫 번째 줄 -->
         <div class="nav-item flex flex-col items-center justify-center gap-1 text-[#A0A0A0] w-full cursor-pointer" onclick="window.switchTab('notice', this)"><i data-lucide="megaphone" class="w-[20px] h-[20px]"></i><span class="text-[11px] font-bold">공지사항</span></div>
         <div class="nav-item flex flex-col items-center justify-center gap-1 text-[#A0A0A0] w-full cursor-pointer" onclick="window.switchTab('schedule', this)"><i data-lucide="calendar-days" class="w-[20px] h-[20px]"></i><span class="text-[11px] font-bold">근무표</span></div>
         <div class="nav-item flex flex-col items-center justify-center gap-1 text-[#A0A0A0] w-full cursor-pointer active" onclick="window.switchTab('calendar', this)"><i data-lucide="calendar" class="w-[20px] h-[20px]"></i><span class="text-[11px] font-bold">캘린더</span></div>
@@ -2547,9 +2697,24 @@
 </div>
 
 <!-- ==========================================
-     환경 설정(사용자 정보/로그아웃) 모달 추가 
+     직원 정보 목록 전체화면 모달 
      ========================================== -->
-<div id="page-profile-modal" style="display: none;" class="fixed inset-0 w-full max-w-md mx-auto bg-black/40 backdrop-blur-[2px] z-[300] flex-col items-center justify-center p-6">
+<div id="page-staff-modal" style="display: none;" class="fixed inset-0 w-full max-w-md mx-auto bg-[#FAF9F5] z-[300] flex-col font-sans">
+    <div class="pb-4 bg-[#FAF9F5] flex-shrink-0 relative flex flex-col items-center border-b border-[#E8E4DB]" style="padding-top: max(4px, env(safe-area-inset-top));">
+        <button onclick="closeStaffList()" class="absolute right-6 top-10 text-[#999] p-2 active:scale-95"><i data-lucide="x" class="w-6 h-6"></i></button>
+        <h2 class="text-xl font-serif font-bold text-[#333] mt-8 mb-1">직원 정보</h2>
+        <div id="staff-count" class="text-[13px] font-semibold text-[#888]">총 0명</div>
+    </div>
+    
+    <div id="staff-list-content" class="flex-1 overflow-y-auto p-4 space-y-3 bg-[#FAF9F5] pb-20 no-scrollbar">
+        <!-- JS로 직원 카드 렌더링 -->
+    </div>
+</div>
+
+<!-- ==========================================
+     내 프로필 수정(환경설정) 모달 
+     ========================================== -->
+<div id="page-profile-modal" style="display: none;" class="fixed inset-0 w-full max-w-md mx-auto bg-black/40 backdrop-blur-[2px] z-[400] flex-col items-center justify-center p-6">
     <div class="bg-[#FCFBF9] rounded-2xl w-full max-w-[320px] shadow-2xl border border-[#E8E4DB] flex flex-col overflow-hidden relative pt-6 pb-2">
         <button onclick="closeProfile()" class="absolute right-4 top-4 text-[#999] p-1 active:scale-95"><i data-lucide="x" class="w-5 h-5"></i></button>
         
@@ -2565,6 +2730,14 @@
         </div>
 
         <div class="p-5 space-y-3 flex-1 overflow-y-auto max-h-[60vh] no-scrollbar pb-10">
+            <div>
+                <label class="block text-[11px] font-bold text-[#666] mb-1.5 ml-1">직급</label>
+                <div class="flex gap-2">
+                    <button type="button" data-pos="점장" onclick="window.editPosition='점장'; window.renderEditPosition();" class="edit-pos-btn flex-1 py-2 rounded-lg border font-bold text-[12px] transition-all shadow-sm">점장</button>
+                    <button type="button" data-pos="부점장" onclick="window.editPosition='부점장'; window.renderEditPosition();" class="edit-pos-btn flex-1 py-2 rounded-lg border font-bold text-[12px] transition-all shadow-sm">부점장</button>
+                    <button type="button" data-pos="사원" onclick="window.editPosition='사원'; window.renderEditPosition();" class="edit-pos-btn flex-1 py-2 rounded-lg border font-bold text-[12px] transition-all shadow-sm">사원</button>
+                </div>
+            </div>
             <div>
                 <label class="block text-[11px] font-bold text-[#666] mb-1.5 ml-1">이름</label>
                 <input id="profile-name" type="text" class="form-input text-xs py-2.5">
