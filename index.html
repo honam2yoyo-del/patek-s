@@ -9,8 +9,9 @@
     <!-- iOS 홈 화면 추가를 위한 PWA 메타 태그 -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="Patek-S">
-    <link class="rounded-full" rel="apple-touch-icon" href="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Patek_Philippe_logo.svg/512px-Patek_Philippe_logo.svg.png">
+    <meta name="apple-mobile-web-app-title" content="PATEK">
+    <!-- 홈 화면 추가 시 아이콘 log2.png 로 설정 -->
+    <link class="rounded-full" rel="apple-touch-icon" href="log2.png">
 
     <!-- Tailwind CSS 및 아이콘 -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -38,7 +39,7 @@
             position: absolute; /* 부모 relative 컨테이너에 꽉 차게 설정 */
             top: 0; left: 0; right: 0; bottom: 0;
             overflow-y: auto;
-            padding-bottom: 240px; /* 2줄 하단 네비게이션 공간 충분히 확보 */
+            padding-bottom: 90px; /* 8개 탭에 맞게 하단 공백 극한 축소 */
             animation: fadeIn 0.2s ease-out;
         }
         .page.active { display: block; }
@@ -48,7 +49,7 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* 하단 네비게이션 아이템 액티브 컬러 */
+        /* 하단 네비게이션 아이템 액티브 컬러 (레이아웃은 Tailwind로 HTML 직접 제어) */
         .nav-item { transition: color 0.2s; }
         .nav-item.active { color: #B4975A; }
         .nav-item.active svg { stroke: #B4975A; }
@@ -73,7 +74,6 @@
             overflow: hidden;
             word-break: keep-all;
         }
-        /* 첫 두 열(연차, 성명) 넓이 고정 */
         .schedule-table th:nth-child(1), .schedule-table td:nth-child(1) { width: 18px; }
         .schedule-table th:nth-child(2), .schedule-table td:nth-child(2) { width: 26px; }
         
@@ -89,35 +89,56 @@
         .schedule-pill {
             width: 100%;
             border: 1px solid;
-            border-radius: 6px;
-            padding: 5px 3px;
-            font-size: 11px;
-            font-weight: 700;
-            line-height: 1.2;
+            border-radius: 4px;
+            padding: 2.5px 1px;
+            font-size: 7.5px; /* 글씨 크기 축소 */
+            letter-spacing: -0.5px; /* 자간 축소 */
+            font-weight: 800;
+            line-height: 1.1;
             text-align: center;
-            word-break: keep-all;
-            white-space: normal;
+            white-space: nowrap; /* 무조건 가로로 한 줄 고정 */
+            overflow: hidden;
+            text-overflow: clip; /* 좁으면 ... 대신 잘리도록 (최대한 보이게) */
             box-sizing: border-box;
             box-shadow: inset 0 1px 0 rgba(255,255,255,0.45);
         }
         .schedule-meta-line {
             display: block;
             max-width: 100%;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+            overflow: visible;
+            text-overflow: unset;
+            white-space: normal;
         }
 
+        /* 폼 입력창 스타일 */
+        .form-input {
+            width: 100%;
+            box-sizing: border-box;
+            background-color: #FFFFFF;
+            border: 1px solid #E5E5E5;
+            border-radius: 12px;
+            padding: 12px 14px;
+            outline: none;
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+            transition: border-color 0.2s;
+            text-align: left;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        .form-input:focus { border-color: #B4975A; }
+        .form-input[type="date"]::-webkit-date-and-time-value { text-align: left; }
     </style>
 </head>
 <body>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, collection, onSnapshot, doc, setDoc, getDoc, addDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    // 프로젝트 설정값
+    // ⭐️ patek-s 프로젝트 설정값
     const firebaseConfig = {
       apiKey: "AIzaSyCt7aQXA5eFdnDTMHlRhjPAkyH4b8UB6HY",
       authDomain: "patek-s.firebaseapp.com",
@@ -144,6 +165,8 @@
     const MAX_READERS = 6;
 
     let currentUser = null;
+    window.currentUserData = null; // 유저 프로필 데이터 저장용
+
     let unsubscribeNotices = null;
     let unsubscribeApproval = null;
     let unsubscribeAlbums = null;
@@ -171,31 +194,60 @@
     window.leaveRangeStart = null;
     window.leaveRangeEnd = null;
 
-    // 공휴일 정보 (2026년 기준 예시 데이터)
+    // 프로필 이미지 임시 저장소
+    window.regProfileImageData = '';
+    window.editProfileImageData = '';
+
+    // 2026년 법정공휴일 및 선거일 완벽 세팅
     const PUBLIC_HOLIDAYS_2026 = {
+        "2026-01-01": "신정",
+        "2026-02-16": "설날 연휴",
+        "2026-02-17": "설날",
+        "2026-02-18": "설날 연휴",
+        "2026-03-01": "삼일절",
+        "2026-03-02": "대체공휴일",
         "2026-05-05": "어린이날",
-        "2026-05-24": "석가탄신일",
-        "2026-06-06": "현충일"
+        "2026-05-24": "부처님오신날",
+        "2026-05-25": "대체공휴일",
+        "2026-06-03": "전국동시지방선거",
+        "2026-06-06": "현충일",
+        "2026-08-15": "광복절",
+        "2026-08-17": "대체공휴일",
+        "2026-09-24": "추석 연휴",
+        "2026-09-25": "추석",
+        "2026-09-26": "추석 연휴",
+        "2026-09-28": "대체공휴일",
+        "2026-10-03": "개천절",
+        "2026-10-05": "대체공휴일",
+        "2026-10-09": "한글날",
+        "2026-12-25": "기독탄신일"
     };
 
     // 모바일 Safari/PWA 환경을 위한 리다이렉트 로그인 결과 처리
-    getRedirectResult(auth).catch(error => {
+    getRedirectResult(auth).then((result) => {
+        if (result && result.user) {
+            document.getElementById('loading-overlay').style.display = 'flex';
+        }
+    }).catch(error => {
         console.error("로그인 에러:", error);
         const loading = document.getElementById('loading-overlay');
         if (loading) loading.style.display = 'none';
         if (error.code === 'auth/unauthorized-domain') {
             window.showCustomAlert("구글 로그인 정책: 현재 주소가 승인된 도메인이 아닙니다.");
+        } else {
+            window.showCustomAlert("로그인 처리에 실패했습니다.\n" + error.message);
         }
     });
 
     onAuthStateChanged(auth, (user) => {
         if (user) {
             currentUser = user;
-            document.getElementById('login-page').style.display = 'none';
+            hideAllPages();
             document.getElementById('loading-overlay').style.display = 'flex';
             checkApproval(user);
         } else {
             currentUser = null;
+            window.currentUserData = null;
             window.appNotices = [];
             window.albums = [];
             window.selectedAlbumIds = [];
@@ -205,16 +257,22 @@
             if(unsubscribeSchedules) unsubscribeSchedules();
             if(unsubscribeLeaveRequests) unsubscribeLeaveRequests();
             
-            document.getElementById('loading-overlay').style.display = 'none';
-            document.getElementById('pending-page').style.display = 'none';
-            document.getElementById('app-container').style.display = 'none';
-            document.getElementById('page-notice-create').style.display = 'none';
-            document.getElementById('page-notice-detail').style.display = 'none';
-            document.getElementById('page-album-modal').style.display = 'none';
-            
+            hideAllPages();
             document.getElementById('login-page').style.display = 'flex';
         }
     });
+
+    function hideAllPages() {
+        document.getElementById('loading-overlay').style.display = 'none';
+        document.getElementById('login-page').style.display = 'none';
+        document.getElementById('register-page').style.display = 'none';
+        document.getElementById('pending-page').style.display = 'none';
+        document.getElementById('app-container').style.display = 'none';
+        document.getElementById('page-notice-create').style.display = 'none';
+        document.getElementById('page-notice-detail').style.display = 'none';
+        document.getElementById('page-album-modal').style.display = 'none';
+        document.getElementById('page-profile-modal').style.display = 'none';
+    }
 
     function checkApproval(user) {
         const userDocRef = doc(db, 'users', user.uid);
@@ -222,68 +280,151 @@
         unsubscribeApproval = onSnapshot(userDocRef, (docSnap) => {
             if (docSnap.exists()) {
                 const data = docSnap.data();
-                if (data.approved === true) {
-                    document.getElementById('loading-overlay').style.display = 'none';
-                    document.getElementById('pending-page').style.display = 'none';
+                window.currentUserData = data;
+
+                if (!data.name || !data.empId) {
+                    // 프로필 정보가 없는 신규/기존 유저 -> 등록 화면
+                    hideAllPages();
+                    document.getElementById('register-page').style.display = 'flex';
+                    window.regProfileImageData = '';
+                    document.getElementById('reg-profile-img-preview').classList.add('hidden');
+                    document.getElementById('reg-profile-img-icon').classList.remove('hidden');
+                } else if (data.approved === true) {
+                    // 승인 완료된 정상 유저 -> 메인 앱 
+                    hideAllPages();
                     document.getElementById('app-container').style.display = 'flex'; 
                     
-                    fetchNotices(); // 공지사항 데이터 불러오기
-                    fetchAlbums(user); // 개인 앨범 실시간 데이터 불러오기
-                    fetchSchedules(); // 공용 근무표 실시간 구독
-                    fetchLeaveRequests(); // 휴무 신청 데이터 실시간 구독
+                    fetchNotices(); 
+                    fetchAlbums(user); 
+                    fetchSchedules(); 
+                    fetchLeaveRequests(); 
                     lucide.createIcons();
                 } else {
-                    document.getElementById('loading-overlay').style.display = 'none';
-                    document.getElementById('app-container').style.display = 'none';
+                    // 가입은 했으나 미승인 상태 -> 대기 화면
+                    hideAllPages();
                     document.getElementById('pending-page').style.display = 'flex';
                 }
             } else {
-                setDoc(userDocRef, {
-                    approved: false,
-                    email: user.email || '',
-                    name: user.displayName || '',
-                    role: 'user',
-                    createdAt: new Date().toISOString()
-                }, { merge: true }).then(() => {
-                    document.getElementById('loading-overlay').style.display = 'none';
-                    document.getElementById('app-container').style.display = 'none';
-                    document.getElementById('pending-page').style.display = 'flex';
-                }).catch(err => {
-                    console.error("데이터베이스 저장 오류:", err);
-                    document.getElementById('loading-overlay').style.display = 'none';
-                    window.showCustomAlert("가입 처리에 실패했습니다. 다시 로그인해주세요.");
-                });
+                // 문서 자체가 없는 완전 신규 -> 등록 화면
+                hideAllPages();
+                document.getElementById('register-page').style.display = 'flex';
+                window.regProfileImageData = '';
             }
         }, (error) => {
             console.error("Firestore Error:", error);
-            document.getElementById('loading-overlay').style.display = 'none';
+            hideAllPages();
             window.showCustomAlert("데이터베이스 권한 오류가 발생했습니다.");
         });
     }
 
-    // 로그인 함수
-    window.loginWithGoogle = function() {
-        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-        const isPWA = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+    // 휴대폰 번호 자동 하이픈 기능
+    window.autoHyphenPhone = function(target) {
+        let val = target.value.replace(/[^0-9]/g, '');
+        let res = '';
+        if(val.length < 4) {
+            res = val;
+        } else if(val.length < 7) {
+            res = val.substr(0, 3) + '-' + val.substr(3);
+        } else if(val.length < 11) {
+            res = val.substr(0, 3) + '-' + val.substr(3, 3) + '-' + val.substr(6);
+        } else {
+            res = val.substr(0, 3) + '-' + val.substr(3, 4) + '-' + val.substr(7);
+        }
+        target.value = res;
+    };
+
+    // 프로필 이미지 선택 및 미리보기
+    window.previewProfileImage = async function(input, previewId, iconId) {
+        if (input.files && input.files[0]) {
+            try {
+                const base64Url = await compressImage(input.files[0]);
+                const preview = document.getElementById(previewId);
+                const icon = document.getElementById(iconId);
+                preview.src = base64Url;
+                preview.classList.remove('hidden');
+                if(icon) icon.classList.add('hidden');
+                
+                if (previewId === 'reg-profile-img-preview') window.regProfileImageData = base64Url;
+                if (previewId === 'edit-profile-img-preview') window.editProfileImageData = base64Url;
+            } catch (err) {
+                console.error("이미지 압축 실패:", err);
+                window.showCustomAlert("이미지를 처리할 수 없습니다.");
+            }
+        }
+    };
+
+    // 가입(프로필 등록) 취소
+    window.cancelRegistration = function() {
+        signOut(auth).then(() => {
+            hideAllPages();
+            document.getElementById('login-page').style.display = 'flex';
+        });
+    };
+
+    // 신규 프로필 등록 제출
+    window.submitRegistration = async function() {
+        const name = document.getElementById('reg-name').value.trim();
+        const empId = document.getElementById('reg-emp-id').value.trim();
+        const birth = document.getElementById('reg-birth').value.trim();
+        const phone = document.getElementById('reg-phone').value.trim();
+        const emergency = document.getElementById('reg-emergency').value.trim();
+        const relation = document.getElementById('reg-relation').value.trim();
+
+        if (!name || !empId || !phone || !emergency || !relation) {
+            window.showCustomAlert("모든 필수 항목(이름, 사번, 전화번호, 비상연락망, 관계)을 입력해 주세요.");
+            return;
+        }
 
         document.getElementById('loading-overlay').style.display = 'flex';
+        try {
+            await setDoc(doc(db, 'users', currentUser.uid), {
+                approved: false, // 최초 가입 시 미승인
+                email: currentUser.email || '',
+                name: name,
+                empId: empId,
+                birth: birth,
+                phone: phone,
+                emergency: emergency,
+                relation: relation,
+                photoUrl: window.regProfileImageData || '',
+                role: 'user',
+                createdAt: new Date().toISOString()
+            }, { merge: true });
+            // onSnapshot이 반응하여 pending-page로 자동 이동됨
+        } catch (e) {
+            console.error(e);
+            window.showCustomAlert("프로필 등록 중 오류가 발생했습니다.");
+            document.getElementById('loading-overlay').style.display = 'none';
+        }
+    };
 
-        if (isMobile || isPWA) {
-            signInWithRedirect(auth, provider).catch(error => {
-                console.error("로그인 에러:", error);
+    // 로그인 함수 (Vercel 도메인 + 모바일 Safari ITP 해결을 위해 Popup 기본 사용)
+    window.loginWithGoogle = async function() {
+        document.getElementById('loading-overlay').style.display = 'flex';
+
+        try {
+            await signInWithPopup(auth, provider);
+        } catch (error) {
+            console.error("로그인 에러:", error);
+            if (error.code === 'auth/popup-closed-by-user') {
                 document.getElementById('loading-overlay').style.display = 'none';
-                window.showCustomAlert("로그인 실패: " + error.message);
-            });
-        } else {
-            signInWithPopup(auth, provider).catch(error => {
-                console.error("로그인 에러:", error);
-                document.getElementById('loading-overlay').style.display = 'none';
-                if (error.code === 'auth/unauthorized-domain') {
-                    window.showCustomAlert("구글 로그인 정책: 현재 주소가 승인된 도메인이 아닙니다.");
-                } else if (error.code !== 'auth/popup-closed-by-user') {
-                    window.showCustomAlert("로그인 중 오류가 발생했습니다.\n" + error.message);
+                return;
+            }
+            if (error.code === 'auth/popup-blocked') {
+                try {
+                    await signInWithRedirect(auth, provider);
+                } catch(redirectErr) {
+                    document.getElementById('loading-overlay').style.display = 'none';
+                    window.showCustomAlert("로그인 중 오류가 발생했습니다.\n" + redirectErr.message);
                 }
-            });
+                return;
+            }
+            document.getElementById('loading-overlay').style.display = 'none';
+            if (error.code === 'auth/unauthorized-domain') {
+                window.showCustomAlert("구글 로그인 정책: 현재 주소가 승인된 도메인이 아닙니다.");
+            } else {
+                window.showCustomAlert("로그인 중 오류가 발생했습니다.\n" + error.message);
+            }
         }
     };
 
@@ -292,6 +433,74 @@
             signOut(auth);
         });
     };
+
+    // 프로필 정보 보기 및 수정
+    window.openProfile = function() {
+        if (window.currentUserData) {
+            document.getElementById('profile-name').value = window.currentUserData.name || '';
+            document.getElementById('profile-emp-id').value = window.currentUserData.empId || '';
+            document.getElementById('profile-birth').value = window.currentUserData.birth || '';
+            document.getElementById('profile-phone').value = window.currentUserData.phone || '';
+            document.getElementById('profile-emergency').value = window.currentUserData.emergency || '';
+            document.getElementById('profile-relation').value = window.currentUserData.relation || '';
+            
+            const preview = document.getElementById('edit-profile-img-preview');
+            const icon = document.getElementById('edit-profile-img-icon');
+            if (window.currentUserData.photoUrl) {
+                preview.src = window.currentUserData.photoUrl;
+                preview.classList.remove('hidden');
+                icon.classList.add('hidden');
+                window.editProfileImageData = window.currentUserData.photoUrl;
+            } else {
+                preview.src = '';
+                preview.classList.add('hidden');
+                icon.classList.remove('hidden');
+                window.editProfileImageData = '';
+            }
+        }
+        document.getElementById('page-profile-modal').style.display = 'flex';
+        lucide.createIcons();
+    };
+
+    window.closeProfile = function() {
+        document.getElementById('page-profile-modal').style.display = 'none';
+    };
+
+    window.submitProfileEdit = async function() {
+        const name = document.getElementById('profile-name').value.trim();
+        const empId = document.getElementById('profile-emp-id').value.trim();
+        const birth = document.getElementById('profile-birth').value.trim();
+        const phone = document.getElementById('profile-phone').value.trim();
+        const emergency = document.getElementById('profile-emergency').value.trim();
+        const relation = document.getElementById('profile-relation').value.trim();
+
+        if (!name || !empId || !phone || !emergency || !relation) {
+            window.showCustomAlert("이름, 사번, 전화번호, 비상연락망, 관계는 필수입니다.");
+            return;
+        }
+
+        document.getElementById('loading-overlay').style.display = 'flex';
+        try {
+            await updateDoc(doc(db, 'users', currentUser.uid), {
+                name: name,
+                empId: empId,
+                birth: birth,
+                phone: phone,
+                emergency: emergency,
+                relation: relation,
+                photoUrl: window.editProfileImageData || '',
+                updatedAt: new Date().toISOString()
+            });
+            window.showCustomAlert("프로필이 수정되었습니다.");
+            closeProfile();
+        } catch (e) {
+            console.error(e);
+            window.showCustomAlert("수정 중 오류가 발생했습니다.");
+        } finally {
+            document.getElementById('loading-overlay').style.display = 'none';
+        }
+    };
+
 
     // ==========================================
     // 앱 데이터 및 화면 로직
@@ -361,7 +570,7 @@
         }
 
         if (filtered.length === 0) {
-            list.innerHTML = '<div class="text-center text-[#999] py-10 text-sm">조건에 맞는 공지사항이 없습니다.</div>';
+            list.innerHTML = '<div class="text-center text-[#999] py-8 text-sm">조건에 맞는 공지사항이 없습니다.</div>';
             return;
         }
 
@@ -382,17 +591,17 @@
             const countTextClass = notice.completed === true ? 'text-[#777]' : (isRead ? 'text-[#B4975A]' : 'text-[#999]');
 
             list.innerHTML += `
-                <div onclick="openNoticeDetail('${notice.id}')" class="${cardBgClass} p-4 rounded-2xl border ${cardBorderClass} shadow-sm cursor-pointer active:scale-[0.98] transition-transform mb-3">
+                <div onclick="openNoticeDetail('${notice.id}')" class="${cardBgClass} p-3 rounded-2xl border ${cardBorderClass} shadow-sm cursor-pointer active:scale-[0.98] transition-transform mb-2.5">
                     <div class="flex items-center gap-3">
-                        <div class="px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap" style="background-color: ${notice.completed === true ? '#DDDDDD' : catStyle.bg}; color: ${notice.completed === true ? '#666666' : catStyle.text};">
+                        <div class="px-2.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap" style="background-color: ${notice.completed === true ? '#DDDDDD' : catStyle.bg}; color: ${notice.completed === true ? '#666666' : catStyle.text};">
                             ${notice.category || '매장'}
                         </div>
                         <div class="flex-1 min-w-0">
                             <div class="flex items-center gap-2 min-w-0">
-                                <div class="truncate text-[15px] font-semibold ${titleTextClass}">${notice.title || ''}</div>
+                                <div class="truncate text-[14px] font-semibold ${titleTextClass}">${notice.title || ''}</div>
                                 ${completedBadge}
                             </div>
-                            <div class="text-[11px] ${metaTextClass} mt-1 font-medium truncate">등록 ${registerDate} · 마감 ${deadlineDate}</div>
+                            <div class="text-[10px] ${metaTextClass} mt-0.5 font-medium truncate">등록 ${registerDate} · 마감 ${deadlineDate}</div>
                         </div>
                         <div class="flex items-center gap-2 shrink-0">
                             <span class="text-xs font-semibold ${countTextClass}">${readCount} / ${MAX_READERS}</span>
@@ -440,7 +649,7 @@
             const isActive = category === window.noticeCategoryFilter;
             const theme = getNoticeFilterTheme(category);
 
-            btn.className = 'notice-filter-btn h-8 px-1 rounded-full text-[11px] font-bold whitespace-nowrap transition-all duration-150';
+            btn.className = 'notice-filter-btn h-7 px-1 rounded-full text-[11px] font-bold whitespace-nowrap transition-all duration-150';
             if (isActive) {
                 btn.style.backgroundColor = theme.bg;
                 btn.style.color = theme.text;
@@ -556,6 +765,7 @@
                 title,
                 content,
                 author: currentUser.uid,
+                authorName: window.currentUserData?.name || '관리자',
                 createdAt: new Date().toISOString(),
                 readers: [],
                 completed: false,
@@ -576,6 +786,7 @@
         const editBtn = document.getElementById('notice-detail-edit-btn');
         const saveBtn = document.getElementById('notice-detail-save-btn');
         const completeBtn = document.getElementById('notice-detail-complete-btn');
+        const deleteBtn = document.getElementById('notice-detail-delete-btn');
         const modalTitle = document.getElementById('notice-detail-modal-title');
 
         if (!viewArea || !editArea) return;
@@ -587,6 +798,7 @@
             if (editBtn) editBtn.style.display = 'none';
             if (saveBtn) saveBtn.style.display = 'block';
             if (completeBtn) completeBtn.style.display = 'none';
+            if (deleteBtn) deleteBtn.style.display = 'none';
             applyEditCategoryStyles();
         } else {
             viewArea.style.display = 'block';
@@ -595,6 +807,7 @@
             if (editBtn) editBtn.style.display = 'flex';
             if (saveBtn) saveBtn.style.display = 'none';
             if (completeBtn) completeBtn.style.display = 'block';
+            if (deleteBtn) deleteBtn.style.display = 'block';
         }
         lucide.createIcons();
     }
@@ -710,7 +923,7 @@
                 title,
                 content,
                 updatedAt: new Date().toISOString(),
-                updatedBy: currentUser.displayName || currentUser.email || currentUser.uid
+                updatedBy: currentUser.uid
             });
             window.showCustomAlert('공지사항이 수정되었습니다.');
             closeNoticeDetail();
@@ -731,7 +944,7 @@
                 await updateDoc(doc(db, 'notices', window.selectedNoticeId), {
                     completed: true,
                     completedAt: new Date().toISOString(),
-                    completedBy: currentUser.displayName || currentUser.email || currentUser.uid
+                    completedBy: currentUser.uid
                 });
                 closeNoticeDetail();
             } catch(e) {
@@ -740,15 +953,24 @@
             } finally {
                 document.getElementById('loading-overlay').style.display = 'none';
             }
-        }, {
-            cancelText: '아니오',
-            okText: '네',
-            okBg: '#4A443F',
-            okHoverBg: '#2A2522',
-            icon: 'check-circle',
-            iconBg: '#F8F3E7',
-            iconBorder: '#E8E4DB',
-            iconColor: '#4A443F'
+        });
+    };
+
+
+    window.deleteNotice = function() {
+        if (!window.selectedNoticeId) return;
+
+        window.showCustomConfirm('삭제 하시겠습니까?', async () => {
+            document.getElementById('loading-overlay').style.display = 'flex';
+            try {
+                await deleteDoc(doc(db, 'notices', window.selectedNoticeId));
+                closeNoticeDetail();
+            } catch(e) {
+                console.error(e);
+                window.showCustomAlert('삭제 실패');
+            } finally {
+                document.getElementById('loading-overlay').style.display = 'none';
+            }
         });
     };
 
@@ -803,6 +1025,7 @@
 
     function fetchAlbums(user) {
         if (!db) return;
+        // RULE 1에 따른 개인 전용 앨범 참조 설정
         const colRef = collection(db, 'artifacts', 'patek-s', 'users', user.uid, 'albums');
         unsubscribeAlbums = onSnapshot(colRef, (snapshot) => {
             window.albums = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -817,9 +1040,9 @@
     window.setAlbumFilter = function(category, btnElement) {
         window.albumFilter = category;
         document.querySelectorAll('.album-filter-btn').forEach(btn => {
-            btn.className = "album-filter-btn flex-1 py-2 rounded-lg text-[13px] font-sans whitespace-nowrap transition-colors border shadow-sm bg-white text-[#8A847E] border-[#E8E4DB]";
+            btn.className = "album-filter-btn flex-1 py-1.5 rounded-lg text-[12px] font-sans whitespace-nowrap transition-colors border shadow-sm bg-white text-[#8A847E] border-[#E8E4DB]";
         });
-        btnElement.className = "album-filter-btn flex-1 py-2 rounded-lg text-[13px] font-sans whitespace-nowrap transition-colors border shadow-sm bg-[#8B7355] text-white border-[#8B7355] font-medium";
+        btnElement.className = "album-filter-btn flex-1 py-1.5 rounded-lg text-[12px] font-sans whitespace-nowrap transition-colors border shadow-sm bg-[#8B7355] text-white border-[#8B7355] font-medium";
         window.renderAlbums();
     };
 
@@ -1053,7 +1276,7 @@
             addBtn.className = `shrink-0 border-[1.5px] border-dashed border-[#C2BDB5] rounded-[14px] flex flex-col items-center justify-center cursor-pointer hover:bg-[#FDFBF7] transition-colors ${isFirst ? 'w-full h-[180px]' : 'w-28 h-28'}`;
             addBtn.onclick = window.triggerAlbumFileSelect;
             addBtn.innerHTML = `
-                <i data-lucide="camera" class="${isFirst ? 'w-11 h-11' : 'w-7 h-7'} text-[#8B7355] mb-2"></i>
+                <i data-lucide="camera" class="${isFirst ? 'w-11 h-11' : 'w-7 h-7'} text-[#8B7355] mb-1"></i>
                 <p class="text-[#8A847E] font-sans text-[12px]">추가</p>
             `;
             list.appendChild(addBtn);
@@ -1236,7 +1459,7 @@
 
 
     // ==========================================
-    // 매장 근무표 관리 로직
+    // ⭐️ 신규: 매장 근무표 관리 로직 (사진 3, 4, 5, 6)
     // ==========================================
 
     function fetchSchedules() {
@@ -1320,6 +1543,7 @@
 
     window.openScheduleMonthPicker = function() {
         window.schedulePickerYear = window.scheduleYear;
+        window.schedulePickerMode = 'month';
         renderScheduleMonthModal();
         const modal = document.getElementById('schedule-month-modal');
         if (modal) modal.style.display = 'flex';
@@ -1332,6 +1556,17 @@
 
     window.adjustSchedulePickerYear = function(amount) {
         window.schedulePickerYear = (window.schedulePickerYear || window.scheduleYear) + amount;
+        renderScheduleMonthModal();
+    };
+
+    window.openScheduleYearPicker = function() {
+        window.schedulePickerMode = 'year';
+        renderScheduleMonthModal();
+    };
+
+    window.selectSchedulePickerYear = function(year) {
+        window.schedulePickerYear = year;
+        window.schedulePickerMode = 'month';
         renderScheduleMonthModal();
     };
 
@@ -1354,8 +1589,21 @@
         const monthGrid = document.getElementById('schedule-picker-month-grid');
         if (!yearText || !monthGrid) return;
         const year = window.schedulePickerYear || window.scheduleYear;
+        const mode = window.schedulePickerMode || 'month';
         yearText.innerText = `${year}년`;
         monthGrid.innerHTML = '';
+
+        if (mode === 'year') {
+            const startYear = year - 5;
+            for (let y = startYear; y < startYear + 12; y++) {
+                const active = y === window.scheduleYear;
+                monthGrid.innerHTML += `
+                    <button onclick="selectSchedulePickerYear(${y})" class="py-3 rounded-xl text-[15px] font-bold border active:scale-95 transition-transform ${active ? 'bg-[#B4975A] text-white border-[#B4975A]' : 'bg-white text-[#4A443F] border-[#E8E4DB]'}">${y}</button>
+                `;
+            }
+            return;
+        }
+
         for (let m = 1; m <= 12; m++) {
             const active = year === window.scheduleYear && m === window.scheduleMonth;
             monthGrid.innerHTML += `
@@ -1455,7 +1703,7 @@
                 staffs: updatedStaffs,
                 staffNames,
                 lastUpdated: formattedDate,
-                updatedBy: currentUser.displayName || currentUser.email || '관리자',
+                updatedBy: window.currentUserData?.name || currentUser.displayName || currentUser.email,
                 sourceFileName: file.name
             }, { merge: true });
 
@@ -1472,33 +1720,54 @@
         }
     };
 
-    // 연월 선택에 따른 실시간 매장 근무표 렌더 (달력형)
+    // 근무표 삭제(휴지통) 기능
+    window.deleteCurrentSchedule = function() {
+        const year = window.scheduleYear;
+        const month = window.scheduleMonth;
+        const currentMonthKey = `${year}-${String(month).padStart(2, '0')}`;
+        
+        if (!window.schedulesData[currentMonthKey] || Object.keys(window.schedulesData[currentMonthKey]).length === 0) {
+            window.showCustomAlert("삭제할 근무표가 없습니다.");
+            return;
+        }
+
+        window.showCustomConfirm("해당 월의 근무표 전체 데이터를 삭제하시겠습니까?", async () => {
+            document.getElementById('loading-overlay').style.display = 'flex';
+            try {
+                await deleteDoc(doc(db, 'artifacts', 'patek-s', 'public', 'data', 'schedules', currentMonthKey));
+                window.showCustomAlert("근무표가 완전 삭제되었습니다.");
+            } catch(e) {
+                console.error(e);
+                window.showCustomAlert("삭제 실패");
+            } finally {
+                document.getElementById('loading-overlay').style.display = 'none';
+            }
+        });
+    };
+
+    // 연월 선택에 따른 실시간 근무표 렌더 (달력형)
     window.renderScheduleSheet = function() {
         const year = window.scheduleYear;
         const month = window.scheduleMonth;
         const totalDays = getDaysInMonth(year, month);
         const currentMonthKey = `${year}-${String(month).padStart(2, '0')}`;
-        const monthScheduleDoc = window.schedulesData[currentMonthKey];
-        
-        const hasData = monthScheduleDoc && monthScheduleDoc.staffs && Object.keys(monthScheduleDoc.staffs).length > 0;
-        const staffData = hasData ? monthScheduleDoc.staffs : {};
+        const monthScheduleDoc = window.schedulesData[currentMonthKey]; // undefined일 경우를 판별하기 위해 기본값 {} 제거
+        const staffData = monthScheduleDoc ? monthScheduleDoc.staffs : {};
 
         const monthText = document.getElementById('schedule-month-text');
         const monthPicker = document.getElementById('schedule-month-picker');
         if (monthText) monthText.innerText = `${year}년 ${month}월`;
-        const cardMonthText = document.getElementById('schedule-card-month-text');
-        if (cardMonthText) cardMonthText.innerText = `${year}년 ${month}월`;
         if (monthPicker) monthPicker.value = currentMonthKey;
 
         const metaInfo = document.getElementById('schedule-meta-info');
         if (metaInfo) {
-            if (hasData && monthScheduleDoc.lastUpdated) {
+            if (monthScheduleDoc && monthScheduleDoc.lastUpdated) {
                 metaInfo.innerHTML = `
-                    <span class="schedule-meta-line">마지막 수정일 ${monthScheduleDoc.lastUpdated}</span>
-                    <span class="schedule-meta-line mt-1">수정자 ${monthScheduleDoc.updatedBy || '시스템'}</span>
+                    <span class="schedule-meta-line text-[9px] text-[#8A847E]">수정일: ${monthScheduleDoc.lastUpdated.split(' ')[0]}</span>
+                    <span class="schedule-meta-line text-[9px] text-[#8A847E] mt-0.5 w-[65px] truncate">수정자: ${monthScheduleDoc.updatedBy || '시스템'}</span>
                 `;
             } else {
-                metaInfo.innerHTML = '<span class="schedule-meta-line">근무표가 등록되지 않았습니다.</span>';
+                metaInfo.innerHTML = '<span class="schedule-meta-line text-[9px] text-[#A8A29D]">근무표 없음</span>';
             }
         }
 
@@ -1517,13 +1786,14 @@
         if (!grid) return;
         grid.innerHTML = '';
 
-        const weekLabels = ['월', '화', '수', '목', '금', '토', '일'];
-        weekLabels.forEach(label => {
-            grid.innerHTML += `<div class="h-11 flex items-center justify-center text-[14px] font-bold text-[#6B5335] border-b border-r border-[#E8D8BD] last:border-r-0 bg-[#FFFDF8]">${label}</div>`;
+        const weekLabels = ['일', '월', '화', '수', '목', '금', '토'];
+        weekLabels.forEach((label, index) => {
+            const labelColor = index === 0 ? 'text-[#B35C5C]' : (index === 6 ? 'text-[#4F74A8]' : 'text-[#6B5335]');
+            grid.innerHTML += `<div class="h-10 flex items-center justify-center text-[13px] font-bold ${labelColor} border-b border-r border-[#E8D8BD] last:border-r-0 bg-[#FFFDF8]">${label}</div>`;
         });
 
         const firstDay = new Date(year, month - 1, 1).getDay();
-        const firstDayShift = firstDay === 0 ? 6 : firstDay - 1; // 월요일 시작
+        const firstDayShift = firstDay; // 일요일 시작
         const totalCells = Math.ceil((firstDayShift + totalDays) / 7) * 7;
 
         const codeMeta = {
@@ -1537,33 +1807,26 @@
             return String(name || '').trim().replace(/^옥/, '').replace(/^엄/, '').replace(/^장/, '').replace(/^최/, '').replace(/^이/, '').replace(/^형/, '');
         }
 
-        // 이름 리스트를 최대 2명씩 묶어 줄바꿈 처리하는 헬퍼 함수
-        function formatStaffListWithLineBreak(names) {
-            if (!names || names.length === 0) return '';
-            let formatted = [];
-            for (let i = 0; i < names.length; i += 2) {
-                formatted.push(names.slice(i, i + 2).join(', '));
-            }
-            return formatted.join('<br>');
-        }
-
         function getDayGroups(day) {
             const groups = { A: [], B: [], C: [], '휴무': [] };
-            const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-
-            // ⭐️ 근무표 등록이 되지 않은 달(hasData가 false인 경우)에는 이름 전부가 나오지 않도록 완전 빈 배열 반환
-            if (!hasData) {
-                return groups;
+            
+            // 데이터가 아예 없는 경우 텅 빈 채로 리턴 (모두 휴무 처리 안함)
+            if (!staffData || Object.keys(staffData).length === 0) {
+                return groups; 
             }
 
+            const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
             const scheduleStaffs = monthScheduleDoc.staffNames || window.storeStaffs;
+
             scheduleStaffs.forEach(staffName => {
                 const userDays = staffData[staffName] || {};
                 let code = userDays[day] || userDays[String(day)] || '';
                 const hasLeave = window.leaveRequests.some(r => r.name === staffName && dateStr >= r.startDate && dateStr <= r.endDate);
+                
                 if (!code || hasLeave) code = code || '휴무';
                 if (code === '/' || code === '휴' || code === '연' || code === '경') code = '휴무';
                 if (String(code).includes('반')) code = String(code).charAt(0);
+                
                 if (groups[code]) groups[code].push(compactName(staffName));
             });
             return groups;
@@ -1572,7 +1835,7 @@
         for (let cell = 0; cell < totalCells; cell++) {
             const day = cell - firstDayShift + 1;
             if (day < 1 || day > totalDays) {
-                grid.innerHTML += `<div class="min-h-[116px] border-r border-b border-[#E8D8BD] bg-[#FFFDF8]/60"></div>`;
+                grid.innerHTML += `<div class="min-h-[82px] border-r border-b border-[#E8D8BD] bg-[#FFFDF8]/60"></div>`;
                 continue;
             }
 
@@ -1587,18 +1850,17 @@
             const pills = Object.keys(codeMeta).map(code => {
                 if (!groups[code] || groups[code].length === 0) return '';
                 const meta = codeMeta[code];
-                // 3명 이상인 경우 최대 2명씩 줄바꿈 처리하여 적용
-                const namesMarkup = formatStaffListWithLineBreak(groups[code]);
-                return `<div class="schedule-pill" style="background:${meta.bg}; color:${meta.text}; border-color:${meta.border};">${namesMarkup}</div>`;
+                // 콤마 뒤 공백 제거하여 한줄 나열 시 불필요한 줄바꿈 방지
+                return `<div class="schedule-pill" style="background:${meta.bg}; color:${meta.text}; border-color:${meta.border};">${groups[code].join(',')}</div>`;
             }).join('');
 
             grid.innerHTML += `
-                <div class="min-h-[116px] p-2 border-r border-b border-[#E8D8BD] bg-[#FFFDF8] overflow-hidden">
-                    <div class="flex items-center justify-between mb-2">
-                        <span class="text-[15px] font-semibold ${dateColor}">${day}</span>
-                        ${isHoliday ? `<span class="text-[9px] font-bold text-[#B35C5C] truncate ml-1">${PUBLIC_HOLIDAYS_2026[dateStr]}</span>` : ''}
+                <div class="min-h-[82px] p-1.5 border-r border-b border-[#E8D8BD] bg-[#FFFDF8] overflow-hidden">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-[13px] font-semibold ${dateColor}">${day}</span>
+                        ${isHoliday ? `<span class="text-[8px] font-bold text-[#B35C5C] truncate ml-1">${PUBLIC_HOLIDAYS_2026[dateStr]}</span>` : ''}
                     </div>
-                    <div class="space-y-1.5">${pills}</div>
+                    <div class="space-y-0.5">${pills}</div>
                 </div>
             `;
         }
@@ -1615,7 +1877,7 @@
         const monthScheduleDoc = window.schedulesData[currentMonthKey] || {};
         const staffData = monthScheduleDoc.staffs || {};
 
-        document.getElementById('edit-schedule-title').innerText = `${year}년 ${month}월 매장 근무표 작성`;
+        document.getElementById('edit-schedule-title').innerText = `${year}년 ${month}월 근무표 작성`;
 
         const container = document.getElementById('edit-staff-rows-container');
         container.innerHTML = '';
@@ -1653,7 +1915,7 @@
         document.getElementById('page-schedule-edit-modal').style.display = 'none';
     };
 
-    // 작성한 매장 근무표 Firestore 업데이트 저장
+    // 작성한 근무표 Firestore 업데이트 저장
     window.saveScheduleSheet = async function() {
         if (!currentUser) return;
         document.getElementById('loading-overlay').style.display = 'flex';
@@ -1683,9 +1945,8 @@
             const docRef = doc(db, 'artifacts', 'patek-s', 'public', 'data', 'schedules', currentMonthKey);
             await setDoc(docRef, {
                 staffs: updatedStaffs,
-                staffNames: window.storeStaffs,
                 lastUpdated: formattedDate,
-                updatedBy: currentUser.displayName || currentUser.email || '관리자'
+                updatedBy: window.currentUserData?.name || currentUser.displayName || currentUser.email
             }, { merge: true });
 
             window.closeScheduleEdit();
@@ -1700,7 +1961,7 @@
 
 
     // ==========================================
-    // 휴무 신청 & 캘린더 관리 로직
+    // ⭐️ 신규: 휴무 신청 & 캘린더 관리 로직 (사진 6)
     // ==========================================
 
     window.openLeaveCalendarModal = function() {
@@ -1718,7 +1979,7 @@
         document.getElementById('page-leave-calendar-modal').style.display = 'none';
     };
 
-    // 휴무 달력 그리기
+    // 휴무 달력 그리기 (사진 6 형태)
     window.renderLeaveCalendar = function() {
         const year = window.scheduleYear;
         const month = window.scheduleMonth;
@@ -1729,10 +1990,10 @@
         const firstDay = new Date(year, month - 1, 1).getDay(); // 1일의 요일 인덱스
         const totalDays = getDaysInMonth(year, month);
 
-        // 요일 맞춤용 앞단 빈 셀 삽입
+        // 요일 맞춤용 앞단 빈 셀 삽입 (aspect-square 대신 높이 자동 확장 적용)
         const firstDayShift = firstDay === 0 ? 6 : firstDay - 1; // 월요일 시작 정비
         for (let i = 0; i < firstDayShift; i++) {
-            container.innerHTML += `<div class="aspect-square bg-[#FAF9F5] border border-[#F0EFEA]"></div>`;
+            container.innerHTML += `<div class="min-h-[70px] bg-[#FAF9F5] border border-[#F0EFEA]"></div>`;
         }
 
         for (let d = 1; d <= totalDays; d++) {
@@ -1769,7 +2030,7 @@
             // 행사 하이라이팅 테두리
             let eventBorder = "";
             if (isEventDay) {
-                eventBorder = "border-2 border-amber-500 rounded-lg";
+                eventBorder = "border-2 border-amber-500 rounded-lg z-10";
             }
 
             // 직원 이름 및 지역 노출 가공
@@ -1779,22 +2040,24 @@
                 const isStart = dateStr === req.startDate;
                 const regionSuffix = (isStart && req.region) ? ` (${req.region})` : '';
                 staffNamesMarkup += `
-                    <div class="text-[9px] font-bold text-slate-700 bg-slate-100 rounded px-1 py-0.5 truncate w-full text-center leading-none mt-1">
+                    <div class="text-[9px] font-bold text-slate-700 bg-slate-100 rounded px-1 py-[2px] truncate w-full text-center leading-none mt-[2px]">
                         ${req.name}${regionSuffix}
                     </div>
                 `;
             });
 
             const dayCell = document.createElement('div');
-            dayCell.className = `aspect-square p-1 border border-[#F0EFEA] flex flex-col items-center justify-between cursor-pointer transition-colors hover:bg-slate-50 relative ${selectBg} ${overbookedBg} ${eventBorder}`;
+            // aspect-square 제거, min-h-[70px] h-full 추가하여 내용이 늘어나도 잘리지 않도록 함
+            dayCell.className = `min-h-[70px] h-full p-1 border border-[#F0EFEA] flex flex-col items-center justify-start cursor-pointer transition-colors hover:bg-slate-50 relative ${selectBg} ${overbookedBg} ${eventBorder}`;
             dayCell.onclick = () => window.handleLeaveCalendarCellClick(dateStr);
 
             dayCell.innerHTML = `
-                <div class="w-full flex justify-between">
+                <div class="w-full flex justify-between shrink-0">
                     <span class="text-xs font-bold ${dayTextClass}">${d}</span>
-                    ${isHoliday ? `<span class="text-[8px] text-[#D81B60] truncate font-sans">${PUBLIC_HOLIDAYS_2026[dateStr]}</span>` : ''}
+                    ${isHoliday ? `<span class="text-[8px] text-[#D81B60] truncate font-sans ml-1 mt-0.5">${PUBLIC_HOLIDAYS_2026[dateStr]}</span>` : ''}
                 </div>
-                <div class="w-full flex-1 overflow-y-auto no-scrollbar flex flex-col justify-end mt-1">
+                <!-- overflow-y-auto 제거, justify-start 적용으로 모든 이름이 다 보이도록 확장 -->
+                <div class="w-full flex-1 flex flex-col justify-end mt-1 gap-[1px]">
                     ${staffNamesMarkup}
                 </div>
             `;
@@ -1844,7 +2107,7 @@
         const reason = document.getElementById('leave-reason-input').value.trim();
         const region = document.getElementById('leave-region-input').value.trim();
 
-        // 3일 이상 휴무 시 지역 입력 필수 규격 필터링
+        // ⭐️ 3일 이상 휴무 시 지역 입력 필수 규격 필터링
         if (diffDays >= 3 && !region) {
             window.showCustomAlert("지역을 입력하세요");
             return;
@@ -1853,7 +2116,7 @@
         document.getElementById('loading-overlay').style.display = 'flex';
         try {
             const payload = {
-                name: currentUser.displayName || '미인증',
+                name: window.currentUserData?.name || currentUser.displayName || '미인증',
                 uid: currentUser.uid,
                 startDate: startDate,
                 endDate: endDate,
@@ -1938,10 +2201,10 @@
      화면 UI 영역
      ========================================== -->
 
-<!-- 1. 로그인 화면 -->
-<div id="login-page" style="display: flex;" class="w-full max-w-md mx-auto h-screen bg-[#DCD6CC] flex-col justify-center items-center px-4 font-sans z-[100000] relative">
-    <div class="w-full max-w-md bg-[#FCFBF9] shadow-2xl flex flex-col items-center justify-center relative px-6 rounded-3xl h-[85vh]">
-        <img src="log.png" alt="Patek Philippe" class="w-56 h-auto mb-16 object-contain" />
+<!-- 1. 로그인 화면 (카드 제거 및 배경 통합, 로고 변경) -->
+<div id="login-page" style="display: flex;" class="w-full max-w-md mx-auto h-screen bg-[#FAF9F5] flex-col justify-center items-center px-6 font-sans z-[100000] relative">
+    <div class="w-full flex flex-col items-center justify-center relative">
+        <img src="log2.png" alt="Patek Philippe" class="w-56 h-auto mb-16 object-contain" />
         
         <button onclick="loginWithGoogle()" class="flex items-center gap-4 bg-white border border-[#E8E4DB] px-6 py-4 rounded-full shadow-sm transition-all active:scale-95 w-full justify-center">
             <svg width="20" height="20" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -1951,6 +2214,59 @@
                 <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
             </svg>
             <span class="text-[15px] font-semibold text-[#4A443F]">Google 계정으로 시작하기</span>
+        </button>
+    </div>
+</div>
+
+<!-- 1.5 프로필 등록 화면 (신규 가입용) -->
+<div id="register-page" style="display: none;" class="w-full max-w-md mx-auto h-screen bg-[#FAF9F5] flex-col font-sans z-[100000] relative">
+    <div class="flex items-center justify-center pt-[calc(20px+env(safe-area-inset-top))] pb-3 bg-[#FAF9F5] flex-shrink-0 relative w-full px-5">
+        <h2 class="text-xl font-serif font-bold text-[#333]">프로필</h2>
+        <button onclick="cancelRegistration()" class="absolute right-5 text-[#999] p-1 active:scale-95">
+            <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+    </div>
+
+    <div class="flex-1 overflow-y-auto px-6 pt-2 space-y-4 no-scrollbar pb-10">
+        
+        <!-- 프로필 사진 업로드 영역 -->
+        <div class="flex justify-center mt-2 mb-4">
+            <div class="relative w-24 h-24 rounded-full bg-[#E8E4DB] flex items-center justify-center overflow-hidden cursor-pointer border-2 border-[#D8B98B]" onclick="document.getElementById('reg-profile-img-input').click()">
+                <img id="reg-profile-img-preview" src="" class="w-full h-full object-cover hidden" />
+                <i id="reg-profile-img-icon" data-lucide="camera" class="w-8 h-8 text-[#8A847E]"></i>
+                <input type="file" id="reg-profile-img-input" class="hidden" accept="image/*" onchange="window.previewProfileImage(this, 'reg-profile-img-preview', 'reg-profile-img-icon')" />
+            </div>
+        </div>
+
+        <div>
+            <label class="block text-sm font-semibold text-[#4A443F] mb-1.5 ml-1">이름</label>
+            <input type="text" id="reg-name" class="form-input" placeholder="이름을 입력하세요">
+        </div>
+        <div>
+            <label class="block text-sm font-semibold text-[#4A443F] mb-1.5 ml-1">사번</label>
+            <input type="text" id="reg-emp-id" class="form-input" placeholder="사원번호 입력">
+        </div>
+        <div>
+            <label class="block text-sm font-semibold text-[#4A443F] mb-1.5 ml-1">생년월일</label>
+            <input type="date" id="reg-birth" class="form-input text-left w-full">
+        </div>
+        <div>
+            <label class="block text-sm font-semibold text-[#4A443F] mb-1.5 ml-1">전화번호</label>
+            <input type="tel" id="reg-phone" class="form-input" placeholder="010-0000-0000" oninput="window.autoHyphenPhone(this)">
+        </div>
+        <div>
+            <label class="block text-sm font-semibold text-[#4A443F] mb-1.5 ml-1">비상연락망</label>
+            <input type="tel" id="reg-emergency" class="form-input" placeholder="비상 시 연락처 입력" oninput="window.autoHyphenPhone(this)">
+        </div>
+        <div>
+            <label class="block text-sm font-semibold text-[#4A443F] mb-1.5 ml-1">관계</label>
+            <input type="text" id="reg-relation" class="form-input" placeholder="예: 부, 모, 배우자 등">
+        </div>
+    </div>
+
+    <div class="p-6 bg-white border-t border-[#F0EFEA] pb-[calc(20px+env(safe-area-inset-bottom))] shrink-0">
+        <button onclick="submitRegistration()" class="w-full bg-[#B4975A] text-white py-3.5 rounded-xl text-[16px] font-bold shadow-md active:scale-95 transition-transform">
+            등록 신청하기
         </button>
     </div>
 </div>
@@ -1975,38 +2291,38 @@
 <div id="app-container" style="display: none;" class="w-full max-w-md mx-auto h-screen relative overflow-hidden bg-[#FAF9F5] flex-col">
     
     <!-- 공통 헤더 로고 -->
-    <div class="pt-12 pb-4 bg-[#FAF9F5] flex-shrink-0 z-10 relative flex flex-col items-center justify-center">
-        <img src="log.png" alt="Patek Philippe" class="w-40 h-auto object-contain" />
-        <div class="w-[80%] flex items-center justify-center mt-4 opacity-50">
-            <div class="h-[1px] w-full bg-[#B4975A]"></div>
-            <div class="w-1.5 h-1.5 rotate-45 bg-[#B4975A] mx-2 flex-shrink-0"></div>
-            <div class="h-[1px] w-full bg-[#B4975A]"></div>
+    <div class="pb-1 bg-[#FAF9F5] flex-shrink-0 z-10 relative flex items-center justify-center w-full px-5" style="padding-top: max(4px, env(safe-area-inset-top));">
+        <!-- 톱니바퀴 및 새로고침 버튼 추가 -->
+        <div class="absolute right-5 flex gap-4 mt-1">
+            <button onclick="location.reload()" class="text-[#8A847E] hover:text-[#4A443F] active:scale-95 transition-all"><i data-lucide="rotate-cw" class="w-[18px] h-[18px]"></i></button>
+            <button onclick="openProfile()" class="text-[#8A847E] hover:text-[#4A443F] active:scale-95 transition-all"><i data-lucide="settings" class="w-[18px] h-[18px]"></i></button>
         </div>
+        <img src="log.png" alt="Patek Philippe" class="w-24 h-auto object-contain" />
     </div>
 
     <!-- 완전히 독립된 탭 컨테이너 -->
     <div class="flex-1 relative w-full h-full bg-[#FAF9F5]">
         
         <!-- [탭] 캘린더 (메인 화면) -->
-        <div id="page-calendar" class="page active p-6 no-scrollbar">
-            <h2 class="text-2xl font-serif text-center mb-8 text-[#333]">캘린더</h2>
+        <div id="page-calendar" class="page active px-5 pt-1 no-scrollbar">
+            <h2 class="text-xl font-serif text-center mb-4 text-[#333]">캘린더</h2>
             <div class="bg-white rounded-2xl shadow-sm border border-[#F0EFEA] p-4 h-[400px] flex items-center justify-center text-[#999]">
                 달력 컴포넌트 영역
             </div>
         </div>
 
         <!-- [탭] 공지사항 리스트 -->
-        <div id="page-notice" class="page p-6 no-scrollbar">
-            <div class="flex justify-between items-center mb-5 relative">
+        <div id="page-notice" class="page px-5 pt-1 no-scrollbar">
+            <div class="flex justify-between items-center mb-3 relative">
                 <div class="w-10"></div>
-                <h2 class="text-2xl font-serif font-bold text-[#333]">공지사항</h2>
-                <button onclick="openNoticeCreate()" class="w-10 h-10 flex items-center justify-center border border-[#E5E5E5] rounded-xl text-[#B4975A] bg-white shadow-sm active:scale-95">
-                    <i data-lucide="plus" class="w-5 h-5"></i>
+                <h2 class="text-xl font-serif font-bold text-[#333]">공지사항</h2>
+                <button onclick="openNoticeCreate()" class="w-8 h-8 flex items-center justify-center border border-[#E5E5E5] rounded-xl text-[#B4975A] bg-white shadow-sm active:scale-95">
+                    <i data-lucide="plus" class="w-4 h-4"></i>
                 </button>
             </div>
 
             <!-- 검색창 -->
-            <div class="bg-white border border-[#E8E4DB] rounded-[14px] px-3 py-3 flex items-center shadow-sm relative mb-4">
+            <div class="bg-white border border-[#E8E4DB] rounded-[14px] px-3 py-2 flex items-center shadow-sm relative mb-3">
                 <i data-lucide="search" class="text-[#8A847E] mr-2 shrink-0 w-[18px] h-[18px]"></i>
                 <input
                     id="notice-search-input"
@@ -2020,7 +2336,7 @@
             </div>
 
             <!-- 필터 -->
-            <div class="bg-white border border-[#E5DED2] rounded-[22px] p-[4px] shadow-sm mb-4 overflow-x-auto no-scrollbar">
+            <div class="bg-white border border-[#E5DED2] rounded-[22px] p-[4px] shadow-sm mb-3 overflow-x-auto no-scrollbar">
                 <div class="grid grid-cols-6 gap-1 w-full">
                     <button data-category="전체" onclick="setNoticeCategoryFilter('전체')" class="notice-filter-btn">전체</button>
                     <button data-category="매장" onclick="setNoticeCategoryFilter('매장')" class="notice-filter-btn">매장</button>
@@ -2032,7 +2348,7 @@
             </div>
 
             <!-- 정렬 -->
-            <div class="flex items-center justify-between mb-4 px-1">
+            <div class="flex items-center justify-between mb-3 px-1">
                 <div id="notice-result-count" class="text-[13px] text-[#4A443F] font-medium">전체 0</div>
                 <div class="relative flex items-center">
                     <select id="notice-sort-select" onchange="setNoticeSortType(this.value)" class="appearance-none bg-transparent outline-none text-[13px] text-[#4A443F] font-medium pr-5 cursor-pointer text-center" style="text-align-last:center; text-align:center;">
@@ -2043,74 +2359,79 @@
                 </div>
             </div>
 
-            <div id="notice-list-content" class="space-y-3 mt-4"></div>
+            <div id="notice-list-content" class="space-y-3 mt-3"></div>
         </div>
 
-        <!-- [탭] 매장 근무표 화면 -->
-        <div id="page-schedule" class="page bg-[#FAF9F5] no-scrollbar px-4 pt-4">
-            <div class="flex flex-col items-center mb-5 w-full text-center">
-                <div class="flex items-center justify-center w-full relative mb-4 h-10">
-                    <h2 class="text-2xl font-serif text-[#3A3532] font-semibold absolute left-1/2 -translate-x-1/2 whitespace-nowrap">매장 근무표</h2>
+        <!-- [탭] 신규: 매장 근무표 화면 -->
+        <div id="page-schedule" class="page bg-[#FAF9F5] no-scrollbar px-3 pt-1">
+            <div class="flex flex-col items-center w-full text-center">
+                
+                <!-- 수정일/타이틀/버튼 헤더 -->
+                <div class="flex items-center justify-between w-full relative mb-1.5 h-8">
+                    <div id="schedule-meta-info" class="absolute left-0 flex flex-col items-start justify-center h-full text-left leading-tight w-[35%] overflow-hidden">
+                        <span class="text-[9px] text-[#999]">로딩 중...</span>
+                    </div>
+
+                    <h2 class="text-xl font-serif text-[#3A3532] font-semibold absolute left-1/2 -translate-x-1/2 whitespace-nowrap">근무표</h2>
+                    
                     <div class="flex gap-1.5 absolute right-0">
-                        <button onclick="triggerScheduleExcelUpload()" class="w-9 h-9 bg-white border border-[#E8E4DB] rounded-xl flex items-center justify-center text-[#B4975A] shadow-sm active:scale-95">
-                            <i data-lucide="plus" class="w-4.5 h-4.5"></i>
+                        <button onclick="triggerScheduleExcelUpload()" class="w-7 h-7 bg-white border border-[#E8E4DB] rounded-lg flex items-center justify-center text-[#B4975A] shadow-sm active:scale-95">
+                            <i data-lucide="plus" class="w-4 h-4"></i>
                         </button>
                         <input type="file" id="schedule-excel-input" accept=".xlsx,.xls" class="hidden" onchange="handleScheduleExcelUpload(event)" />
-                        <button onclick="openLeaveCalendarModal()" class="w-9 h-9 bg-white border border-[#E8E4DB] rounded-xl flex items-center justify-center text-[#B4975A] shadow-sm active:scale-95">
-                            <i data-lucide="calendar-days" class="w-4.5 h-4.5"></i>
+                        <button onclick="openLeaveCalendarModal()" class="w-7 h-7 bg-white border border-[#E8E4DB] rounded-lg flex items-center justify-center text-[#B4975A] shadow-sm active:scale-95">
+                            <i data-lucide="calendar-days" class="w-4 h-4"></i>
                         </button>
                     </div>
                 </div>
 
-                <!-- 월 선택/수정 정보 바 -->
-                <div class="w-full flex items-center justify-between gap-3">
-                    <div class="relative shrink-0 flex items-center rounded-xl border border-[#D8B98B] bg-[#FFFDF8] shadow-sm overflow-hidden h-12">
-                        <button onclick="adjustScheduleMonth(-1)" class="w-11 h-full flex items-center justify-center text-[#B17A2A] active:bg-[#F8EFE3]">
-                            <i data-lucide="chevron-left" class="w-5 h-5"></i>
+                <!-- 2번째 줄: 월 선택 및 우측 범례/법정공휴일/삭제버튼 -->
+                <div class="w-full flex items-start justify-between gap-2">
+                    <div class="relative shrink-0 flex items-center rounded-xl border border-[#D8B98B] bg-[#FFFDF8] shadow-sm overflow-hidden h-9">
+                        <button onclick="adjustScheduleMonth(-1)" class="w-9 h-full flex items-center justify-center text-[#B17A2A] active:bg-[#F8EFE3]">
+                            <i data-lucide="chevron-left" class="w-4 h-4"></i>
                         </button>
-                        <button type="button" onclick="openScheduleMonthPicker()" class="relative h-full flex items-center justify-center px-3 min-w-[120px] cursor-pointer active:bg-[#F8EFE3] bg-transparent border-0">
-                            <span id="schedule-month-text" class="text-[18px] font-medium text-[#2F2924] pointer-events-none whitespace-nowrap">2026년 5월</span>
+                        <button type="button" onclick="openScheduleMonthPicker()" class="relative h-full flex items-center justify-center px-2 min-w-[90px] cursor-pointer active:bg-[#F8EFE3] bg-transparent border-0">
+                            <span id="schedule-month-text" class="text-[14px] font-bold text-[#2F2924] pointer-events-none whitespace-nowrap">2026년 5월</span>
                         </button>
                         <input type="month" id="schedule-month-picker" onchange="handleMonthPicker(this.value)" class="absolute opacity-0 pointer-events-none w-1 h-1" />
-                        <button onclick="adjustScheduleMonth(1)" class="w-11 h-full flex items-center justify-center text-[#B17A2A] active:bg-[#F8EFE3]">
-                            <i data-lucide="chevron-right" class="w-5 h-5"></i>
+                        <button onclick="adjustScheduleMonth(1)" class="w-9 h-full flex items-center justify-center text-[#B17A2A] active:bg-[#F8EFE3]">
+                            <i data-lucide="chevron-right" class="w-4 h-4"></i>
                         </button>
                     </div>
 
-                    <div class="flex-1 min-w-0 flex flex-col items-end text-right">
-                        <div id="schedule-meta-info" class="text-[11px] text-[#4A443F] font-medium leading-tight max-w-full">근무표 불러오는 중...</div>
-                        <span id="schedule-holiday-info" class="text-[11px] text-[#6E2626] font-semibold mt-2">(법정공휴일 : 0개)</span>
+                    <div class="flex flex-col items-end gap-0.5 max-w-[60%] pt-0.5">
+                        <div class="flex flex-wrap justify-end gap-1">
+                            <span class="inline-flex items-center gap-0.5 text-[10px] font-bold text-[#6E2626] bg-[#FAD7D5] border border-[#F0B9B7] rounded px-1.5 py-0.5"><span class="w-2 h-2 rounded-sm bg-[#E87979]"></span>A</span>
+                            <span class="inline-flex items-center gap-0.5 text-[10px] font-bold text-[#234B7A] bg-[#D9E7FA] border border-[#BFD2EF] rounded px-1.5 py-0.5"><span class="w-2 h-2 rounded-sm bg-[#6793D8]"></span>B</span>
+                            <span class="inline-flex items-center gap-0.5 text-[10px] font-bold text-[#7A4F14] bg-[#FFE7B8] border border-[#F4D08C] rounded px-1.5 py-0.5"><span class="w-2 h-2 rounded-sm bg-[#F0B64D]"></span>C</span>
+                            <span class="inline-flex items-center gap-0.5 text-[10px] font-bold text-[#4A443F] bg-[#EEEEEA] border border-[#DDDDD8] rounded px-1.5 py-0.5"><span class="w-2 h-2 rounded-sm bg-[#C8C8C0]"></span>휴무</span>
+                        </div>
+                        <div class="w-full flex items-center justify-end gap-1.5 pr-1 mt-0.5">
+                            <span id="schedule-holiday-info" class="text-[9px] text-[#D81B60] font-semibold tracking-tighter">(법정공휴일 : 0개)</span>
+                            <button onclick="deleteCurrentSchedule()" class="text-[#8A847E] hover:text-[#FF3B30] active:scale-95 transition-all">
+                                <i data-lucide="trash-2" class="w-3 h-3"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <!-- 달력형 근무표 -->
-            <div class="w-full bg-[#FFFDF8] border border-[#E8D8BD] rounded-2xl shadow-[0_8px_28px_rgba(139,115,85,0.12)] overflow-hidden mb-8">
-                <div class="flex items-center justify-between px-5 py-4 border-b border-[#E8D8BD] bg-[#FFFDF8]">
-                    <div class="flex items-center gap-3">
-                        <i data-lucide="calendar-days" class="w-6 h-6 text-[#B4975A]"></i>
-                        <span id="schedule-card-month-text" class="text-[18px] font-bold text-[#2F2924]"></span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <span class="inline-flex items-center gap-1 text-[12px] font-bold text-[#6E2626] bg-[#FAD7D5] border border-[#F0B9B7] rounded-md px-2 py-1"><span class="w-2.5 h-2.5 rounded-sm bg-[#E87979]"></span>A</span>
-                        <span class="inline-flex items-center gap-1 text-[12px] font-bold text-[#234B7A] bg-[#D9E7FA] border border-[#BFD2EF] rounded-md px-2 py-1"><span class="w-2.5 h-2.5 rounded-sm bg-[#6793D8]"></span>B</span>
-                        <span class="inline-flex items-center gap-1 text-[12px] font-bold text-[#7A4F14] bg-[#FFE7B8] border border-[#F4D08C] rounded-md px-2 py-1"><span class="w-2.5 h-2.5 rounded-sm bg-[#F0B64D]"></span>C</span>
-                        <span class="inline-flex items-center gap-1 text-[12px] font-bold text-[#4A443F] bg-[#EEEEEA] border border-[#DDDDD8] rounded-md px-2 py-1"><span class="w-2.5 h-2.5 rounded-sm bg-[#C8C8C0]"></span>휴무</span>
-                    </div>
-                </div>
-                <div id="schedule-calendar-grid" class="grid grid-cols-7"></div>
+            <div class="w-full bg-[#FFFDF8] border border-[#E8D8BD] rounded-2xl shadow-[0_8px_28px_rgba(139,115,85,0.12)] overflow-hidden mb-6 mt-1">
+                <div id="schedule-calendar-grid" class="grid grid-cols-7 border-t-0"></div>
             </div>
         </div>
 
         <!-- [탭] 개인용 앨범 화면 -->
         <div id="page-album" class="page bg-[#FAF9F5] no-scrollbar">
-            <div class="flex flex-col items-center pt-4 pb-2 shrink-0">
-                <h2 class="text-2xl font-serif text-[#333] tracking-wider mb-5">앨범</h2>
+            <div class="flex flex-col items-center pt-1 pb-1 shrink-0">
+                <h2 class="text-xl font-serif text-[#333] tracking-wider mb-2">앨범</h2>
 
                 <!-- 검색창 -->
                 <div class="w-full px-5 flex gap-2 relative">
-                    <div class="flex-1 min-w-0 bg-white border border-[#E8E4DB] rounded-[12px] px-3 py-2.5 flex items-center shadow-sm relative">
-                        <i data-lucide="search" class="text-[#8A847E] mr-2 shrink-0 w-[18px] h-[18px]"></i>
+                    <div class="flex-1 min-w-0 bg-white border border-[#E8E4DB] rounded-[12px] px-3 py-2 flex items-center shadow-sm relative">
+                        <i data-lucide="search" class="text-[#8A847E] mr-2 shrink-0 w-[16px] h-[16px]"></i>
                         <input
                             id="album-search-input"
                             type="text"
@@ -2124,25 +2445,25 @@
                 </div>
 
                 <!-- 카테고리 필터 탭 -->
-                <div class="w-full px-5 mt-4 flex gap-2 overflow-x-auto no-scrollbar pb-1">
-                    <button data-category="전체" onclick="setAlbumFilter('전체', this)" class="album-filter-btn flex-1 py-2 rounded-lg text-[13px] font-sans whitespace-nowrap transition-colors border shadow-sm bg-[#8B7355] text-white border-[#8B7355] font-medium">
+                <div class="w-full px-5 mt-3 flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                    <button data-category="전체" onclick="setAlbumFilter('전체', this)" class="album-filter-btn flex-1 py-1.5 rounded-lg text-[12px] font-sans whitespace-nowrap transition-colors border shadow-sm bg-[#8B7355] text-white border-[#8B7355] font-medium">
                         전체
                     </button>
-                    <button data-category="착용샷" onclick="setAlbumFilter('착용샷', this)" class="album-filter-btn flex-1 py-2 rounded-lg text-[13px] font-sans whitespace-nowrap transition-colors border shadow-sm bg-white text-[#8A847E] border-[#E8E4DB]">
+                    <button data-category="착용샷" onclick="setAlbumFilter('착용샷', this)" class="album-filter-btn flex-1 py-1.5 rounded-lg text-[12px] font-sans whitespace-nowrap transition-colors border shadow-sm bg-white text-[#8A847E] border-[#E8E4DB]">
                         착용샷
                     </button>
-                    <button data-category="실물" onclick="setAlbumFilter('실물', this)" class="album-filter-btn flex-1 py-2 rounded-lg text-[13px] font-sans whitespace-nowrap transition-colors border shadow-sm bg-white text-[#8A847E] border-[#E8E4DB]">
+                    <button data-category="실물" onclick="setAlbumFilter('실물', this)" class="album-filter-btn flex-1 py-1.5 rounded-lg text-[12px] font-sans whitespace-nowrap transition-colors border shadow-sm bg-white text-[#8A847E] border-[#E8E4DB]">
                         실물
                     </button>
-                    <button data-category="기타" onclick="setAlbumFilter('기타', this)" class="album-filter-btn flex-1 py-2 rounded-lg text-[13px] font-sans whitespace-nowrap transition-colors border shadow-sm bg-white text-[#8A847E] border-[#E8E4DB]">
+                    <button data-category="기타" onclick="setAlbumFilter('기타', this)" class="album-filter-btn flex-1 py-1.5 rounded-lg text-[12px] font-sans whitespace-nowrap transition-colors border shadow-sm bg-white text-[#8A847E] border-[#E8E4DB]">
                         기타
                     </button>
                 </div>
             </div>
 
             <!-- 사진 앨범 그리드 영역 -->
-            <div class="px-5 pt-2 pb-10">
-                <div id="album-grid-content" class="grid grid-cols-2 gap-x-3 gap-y-4"></div>
+            <div class="px-5 pt-2 pb-8">
+                <div id="album-grid-content" class="grid grid-cols-2 gap-x-3 gap-y-3"></div>
             </div>
 
             <!-- 다중선택 하단 플로팅 컨트롤 바 -->
@@ -2172,32 +2493,89 @@
             </div>
 
             <!-- 사진 추가 Floating Action Button -->
-            <button onclick="openCreateAlbum()" class="absolute bottom-[24px] right-6 w-14 h-14 bg-[#3A3532] text-[#F3EFE8] rounded-full flex items-center justify-center shadow-[0_8px_20px_rgba(58,53,50,0.3)] active:scale-95 z-40 border border-[#2A2522]">
-                <i data-lucide="plus" class="w-7 h-7" stroke-width="1.5"></i>
+            <button onclick="openCreateAlbum()" class="absolute bottom-[24px] right-6 w-12 h-12 bg-[#3A3532] text-[#F3EFE8] rounded-full flex items-center justify-center shadow-[0_8px_20px_rgba(58,53,50,0.3)] active:scale-95 z-40 border border-[#2A2522]">
+                <i data-lucide="plus" class="w-6 h-6" stroke-width="1.5"></i>
             </button>
         </div>
 
         <!-- [탭] 임시 화면들 -->
-        <div id="page-sales" class="page p-6 no-scrollbar"><div class="h-full flex items-center justify-center text-[#999]">매출 준비중입니다.</div></div>
-        <div id="page-inventory" class="page p-6 no-scrollbar"><div class="h-full flex items-center justify-center text-[#999]">재고 준비중입니다.</div></div>
-        <div id="page-as" class="page p-6 no-scrollbar"><div class="h-full flex items-center justify-center text-[#999]">A/S 준비중입니다.</div></div>
-        <div id="page-sp" class="page p-6 no-scrollbar"><div class="h-full flex items-center justify-center text-[#999]">SP 준비중입니다.</div></div>
+        <div id="page-sales" class="page px-5 pt-3 no-scrollbar"><div class="h-full flex items-center justify-center text-[#999]">매출 준비중입니다.</div></div>
+        <div id="page-inventory" class="page px-5 pt-3 no-scrollbar"><div class="h-full flex items-center justify-center text-[#999]">재고 준비중입니다.</div></div>
+        <div id="page-as" class="page px-5 pt-3 no-scrollbar"><div class="h-full flex items-center justify-center text-[#999]">A/S 준비중입니다.</div></div>
+        <div id="page-sp" class="page px-5 pt-3 no-scrollbar"><div class="h-full flex items-center justify-center text-[#999]">SP 준비중입니다.</div></div>
     </div>
 
-    <!-- 하단 네비게이션 (시안 3 완벽 매칭) -->
-    <div id="bottom-nav-bar" class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] bg-white border-t border-[#F0EFEA] grid grid-cols-4 gap-y-4 gap-x-2 px-4 pt-4 pb-[calc(24px+env(safe-area-inset-bottom))] z-[90] shadow-[0_-8px_30px_rgba(0,0,0,0.04)] rounded-t-[24px]">
-        <!-- 첫 번째 줄 -->
-        <div class="nav-item flex flex-col items-center justify-center gap-1 text-[#A0A0A0] w-full cursor-pointer" onclick="window.switchTab('notice', this)"><i data-lucide="megaphone" class="w-[22px] h-[22px]"></i><span class="text-[11.5px] font-bold">공지사항</span></div>
-        <div class="nav-item flex flex-col items-center justify-center gap-1 text-[#A0A0A0] w-full cursor-pointer" onclick="window.switchTab('schedule', this)"><i data-lucide="calendar-days" class="w-[22px] h-[22px]"></i><span class="text-[11.5px] font-bold">근무표</span></div>
-        <div class="nav-item flex flex-col items-center justify-center gap-1 text-[#A0A0A0] w-full cursor-pointer active" onclick="window.switchTab('calendar', this)"><i data-lucide="calendar" class="w-[22px] h-[22px]"></i><span class="text-[11.5px] font-bold">캘린더</span></div>
-        <div class="nav-item flex flex-col items-center justify-center gap-1 text-[#A0A0A0] w-full cursor-pointer" onclick="window.switchTab('sales', this)"><i data-lucide="bar-chart-3" class="w-[22px] h-[22px]"></i><span class="text-[11.5px] font-bold">매출</span></div>
+    <!-- 하단 네비게이션 (시안 3 완벽 매칭: 4x2 격자 그리드 형태 최적화 교정 완료) -->
+    <div id="bottom-nav-bar" class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] bg-white border-t border-[#F0EFEA] grid grid-cols-4 gap-y-3 gap-x-2 px-3 pt-3 z-[90] shadow-[0_-8px_30px_rgba(0,0,0,0.04)] rounded-t-[20px]" style="padding-bottom: max(4px, env(safe-area-inset-bottom));">
+        <!-- 첫 번째 줄 (정밀 정렬 및 아이콘-라벨 분배) -->
+        <div class="nav-item flex flex-col items-center justify-center gap-1 text-[#A0A0A0] w-full cursor-pointer" onclick="window.switchTab('notice', this)"><i data-lucide="megaphone" class="w-[20px] h-[20px]"></i><span class="text-[11px] font-bold">공지사항</span></div>
+        <div class="nav-item flex flex-col items-center justify-center gap-1 text-[#A0A0A0] w-full cursor-pointer" onclick="window.switchTab('schedule', this)"><i data-lucide="calendar-days" class="w-[20px] h-[20px]"></i><span class="text-[11px] font-bold">근무표</span></div>
+        <div class="nav-item flex flex-col items-center justify-center gap-1 text-[#A0A0A0] w-full cursor-pointer active" onclick="window.switchTab('calendar', this)"><i data-lucide="calendar" class="w-[20px] h-[20px]"></i><span class="text-[11px] font-bold">캘린더</span></div>
+        <div class="nav-item flex flex-col items-center justify-center gap-1 text-[#A0A0A0] w-full cursor-pointer" onclick="window.switchTab('sales', this)"><i data-lucide="bar-chart-3" class="w-[20px] h-[20px]"></i><span class="text-[11px] font-bold">매출</span></div>
         <!-- 두 번째 줄 -->
-        <div class="nav-item flex flex-col items-center justify-center gap-1 text-[#A0A0A0] w-full cursor-pointer" onclick="window.switchTab('inventory', this)"><i data-lucide="package" class="w-[22px] h-[22px]"></i><span class="text-[11.5px] font-bold">재고</span></div>
-        <div class="nav-item flex flex-col items-center justify-center gap-1 text-[#A0A0A0] w-full cursor-pointer" onclick="window.switchTab('as', this)"><i data-lucide="wrench" class="w-[22px] h-[22px]"></i><span class="text-[11.5px] font-bold">A/S</span></div>
-        <div class="nav-item flex flex-col items-center justify-center gap-1 text-[#A0A0A0] w-full cursor-pointer" onclick="window.switchTab('sp', this)"><i data-lucide="star" class="w-[22px] h-[22px]"></i><span class="text-[11.5px] font-bold">SP</span></div>
-        <div class="nav-item flex flex-col items-center justify-center gap-1 text-[#A0A0A0] w-full cursor-pointer" onclick="window.switchTab('album', this)"><i data-lucide="image" class="w-[22px] h-[22px]"></i><span class="text-[11.5px] font-bold">앨범</span></div>
+        <div class="nav-item flex flex-col items-center justify-center gap-1 text-[#A0A0A0] w-full cursor-pointer" onclick="window.switchTab('inventory', this)"><i data-lucide="package" class="w-[20px] h-[20px]"></i><span class="text-[11px] font-bold">재고</span></div>
+        <div class="nav-item flex flex-col items-center justify-center gap-1 text-[#A0A0A0] w-full cursor-pointer" onclick="window.switchTab('as', this)"><i data-lucide="wrench" class="w-[20px] h-[20px]"></i><span class="text-[11px] font-bold">A/S</span></div>
+        <div class="nav-item flex flex-col items-center justify-center gap-1 text-[#A0A0A0] w-full cursor-pointer" onclick="window.switchTab('sp', this)"><i data-lucide="star" class="w-[20px] h-[20px]"></i><span class="text-[11px] font-bold">SP</span></div>
+        <div class="nav-item flex flex-col items-center justify-center gap-1 text-[#A0A0A0] w-full cursor-pointer" onclick="window.switchTab('album', this)"><i data-lucide="image" class="w-[20px] h-[20px]"></i><span class="text-[11px] font-bold">앨범</span></div>
     </div>
 </div>
+
+<!-- ==========================================
+     환경 설정(사용자 정보/로그아웃) 모달 추가 
+     ========================================== -->
+<div id="page-profile-modal" style="display: none;" class="fixed inset-0 w-full max-w-md mx-auto bg-black/40 backdrop-blur-[2px] z-[300] flex-col items-center justify-center p-6">
+    <div class="bg-[#FCFBF9] rounded-2xl w-full max-w-[320px] shadow-2xl border border-[#E8E4DB] flex flex-col overflow-hidden relative pt-6 pb-2">
+        <button onclick="closeProfile()" class="absolute right-4 top-4 text-[#999] p-1 active:scale-95"><i data-lucide="x" class="w-5 h-5"></i></button>
+        
+        <div class="flex flex-col items-center px-6 pt-2 pb-5 border-b border-[#F0EFEA]">
+            <div class="relative w-16 h-16 rounded-full bg-[#E8E4DB] flex items-center justify-center overflow-hidden cursor-pointer border border-[#D8B98B] mb-2" onclick="document.getElementById('edit-profile-img-input').click()">
+                <img id="edit-profile-img-preview" src="" class="w-full h-full object-cover hidden" />
+                <i id="edit-profile-img-icon" data-lucide="camera" class="w-6 h-6 text-[#8A847E]"></i>
+                <input type="file" id="edit-profile-img-input" class="hidden" accept="image/*" onchange="window.previewProfileImage(this, 'edit-profile-img-preview', 'edit-profile-img-icon')" />
+            </div>
+            
+            <div class="text-[16px] font-bold text-[#3A3532] mb-0.5">내 프로필 설정</div>
+            <div class="text-[11px] text-[#8A847E]">사진 변경 및 정보 수정이 가능합니다.</div>
+        </div>
+
+        <div class="p-5 space-y-3 flex-1 overflow-y-auto max-h-[60vh] no-scrollbar pb-10">
+            <div>
+                <label class="block text-[11px] font-bold text-[#666] mb-1.5 ml-1">이름</label>
+                <input id="profile-name" type="text" class="form-input text-xs py-2.5">
+            </div>
+            <div>
+                <label class="block text-[11px] font-bold text-[#666] mb-1.5 ml-1">사번</label>
+                <input id="profile-emp-id" type="text" class="form-input text-xs py-2.5">
+            </div>
+            <div>
+                <label class="block text-[11px] font-bold text-[#666] mb-1.5 ml-1">생년월일</label>
+                <input id="profile-birth" type="date" class="form-input text-xs py-2.5 text-left w-full">
+            </div>
+            <div>
+                <label class="block text-[11px] font-bold text-[#666] mb-1.5 ml-1">전화번호</label>
+                <input id="profile-phone" type="tel" class="form-input text-xs py-2.5" oninput="window.autoHyphenPhone(this)">
+            </div>
+            <div>
+                <label class="block text-[11px] font-bold text-[#666] mb-1.5 ml-1">비상연락망</label>
+                <input id="profile-emergency" type="tel" class="form-input text-xs py-2.5" oninput="window.autoHyphenPhone(this)">
+            </div>
+            <div>
+                <label class="block text-[11px] font-bold text-[#666] mb-1.5 ml-1">관계</label>
+                <input id="profile-relation" type="text" class="form-input text-xs py-2.5" placeholder="예: 부, 모, 배우자 등">
+            </div>
+        </div>
+
+        <div class="p-5 border-t border-[#F0EFEA] flex flex-col gap-2 bg-white shrink-0">
+            <button onclick="submitProfileEdit()" class="w-full bg-[#B4975A] text-white py-3 rounded-xl text-[14px] font-bold shadow-sm active:scale-95 transition-colors">
+                저장하기
+            </button>
+            <button onclick="logout()" class="w-full bg-white hover:bg-[#FFF5F5] border border-[#FAD7D5] text-[#D81B60] py-3 rounded-xl text-[14px] font-bold shadow-sm transition-colors flex items-center justify-center gap-2 active:scale-95">
+                <i data-lucide="log-out" class="w-4 h-4"></i> 로그아웃
+            </button>
+        </div>
+    </div>
+</div>
+
 
 <!-- 근무표 월 선택 모달 -->
 <div id="schedule-month-modal" style="display:none;" class="fixed inset-0 bg-black/35 z-[260] items-end justify-center">
@@ -2206,7 +2584,7 @@
             <button onclick="adjustSchedulePickerYear(-1)" class="w-10 h-10 rounded-full bg-white border border-[#E8E4DB] flex items-center justify-center text-[#8B7355] active:scale-95">
                 <i data-lucide="chevron-left" class="w-5 h-5"></i>
             </button>
-            <div id="schedule-picker-year-text" class="text-[20px] font-bold text-[#2F2924]">2026년</div>
+            <button type="button" id="schedule-picker-year-text" onclick="openScheduleYearPicker()" class="text-[20px] font-bold text-[#2F2924] bg-transparent border-0 px-3 py-1 rounded-lg active:bg-[#F2EFE8]">2026년</button>
             <button onclick="adjustSchedulePickerYear(1)" class="w-10 h-10 rounded-full bg-white border border-[#E8E4DB] flex items-center justify-center text-[#8B7355] active:scale-95">
                 <i data-lucide="chevron-right" class="w-5 h-5"></i>
             </button>
@@ -2222,15 +2600,15 @@
 
 <!-- 공지사항 등록 -->
 <div id="page-notice-create" style="display: none;" class="fixed inset-0 w-full max-w-md mx-auto bg-[#FAF9F5] z-[200] flex-col">
-    <div class="pt-12 pb-4 bg-[#FAF9F5] flex-shrink-0 relative flex flex-col items-center">
-        <button onclick="closeNoticeCreate()" class="absolute right-6 top-14 text-[#999] p-2"><i data-lucide="x" class="w-6 h-6"></i></button>
-        <img src="log.png" alt="Patek Philippe" class="w-32 h-auto object-contain mt-2 mb-4" />
-        <h2 class="text-2xl font-serif font-bold mb-2 text-[#333]">공지사항 등록</h2>
+    <div class="pb-4 bg-[#FAF9F5] flex-shrink-0 relative flex flex-col items-center" style="padding-top: max(4px, env(safe-area-inset-top));">
+        <button onclick="closeNoticeCreate()" class="absolute right-6 top-10 text-[#999] p-2"><i data-lucide="x" class="w-6 h-6"></i></button>
+        <img src="log.png" alt="Patek Philippe" class="w-24 h-auto object-contain mb-3" />
+        <h2 class="text-xl font-serif font-bold mb-1 text-[#333]">공지사항 등록</h2>
     </div>
 
-    <div class="flex-1 overflow-y-auto p-6 space-y-6 pb-32">
+    <div class="flex-1 overflow-y-auto p-5 space-y-5 pb-32">
         <div>
-            <label class="block text-sm font-semibold text-[#666] mb-3">Category</label>
+            <label class="block text-sm font-semibold text-[#666] mb-2">Category</label>
             <div class="grid grid-cols-5 gap-2">
                 <button data-category="매장" onclick="selectCategory('매장')" class="cat-btn">매장</button>
                 <button data-category="본사" onclick="selectCategory('본사')" class="cat-btn">본사</button>
@@ -2244,89 +2622,89 @@
             <div>
                 <label class="block text-sm font-semibold text-[#666] mb-2">Start Date</label>
                 <div class="relative">
-                    <input type="date" id="input-register-date" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-3.5 outline-none font-medium appearance-none text-[13px]" />
-                    <i data-lucide="calendar-days" class="absolute right-3 top-3.5 text-[#999] pointer-events-none w-4 h-4"></i>
+                    <input type="date" id="input-register-date" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-3 outline-none font-medium appearance-none text-[13px]" />
+                    <i data-lucide="calendar-days" class="absolute right-3 top-3 text-[#999] pointer-events-none w-4 h-4"></i>
                 </div>
             </div>
             <div>
                 <label class="block text-sm font-semibold text-[#666] mb-2">Due Date</label>
                 <div class="relative">
-                    <input type="date" id="input-deadline-date" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-3.5 outline-none font-medium appearance-none text-[13px]" />
-                    <i data-lucide="calendar-days" class="absolute right-3 top-3.5 text-[#999] pointer-events-none w-4 h-4"></i>
+                    <input type="date" id="input-deadline-date" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-3 outline-none font-medium appearance-none text-[13px]" />
+                    <i data-lucide="calendar-days" class="absolute right-3 top-3 text-[#999] pointer-events-none w-4 h-4"></i>
                 </div>
             </div>
         </div>
 
         <div>
             <label class="block text-sm font-semibold text-[#666] mb-2">Title</label>
-            <input type="text" id="input-title" placeholder="Enter title" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-3.5 outline-none font-medium" />
+            <input type="text" id="input-title" placeholder="Enter title" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-3 outline-none font-medium text-sm" />
         </div>
 
         <div>
             <label class="block text-sm font-semibold text-[#666] mb-2">Memo</label>
-            <textarea id="input-content" rows="6" placeholder="Enter memo" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-3.5 outline-none font-medium resize-none"></textarea>
+            <textarea id="input-content" rows="6" placeholder="Enter memo" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-3 outline-none font-medium resize-none text-sm"></textarea>
         </div>
     </div>
 
-    <div class="absolute bottom-0 w-full p-6 bg-white border-t border-[#F0EFEA] pb-8">
-        <button onclick="submitNotice()" class="w-full bg-[#B4975A] text-white py-4 rounded-xl text-[17px] font-bold shadow-md active:scale-95 transition-transform">저장</button>
+    <div class="absolute bottom-0 w-full p-5 bg-white border-t border-[#F0EFEA]" style="padding-bottom: max(16px, env(safe-area-inset-bottom));">
+        <button onclick="submitNotice()" class="w-full bg-[#B4975A] text-white py-3.5 rounded-xl text-[16px] font-bold shadow-md active:scale-95 transition-transform">저장</button>
     </div>
 </div>
 
 <!-- 공지사항 뷰어/수정 화면 -->
 <div id="page-notice-detail" style="display: none;" class="fixed inset-0 w-full max-w-md mx-auto bg-[#FAF9F5] z-[200] flex-col">
-    <div class="pt-12 pb-4 bg-[#FAF9F5] flex-shrink-0 relative flex flex-col items-center">
-        <button id="notice-detail-edit-btn" onclick="enterNoticeEditMode()" class="absolute left-6 top-14 text-[#8B7355] p-2 active:scale-95">
+    <div class="pb-4 bg-[#FAF9F5] flex-shrink-0 relative flex flex-col items-center" style="padding-top: max(4px, env(safe-area-inset-top));">
+        <button id="notice-detail-edit-btn" onclick="enterNoticeEditMode()" class="absolute left-6 top-10 text-[#8B7355] p-2 active:scale-95">
             <i data-lucide="pencil" class="w-5 h-5"></i>
         </button>
-        <button onclick="closeNoticeDetail()" class="absolute right-6 top-14 text-[#999] p-2"><i data-lucide="x" class="w-6 h-6"></i></button>
-        <img src="log.png" alt="Patek Philippe" class="w-32 h-auto object-contain mt-2 mb-3" />
-        <h2 id="notice-detail-modal-title" class="text-2xl font-serif font-bold text-[#333]">공지사항</h2>
+        <button onclick="closeNoticeDetail()" class="absolute right-6 top-10 text-[#999] p-2"><i data-lucide="x" class="w-6 h-6"></i></button>
+        <img src="log.png" alt="Patek Philippe" class="w-24 h-auto object-contain mb-3" />
+        <h2 id="notice-detail-modal-title" class="text-xl font-serif font-bold text-[#333]">공지사항</h2>
     </div>
 
-    <div class="flex-1 overflow-y-auto p-6 pb-40 bg-[#FAF9F5]">
+    <div class="flex-1 overflow-y-auto p-5 pb-40 bg-[#FAF9F5]">
         <!-- Viewer mode -->
-        <div id="notice-detail-view-area" class="space-y-5">
+        <div id="notice-detail-view-area" class="space-y-4">
             <div class="flex items-center justify-between">
-                <span id="view-notice-category" class="inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-sm font-bold">매장</span>
+                <span id="view-notice-category" class="inline-flex items-center justify-center px-3 py-1 rounded-lg text-[13px] font-bold">매장</span>
                 <div class="flex items-center gap-2">
-                    <span id="view-notice-status" class="text-xs font-bold text-[#B4975A] bg-[#F8F3E7] px-2 py-1 rounded-md">진행 중인 공지</span>
+                    <span id="view-notice-status" class="text-[11px] font-bold text-[#B4975A] bg-[#F8F3E7] px-2 py-1 rounded-md">진행 중인 공지</span>
                 </div>
             </div>
 
-            <div class="bg-white rounded-2xl border border-[#F0EFEA] shadow-sm p-5">
-                <div class="grid grid-cols-2 gap-3 mb-5">
-                    <div class="bg-[#FCFBF9] border border-[#F2EFE8] rounded-xl p-3">
-                        <div class="text-[11px] font-bold text-[#999] mb-1">Date Created</div>
-                        <div id="view-notice-register-date" class="text-[13px] font-bold text-[#4A443F]">-</div>
+            <div class="bg-white rounded-2xl border border-[#F0EFEA] shadow-sm p-4">
+                <div class="grid grid-cols-2 gap-3 mb-4">
+                    <div class="bg-[#FCFBF9] border border-[#F2EFE8] rounded-xl p-2.5">
+                        <div class="text-[11px] font-bold text-[#999] mb-1">Start Date</div>
+                        <div id="view-notice-register-date" class="text-[12px] font-bold text-[#4A443F]">-</div>
                     </div>
-                    <div class="bg-[#FCFBF9] border border-[#F2EFE8] rounded-xl p-3">
+                    <div class="bg-[#FCFBF9] border border-[#F2EFE8] rounded-xl p-2.5">
                         <div class="text-[11px] font-bold text-[#999] mb-1">Due Date</div>
-                        <div id="view-notice-deadline-date" class="text-[13px] font-bold text-[#4A443F]">-</div>
+                        <div id="view-notice-deadline-date" class="text-[12px] font-bold text-[#4A443F]">-</div>
                     </div>
                 </div>
 
-                <div class="mb-5">
-                    <div class="text-[12px] font-bold text-[#999] mb-2">Title</div>
+                <div class="mb-4">
+                    <div class="text-[11px] font-bold text-[#999] mb-1.5">Title</div>
                     <div id="view-notice-title" class="text-[13px] font-semibold text-[#333] leading-snug break-words"></div>
                 </div>
 
                 <div>
-                    <div class="text-[12px] font-bold text-[#999] mb-2">Memo</div>
-                    <div id="view-notice-content" class="text-[15px] font-medium text-[#4A443F] leading-relaxed whitespace-pre-wrap break-words min-h-[140px]"></div>
+                    <div class="text-[11px] font-bold text-[#999] mb-1.5">Memo</div>
+                    <div id="view-notice-content" class="text-[14px] font-medium text-[#4A443F] leading-relaxed whitespace-pre-wrap break-words min-h-[120px]"></div>
                 </div>
             </div>
 
-            <div class="bg-white border border-[#F2EFE8] rounded-xl p-4 flex flex-col items-center justify-center gap-2 text-[#B4975A] shadow-sm">
-                <i data-lucide="eye" class="w-6 h-6"></i>
-                <span id="view-notice-count" class="font-bold text-xl">0 / 6</span>
+            <div class="bg-white border border-[#F2EFE8] rounded-xl p-3 flex flex-col items-center justify-center gap-1.5 text-[#B4975A] shadow-sm">
+                <i data-lucide="eye" class="w-5 h-5"></i>
+                <span id="view-notice-count" class="font-bold text-lg">0 / 6</span>
             </div>
         </div>
 
         <!-- Edit mode -->
-        <div id="notice-detail-edit-area" class="space-y-5" style="display:none;">
+        <div id="notice-detail-edit-area" class="space-y-4" style="display:none;">
             <div>
-                <label class="block text-sm font-semibold text-[#666] mb-3">Category</label>
+                <label class="block text-sm font-semibold text-[#666] mb-2">Category</label>
                 <div class="grid grid-cols-5 gap-2">
                     <button type="button" data-category="매장" onclick="selectEditNoticeCategory('매장')" class="detail-cat-btn">매장</button>
                     <button type="button" data-category="본사" onclick="selectEditNoticeCategory('본사')" class="detail-cat-btn">본사</button>
@@ -2338,35 +2716,38 @@
 
             <div class="grid grid-cols-2 gap-3">
                 <div>
-                    <label class="block text-sm font-semibold text-[#666] mb-2">Date Created</label>
-                    <input type="date" id="detail-edit-register-date" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-3.5 outline-none font-medium text-[13px]" />
+                    <label class="block text-sm font-semibold text-[#666] mb-2">Start Date</label>
+                    <input type="date" id="detail-edit-register-date" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-3 outline-none font-medium text-[13px]" />
                 </div>
                 <div>
                     <label class="block text-sm font-semibold text-[#666] mb-2">Due Date</label>
-                    <input type="date" id="detail-edit-deadline-date" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-3.5 outline-none font-medium text-[13px]" />
+                    <input type="date" id="detail-edit-deadline-date" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-3 outline-none font-medium text-[13px]" />
                 </div>
             </div>
 
             <div>
                 <label class="block text-sm font-semibold text-[#666] mb-2">Title</label>
-                <input id="detail-edit-title" type="text" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-3.5 outline-none font-bold text-[#333]" />
+                <input id="detail-edit-title" type="text" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-3 outline-none font-bold text-[#333] text-sm" />
             </div>
 
             <div>
                 <label class="block text-sm font-semibold text-[#666] mb-2">Memo</label>
-                <textarea id="detail-edit-content" rows="8" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-3.5 outline-none font-medium resize-none leading-relaxed"></textarea>
+                <textarea id="detail-edit-content" rows="6" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-3 outline-none font-medium resize-none leading-relaxed text-sm"></textarea>
             </div>
 
-            <div class="bg-white border border-[#F2EFE8] rounded-xl p-4 flex items-center justify-center gap-3 text-[#B4975A] shadow-sm">
-                <i data-lucide="eye" class="w-6 h-6"></i>
-                <span id="detail-edit-count" class="font-bold text-xl">0 / 6</span>
+            <div class="bg-white border border-[#F2EFE8] rounded-xl p-3 flex items-center justify-center gap-3 text-[#B4975A] shadow-sm">
+                <i data-lucide="eye" class="w-5 h-5"></i>
+                <span id="detail-edit-count" class="font-bold text-lg">0 / 6</span>
             </div>
         </div>
     </div>
 
-    <div class="absolute bottom-0 w-full p-6 bg-white border-t border-[#F0EFEA] pb-8">
-        <button id="notice-detail-save-btn" onclick="saveNoticeEdit()" style="display:none;" class="w-full bg-[#B4975A] text-white py-4 rounded-xl text-[16px] font-bold shadow-md active:scale-95 transition-transform">저장</button>
-        <button id="notice-detail-complete-btn" onclick="completeNotice()" class="w-full bg-[#4A443F] text-white py-4 rounded-xl text-[16px] font-bold shadow-md active:scale-95 transition-transform">완료</button>
+    <div class="absolute bottom-0 w-full p-5 bg-white border-t border-[#F0EFEA]" style="padding-bottom: max(16px, env(safe-area-inset-bottom));">
+        <button id="notice-detail-save-btn" onclick="saveNoticeEdit()" style="display:none;" class="w-full bg-[#B4975A] text-white py-3.5 rounded-xl text-[16px] font-bold shadow-md active:scale-95 transition-transform">저장</button>
+        <div class="flex gap-3">
+            <button id="notice-detail-complete-btn" onclick="completeNotice()" class="flex-1 bg-[#4A443F] text-white py-3.5 rounded-xl text-[16px] font-bold shadow-md active:scale-95 transition-transform">완료</button>
+            <button id="notice-detail-delete-btn" onclick="deleteNotice()" class="flex-1 bg-white text-[#4A443F] py-3.5 rounded-xl text-[16px] font-bold shadow-md border border-[#D8D8D8] active:scale-95 transition-transform">삭제</button>
+        </div>
     </div>
 </div>
 
@@ -2374,54 +2755,54 @@
 <div id="page-album-modal" style="display: none;" class="fixed inset-0 w-full max-w-md mx-auto bg-[#FAF9F5] z-[210] flex-col font-sans">
     
     <!-- 모달 헤더 -->
-    <div class="flex justify-between items-center px-5 pt-12 pb-4 bg-[#FAF9F5] sticky top-0 z-20 shrink-0">
+    <div class="flex justify-between items-center px-5 pb-3 bg-[#FAF9F5] sticky top-0 z-20 shrink-0" style="padding-top: max(12px, env(safe-area-inset-top));">
         <button onclick="closeAlbumModal()" class="text-[#8A847E] text-[15px] hover:text-[#4A443F] py-2">취소</button>
-        <div class="absolute left-1/2 -translate-x-1/2 flex flex-col items-center top-10">
-            <img src="log.png" alt="Logo" class="w-24 h-auto object-contain mb-1" />
-            <span id="album-modal-title" class="font-serif text-[18px] text-[#3A3532]">Upload Photo</span>
+        <div class="absolute left-1/2 -translate-x-1/2 flex flex-col items-center" style="top: max(6px, env(safe-area-inset-top));">
+            <img src="log.png" alt="Logo" class="w-20 h-auto object-contain mb-1" />
+            <span id="album-modal-title" class="font-serif text-[16px] text-[#3A3532]">Upload Photo</span>
         </div>
         <button onclick="submitAlbumForm()" class="text-[#8B7355] text-[15px] font-medium hover:text-[#6B5335] py-2">완료</button>
     </div>
 
-    <div class="flex-1 overflow-y-auto px-5 pb-8 mt-12 no-scrollbar">
+    <div class="flex-1 overflow-y-auto px-5 pb-8 mt-10 no-scrollbar">
         <!-- 숨겨진 실물 파일 인풋 -->
         <input type="file" id="album-file-input" multiple accept="image/*" class="hidden" onchange="window.handleAlbumFileChange(event)" />
 
         <!-- 이미지 미리보기 가로 스크롤 영역 -->
-        <div id="album-preview-list" class="flex overflow-x-auto gap-3 no-scrollbar mb-6 pb-2 px-1"></div>
+        <div id="album-preview-list" class="flex overflow-x-auto gap-3 no-scrollbar mb-5 pb-2 px-1"></div>
 
         <!-- 카테고리 태그 선택 -->
-        <div class="flex gap-2 mb-6 justify-center">
-            <button data-category="착용샷" onclick="setFormCategory('착용샷')" class="album-form-cat-btn flex-1 py-2.5 rounded-[8px] text-[13px] font-sans whitespace-nowrap transition-colors border shadow-sm bg-white text-[#8A847E] border-[#E8E4DB]">
+        <div class="flex gap-2 mb-5 justify-center">
+            <button data-category="착용샷" onclick="setFormCategory('착용샷')" class="album-form-cat-btn flex-1 py-2 rounded-[8px] text-[12px] font-sans whitespace-nowrap transition-colors border shadow-sm bg-white text-[#8A847E] border-[#E8E4DB]">
                 착용샷
             </button>
-            <button data-category="실물" onclick="setFormCategory('실물')" class="album-form-cat-btn flex-1 py-2.5 rounded-[8px] text-[13px] font-sans whitespace-nowrap transition-colors border shadow-sm bg-white text-[#8A847E] border-[#E8E4DB]">
+            <button data-category="실물" onclick="setFormCategory('실물')" class="album-form-cat-btn flex-1 py-2 rounded-[8px] text-[12px] font-sans whitespace-nowrap transition-colors border shadow-sm bg-white text-[#8A847E] border-[#E8E4DB]">
                 실물
             </button>
-            <button data-category="기타" onclick="setFormCategory('기타')" class="album-form-cat-btn flex-1 py-2.5 rounded-[8px] text-[13px] font-sans whitespace-nowrap transition-colors border shadow-sm bg-[#8B7355] text-white border-[#8B7355] font-medium">
+            <button data-category="기타" onclick="setFormCategory('기타')" class="album-form-cat-btn flex-1 py-2 rounded-[8px] text-[12px] font-sans whitespace-nowrap transition-colors border shadow-sm bg-[#8B7355] text-white border-[#8B7355] font-medium">
                 기타
             </button>
         </div>
 
         <!-- 데이터 입력 카드 폼 -->
-        <div class="bg-white border border-[#E8E4DB] rounded-[14px] p-5 shadow-[0_2px_10px_rgba(0,0,0,0.02)] mb-8">
-            <div class="flex flex-col py-3 border-b border-[#F2EFE8]">
-                <span class="text-[13px] text-[#2C2724] font-semibold mb-1.5 ml-1">사진명</span>
-                <input id="album-form-title" type="text" class="bg-transparent outline-none text-[#4A443F] w-full text-sm px-1 py-1 font-medium" placeholder="제목을 입력하세요" />
+        <div class="bg-white border border-[#E8E4DB] rounded-[14px] p-4 shadow-[0_2px_10px_rgba(0,0,0,0.02)] mb-6">
+            <div class="flex flex-col py-2.5 border-b border-[#F2EFE8]">
+                <span class="text-[12px] text-[#2C2724] font-semibold mb-1 ml-1">사진명</span>
+                <input id="album-form-title" type="text" class="bg-transparent outline-none text-[#4A443F] w-full text-[13px] px-1 py-1 font-medium" placeholder="제목을 입력하세요" />
             </div>
-            <div class="flex flex-col py-3 border-b border-[#F2EFE8]">
-                <span class="text-[13px] text-[#2C2724] font-semibold mb-1.5 ml-1">REF.</span>
-                <input id="album-form-ref" type="text" class="bg-transparent outline-none text-[#4A443F] w-full text-sm px-1 py-1 font-medium" placeholder="레퍼런스 넘버 입력" />
+            <div class="flex flex-col py-2.5 border-b border-[#F2EFE8]">
+                <span class="text-[12px] text-[#2C2724] font-semibold mb-1 ml-1">REF.</span>
+                <input id="album-form-ref" type="text" class="bg-transparent outline-none text-[#4A443F] w-full text-[13px] px-1 py-1 font-medium" placeholder="레퍼런스 넘버 입력" />
             </div>
-            <div class="flex flex-col pt-3 pb-1">
-                <span class="text-[13px] text-[#2C2724] font-semibold mb-2 ml-1">메모</span>
-                <textarea id="album-form-memo" class="bg-transparent outline-none text-[#4A443F] w-full text-sm resize-none h-[70px] px-1 font-medium" placeholder="메모를 입력하세요"></textarea>
+            <div class="flex flex-col pt-2.5 pb-1">
+                <span class="text-[12px] text-[#2C2724] font-semibold mb-1.5 ml-1">메모</span>
+                <textarea id="album-form-memo" class="bg-transparent outline-none text-[#4A443F] w-full text-[13px] resize-none h-[60px] px-1 font-medium" placeholder="메모를 입력하세요"></textarea>
             </div>
         </div>
 
         <!-- 단일 앨범 삭제 (수정 시에만 노출) -->
         <div id="album-delete-btn-container" style="display: none;">
-            <button onclick="deleteSingleAlbum()" class="w-full py-4 mt-2 mb-8 bg-white border border-[#E8D8D8] text-[#A06C6C] rounded-[14px] font-sans font-semibold text-sm tracking-wide hover:bg-[#FFF5F5] transition-colors shadow-sm">
+            <button onclick="deleteSingleAlbum()" class="w-full py-3.5 mt-2 mb-6 bg-white border border-[#E8D8D8] text-[#A06C6C] rounded-[12px] font-sans font-semibold text-[13px] tracking-wide hover:bg-[#FFF5F5] transition-colors shadow-sm">
                 이 사진 삭제하기
             </button>
         </div>
@@ -2430,33 +2811,33 @@
 
 <!-- 근무표 편집 모달 (작성 모달) -->
 <div id="page-schedule-edit-modal" style="display: none;" class="fixed inset-0 w-full max-w-md mx-auto bg-[#FAF9F5] z-[200] flex-col font-sans">
-    <div class="pt-12 pb-4 bg-[#FAF9F5] flex-shrink-0 relative flex flex-col items-center">
-        <button onclick="closeScheduleEdit()" class="absolute right-6 top-14 text-[#999] p-2"><i data-lucide="x" class="w-6 h-6"></i></button>
-        <img src="log.png" alt="Patek Philippe" class="w-32 h-auto object-contain mt-2 mb-4" />
-        <h2 id="edit-schedule-title" class="text-2xl font-serif text-[#333]">근무표 작성</h2>
+    <div class="pb-4 bg-[#FAF9F5] flex-shrink-0 relative flex flex-col items-center" style="padding-top: max(4px, env(safe-area-inset-top));">
+        <button onclick="closeScheduleEdit()" class="absolute right-6 top-10 text-[#999] p-2"><i data-lucide="x" class="w-6 h-6"></i></button>
+        <img src="log.png" alt="Patek Philippe" class="w-24 h-auto object-contain mb-3" />
+        <h2 id="edit-schedule-title" class="text-xl font-serif text-[#333]">근무표 작성</h2>
     </div>
-    <div id="edit-staff-rows-container" class="flex-1 overflow-y-auto p-6 space-y-4 pb-32">
+    <div id="edit-staff-rows-container" class="flex-1 overflow-y-auto p-5 space-y-4 pb-32">
         <!-- 직원별 스케줄 로우 드롭다운 리스트 동적 삽입 -->
     </div>
-    <div class="absolute bottom-0 w-full p-6 bg-white border-t border-[#F0EFEA] pb-8">
-        <button onclick="saveScheduleSheet()" class="w-full bg-[#B4975A] text-white py-4 rounded-xl text-[17px] font-bold shadow-md active:scale-95 transition-transform">저장하기</button>
+    <div class="absolute bottom-0 w-full p-5 bg-white border-t border-[#F0EFEA]" style="padding-bottom: max(16px, env(safe-area-inset-bottom));">
+        <button onclick="saveScheduleSheet()" class="w-full bg-[#B4975A] text-white py-3.5 rounded-xl text-[16px] font-bold shadow-md active:scale-95 transition-transform">저장하기</button>
     </div>
 </div>
 
 <!-- 휴무 신청 캘린더 모달 -->
 <div id="page-leave-calendar-modal" style="display: none;" class="fixed inset-0 w-full max-w-md mx-auto bg-[#FAF9F5] z-[200] flex-col font-sans">
-    <div class="pt-12 pb-4 bg-[#FAF9F5] flex-shrink-0 relative flex flex-col items-center">
-        <button onclick="closeLeaveCalendarModal()" class="absolute right-6 top-14 text-[#999] p-2"><i data-lucide="x" class="w-6 h-6"></i></button>
-        <img src="log.png" alt="Patek Philippe" class="w-32 h-auto object-contain mt-2 mb-2" />
-        <h2 class="text-2xl font-serif text-[#333]">휴무 신청</h2>
+    <div class="pb-4 bg-[#FAF9F5] flex-shrink-0 relative flex flex-col items-center" style="padding-top: max(4px, env(safe-area-inset-top));">
+        <button onclick="closeLeaveCalendarModal()" class="absolute right-6 top-10 text-[#999] p-2"><i data-lucide="x" class="w-6 h-6"></i></button>
+        <img src="log.png" alt="Patek Philippe" class="w-24 h-auto object-contain mb-2" />
+        <h2 class="text-xl font-serif text-[#333]">휴무 신청</h2>
     </div>
 
     <div class="flex-1 overflow-y-auto px-5 pb-32 no-scrollbar">
         <!-- 연월 조정 바 & 네이티브 달력 선택기 융합 -->
-        <div class="flex justify-between items-center bg-white border border-[#E8E4DB] rounded-xl p-3 mb-4 shadow-sm">
+        <div class="flex justify-between items-center bg-white border border-[#E8E4DB] rounded-xl p-2.5 mb-3 shadow-sm">
             <button onclick="adjustScheduleMonth(-1)" class="p-1 hover:bg-[#F2EFE8] rounded"><i data-lucide="chevron-left" class="w-4 h-4 text-[#8B7355]"></i></button>
-            <div class="relative flex items-center justify-center bg-slate-50 px-3 py-1.5 rounded-lg cursor-pointer border border-[#E8E4DB]">
-                <span id="leave-month-text" class="text-[15px] font-bold text-[#3A3532] pointer-events-none mr-1.5">2026년 6월</span>
+            <div class="relative flex items-center justify-center bg-slate-50 px-3 py-1 rounded-lg cursor-pointer border border-[#E8E4DB]">
+                <span id="leave-month-text" class="text-[14px] font-bold text-[#3A3532] pointer-events-none mr-1.5">2026년 6월</span>
                 <i data-lucide="calendar-days" class="w-4 h-4 text-[#8B7355] pointer-events-none"></i>
                 <input type="month" id="leave-month-picker" onchange="handleMonthPicker(this.value)" class="absolute inset-0 opacity-0 w-full h-full cursor-pointer" />
             </div>
@@ -2464,56 +2845,56 @@
         </div>
 
         <!-- 요일 헤더 -->
-        <div class="grid grid-cols-7 gap-1 text-center font-bold text-xs text-[#666] mb-1">
+        <div class="grid grid-cols-7 gap-1 text-center font-bold text-[11px] text-[#666] mb-1">
             <div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div class="text-blue-500">토</div><div class="text-red-500">일</div>
         </div>
 
         <!-- 달력 본체 그리드 -->
-        <div id="leave-calendar-grid" class="grid grid-cols-7 gap-1 bg-white border border-[#F0EFEA] rounded-xl p-1 shadow-sm mb-4 overflow-hidden">
+        <div id="leave-calendar-grid" class="grid grid-cols-7 gap-1 bg-white border border-[#F0EFEA] rounded-xl p-1 shadow-sm mb-3 overflow-hidden">
             <!-- JS 렌더링 -->
         </div>
 
         <!-- 범례 표시 -->
-        <div class="flex flex-wrap justify-center items-center gap-4 text-[10px] font-bold text-[#666] mb-6">
-            <div class="flex items-center gap-1.5"><span class="w-3.5 h-3.5 bg-[#DDEBFF] border border-[#A0C4FF] rounded-sm"></span><span>휴무 신청</span></div>
-            <div class="flex items-center gap-1.5"><span class="w-3.5 h-3.5 bg-[#E2F0D9] border border-[#A9D18E] rounded-sm"></span><span>정기휴점</span></div>
-            <div class="flex items-center gap-1.5"><span class="w-3.5 h-3.5 bg-[#FFE5E5] border border-[#FFADAD] rounded-sm"></span><span>3명 이상 신청</span></div>
-            <div class="flex items-center gap-1.5"><span class="w-3.5 h-3.5 border-2 border-amber-500 rounded-sm"></span><span>행사</span></div>
+        <div class="flex flex-wrap justify-center items-center gap-3 text-[9px] font-bold text-[#666] mb-5">
+            <div class="flex items-center gap-1"><span class="w-3 h-3 bg-[#DDEBFF] border border-[#A0C4FF] rounded-sm"></span><span>휴무 신청</span></div>
+            <div class="flex items-center gap-1"><span class="w-3 h-3 bg-[#E2F0D9] border border-[#A9D18E] rounded-sm"></span><span>정기휴점</span></div>
+            <div class="flex items-center gap-1"><span class="w-3 h-3 bg-[#FFE5E5] border border-[#FFADAD] rounded-sm"></span><span>3명 이상 신청</span></div>
+            <div class="flex items-center gap-1"><span class="w-3 h-3 border border-amber-500 rounded-sm"></span><span>행사</span></div>
         </div>
 
         <!-- 입력란: 사유 & 지역 -->
-        <div class="space-y-4">
+        <div class="space-y-3">
             <div>
-                <label class="block text-xs font-bold text-[#666] mb-1.5 ml-1">휴무 사유 (선택 사항)</label>
-                <input id="leave-reason-input" type="text" placeholder="예: 정기 검진, 연차 등" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-3 outline-none text-xs font-semibold" />
+                <label class="block text-[11px] font-bold text-[#666] mb-1.5 ml-1">휴무 사유 (선택 사항)</label>
+                <input id="leave-reason-input" type="text" placeholder="예: 정기 검진, 연차 등" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-2.5 outline-none text-xs font-semibold" />
             </div>
             <!-- 3일 이상 연휴인 경우 노출되는 지역 필수 입력란 -->
             <div id="leave-region-container" style="display: none;">
-                <label class="block text-xs font-bold text-red-600 mb-1.5 ml-1">지역 (3일 이상 휴무 시 필수 입력)</label>
-                <input id="leave-region-input" type="text" placeholder="예: 일본, 제주도 등" class="w-full bg-white border-2 border-[#B4975A] rounded-xl p-3 outline-none text-xs font-bold text-[#333]" />
+                <label class="block text-[11px] font-bold text-red-600 mb-1.5 ml-1">지역 (3일 이상 휴무 시 필수 입력)</label>
+                <input id="leave-region-input" type="text" placeholder="예: 일본, 제주도 등" class="w-full bg-white border-2 border-[#B4975A] rounded-xl p-2.5 outline-none text-xs font-bold text-[#333]" />
             </div>
         </div>
     </div>
 
-    <!-- 푸터 단추들 -->
-    <div class="absolute bottom-0 w-full p-4 bg-white border-t border-[#F0EFEA] pb-6 flex flex-col gap-2">
-        <button onclick="submitLeaveRequest()" class="w-full bg-[#B4975A] text-white py-3.5 rounded-xl text-[15px] font-bold shadow-md active:scale-95 transition-all">
+    <!-- 푸터 단추들 (휴무 신청하기 / 신청 내역 보기) -->
+    <div class="absolute bottom-0 w-full p-4 bg-white border-t border-[#F0EFEA] flex flex-col gap-2" style="padding-bottom: max(16px, env(safe-area-inset-bottom));">
+        <button onclick="submitLeaveRequest()" class="w-full bg-[#B4975A] text-white py-3 rounded-xl text-[14px] font-bold shadow-md active:scale-95 transition-all">
             휴무 신청하기
         </button>
-        <button onclick="openLeaveHistoryModal()" class="w-full bg-white border border-[#E5E5E5] text-[#8B7355] py-3 rounded-xl text-[13px] font-bold active:scale-95 transition-all flex items-center justify-center gap-1">
-            신청 내역 보기 <i data-lucide="chevron-right" class="w-4 h-4"></i>
+        <button onclick="openLeaveHistoryModal()" class="w-full bg-white border border-[#E5E5E5] text-[#8B7355] py-2.5 rounded-xl text-[12px] font-bold active:scale-95 transition-all flex items-center justify-center gap-1">
+            신청 내역 보기 <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
         </button>
     </div>
 </div>
 
 <!-- 휴무 신청 내역 리스트 모달 -->
 <div id="page-leave-history-modal" style="display: none;" class="fixed inset-0 w-full max-w-md mx-auto bg-[#FAF9F5] z-[220] flex-col font-sans">
-    <div class="pt-12 pb-4 bg-[#FAF9F5] flex-shrink-0 relative flex flex-col items-center">
-        <button onclick="closeLeaveHistoryModal()" class="absolute right-6 top-14 text-[#999] p-2"><i data-lucide="x" class="w-6 h-6"></i></button>
-        <img src="log.png" alt="Patek Philippe" class="w-32 h-auto object-contain mt-2 mb-4" />
-        <h2 class="text-2xl font-serif text-[#333]">휴무 신청 내역</h2>
+    <div class="pb-4 bg-[#FAF9F5] flex-shrink-0 relative flex flex-col items-center" style="padding-top: max(4px, env(safe-area-inset-top));">
+        <button onclick="closeLeaveHistoryModal()" class="absolute right-6 top-10 text-[#999] p-2"><i data-lucide="x" class="w-6 h-6"></i></button>
+        <img src="log.png" alt="Patek Philippe" class="w-24 h-auto object-contain mt-1 mb-3" />
+        <h2 class="text-xl font-serif text-[#333]">휴무 신청 내역</h2>
     </div>
-    <div id="leave-history-list" class="flex-1 overflow-y-auto p-6 space-y-3 pb-24 no-scrollbar">
+    <div id="leave-history-list" class="flex-1 overflow-y-auto p-5 space-y-3 pb-24 no-scrollbar">
         <!-- 내역 리스트 주입 -->
     </div>
 </div>
@@ -2525,25 +2906,26 @@
 
 <!-- 커스텀 알림 모달 (Alert) -->
 <div id="custom-alert" style="display: none;" class="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center p-6 z-[200000]">
-    <div class="bg-[#FCFBF9] rounded-xl p-6 w-full max-w-[280px] shadow-2xl border border-[#E8E4DB] flex flex-col items-center">
-        <div class="w-12 h-12 rounded-full bg-[#FDFBF7] border border-[#E8E4DB] flex items-center justify-center mb-4 text-[#8B7355]">
-            <i data-lucide="info" class="w-6 h-6"></i>
+    <div class="bg-[#FCFBF9] rounded-xl p-5 w-full max-w-[260px] shadow-2xl border border-[#E8E4DB] flex flex-col items-center">
+        <div class="w-10 h-10 rounded-full bg-[#FDFBF7] border border-[#E8E4DB] flex items-center justify-center mb-3 text-[#8B7355]">
+            <i data-lucide="info" class="w-5 h-5"></i>
         </div>
-        <p id="custom-alert-message" class="text-[#3A3532] text-[15px] font-sans text-center font-medium leading-relaxed mb-6 whitespace-pre-wrap">알림 메시지</p>
-        <button onclick="window.closeCustomAlert()" class="w-full bg-[#3A3532] hover:bg-[#2A2522] text-[#F3EFE8] font-serif tracking-widest py-3 rounded-md transition-colors text-[13px]">확인</button>
+        <p id="custom-alert-message" class="text-[#3A3532] text-[14px] font-sans text-center font-medium leading-relaxed mb-5 whitespace-pre-wrap">알림 메시지</p>
+        <button onclick="window.closeCustomAlert()" class="w-full bg-[#3A3532] hover:bg-[#2A2522] text-[#F3EFE8] font-serif tracking-widest py-2.5 rounded-md transition-colors text-[13px]">확인</button>
     </div>
 </div>
 
 <!-- 커스텀 확인 모달 (Confirm) -->
 <div id="custom-confirm" style="display: none;" class="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center p-6 z-[200000]">
-    <div class="bg-[#FCFBF9] rounded-xl p-6 w-full max-w-[280px] shadow-2xl border border-[#E8E4DB] flex flex-col items-center">
-        <div id="custom-confirm-icon-wrap" class="w-12 h-12 rounded-full bg-[#FFF5F5] border border-[#E8D8D8] flex items-center justify-center mb-4 text-[#A06C6C]">
-            <i id="custom-confirm-icon" data-lucide="trash-2" class="w-6 h-6"></i>
+    <div class="bg-[#FCFBF9] rounded-xl p-5 w-full max-w-[260px] shadow-2xl border border-[#E8E4DB] flex flex-col items-center">
+        <div id="custom-confirm-icon-wrap" class="w-10 h-10 rounded-full bg-[#FFF5F5] border border-[#E8D8D8] flex items-center justify-center mb-3 text-[#A06C6C]">
+            <i id="custom-confirm-icon" data-lucide="trash-2" class="w-5 h-5"></i>
         </div>
-        <p id="custom-confirm-message" class="text-[#3A3532] text-[15px] font-sans text-center font-medium leading-relaxed mb-6 whitespace-pre-wrap">정말 삭제하시겠습니까?</p>
-        <div class="flex gap-3 w-full">
-            <button id="custom-confirm-cancel-btn" onclick="window.closeCustomConfirm()" class="flex-1 bg-white hover:bg-[#F2EFE8] text-[#8A847E] font-serif tracking-widest py-3 rounded-md transition-colors text-[13px] border border-[#E8E4DB]">취소</button>
-            <button id="custom-confirm-ok-btn" class="flex-1 bg-[#FF3B30] hover:bg-[#D93025] text-white font-serif tracking-widest py-3 rounded-md transition-colors text-[13px]">삭제</button>
+        <p id="custom-confirm-message" class="text-[#3A3532] text-[14px] font-sans text-center font-medium leading-relaxed mb-5 whitespace-pre-wrap">정말 삭제하시겠습니까?</p>
+        <!-- '네', '아니오' 순서 고정 -->
+        <div class="flex gap-2.5 w-full">
+            <button id="custom-confirm-ok-btn" class="flex-1 bg-[#FF3B30] hover:bg-[#D93025] text-white font-serif tracking-widest py-2.5 rounded-md transition-colors text-[12px]">네</button>
+            <button id="custom-confirm-cancel-btn" onclick="window.closeCustomConfirm()" class="flex-1 bg-white hover:bg-[#F2EFE8] text-[#8A847E] font-serif tracking-widest py-2.5 rounded-md transition-colors text-[12px] border border-[#E8E4DB]">아니오</button>
         </div>
     </div>
 </div>
@@ -2576,9 +2958,9 @@
         window.__customConfirmCallback = onConfirm;
 
         if (msg) msg.innerText = message || '';
-        if (cancelBtn) cancelBtn.innerText = options.cancelText || '취소';
+        if (cancelBtn) cancelBtn.innerText = options.cancelText || '아니오';
         if (okBtn) {
-            okBtn.innerText = options.okText || '확인';
+            okBtn.innerText = options.okText || '네';
             okBtn.style.backgroundColor = options.okBg || '#FF3B30';
             okBtn.style.color = '#FFFFFF';
             okBtn.onmouseenter = () => { okBtn.style.backgroundColor = options.okHoverBg || options.okBg || '#D93025'; };
