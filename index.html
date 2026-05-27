@@ -2200,10 +2200,10 @@
         window.leaveType = type;
         const colors = {
             '휴무': {bg: '#FFE146', text: '#333333'},
-            'A조': {bg: '#FFAAAF', text: '#333333'},
-            'A반차': {bg: '#FFC8CD', text: '#333333'},
-            'B조': {bg: '#32BBFF', text: '#333333'},
-            'B반차': {bg: '#6EE0FF', text: '#333333'},
+            'A': {bg: '#FFC8CD', text: '#333333'},
+            'A반': {bg: '#FFC8CD', text: '#333333'},
+            'B': {bg: '#FFC8CD', text: '#333333'},
+            'B반': {bg: '#FFC8CD', text: '#333333'},
             '정기휴무': {bg: '#A0A0A0', text: '#FFFFFF'},
             '행사': {bg: '#96F56E', text: '#333333'}
         };
@@ -2246,69 +2246,86 @@
 
             // 해당 일자의 휴무 신청 직원들 색출
             const matchedRequests = window.leaveRequests.filter(r => dateStr >= r.startDate && dateStr <= r.endDate);
-            const isEventDay = matchedRequests.some(r => r.type === '행사'); // 행사 구분선
+            
+            const hasRegLeave = matchedRequests.some(r => r.type === '정기휴무');
+            const hasEvent = matchedRequests.some(r => r.type === '행사');
 
+            // 칸 전체 배경색 결정 로직 (우선순위: 선택중 > 행사 > 정기휴무 > 3명 이상)
+            let cellBg = "bg-white";
+            let fullCellTextColor = "";
+
+            if (hasEvent) {
+                cellBg = "bg-[#96F56E]";
+                fullCellTextColor = "text-[#333]";
+            } else if (hasRegLeave) {
+                cellBg = "bg-[#A0A0A0]";
+                fullCellTextColor = "text-white";
+            }
+
+            // 클릭 범위 지정 중인 백그라운드 칼라 색상 세팅
+            if (window.leaveRangeStart && window.leaveRangeEnd) {
+                if (dateStr >= window.leaveRangeStart && dateStr <= window.leaveRangeEnd) {
+                    cellBg = "bg-[#DDEBFF]"; // 선택 범위 하이라이트
+                    fullCellTextColor = "";
+                }
+            } else if (window.leaveRangeStart && dateStr === window.leaveRangeStart) {
+                cellBg = "bg-[#DDEBFF]";
+                fullCellTextColor = "";
+            } else if (matchedRequests.length >= 3 && !hasEvent && !hasRegLeave) {
+                cellBg = "bg-[#FFE5E5]"; // 3명 이상 신청 색상
+            }
+
+            // 상단 날짜 텍스트 색상 결정
             let dayTextClass = "text-[#333]";
             if (isHoliday) dayTextClass = "text-[#D81B60]";
             else if (dayOfWeek === 0) dayTextClass = "text-red-500";
             else if (dayOfWeek === 6) dayTextClass = "text-blue-500";
-
-            // 클릭 범위 지정 중인 백그라운드 칼라 색상 세팅
-            let selectBg = "bg-white";
-            if (window.leaveRangeStart && window.leaveRangeEnd) {
-                if (dateStr >= window.leaveRangeStart && dateStr <= window.leaveRangeEnd) {
-                    selectBg = "bg-[#DDEBFF]"; // 선택 범위 하이라이트
-                }
-            } else if (window.leaveRangeStart && dateStr === window.leaveRangeStart) {
-                selectBg = "bg-[#DDEBFF]";
-            }
-
-            // 3명 이상 신청 여부 확인
-            const isOverbooked = matchedRequests.length >= 3;
-            let overbookedBg = "";
-            if (isOverbooked) {
-                overbookedBg = "bg-[#FFE5E5]"; // 3명 이상 신청 색상
-            }
-
-            // 행사 하이라이팅 테두리
-            let eventBorder = "";
-            if (isEventDay) {
-                eventBorder = "border-2 border-amber-500 rounded-lg z-10";
-            }
+            else if (hasRegLeave && cellBg === "bg-[#A0A0A0]") dayTextClass = "text-white";
+            else if (hasEvent && cellBg === "bg-[#96F56E]") dayTextClass = "text-[#333]";
 
             // 직원 이름 및 지역 노출 가공
             let staffNamesMarkup = "";
             matchedRequests.forEach(req => {
-                // 시작일 일 때만 등록된 지역 표기 지원
                 const isStart = dateStr === req.startDate;
                 const regionSuffix = (isStart && req.region) ? ` (${req.region})` : '';
                 
-                // 사유에 따른 배경색 지정
                 let bgColor = '#FFE146'; // 기본 휴무 신청 컬러
                 let textColor = '#333333';
+                let isFullBg = false;
                 
-                if (req.type === 'A반차') { bgColor = '#FFC8CD'; }
-                else if (req.type === 'A조') { bgColor = '#FFAAAF'; }
-                else if (req.type === 'B반차') { bgColor = '#6EE0FF'; }
-                else if (req.type === 'B조') { bgColor = '#32BBFF'; }
-                else if (req.type === '정기휴무') { bgColor = '#A0A0A0'; textColor = '#FFFFFF'; }
-                else if (req.type === '행사') { bgColor = '#96F56E'; }
+                // A, B, 반차 등 통일된 색상 적용
+                if (['A', 'A반', 'B', 'B반'].includes(req.type)) { 
+                    bgColor = '#FFC8CD'; 
+                } else if (req.type === '정기휴무' || req.type === '행사') { 
+                    bgColor = 'transparent'; // 셀 자체가 칠해지므로 배경 투명화
+                    textColor = fullCellTextColor || (req.type === '정기휴무' ? '#FFF' : '#333');
+                    if (cellBg === 'bg-[#DDEBFF]') textColor = '#333'; // 선택중이면 글자 검은색 고정
+                    isFullBg = true;
+                }
 
                 let displayText = '';
-                // 정기휴무, 행사는 입력한 사유를 보여주고 이름은 보여주지 않음
+                let wrapClass = 'truncate px-1 py-[2px]'; // 기본: 잘림 처리
+
+                // 정기휴무, 행사는 입력한 사유를 보여주고 이름은 보여주지 않음 (줄바꿈 허용)
                 if (req.type === '정기휴무' || req.type === '행사') {
                     displayText = req.reason || req.type; 
+                    wrapClass = 'whitespace-normal break-words leading-tight py-0.5 px-0.5'; // 여러 줄로 안 잘리게 표시
                 } else {
                     // 성을 제외하고 이름 2글자만 추출 (이름이 3글자 이상인 경우 뒤 2글자 사용)
                     let shortName = String(req.name || '').trim();
                     if (shortName.length >= 3) {
                         shortName = shortName.slice(-2);
                     }
-                    displayText = shortName + regionSuffix;
+                    
+                    if (['A', 'A반', 'B', 'B반'].includes(req.type)) {
+                        displayText = shortName + ' ' + req.type + regionSuffix; // 예: 영지 A반
+                    } else {
+                        displayText = shortName + regionSuffix; // 예: 영지
+                    }
                 }
 
                 staffNamesMarkup += `
-                    <div class="text-[9px] font-bold rounded px-1 py-[2px] truncate w-full text-center leading-none mt-[2px] shadow-sm" style="background-color: ${bgColor}; color: ${textColor};">
+                    <div class="text-[9px] font-bold rounded ${wrapClass} w-full text-center mt-[2px] ${!isFullBg ? 'shadow-sm' : ''}" style="background-color: ${bgColor}; color: ${textColor};">
                         ${displayText}
                     </div>
                 `;
@@ -2316,13 +2333,13 @@
 
             const dayCell = document.createElement('div');
             // aspect-square 제거, min-h-[70px] h-full 추가하여 내용이 늘어나도 잘리지 않도록 함
-            dayCell.className = `min-h-[70px] h-full p-1 border border-[#F0EFEA] flex flex-col items-center justify-start cursor-pointer transition-colors hover:bg-slate-50 relative ${selectBg} ${overbookedBg} ${eventBorder}`;
+            dayCell.className = `min-h-[70px] h-full p-1 border border-[#F0EFEA] flex flex-col items-center justify-start cursor-pointer transition-colors hover:bg-slate-50 relative ${cellBg}`;
             dayCell.onclick = () => window.handleLeaveCalendarCellClick(dateStr);
 
             dayCell.innerHTML = `
                 <div class="w-full flex justify-between shrink-0">
                     <span class="text-xs font-bold ${dayTextClass}">${d}</span>
-                    ${isHoliday ? `<span class="text-[8px] text-[#D81B60] truncate font-sans ml-1 mt-0.5">${PUBLIC_HOLIDAYS_2026[dateStr]}</span>` : ''}
+                    ${isHoliday ? `<span class="text-[8px] ${hasRegLeave && cellBg === "bg-[#A0A0A0]" ? 'text-[#FFD1D1]' : 'text-[#D81B60]'} truncate font-sans ml-1 mt-0.5">${PUBLIC_HOLIDAYS_2026[dateStr]}</span>` : ''}
                 </div>
                 <!-- overflow-y-auto 제거, justify-start 적용으로 모든 이름이 다 보이도록 확장 -->
                 <div class="w-full flex-1 flex flex-col justify-end mt-1 gap-[1px]">
@@ -2403,8 +2420,16 @@
 
             await addDoc(collection(db, 'artifacts', 'patek-s', 'public', 'data', 'leave_requests'), payload);
             
-            window.closeLeaveCalendarModal();
-            window.showCustomAlert("휴무 신청이 성공적으로 완료되었습니다.");
+            // 모달을 닫지 않고 상태만 초기화하여 연속 신청이 가능하도록 유지
+            window.leaveRangeStart = null;
+            window.leaveRangeEnd = null;
+            document.getElementById('leave-reason-input').value = '';
+            document.getElementById('leave-region-input').value = '';
+            document.getElementById('leave-region-container').style.display = 'none';
+            window.setLeaveType('휴무');
+            window.renderLeaveCalendar();
+
+            window.showCustomAlert("휴무 신청이 완료되었습니다.");
         } catch(e) {
             console.error(e);
             window.showCustomAlert("휴무 신청 중 서버 오류가 발생했습니다.");
@@ -2423,10 +2448,10 @@
         } else {
             const typeBadgeColors = {
                 '휴무': 'bg-[#FFE146] text-[#333]',
-                'A조': 'bg-[#FFAAAF] text-[#333]',
-                'A반차': 'bg-[#FFC8CD] text-[#333]',
-                'B조': 'bg-[#32BBFF] text-[#333]',
-                'B반차': 'bg-[#6EE0FF] text-[#333]',
+                'A': 'bg-[#FFC8CD] text-[#333]',
+                'A반': 'bg-[#FFC8CD] text-[#333]',
+                'B': 'bg-[#FFC8CD] text-[#333]',
+                'B반': 'bg-[#FFC8CD] text-[#333]',
                 '정기휴무': 'bg-[#A0A0A0] text-white',
                 '행사': 'bg-[#96F56E] text-[#333]'
             };
@@ -3182,10 +3207,7 @@
         <!-- 범례 표시 -->
         <div class="flex flex-wrap justify-center items-center gap-2.5 text-[9px] font-bold text-[#666] mb-5">
             <div class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm shadow-sm" style="background-color: #FFE146;"></span><span>휴무</span></div>
-            <div class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm shadow-sm" style="background-color: #FFAAAF;"></span><span>A조</span></div>
-            <div class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm shadow-sm" style="background-color: #FFC8CD;"></span><span>A반차</span></div>
-            <div class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm shadow-sm" style="background-color: #32BBFF;"></span><span>B조</span></div>
-            <div class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm shadow-sm" style="background-color: #6EE0FF;"></span><span>B반차</span></div>
+            <div class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm shadow-sm" style="background-color: #FFC8CD;"></span><span>A/B/반차</span></div>
             <div class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm shadow-sm" style="background-color: #A0A0A0;"></span><span>정기휴무</span></div>
             <div class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm shadow-sm" style="background-color: #96F56E;"></span><span>행사</span></div>
         </div>
@@ -3194,14 +3216,15 @@
         <div class="space-y-4">
             <div>
                 <label class="block text-[11px] font-bold text-[#666] mb-1.5 ml-1">신청 종류</label>
-                <div class="flex flex-wrap gap-2" id="leave-type-container">
-                    <button type="button" onclick="setLeaveType('휴무')" class="leave-type-btn px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-colors bg-white text-[#666] border-[#E5E5E5]">휴무</button>
-                    <button type="button" onclick="setLeaveType('A조')" class="leave-type-btn px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-colors bg-white text-[#666] border-[#E5E5E5]">A조</button>
-                    <button type="button" onclick="setLeaveType('A반차')" class="leave-type-btn px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-colors bg-white text-[#666] border-[#E5E5E5]">A반차</button>
-                    <button type="button" onclick="setLeaveType('B조')" class="leave-type-btn px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-colors bg-white text-[#666] border-[#E5E5E5]">B조</button>
-                    <button type="button" onclick="setLeaveType('B반차')" class="leave-type-btn px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-colors bg-white text-[#666] border-[#E5E5E5]">B반차</button>
-                    <button type="button" onclick="setLeaveType('정기휴무')" class="leave-type-btn px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-colors bg-white text-[#666] border-[#E5E5E5]">정기휴무</button>
-                    <button type="button" onclick="setLeaveType('행사')" class="leave-type-btn px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-colors bg-white text-[#666] border-[#E5E5E5]">행사</button>
+                <!-- overflow-x-auto와 whitespace-nowrap을 사용해 버튼을 한 줄로 스크롤 배치 -->
+                <div class="flex flex-nowrap overflow-x-auto no-scrollbar gap-1.5 pb-1 w-full" id="leave-type-container">
+                    <button type="button" onclick="setLeaveType('휴무')" class="leave-type-btn shrink-0 px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-colors bg-white text-[#666] border-[#E5E5E5]">휴무</button>
+                    <button type="button" onclick="setLeaveType('A')" class="leave-type-btn shrink-0 px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-colors bg-white text-[#666] border-[#E5E5E5]">A</button>
+                    <button type="button" onclick="setLeaveType('A반')" class="leave-type-btn shrink-0 px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-colors bg-white text-[#666] border-[#E5E5E5]">A반</button>
+                    <button type="button" onclick="setLeaveType('B')" class="leave-type-btn shrink-0 px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-colors bg-white text-[#666] border-[#E5E5E5]">B</button>
+                    <button type="button" onclick="setLeaveType('B반')" class="leave-type-btn shrink-0 px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-colors bg-white text-[#666] border-[#E5E5E5]">B반</button>
+                    <button type="button" onclick="setLeaveType('정기휴무')" class="leave-type-btn shrink-0 px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-colors bg-white text-[#666] border-[#E5E5E5]">정기휴무</button>
+                    <button type="button" onclick="setLeaveType('행사')" class="leave-type-btn shrink-0 px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-colors bg-white text-[#666] border-[#E5E5E5]">행사</button>
                 </div>
             </div>
             <div>
@@ -3219,7 +3242,7 @@
     <!-- 푸터 단추들 (휴무 신청하기 / 신청 내역 보기) -->
     <div class="absolute bottom-0 w-full p-4 bg-white border-t border-[#F0EFEA] flex flex-col gap-2" style="padding-bottom: max(16px, env(safe-area-inset-bottom));">
         <button onclick="submitLeaveRequest()" class="w-full bg-[#B4975A] text-white py-3 rounded-xl text-[14px] font-bold shadow-md active:scale-95 transition-all">
-            휴무 신청하기
+            신청하기
         </button>
         <button onclick="openLeaveHistoryModal()" class="w-full bg-white border border-[#E5E5E5] text-[#8B7355] py-2.5 rounded-xl text-[12px] font-bold active:scale-95 transition-all flex items-center justify-center gap-1">
             신청 내역 보기 <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
