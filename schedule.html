@@ -33,8 +33,8 @@ body { font-family:'Malgun Gothic','맑은 고딕',Arial,sans-serif; background:
 /* ── 신청 반영 패널 ── */
 #apply-list { border:1px solid #E8E4DB; border-radius:10px; overflow:hidden; margin-bottom:16px; max-height:260px; overflow-y:auto; }
 #apply-list table { width:100%; border-collapse:collapse; font-size:12px; }
-#apply-list th { background:#F8F6F0; padding:7px 10px; font-weight:800; border-bottom:1px solid #E8E4DB; }
-#apply-list td { padding:6px 10px; border-bottom:1px solid #F0EFEA; }
+#apply-list th { background:#F8F6F0; padding:7px 10px; font-weight:800; border-bottom:1px solid #E8E4DB; text-align:center; }
+#apply-list td { padding:6px 10px; border-bottom:1px solid #F0EFEA; text-align:center; }
 #apply-list tr:last-child td { border-bottom:none; }
 .code-badge { display:inline-block; padding:2px 7px; border-radius:4px; font-size:11px; font-weight:800; background:#FFE146; color:#555; }
 
@@ -162,6 +162,7 @@ thead .s-annual, thead .s-name { z-index:15; background:#EDE0CB; }
     <span id="month-title">로딩 중...</span>
     <button id="next-btn">›</button>
   </div>
+  <span id="holiday-count" style="font-size:12px;font-weight:800;color:#C74A4A;background:#FFF5F5;border:1px solid #FFD0D0;border-radius:8px;padding:4px 10px;white-space:nowrap;"></span>
   <div class="hdr-btns">
     <button class="btn btn-gold" id="settings-btn">⚙ 직원 설정</button>
     <button class="btn btn-apply" id="apply-btn">✔ 신청 반영하기</button>
@@ -324,10 +325,13 @@ function render() {
       const reqVal   = reqM[name][d];   // requested or undefined
 
       let code='', isReq=false;
-      if (schedVal) {
-        code = schedVal; isReq = false;  // admin wins
+      if (schedVal && reqVal) {
+        // 스케줄 데이터와 신청이 둘 다 있으면 → 신청 반영된 것 → 노란색
+        code = schedVal; isReq = true;
+      } else if (schedVal) {
+        code = schedVal; isReq = false;  // 관리자 입력만 → 흰색
       } else if (reqVal) {
-        code = reqVal;   isReq = true;   // only requested
+        code = reqVal;   isReq = true;   // 신청만 → 노란색
       }
 
       const disp = dispCode(code);
@@ -371,6 +375,12 @@ function render() {
     </table>`;
 
   renderFooter(staffNames, sMeta, tUsed);
+  // 법정공휴일 수 업데이트
+  let holCount = 0;
+  for (let d=1; d<=total; d++) { if (HOLIDAYS[ds(curYear,curMonth,d)]) holCount++; }
+  const hcEl = document.getElementById('holiday-count');
+  if (hcEl) hcEl.textContent = `법정공휴일 ${holCount}일`;
+
   document.getElementById('loading').style.display='none';
   document.getElementById('table-wrap').style.display='block';
   document.getElementById('footer-area').style.display='flex';

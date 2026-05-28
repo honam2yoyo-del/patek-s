@@ -34,7 +34,7 @@
             position: absolute; 
             top: 0; left: 0; right: 0; bottom: 0;
             overflow-y: auto;
-            padding-bottom: 90px;
+            padding-bottom: max(110px, calc(80px + env(safe-area-inset-bottom)));
             animation: fadeIn 0.2s ease-out;
         }
         .page.active { display: block; }
@@ -199,6 +199,8 @@
     window.regPosition = '사원';
     window.editPosition = '사원';
 
+    window.leaveTimeHours = null;
+
     window.timeRequests = [];
     let unsubscribeTimeRequests = null;
     window.timeRequestSelectedDate = null;
@@ -265,7 +267,7 @@
             'page-cal-event-modal', 'page-schedule-edit-modal',
             'page-leave-calendar-modal', 'page-leave-history-modal',
             'page-my-schedule-modal', 'page-time-request-modal', 'page-time-history-modal',
-            'staff-name-picker-overlay', 'page-schedule-generator'
+            'staff-name-picker-overlay', 'page-schedule-generator', 'page-staff-stats-modal'
         ];
         pages.forEach(id => {
             const el = document.getElementById(id);
@@ -1992,6 +1994,100 @@
         window.XLSX.writeFile(wb, `스케줄_${year}년${month}월.xlsx`);
     };
 
+    window.openStaffStatsModal = function() {
+        window.renderStaffStats();
+        document.getElementById('page-staff-stats-modal').style.display = 'flex';
+        lucide.createIcons();
+    };
+    window.closeStaffStatsModal = function() {
+        document.getElementById('page-staff-stats-modal').style.display = 'none';
+    };
+
+    window.renderStaffStats = function() {
+        const year = window.scheduleYear; const month = window.scheduleMonth;
+        const mKey = `${year}-${String(month).padStart(2,'0')}`;
+        const mDoc = window.schedulesData[mKey];
+        const staffNames = (mDoc?.staffNames) || window.storeStaffs;
+        const totalDays = getDaysInMonth(year, month);
+
+        const hEl = document.getElementById('staff-stats-month-title');
+        if (hEl) hEl.innerText = `${year}년 ${month}월`;
+
+        function calcStats(sNames, allYears) {
+            return sNames.map(name => {
+                let cA=0,cB=0,cC=0,cAnn=0,cWkOff=0;
+                const docsToCheck = allYears
+                    ? Object.entries(window.schedulesData||{}).filter(([k])=>k.startsWith(String(year)))
+                    : [[mKey, mDoc||{}]];
+                docsToCheck.forEach(([key, doc]) => {
+                    const m = parseInt(key.split('-')[1]);
+                    const days = getDaysInMonth(year, m);
+                    const uD = (doc.staffs||{})[name]||{};
+                    for (let d=1; d<=days; d++) {
+                        const ds = `${year}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                        const dow = new Date(year,m-1,d).getDay();
+                        const isHol = PUBLIC_HOLIDAYS_2026[ds] !== undefined;
+                        let code = uD[d]||uD[String(d)]||'';
+                        const lv = window.leaveRequests.find(r=>r.name===name&&ds>=r.startDate&&ds<=r.endDate);
+                        if (lv) code = lv.type;
+                        const u = String(code).trim().toUpperCase();
+                        if(u==='A'||u==='A반') cA++;
+                        else if(u==='B'||u==='B반') cB++;
+                        else if(u==='C') cC++;
+                        else if(u==='연차'||u==='연') cAnn++;
+                        else if(dow===0||dow===6||isHol) cWkOff++;
+                    }
+                });
+                const staffObj = window.staffList.find(s=>s.name===name)||{};
+                const alloc = staffObj.timeAllowance ?? 0;
+                const used = (window.timeRequests||[]).filter(r=>r.name===name).reduce((s,r)=>s+(r.hours||0),0);
+                const remain = Math.max(0, alloc - used);
+                return { name, cA, cB, cC, cAnn, cWkOff, remain };
+            });
+        }
+
+        const monthStats = calcStats(staffNames, false);
+        const yearStats  = calcStats(staffNames, true);
+
+        const thCls = 'px-2 py-2 text-[10px] font-bold text-white text-center whitespace-nowrap border-r border-white/20 last:border-r-0';
+        const tdCls = 'px-2 py-2 text-[12px] font-semibold text-center border-b border-[#F0EFEA]';
+
+        function buildTable(title, stats, bg) {
+            const rows = stats.map(s => `
+                <tr class="hover:bg-[#FDFCF8]">
+                    <td class="${tdCls} text-left font-bold text-[#333]">${s.name}</td>
+                    <td class="${tdCls} text-[#B4975A]">${s.cAnn.toFixed(1)}</td>
+                    <td class="${tdCls}" style="color:#6E2626;">${s.cA}</td>
+                    <td class="${tdCls}" style="color:#234B7A;">${s.cB}</td>
+                    <td class="${tdCls}" style="color:#7A4F14;">${s.cC}</td>
+                    <td class="${tdCls} text-[#555]">${s.cWkOff}</td>
+                    <td class="${tdCls} text-[#167B72]">${s.remain>0?s.remain.toFixed(1)+'h':'-'}</td>
+                </tr>`).join('');
+            return `<div class="mb-5">
+                <div class="text-[13px] font-bold text-[#333] mb-2">${title}</div>
+                <div class="overflow-x-auto no-scrollbar rounded-xl border border-[#F0EFEA] shadow-sm">
+                    <table class="w-full border-collapse" style="min-width:420px;">
+                        <thead><tr style="background:${bg};">
+                            <th class="${thCls} text-left">직원</th>
+                            <th class="${thCls}">연차 사용</th>
+                            <th class="${thCls}">A조</th>
+                            <th class="${thCls}">B조</th>
+                            <th class="${thCls}">C조</th>
+                            <th class="${thCls}">주말·공휴일 휴무</th>
+                            <th class="${thCls}">시간찾기 잔여</th>
+                        </tr></thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>
+            </div>`;
+        }
+
+        const container = document.getElementById('staff-stats-content');
+        if (container) container.innerHTML =
+            buildTable(`${year}년 ${month}월 현황`, monthStats, '#B4975A') +
+            buildTable(`${year}년 누적 현황`, yearStats, '#7A6B5A');
+    };
+
     window.openLeaveCalendarModal = function() {
         window.leaveRangeStart = null; window.leaveRangeEnd = null;
         document.getElementById('leave-reason-input').value = '';
@@ -2006,12 +2102,44 @@
 
     window.setLeaveType = function(type) {
         window.leaveType = type;
-        const colors = { '휴무': '#FFE146', 'A': '#FFC8CD', 'A반': '#FFC8CD', 'B': '#FFC8CD', 'B반': '#FFC8CD' };
+        window.leaveTimeHours = null;
+        const colors = { '휴무':'#FFE146','A':'#FFC8CD','A반':'#FFC8CD','B':'#FFC8CD','B반':'#FFC8CD','시간찾기':'#B4975A' };
         document.querySelectorAll('.leave-type-btn').forEach(btn => {
-            const btnType = btn.innerText.trim();
-            if (btnType === type) { btn.style.backgroundColor = colors[btnType]; btn.style.color = '#333333'; btn.style.borderColor = colors[btnType]; } 
+            const btnType = btn.dataset.type || btn.innerText.trim();
+            if (btnType === type) { btn.style.backgroundColor = colors[btnType]||'#B4975A'; btn.style.color = '#333333'; btn.style.borderColor = colors[btnType]||'#B4975A'; }
             else { btn.style.backgroundColor = '#FFFFFF'; btn.style.color = '#666666'; btn.style.borderColor = '#E5E5E5'; }
         });
+        const hoursSection = document.getElementById('leave-time-hours-section');
+        if (hoursSection) hoursSection.style.display = type === '시간찾기' ? 'block' : 'none';
+        if (type === '시간찾기') renderLeaveHoursButtons(null);
+    };
+
+    function renderLeaveHoursButtons(selected) {
+        const opts = [0.5,1.0,1.5,2.0,2.5,3.0,3.5,4.0];
+        const grid = document.getElementById('leave-hours-grid');
+        if (!grid) return;
+        const userName = window.currentUserData?.name;
+        const totalAllowance = window.staffList.find(s=>s.name===userName)?.timeAllowance || window.currentUserData?.timeAllowance || 0;
+        const timeUsed = (window.timeRequests||[]).filter(r=>r.name===userName).reduce((s,r)=>s+(r.hours||0),0);
+        const remaining = Math.max(0, totalAllowance - timeUsed);
+        const remEl = document.getElementById('leave-hours-remain');
+        if (remEl) remEl.textContent = `잔여: ${remaining.toFixed(1)}시간`;
+        grid.innerHTML = opts.map(h => {
+            const isSel = selected===h;
+            const disabled = h > remaining ? 'opacity-50 cursor-not-allowed' : 'active:scale-95';
+            return `<button onclick="window.selectLeaveHours(${h})" class="py-2 rounded-xl text-[12px] font-bold border transition-all ${disabled} ${isSel?'bg-[#B4975A] text-white border-[#B4975A]':'bg-white text-[#4A443F] border-[#E8E4DB]'}" ${h>remaining?'disabled':''} >${h}</button>`;
+        }).join('') + `<button onclick="window.selectLeaveHoursCustom()" class="py-2 rounded-xl text-[12px] font-bold border transition-all active:scale-95 col-span-2 ${selected==='custom'?'bg-[#B4975A] text-white border-[#B4975A]':'bg-white text-[#4A443F] border-[#E8E4DB]'}">직접입력</button>`;
+    }
+
+    window.selectLeaveHours = function(h) {
+        window.leaveTimeHours = h;
+        document.getElementById('leave-hours-custom-wrap').style.display = 'none';
+        renderLeaveHoursButtons(h);
+    };
+    window.selectLeaveHoursCustom = function() {
+        window.leaveTimeHours = 'custom';
+        document.getElementById('leave-hours-custom-wrap').style.display = 'block';
+        renderLeaveHoursButtons('custom');
     };
 
     window.renderLeaveCalendar = function() {
@@ -2094,26 +2222,57 @@
 
     window.submitLeaveRequest = async function() {
         if (!currentUser) return;
-        if (!window.leaveRangeStart) { window.showCustomAlert("휴무일을 선택해주세요."); return; }
+        if (!window.leaveRangeStart) { window.showCustomAlert("날짜를 선택해주세요."); return; }
 
+        // ── 시간찾기 분기 ──
+        if (window.leaveType === '시간찾기') {
+            let hours = window.leaveTimeHours;
+            if (hours === 'custom') {
+                const customVal = parseFloat(document.getElementById('leave-hours-custom-input')?.value || '0');
+                if (!customVal || customVal <= 0) { window.showCustomAlert("시간을 입력해주세요."); return; }
+                hours = customVal;
+            }
+            if (!hours) { window.showCustomAlert("시간을 선택해주세요."); return; }
+            const userName = window.currentUserData?.name || '미인증';
+            const totalAllowance = window.staffList.find(s=>s.name===userName)?.timeAllowance || window.currentUserData?.timeAllowance || 0;
+            const timeUsed = (window.timeRequests||[]).filter(r=>r.name===userName).reduce((s,r)=>s+(r.hours||0),0);
+            const remaining = Math.max(0, totalAllowance - timeUsed);
+            if (hours > remaining) { window.showCustomAlert(`잔여 시간(${remaining}시간)을 초과할 수 없습니다.`); return; }
+            const note = document.getElementById('leave-reason-input').value.trim();
+            document.getElementById('loading-overlay').style.display = 'flex';
+            try {
+                await addDoc(collection(db, 'artifacts', 'patek-s', 'public', 'data', 'time_requests'), {
+                    uid: currentUser.uid, name: userName, date: window.leaveRangeStart, hours, note, createdAt: new Date().toISOString()
+                });
+                window.showCustomAlert("시간찾기 신청이 완료됐습니다.");
+                window.leaveRangeStart = null; window.leaveRangeEnd = null;
+                window.leaveTimeHours = null;
+                document.getElementById('leave-reason-input').value = '';
+                document.getElementById('leave-time-hours-section').style.display = 'none';
+                window.setLeaveType('휴무');
+                window.renderLeaveCalendar();
+            } catch(e) { window.showCustomAlert("오류 발생"); }
+            finally { document.getElementById('loading-overlay').style.display = 'none'; }
+            return;
+        }
+
+        // ── 일반 스케줄 신청 ──
         const reason = document.getElementById('leave-reason-input').value.trim();
         const startDate = window.leaveRangeStart; const endDate = window.leaveRangeEnd || window.leaveRangeStart;
         const diffDays = Math.ceil((new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24)) + 1;
         const region = document.getElementById('leave-region-input').value.trim();
-
         if (diffDays >= 3 && !region) { window.showCustomAlert("지역을 입력하세요"); return; }
-
         document.getElementById('loading-overlay').style.display = 'flex';
         try {
             await addDoc(collection(db, 'artifacts', 'patek-s', 'public', 'data', 'leave_requests'), {
                 name: window.currentUserData?.name || '미인증', uid: currentUser.uid, startDate, endDate, type: window.leaveType, reason, region: region || '', createdAt: new Date().toISOString()
             });
-            window.showCustomAlert("신청이 완료되었습니다.");
+            window.showCustomAlert("신청이 완료됐습니다.");
             window.leaveRangeStart = null; window.leaveRangeEnd = null;
             document.getElementById('leave-reason-input').value = ''; document.getElementById('leave-region-input').value = '';
             document.getElementById('leave-region-container').style.display = 'none';
             window.renderLeaveCalendar();
-        } catch(e) { window.showCustomAlert("오류 발생"); } 
+        } catch(e) { window.showCustomAlert("오류 발생"); }
         finally { document.getElementById('loading-overlay').style.display = 'none'; }
     };
 
@@ -2271,7 +2430,7 @@
                 <!-- 2행: 아이콘 5개 (라벨 없음) -->
                 <div class="flex items-center justify-center gap-2.5 mb-2.5 w-full">
                     <button onclick="window.openMySchedule()" class="w-9 h-9 bg-white border border-[#E8E4DB] rounded-xl flex items-center justify-center text-[#B4975A] shadow-sm active:scale-95 transition-transform"><i data-lucide="user" class="w-4 h-4"></i></button>
-                    <button onclick="window.openTimeRequestModal()" class="w-9 h-9 bg-white border border-[#E8E4DB] rounded-xl flex items-center justify-center text-[#B4975A] shadow-sm active:scale-95 transition-transform"><i data-lucide="timer" class="w-4 h-4"></i></button>
+                    <button onclick="window.openStaffStatsModal()" class="w-9 h-9 bg-white border border-[#E8E4DB] rounded-xl flex items-center justify-center text-[#B4975A] shadow-sm active:scale-95 transition-transform"><i data-lucide="users" class="w-4 h-4"></i></button>
                     <button onclick="window.openLeaveCalendarModal()" class="w-9 h-9 bg-white border border-[#E8E4DB] rounded-xl flex items-center justify-center text-[#B4975A] shadow-sm active:scale-95 transition-transform"><i data-lucide="calendar-days" class="w-4 h-4"></i></button>
                     <button onclick="window.openScheduleEdit()" class="w-9 h-9 bg-white border border-[#E8E4DB] rounded-xl flex items-center justify-center text-[#B4975A] shadow-sm active:scale-95 transition-transform"><i data-lucide="pencil" class="w-4 h-4"></i></button>
                     <input type="file" id="schedule-excel-input" accept=".xlsx,.xls" class="hidden" onchange="window.handleScheduleExcelUpload(event)" />
@@ -2499,11 +2658,23 @@
             <div>
                 <label class="block text-[11px] font-bold text-[#666] mb-1.5 ml-1">신청 종류</label>
                 <div class="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-                    <button type="button" onclick="window.setLeaveType('휴무')" class="leave-type-btn whitespace-nowrap px-4 py-2 rounded-lg text-[12px] font-bold border transition-colors bg-white text-[#666] border-[#E5E5E5] shadow-sm">휴무</button>
-                    <button type="button" onclick="window.setLeaveType('A')" class="leave-type-btn whitespace-nowrap px-4 py-2 rounded-lg text-[12px] font-bold border transition-colors bg-white text-[#666] border-[#E5E5E5] shadow-sm">A</button>
-                    <button type="button" onclick="window.setLeaveType('A반')" class="leave-type-btn whitespace-nowrap px-4 py-2 rounded-lg text-[12px] font-bold border transition-colors bg-white text-[#666] border-[#E5E5E5] shadow-sm">A반</button>
-                    <button type="button" onclick="window.setLeaveType('B')" class="leave-type-btn whitespace-nowrap px-4 py-2 rounded-lg text-[12px] font-bold border transition-colors bg-white text-[#666] border-[#E5E5E5] shadow-sm">B</button>
-                    <button type="button" onclick="window.setLeaveType('B반')" class="leave-type-btn whitespace-nowrap px-4 py-2 rounded-lg text-[12px] font-bold border transition-colors bg-white text-[#666] border-[#E5E5E5] shadow-sm">B반</button>
+                    <button type="button" data-type="휴무" onclick="window.setLeaveType('휴무')" class="leave-type-btn whitespace-nowrap px-4 py-2 rounded-lg text-[12px] font-bold border transition-colors bg-white text-[#666] border-[#E5E5E5] shadow-sm">휴무</button>
+                    <button type="button" data-type="A" onclick="window.setLeaveType('A')" class="leave-type-btn whitespace-nowrap px-4 py-2 rounded-lg text-[12px] font-bold border transition-colors bg-white text-[#666] border-[#E5E5E5] shadow-sm">A</button>
+                    <button type="button" data-type="A반" onclick="window.setLeaveType('A반')" class="leave-type-btn whitespace-nowrap px-4 py-2 rounded-lg text-[12px] font-bold border transition-colors bg-white text-[#666] border-[#E5E5E5] shadow-sm">A반</button>
+                    <button type="button" data-type="B" onclick="window.setLeaveType('B')" class="leave-type-btn whitespace-nowrap px-4 py-2 rounded-lg text-[12px] font-bold border transition-colors bg-white text-[#666] border-[#E5E5E5] shadow-sm">B</button>
+                    <button type="button" data-type="B반" onclick="window.setLeaveType('B반')" class="leave-type-btn whitespace-nowrap px-4 py-2 rounded-lg text-[12px] font-bold border transition-colors bg-white text-[#666] border-[#E5E5E5] shadow-sm">B반</button>
+                    <button type="button" data-type="시간찾기" onclick="window.setLeaveType('시간찾기')" class="leave-type-btn whitespace-nowrap px-4 py-2 rounded-lg text-[12px] font-bold border transition-colors bg-white text-[#666] border-[#E5E5E5] shadow-sm">시간찾기</button>
+                </div>
+                <!-- 시간찾기 시간 선택 -->
+                <div id="leave-time-hours-section" style="display:none;" class="mt-3 p-3 bg-[#F8F3E7] rounded-xl border border-[#E8D8C0]">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-[11px] font-bold text-[#666]">시간 선택</span>
+                        <span id="leave-hours-remain" class="text-[11px] font-bold text-[#B4975A]">잔여: 0시간</span>
+                    </div>
+                    <div id="leave-hours-grid" class="grid grid-cols-5 gap-1.5 mb-2"></div>
+                    <div id="leave-hours-custom-wrap" style="display:none;" class="mt-2">
+                        <input id="leave-hours-custom-input" type="number" step="0.5" min="0.5" placeholder="시간 직접 입력" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-2.5 outline-none text-xs font-semibold" />
+                    </div>
                 </div>
             </div>
             <div>
@@ -2736,6 +2907,22 @@
         <button onclick="window.submitTimeRequest()" class="w-full bg-[#B4975A] text-white py-3 rounded-xl text-[14px] font-bold shadow-md active:scale-95">신청하기</button>
         <button onclick="window.openTimeHistoryModal()" class="w-full bg-white border border-[#E5E5E5] text-[#8B7355] py-2.5 rounded-xl text-[12px] font-bold active:scale-95 flex items-center justify-center gap-1">신청 내역 보기 <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i></button>
     </div>
+</div>
+
+<!-- 직원별 현황 모달 -->
+<div id="page-staff-stats-modal" style="display: none;" class="fixed inset-0 w-full max-w-md mx-auto bg-[#FAF9F5] z-[200] flex-col font-sans">
+    <div class="bg-[#FAF9F5] flex-shrink-0 border-b border-[#F0EFEA]" style="padding-top: max(4px, env(safe-area-inset-top));">
+        <div class="relative flex items-center justify-between px-5 pt-1 pb-0">
+            <div class="w-8"></div>
+            <img src="log.png" alt="Patek Philippe" class="w-24 h-auto object-contain" />
+            <button onclick="window.closeStaffStatsModal()" class="w-8 h-8 flex items-center justify-center text-[#8A847E] active:scale-95"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+        <div class="text-center py-1 pb-3">
+            <h2 class="text-[17px] font-bold text-[#333]">직원별 현황</h2>
+            <p id="staff-stats-month-title" class="text-[13px] text-[#888] font-semibold mt-0.5">2026년 5월</p>
+        </div>
+    </div>
+    <div id="staff-stats-content" class="flex-1 overflow-y-auto no-scrollbar px-4 pt-4 pb-8"></div>
 </div>
 
 <!-- 시간 찾기 내역 모달 -->
