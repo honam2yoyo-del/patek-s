@@ -238,7 +238,8 @@
             'page-album-modal', 'page-profile-modal', 'page-staff-modal',
             'page-cal-event-modal', 'page-schedule-edit-modal',
             'page-leave-calendar-modal', 'page-leave-history-modal',
-            'page-my-schedule-modal', 'page-time-request-modal', 'page-time-history-modal'
+            'page-my-schedule-modal', 'page-time-request-modal', 'page-time-history-modal',
+            'staff-name-picker-overlay'
         ];
         pages.forEach(id => {
             const el = document.getElementById(id);
@@ -1295,26 +1296,48 @@
 
     window.openScheduleEdit = function() {
         if (!currentUser) return;
-        const year = window.scheduleYear; const month = window.scheduleMonth;
-        document.getElementById('edit-schedule-title').innerText = `${year}년 ${month}월`;
+        document.getElementById('edit-schedule-title').innerText = `${window.scheduleYear}년 ${window.scheduleMonth}월`;
         window.scheduleEditSelectedStaff = null;
         window.scheduleEditChangedCells = {};
         window.scheduleEditSelectedDay = null;
         window.renderScheduleEditStaffSelector();
         document.getElementById('page-schedule-edit-modal').style.display = 'flex';
+        lucide.createIcons();
+    };
+
+    window.adjustEditScheduleMonth = function(amount) {
+        window.adjustScheduleMonth(amount);
+        window.scheduleEditChangedCells = {};
+        window.scheduleEditSelectedDay = null;
+        document.getElementById('edit-schedule-title').innerText = `${window.scheduleYear}년 ${window.scheduleMonth}월`;
+        window.renderScheduleEditStaffSelector();
+    };
+
+    window.openStaffNamePicker = function() {
+        const currentMonthKey = `${window.scheduleYear}-${String(window.scheduleMonth).padStart(2,'0')}`;
+        const staffNames = (window.schedulesData[currentMonthKey] || {}).staffNames || window.storeStaffs;
+        const list = document.getElementById('staff-name-picker-list');
+        if (!list) return;
+        list.innerHTML = staffNames.map(name => {
+            const isSel = name === window.scheduleEditSelectedStaff;
+            return `<button onclick="window.selectScheduleEditStaff('${name}'); window.closeStaffNamePicker();" class="w-full py-3 rounded-xl text-[14px] font-bold border transition-all active:scale-95 ${isSel ? 'bg-[#B4975A] text-white border-[#B4975A] shadow-md' : 'bg-white text-[#4A443F] border-[#E8E4DB] shadow-sm'}">${name}</button>`;
+        }).join('');
+        document.getElementById('staff-name-picker-overlay').style.display = 'flex';
+    };
+
+    window.closeStaffNamePicker = function() {
+        document.getElementById('staff-name-picker-overlay').style.display = 'none';
     };
 
     window.renderScheduleEditStaffSelector = function() {
-        const currentMonthKey = `${window.scheduleYear}-${String(window.scheduleMonth).padStart(2, '0')}`;
-        const staffNames = (window.schedulesData[currentMonthKey] || {}).staffNames || window.storeStaffs;
         const container = document.getElementById('edit-staff-rows-container');
-        let html = `<div class="flex flex-wrap gap-2 mb-5">`;
-        staffNames.forEach(name => {
-            const isSel = window.scheduleEditSelectedStaff === name;
-            html += `<button onclick="window.selectScheduleEditStaff('${name}')" class="px-4 py-2 rounded-xl text-[13px] font-bold border transition-all active:scale-95 ${isSel ? 'bg-[#B4975A] text-white border-[#B4975A] shadow-md' : 'bg-white text-[#4A443F] border-[#E8E4DB] shadow-sm'}">${name}</button>`;
-        });
-        html += `</div><div id="schedule-edit-grid-area">`;
-        if (!window.scheduleEditSelectedStaff) html += `<div class="text-center text-[#999] py-16 text-sm">위에서 직원을 선택하세요</div>`;
+        let html = `<div id="schedule-edit-grid-area">`;
+        if (!window.scheduleEditSelectedStaff) {
+            html += `<div class="flex flex-col items-center justify-center py-16 gap-4">
+                <p class="text-[#999] text-sm">직원을 선택해주세요</p>
+                <button onclick="window.openStaffNamePicker()" class="px-6 py-3 bg-[#B4975A] text-white rounded-xl text-[14px] font-bold shadow-md active:scale-95">직원 선택</button>
+            </div>`;
+        }
         html += `</div>`;
         container.innerHTML = html;
         if (window.scheduleEditSelectedStaff) window.renderScheduleEditGrid(window.scheduleEditSelectedStaff);
@@ -1337,7 +1360,13 @@
         const dayNames = ['일','월','화','수','목','금','토'];
 
         let html = `<div class="bg-white border border-[#E8E4DB] rounded-xl shadow-sm overflow-hidden">
-            <div class="font-bold text-[#B4975A] border-b border-[#F0EFEA] px-3 py-2.5 text-[14px]">${staffName}의 근무표</div>
+            <div class="border-b border-[#F0EFEA] px-3 py-2.5 flex items-center gap-1">
+                <button onclick="window.openStaffNamePicker()" class="flex items-center gap-1 text-[#B4975A] active:scale-95 transition-transform">
+                    <span class="text-[14px] font-bold">${staffName}</span>
+                    <i data-lucide="chevron-down" class="w-3.5 h-3.5 shrink-0"></i>
+                </button>
+                <span class="text-[14px] font-medium text-[#8A847E]">의 근무표</span>
+            </div>
             <div class="grid grid-cols-7 border-b border-[#E8E4DB]">`;
         dayNames.forEach((n, i) => {
             const c = i===0 ? 'text-[#E53935]' : (i===6 ? 'text-[#1E88E5]' : 'text-[#666]');
@@ -2285,9 +2314,29 @@
 
 <!-- 근무표 수정 모달 -->
 <div id="page-schedule-edit-modal" style="display: none;" class="fixed inset-0 w-full max-w-md mx-auto bg-[#FAF9F5] z-[200] flex-col font-sans">
-    <div class="pb-4 bg-[#FAF9F5] flex-shrink-0 relative flex flex-col items-center" style="padding-top: max(4px, env(safe-area-inset-top));"><button onclick="window.closeScheduleEdit()" class="absolute right-6 top-10 text-[#999] p-2"><i data-lucide="x" class="w-6 h-6"></i></button><img src="log.png" alt="Patek Philippe" class="w-24 h-auto object-contain mb-3" /><h2 id="edit-schedule-title" class="text-[17px] font-bold text-[#333]">근무표</h2></div>
-    <div id="edit-staff-rows-container" class="flex-1 overflow-y-auto p-5 space-y-4 pb-32"></div>
-    <div class="absolute bottom-0 w-full p-5 bg-white border-t border-[#F0EFEA]" style="padding-bottom: max(16px, env(safe-area-inset-bottom));"><button onclick="window.saveScheduleSheet()" class="w-full bg-[#B4975A] text-white py-3.5 rounded-xl text-[16px] font-bold shadow-md active:scale-95 transition-transform">저장하기</button></div>
+    <div class="bg-[#FAF9F5] flex-shrink-0 border-b border-[#F0EFEA]" style="padding-top: max(4px, env(safe-area-inset-top));">
+        <div class="relative flex items-center justify-between px-5 pt-1 pb-0">
+            <div class="w-8"></div>
+            <img src="log.png" alt="Patek Philippe" class="w-24 h-auto object-contain" />
+            <button onclick="window.closeScheduleEdit()" class="w-8 h-8 flex items-center justify-center text-[#8A847E] active:scale-95"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+        <div class="flex items-center justify-center gap-4 pb-3 pt-1">
+            <button onclick="window.adjustEditScheduleMonth(-1)" class="w-8 h-8 rounded-full bg-white border border-[#E8E4DB] flex items-center justify-center text-[#B4975A] active:scale-95 shadow-sm"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+            <h2 id="edit-schedule-title" class="text-[17px] font-bold text-[#333] min-w-[110px] text-center">근무표</h2>
+            <button onclick="window.adjustEditScheduleMonth(1)" class="w-8 h-8 rounded-full bg-white border border-[#E8E4DB] flex items-center justify-center text-[#B4975A] active:scale-95 shadow-sm"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+        </div>
+    </div>
+    <div id="edit-staff-rows-container" class="flex-1 overflow-y-auto p-5 pb-4 no-scrollbar"></div>
+    <div class="flex-shrink-0 p-5 bg-white border-t border-[#F0EFEA]" style="padding-bottom: max(16px, env(safe-area-inset-bottom));"><button onclick="window.saveScheduleSheet()" class="w-full bg-[#B4975A] text-white py-3.5 rounded-xl text-[16px] font-bold shadow-md active:scale-95 transition-transform">저장하기</button></div>
+</div>
+
+<!-- 직원 선택 피커 (수정 화면용 이름 클릭 시) -->
+<div id="staff-name-picker-overlay" style="display:none;" class="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[250] flex items-end justify-center" onclick="window.closeStaffNamePicker()">
+    <div class="w-full max-w-md bg-[#FCFBF9] rounded-t-[26px] p-5 shadow-2xl" onclick="event.stopPropagation()" style="padding-bottom: max(20px, env(safe-area-inset-bottom));">
+        <div class="text-center text-[14px] font-bold text-[#3A3532] mb-4">직원 선택</div>
+        <div id="staff-name-picker-list" class="space-y-2 max-h-[50vh] overflow-y-auto no-scrollbar"></div>
+        <button onclick="window.closeStaffNamePicker()" class="w-full mt-4 py-3 rounded-xl bg-[#F2EFE8] text-[#4A443F] text-[14px] font-bold active:scale-95">취소</button>
+    </div>
 </div>
 
 <!-- 휴무 신청 캘린더 모달 -->
@@ -2298,7 +2347,7 @@
         <h2 class="text-[17px] font-bold text-[#333]">휴무 신청</h2>
     </div>
 
-    <div class="flex-1 overflow-y-auto px-5 pb-32 no-scrollbar">
+    <div class="flex-1 overflow-y-auto px-5 pb-4 no-scrollbar">
         <div class="w-full flex items-start justify-center gap-2 mb-3">
             <div class="relative shrink-0 flex items-center rounded-xl border border-[#D8B98B] bg-[#FFFDF8] shadow-sm overflow-hidden h-9">
                 <button onclick="window.adjustScheduleMonth(-1)" class="w-9 h-full flex items-center justify-center text-[#B17A2A] active:bg-[#F8EFE3]"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
@@ -2343,7 +2392,7 @@
         </div>
     </div>
 
-    <div class="absolute bottom-0 w-full p-4 bg-white border-t border-[#F0EFEA] flex flex-col gap-2" style="padding-bottom: max(16px, env(safe-area-inset-bottom));">
+    <div class="flex-shrink-0 p-4 bg-white border-t border-[#F0EFEA] flex flex-col gap-2" style="padding-bottom: max(16px, env(safe-area-inset-bottom));">
         <button onclick="window.submitLeaveRequest()" class="w-full bg-[#B4975A] text-white py-3 rounded-xl text-[14px] font-bold shadow-md active:scale-95 transition-all">신청하기</button>
         <button onclick="window.openLeaveHistoryModal()" class="w-full bg-white border border-[#E5E5E5] text-[#8B7355] py-2.5 rounded-xl text-[12px] font-bold active:scale-95 transition-all flex items-center justify-center gap-1">신청 내역 보기 <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i></button>
     </div>
