@@ -63,10 +63,28 @@ header {
 .hdr-btns { display:flex; gap:8px; align-items:center; }
 .btn { display:inline-flex; align-items:center; gap:5px; padding:7px 14px; border-radius:9px; font-size:12px; font-weight:800; border:none; cursor:pointer; transition:.15s; }
 .btn:hover { opacity:.85; } .btn:active { transform:scale(.97); }
-.btn-gold { background:#F8F3E7; color:#8B6B2E; border:1.5px solid #D8B98B; }
+.btn-gold  { background:#F8F3E7; color:#8B6B2E; border:1.5px solid #D8B98B; }
 .btn-green { background:#E8F5E9; color:#2E7D32; border:1.5px solid #C8E6C9; }
-.btn-blue { background:#E3F2FD; color:#1565C0; border:1.5px solid #BBDEFB; }
-.btn-red { background:#FFF3E0; color:#E65100; border:1.5px solid #FFCC80; }
+.btn-blue  { background:#E3F2FD; color:#1565C0; border:1.5px solid #BBDEFB; }
+.btn-red   { background:#FFF3E0; color:#E65100; border:1.5px solid #FFCC80; }
+.btn-apply { background:#E8F0FE; color:#1A56DB; border:1.5px solid #A3C0FF; font-size:13px; }
+.btn-apply:hover { background:#D0E4FF; }
+
+/* 반영 확인 패널 */
+#apply-overlay { position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:600; display:none; align-items:center; justify-content:center; }
+#apply-panel { background:white; border-radius:20px; padding:28px; width:460px; max-width:92vw; box-shadow:0 20px 60px rgba(0,0,0,.2); }
+#apply-panel h3 { font-size:17px; font-weight:800; margin-bottom:10px; }
+#apply-panel p { font-size:13px; color:#666; margin-bottom:16px; line-height:1.6; }
+#apply-list { max-height:260px; overflow-y:auto; margin-bottom:18px; border:1px solid #E8E4DB; border-radius:12px; }
+#apply-list table { width:100%; border-collapse:collapse; font-size:12px; }
+#apply-list th { background:#F8F6F0; padding:7px 10px; font-weight:800; border-bottom:1px solid #E8E4DB; text-align:left; }
+#apply-list td { padding:6px 10px; border-bottom:1px solid #F0EFEA; }
+#apply-list tr:last-child td { border-bottom:none; }
+.apply-btns { display:flex; gap:10px; }
+.apply-confirm-btn { flex:1; padding:12px; background:#1A56DB; color:white; border:none; border-radius:12px; font-size:14px; font-weight:800; cursor:pointer; }
+.apply-confirm-btn:hover { background:#1344B8; }
+.apply-cancel-btn { flex:1; padding:12px; background:#F2EFE8; color:#4A443F; border:none; border-radius:12px; font-size:14px; font-weight:800; cursor:pointer; }
+.chip-preview { display:inline-block; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:800; }
 
 /* ── 메인 ── */
 main { padding:16px 20px 24px; }
@@ -166,6 +184,19 @@ thead .col-annual, thead .col-name { z-index:15; background:#EDE8DF; }
   </div>
 </div>
 
+<!-- 신청 반영 확인 패널 -->
+<div id="apply-overlay">
+  <div id="apply-panel">
+    <h3>신청 내역 반영하기</h3>
+    <p id="apply-desc">아래 신청 내역을 근무표에 반영합니다.<br>기존 근무표 데이터가 있는 날짜는 신청 내용으로 <strong>덮어씌워집니다.</strong></p>
+    <div id="apply-list"></div>
+    <div class="apply-btns">
+      <button class="apply-cancel-btn" id="apply-cancel-btn">취소</button>
+      <button class="apply-confirm-btn" id="apply-confirm-btn">반영하기</button>
+    </div>
+  </div>
+</div>
+
 <!-- 헤더 -->
 <header>
   <div class="header-logo">
@@ -179,6 +210,7 @@ thead .col-annual, thead .col-name { z-index:15; background:#EDE8DF; }
   </div>
   <div class="hdr-btns">
     <button class="btn btn-gold" id="settings-btn">⚙ 직원 설정</button>
+    <button class="btn btn-apply" id="apply-btn" title="스케줄 신청 내역을 근무표에 반영합니다">✔ 신청 반영하기</button>
     <button class="btn btn-green" id="export-btn">⬇ 엑셀</button>
     <button class="btn btn-blue" onclick="window.print()">🖨 인쇄</button>
     <button class="btn btn-red" id="logout-btn">로그아웃</button>
@@ -220,7 +252,7 @@ thead .col-annual, thead .col-name { z-index:15; background:#EDE8DF; }
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, collection, onSnapshot, doc, updateDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, collection, onSnapshot, doc, setDoc, updateDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey:"AIzaSyCt7aQXA5eFdnDTMHlRhjPAkyH4b8UB6HY",
@@ -550,6 +582,115 @@ document.getElementById('logout-btn').addEventListener('click', () => signOut(au
 /* ── 월 네비게이션 ── */
 document.getElementById('prev-btn').addEventListener('click', ()=>{ curMonth--; if(curMonth<1){curMonth=12;curYear--;} render(); });
 document.getElementById('next-btn').addEventListener('click', ()=>{ curMonth++; if(curMonth>12){curMonth=1;curYear++;} render(); });
+
+/* ── 신청 반영하기 ── */
+const CODE_COLORS = {
+  'A':'background:#FAD7D5;color:#6E2626','A반':'background:#FAD7D5;color:#6E2626',
+  'B':'background:#D9E7FA;color:#234B7A','B반':'background:#D9E7FA;color:#234B7A',
+  'C':'background:#FFE7B8;color:#7A4F14','연차':'background:#C8E6C9;color:#2E7D32',
+  '경조':'background:#E1F0FA;color:#0D5D9A','휴무':'background:#F2F2F2;color:#777'
+};
+
+document.getElementById('apply-btn').addEventListener('click', () => {
+  const monthKey = `${curYear}-${pad(curMonth)}`;
+  const monthDoc = schedulesData[monthKey] || {};
+  const staffNames = monthDoc.staffNames || Object.keys(DEFAULT_ANNUAL);
+
+  // 이번 달 신청 내역만 필터
+  const monthRequests = leaveRequests.filter(req => {
+    const s = new Date(req.startDate);
+    const e = new Date(req.endDate || req.startDate);
+    // 이번 달에 하루라도 걸리면 포함
+    return (s.getFullYear() === curYear && s.getMonth()+1 === curMonth) ||
+           (e.getFullYear() === curYear && e.getMonth()+1 === curMonth);
+  });
+
+  if (monthRequests.length === 0) {
+    alert(`${curYear}년 ${curMonth}월에 반영할 신청 내역이 없습니다.`);
+    return;
+  }
+
+  // 미리보기 테이블 생성
+  const tbody = monthRequests.map(req => {
+    const colorStyle = CODE_COLORS[req.type] || CODE_COLORS['휴무'];
+    return `<tr>
+      <td style="font-weight:700;">${req.name}</td>
+      <td>${req.startDate}${req.endDate && req.endDate !== req.startDate ? ` ~ ${req.endDate}` : ''}</td>
+      <td><span class="chip-preview" style="${colorStyle}">${req.type}</span></td>
+      <td style="color:#888;font-size:11px;">${req.reason || req.region || '-'}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('apply-desc').innerHTML =
+    `<strong>${curYear}년 ${curMonth}월</strong> 신청 내역 <strong>${monthRequests.length}건</strong>을 근무표에 반영합니다.<br>
+     기존 근무표 데이터가 있는 날짜는 신청 내용으로 <strong style="color:#C0392B;">덮어씌워집니다.</strong>`;
+
+  document.getElementById('apply-list').innerHTML = `
+    <table>
+      <thead><tr><th>이름</th><th>날짜</th><th>종류</th><th>비고</th></tr></thead>
+      <tbody>${tbody}</tbody>
+    </table>`;
+
+  document.getElementById('apply-overlay').style.display = 'flex';
+  document.getElementById('apply-confirm-btn')._monthRequests = monthRequests;
+  document.getElementById('apply-confirm-btn')._staffNames = staffNames;
+  document.getElementById('apply-confirm-btn')._monthDoc = monthDoc;
+  document.getElementById('apply-confirm-btn')._monthKey = monthKey;
+});
+
+document.getElementById('apply-cancel-btn').addEventListener('click', () => {
+  document.getElementById('apply-overlay').style.display = 'none';
+});
+document.getElementById('apply-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('apply-overlay'))
+    document.getElementById('apply-overlay').style.display = 'none';
+});
+
+document.getElementById('apply-confirm-btn').addEventListener('click', async () => {
+  const btn = document.getElementById('apply-confirm-btn');
+  const { _monthRequests, _staffNames, _monthDoc, _monthKey } = btn;
+  btn.textContent = '반영 중...'; btn.disabled = true;
+
+  try {
+    // 기존 staffs 복사
+    const newStaffs = JSON.parse(JSON.stringify(_monthDoc.staffs || {}));
+    _staffNames.forEach(n => { if (!newStaffs[n]) newStaffs[n] = {}; });
+
+    let applied = 0;
+    _monthRequests.forEach(req => {
+      if (!_staffNames.includes(req.name)) return;
+      const s = new Date(req.startDate);
+      const e = new Date(req.endDate || req.startDate);
+      for (let d = new Date(s); d <= e; d.setDate(d.getDate()+1)) {
+        if (d.getFullYear() === curYear && d.getMonth()+1 === curMonth) {
+          newStaffs[req.name][String(d.getDate())] = req.type;
+          applied++;
+        }
+      }
+    });
+
+    const now = new Date();
+    const updatedAt = `${now.getFullYear()}.${pad(now.getMonth()+1)}.${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+
+    await setDoc(
+      doc(db, 'artifacts','patek-s','public','data','schedules', _monthKey),
+      {
+        staffs: newStaffs,
+        staffNames: _staffNames,
+        lastUpdated: updatedAt,
+        updatedBy: auth.currentUser?.displayName || auth.currentUser?.email || '스케줄생성기'
+      },
+      { merge: true }
+    );
+
+    document.getElementById('apply-overlay').style.display = 'none';
+    alert(`✅ ${applied}개 항목이 근무표에 반영됐습니다.`);
+  } catch(e) {
+    alert('오류 발생: ' + e.message);
+  } finally {
+    btn.textContent = '반영하기'; btn.disabled = false;
+  }
+});
 </script>
 </body>
 </html>
