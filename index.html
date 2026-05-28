@@ -658,7 +658,6 @@
 
             setNoticeDetailMode('view');
 
-            // ⭐️ 유저 읽음 카운트 처리 시 발생할 수 있는 에러 사전 방지
             if (currentUser && currentUser.uid) {
                 const currentReaders = notice.readers || [];
                 if (!currentReaders.includes(currentUser.uid) && currentReaders.length < MAX_READERS) { 
@@ -1586,7 +1585,6 @@
             <div id="notice-list-content" class="space-y-3 mt-3"></div>
         </div>
 
-        <!-- ⭐️ 수정: 연필 모양 아이콘 추가 -->
         <div id="page-schedule" class="page bg-[#FAF9F5] no-scrollbar px-3 pt-1">
             <div class="flex flex-col items-center w-full text-center">
                 <div class="flex items-center justify-between w-full relative mb-1.5 h-8">
