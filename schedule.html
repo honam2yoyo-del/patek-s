@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>스케줄 생성기 – Patek-S</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Pretendard', 'Malgun Gothic', Arial, sans-serif; background: #FAF9F5; color: #333; min-height: 100vh; }
+
+  #app { display: flex; flex-direction: column; min-height: 100vh; }
+
+  header {
+    background: white;
+    border-bottom: 1px solid #E8E4DB;
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  }
+  header .logo { display: flex; align-items: center; gap: 12px; }
+  header img { height: 36px; object-fit: contain; }
+  header h1 { font-size: 20px; font-weight: 800; color: #333; }
+
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .month-nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #FFFDF8;
+    border: 2px solid #D8B98B;
+    border-radius: 12px;
+    padding: 6px 14px;
+  }
+  .month-nav button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 20px;
+    color: #B4975A;
+    line-height: 1;
+    padding: 0 4px;
+  }
+  .month-nav button:hover { color: #8B6B2E; }
+  #month-title { font-size: 17px; font-weight: 800; color: #2F2924; min-width: 110px; text-align: center; }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-excel { background: #E8F5E9; color: #2E7D32; border: 1px solid #C8E6C9; }
+  .btn-excel:hover { background: #C8E6C9; }
+  .btn-print { background: #E3F2FD; color: #1565C0; border: 1px solid #BBDEFB; }
+  .btn-print:hover { background: #BBDEFB; }
+
+  .legend {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 10px 24px;
+    background: white;
+    border-bottom: 1px solid #F0EFEA;
+    flex-wrap: wrap;
+  }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: #555; }
+  .legend-dot { width: 20px; height: 14px; border-radius: 4px; display: inline-block; }
+
+  main { flex: 1; padding: 20px 24px; overflow: hidden; }
+
+  #loading { text-align: center; padding: 60px; color: #888; font-size: 15px; }
+
+  #table-wrap { overflow-x: auto; border-radius: 16px; border: 1.5px solid #E1CDB0; box-shadow: 0 4px 20px rgba(139,115,85,0.1); }
+
+  table { border-collapse: collapse; min-width: max-content; background: white; }
+  thead { position: sticky; top: 0; z-index: 10; }
+
+  th.sticky-col, td.sticky-col {
+    position: sticky;
+    left: 0;
+    z-index: 5;
+    background: #F8F6F0;
+    min-width: 90px;
+    max-width: 90px;
+    white-space: nowrap;
+  }
+  thead th.sticky-col { z-index: 15; background: #F0EBE0; }
+
+  th {
+    padding: 10px 6px;
+    background: #F8F6F0;
+    border: 1px solid #E8D8BD;
+    font-size: 12px;
+    font-weight: 700;
+    text-align: center;
+    color: #555;
+    min-width: 54px;
+  }
+  th.day-sun { color: #C74A4A; }
+  th.day-sat { color: #2F70B9; }
+  th.day-hol { color: #C74A4A; }
+
+  td {
+    padding: 6px 4px;
+    border: 1px solid #E8D8BD;
+    vertical-align: top;
+    min-width: 54px;
+    background: white;
+  }
+  td.sticky-col {
+    font-size: 13px;
+    font-weight: 700;
+    color: #333;
+    padding: 8px 12px;
+    border-right: 2px solid #D8C9B0;
+  }
+
+  .cell-chip {
+    display: block;
+    width: 100%;
+    padding: 3px 2px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 800;
+    text-align: center;
+    border: 1px solid transparent;
+    margin-bottom: 2px;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .cell-chip.requested { border-style: dashed !important; border-width: 1.5px !important; }
+
+  .chip-a { background: #FAD7D5; color: #6E2626; border-color: #F0B9B7; }
+  .chip-b { background: #D9E7FA; color: #234B7A; border-color: #BFD2EF; }
+  .chip-c { background: #FFE7B8; color: #7A4F14; border-color: #F4D08C; }
+  .chip-off { background: #F2F2F2; color: #777; border-color: #DDD; }
+  .chip-annual { background: #C8E6C9; color: #2E7D32; border-color: #A5D6A7; }
+
+  .empty-cell { background: #FAFAF8; }
+  .weekend-cell { background: #FEFCF8; }
+  .holiday-cell { background: #FFF5F5; }
+
+  @media print {
+    header, .legend, .controls { display: none !important; }
+    body { background: white; }
+    #table-wrap { box-shadow: none; border: 1px solid #ccc; }
+    th, td { font-size: 10px; padding: 4px 2px; }
+    td.sticky-col, th.sticky-col { position: static; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="logo">
+      <img src="log.png" alt="Patek-S" onerror="this.style.display='none'" />
+      <h1>스케줄 생성기</h1>
+    </div>
+    <div class="controls">
+      <div class="month-nav">
+        <button id="prev-btn">‹</button>
+        <span id="month-title">로딩 중...</span>
+        <button id="next-btn">›</button>
+      </div>
+      <button class="btn btn-excel" id="export-btn">⬇ 엑셀 다운로드</button>
+      <button class="btn btn-print" onclick="window.print()">🖨 인쇄</button>
+    </div>
+  </header>
+
+  <div class="legend">
+    <span><span class="legend-dot" style="background:#FAD7D5;border:1px solid #F0B9B7;"></span>A조</span>
+    <span><span class="legend-dot" style="background:#D9E7FA;border:1px solid #BFD2EF;"></span>B조</span>
+    <span><span class="legend-dot" style="background:#FFE7B8;border:1px solid #F4D08C;"></span>C조</span>
+    <span><span class="legend-dot" style="background:#F2F2F2;border:1px solid #DDD;"></span>휴무</span>
+    <span><span class="legend-dot" style="background:#C8E6C9;border:1px solid #A5D6A7;"></span>연차</span>
+    <span><span class="legend-dot" style="border:1.5px dashed #9a9a9a;background:transparent;"></span>신청됨</span>
+  </div>
+
+  <main>
+    <div id="loading">Firebase 데이터 로딩 중...</div>
+    <div id="table-wrap" style="display:none;"></div>
+  </main>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getFirestore, collection, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCt7aQXA5eFdnDTMHlRhjPAkyH4b8UB6HY",
+  authDomain: "patek-s.firebaseapp.com",
+  projectId: "patek-s",
+  storageBucket: "patek-s.firebasestorage.app",
+  messagingSenderId: "786016749285",
+  appId: "1:786016749285:web:58538eec1cf7e72068b60c"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const PUBLIC_HOLIDAYS = {
+  "2026-01-01":"신정","2026-02-16":"설날연휴","2026-02-17":"설날","2026-02-18":"설날연휴",
+  "2026-03-01":"삼일절","2026-03-02":"대체공휴일","2026-05-05":"어린이날","2026-05-24":"부처님오신날",
+  "2026-05-25":"대체공휴일","2026-06-03":"전국동시지방선거","2026-06-06":"현충일","2026-08-15":"광복절",
+  "2026-08-17":"대체공휴일","2026-09-24":"추석연휴","2026-09-25":"추석","2026-09-26":"추석연휴",
+  "2026-09-28":"대체공휴일","2026-10-03":"개천절","2026-10-05":"대체공휴일","2026-10-09":"한글날","2026-12-25":"기독탄신일"
+};
+
+const DEFAULT_STAFFS = ['옥영세','엄인주','장용석','최혜지','이승범','형영지'];
+
+let curYear = new Date().getFullYear();
+let curMonth = new Date().getMonth() + 1;
+let schedulesData = {};
+let leaveRequests = [];
+let staffsData = {};
+
+function getDays(y, m) { return new Date(y, m, 0).getDate(); }
+function pad(n) { return String(n).padStart(2, '0'); }
+
+function render() {
+  const totalDays = getDays(curYear, curMonth);
+  const monthKey = `${curYear}-${pad(curMonth)}`;
+  document.getElementById('month-title').textContent = `${curYear}년 ${curMonth}월`;
+
+  const monthDoc = schedulesData[monthKey] || {};
+  const staffNames = monthDoc.staffNames || DEFAULT_STAFFS;
+
+  // Build request matrix from leaveRequests
+  const reqMatrix = {};
+  staffNames.forEach(n => { reqMatrix[n] = {}; });
+  leaveRequests.forEach(req => {
+    if (!reqMatrix[req.name]) return;
+    const start = new Date(req.startDate);
+    const end = new Date(req.endDate || req.startDate);
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      if (d.getFullYear() === curYear && d.getMonth() + 1 === curMonth) {
+        reqMatrix[req.name][d.getDate()] = { type: req.type, requested: true };
+      }
+    }
+  });
+
+  // Build schedule matrix from schedulesData
+  const schedMatrix = {};
+  staffNames.forEach(n => {
+    schedMatrix[n] = {};
+    const uDays = (monthDoc.staffs || {})[n] || {};
+    for (let d = 1; d <= totalDays; d++) {
+      schedMatrix[n][d] = uDays[d] || uDays[String(d)] || '';
+    }
+  });
+
+  // Build header row
+  let dayHeaders = `<th class="sticky-col" rowspan="2">직원</th>`;
+  for (let d = 1; d <= totalDays; d++) {
+    const dateStr = `${curYear}-${pad(curMonth)}-${pad(d)}`;
+    const dow = new Date(curYear, curMonth-1, d).getDay();
+    const isHol = PUBLIC_HOLIDAYS[dateStr];
+    const dayNames = ['일','월','화','수','목','금','토'];
+    let cls = '';
+    if (isHol || dow === 0) cls = 'day-sun';
+    else if (dow === 6) cls = 'day-sat';
+    dayHeaders += `<th class="${cls}" title="${isHol||''}">${d}<br><span style="font-size:10px;font-weight:600;">${dayNames[dow]}</span>${isHol ? `<br><span style="font-size:9px;color:#C74A4A;">${isHol}</span>` : ''}</th>`;
+  }
+
+  // Build rows
+  let rows = '';
+  staffNames.forEach(name => {
+    let cells = `<td class="sticky-col">${name}</td>`;
+    for (let d = 1; d <= totalDays; d++) {
+      const dateStr = `${curYear}-${pad(curMonth)}-${pad(d)}`;
+      const dow = new Date(curYear, curMonth-1, d).getDay();
+      const isHol = PUBLIC_HOLIDAYS[dateStr];
+      let cellCls = dow === 6 ? 'weekend-cell' : (dow === 0 || isHol ? 'holiday-cell' : '');
+
+      const req = reqMatrix[name][d];
+      const sched = schedMatrix[name][d] || '';
+
+      // Determine effective code: req overrides schedule
+      let code = '';
+      let isRequested = false;
+      if (req) {
+        code = req.type;
+        isRequested = true;
+      } else {
+        code = sched;
+      }
+
+      const normalize = (c) => {
+        if (!c) return '';
+        const u = String(c).trim().toUpperCase();
+        if (u === 'A' || u === 'A반') return u === 'A반' ? 'A반' : 'A';
+        if (u === 'B' || u === 'B반') return u === 'B반' ? 'B반' : 'B';
+        if (u === 'C') return 'C';
+        if (u === '연차' || u === '연') return '연차';
+        if (!u || u === '/' || u === '휴' || u === '휴무') return '';
+        return '';
+      };
+
+      const normCode = normalize(code);
+      const chipMap = { 'A':'chip-a', 'A반':'chip-a', 'B':'chip-b', 'B반':'chip-b', 'C':'chip-c', '연차':'chip-annual' };
+      const chipCls = chipMap[normCode] || '';
+      const reqCls = isRequested ? ' requested' : '';
+
+      let chipHtml = '';
+      if (normCode) {
+        chipHtml = `<span class="cell-chip ${chipCls}${reqCls}">${normCode}</span>`;
+      }
+
+      cells += `<td class="${cellCls}">${chipHtml}</td>`;
+    }
+    rows += `<tr>${cells}</tr>`;
+  });
+
+  document.getElementById('table-wrap').innerHTML = `
+    <table>
+      <thead><tr>${dayHeaders}</tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('table-wrap').style.display = 'block';
+}
+
+// Firebase listeners
+onSnapshot(collection(db, 'artifacts', 'patek-s', 'public', 'data', 'schedules'), snap => {
+  schedulesData = {};
+  snap.docs.forEach(d => { schedulesData[d.id] = d.data(); });
+  render();
+});
+
+onSnapshot(collection(db, 'artifacts', 'patek-s', 'public', 'data', 'leave_requests'), snap => {
+  leaveRequests = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  render();
+});
+
+// Month navigation
+document.getElementById('prev-btn').addEventListener('click', () => {
+  curMonth--;
+  if (curMonth < 1) { curMonth = 12; curYear--; }
+  render();
+});
+document.getElementById('next-btn').addEventListener('click', () => {
+  curMonth++;
+  if (curMonth > 12) { curMonth = 1; curYear++; }
+  render();
+});
+
+// Excel export
+document.getElementById('export-btn').addEventListener('click', () => {
+  if (!window.XLSX) { alert('XLSX 라이브러리 로딩 중입니다.'); return; }
+  const totalDays = getDays(curYear, curMonth);
+  const monthKey = `${curYear}-${pad(curMonth)}`;
+  const monthDoc = schedulesData[monthKey] || {};
+  const staffNames = monthDoc.staffNames || DEFAULT_STAFFS;
+
+  const reqMatrix = {};
+  staffNames.forEach(n => { reqMatrix[n] = {}; });
+  leaveRequests.forEach(req => {
+    if (!reqMatrix[req.name]) return;
+    const start = new Date(req.startDate);
+    const end = new Date(req.endDate || req.startDate);
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      if (d.getFullYear() === curYear && d.getMonth() + 1 === curMonth) reqMatrix[req.name][d.getDate()] = req.type;
+    }
+  });
+
+  const header = ['직원', ...Array.from({length:totalDays}, (_,i) => `${i+1}일`)];
+  const data = staffNames.map(name => {
+    const uDays = (monthDoc.staffs || {})[name] || {};
+    return [name, ...Array.from({length:totalDays}, (_,i) => {
+      const d = i+1;
+      const req = reqMatrix[name][d];
+      return req || uDays[d] || uDays[String(d)] || '';
+    })];
+  });
+
+  const ws = window.XLSX.utils.aoa_to_sheet([header, ...data]);
+  const wb = window.XLSX.utils.book_new();
+  window.XLSX.utils.book_append_sheet(wb, ws, `${curYear}년${curMonth}월`);
+  window.XLSX.writeFile(wb, `스케줄_${curYear}년${curMonth}월.xlsx`);
+});
+</script>
+</body>
+</html>

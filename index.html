@@ -73,6 +73,32 @@
             word-break: keep-all;
             box-sizing: border-box;
             box-shadow: inset 0 1px 0 rgba(255,255,255,0.45);
+            position: relative;
+            overflow: visible;
+        }
+        .schedule-pill.requested { border-style: dashed !important; border-width: 1.5px !important; }
+        .schedule-pill.changed::after {
+            content: "";
+            position: absolute;
+            top: -1px; right: -1px;
+            border-top: 9px solid #4b7fd4;
+            border-left: 9px solid transparent;
+        }
+        .day-time-badge {
+            position: absolute;
+            right: 3px; bottom: 3px;
+            min-width: 26px; height: 15px;
+            border-radius: 5px;
+            border: 1px solid #4db5a9;
+            background: #d9faf1;
+            color: #167b72;
+            font-size: 8px;
+            font-weight: 900;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 3;
+            pointer-events: none;
         }
         .schedule-meta-line { display: block; max-width: 100%; overflow: visible; text-overflow: unset; white-space: normal; }
 
@@ -1221,12 +1247,14 @@
                 let code = userDays[day] || userDays[String(day)] || '';
                 let finalCode = ''; let isHalf = false;
                 const leavesOnDay = window.leaveRequests.filter(r => r.name === staffName && dateStr >= r.startDate && dateStr <= r.endDate);
+                let isRequested = false;
                 if (leavesOnDay.length > 0) {
                     const req = leavesOnDay[0];
                     if (req.type === 'A' || req.type === 'A조') finalCode = 'A';
                     if (req.type === 'B' || req.type === 'B조') finalCode = 'B';
                     if (req.type === 'A반' || req.type === 'A반차') { finalCode = 'A'; isHalf = true; }
                     if (req.type === 'B반' || req.type === 'B반차') { finalCode = 'B'; isHalf = true; }
+                    isRequested = true;
                 } else {
                     let rawCode = String(code).trim().toUpperCase();
                     if (rawCode === 'A') finalCode = 'A';
@@ -1236,9 +1264,8 @@
                     if (rawCode === 'B반' || rawCode === 'B반차') { finalCode = 'B'; isHalf = true; }
                 }
                 if (finalCode === 'A' || finalCode === 'B' || finalCode === 'C') {
-                    const changed = hasPersonRecentChange(staffName, day);
-                    const timeReq = (window.timeRequests || []).find(r => r.name === staffName && r.date === dateStr);
-                    groups[finalCode].push({ name: compactName(staffName), fullName: staffName, isHalf, changed, timeHours: timeReq ? timeReq.hours : null });
+                    const changed = !isRequested && hasPersonRecentChange(staffName, day);
+                    groups[finalCode].push({ name: compactName(staffName), fullName: staffName, isHalf, changed, isRequested });
                 }
             });
             ['A', 'B', 'C'].forEach(c => {
@@ -1265,12 +1292,14 @@
                 if (!groups[code] || groups[code].length === 0) return [];
                 const meta = codeMeta[code];
                 return groups[code].map(item => {
-                    const changeBadge = item.changed ? `<span style="font-size:5px;background:#3F9DF5;color:white;padding:1px 2px;border-radius:2px;margin-left:1px;vertical-align:middle;display:inline-block;line-height:1.2;">변</span>` : '';
-                    const timeBadge = item.timeHours ? `<span style="font-size:5px;background:#B4975A;color:white;padding:1px 2px;border-radius:2px;margin-right:1px;vertical-align:middle;display:inline-block;line-height:1.2;">${item.timeHours}</span>` : '';
-                    const halfText = item.isHalf ? `<span style="font-size:6px;opacity:0.7;">(반)</span>` : '';
-                    return `<div class="schedule-pill !py-[2px] !leading-[1.25]" style="background:${meta.bg}; color:${meta.text}; border-color:${meta.border};">${timeBadge}${item.name}${changeBadge}${halfText}</div>`;
+                    const reqClass = item.isRequested ? ' requested' : '';
+                    const chgClass = item.changed ? ' changed' : '';
+                    const halfText = item.isHalf ? `<span style="font-size:6px;opacity:.7;">(반)</span>` : '';
+                    return `<div class="schedule-pill${reqClass}${chgClass} !py-[2px] !leading-[1.25]" style="background:${meta.bg}; color:${meta.text}; border-color:${meta.border};">${item.name}${halfText}</div>`;
                 });
             }).join('');
+            const dayTimeTotal = (window.timeRequests || []).filter(r => r.date === dateStr).reduce((s, r) => s + (r.hours || 0), 0);
+            const dayTimeBadge = dayTimeTotal > 0 ? `<div class="day-time-badge">${dayTimeTotal}h</div>` : '';
 
             const events = window.calEvents.filter(e => e.date === dateStr);
             let calEventMarkup = '';
@@ -1287,6 +1316,7 @@
                     </div>
                     ${calEventMarkup}
                     <div class="space-y-0.5 flex-1 flex flex-col justify-start overflow-y-auto no-scrollbar">${pills}</div>
+                    ${dayTimeBadge}
                 </div>
             `;
         }
@@ -2025,9 +2055,7 @@
                 let bgColor = '#FFE146'; if (req.type !== '휴무') bgColor = '#FFC8CD';
                 let shortName = String(req.name || '').trim(); if (shortName.length >= 3) shortName = shortName.slice(-2);
                 let displayText = `${shortName} ${req.type === '휴무' ? '' : req.type}${regionSuffix}`;
-                const isLocked = req.type === 'A' || req.type === 'A반' || req.type === 'B' || req.type === 'B반';
-                const lockBadge = isLocked ? `<span style="font-size:6px;line-height:1;vertical-align:middle;margin-right:1px;">🔒</span>` : '';
-                staffNamesMarkup += `<div class="text-[8px] font-bold rounded px-0.5 py-[1px] w-full text-center leading-tight mt-[2px] shadow-sm whitespace-nowrap overflow-hidden text-[#333333]" style="background-color: ${bgColor};">${lockBadge}${displayText}</div>`;
+                staffNamesMarkup += `<div class="text-[8px] font-bold rounded px-0.5 py-[1px] w-full text-center leading-tight mt-[2px] shadow-sm whitespace-nowrap overflow-hidden text-[#333333]" style="background-color: ${bgColor};">${displayText}</div>`;
             });
 
             const dayCell = document.createElement('div');
@@ -2246,7 +2274,6 @@
                     <button onclick="window.openTimeRequestModal()" class="w-9 h-9 bg-white border border-[#E8E4DB] rounded-xl flex items-center justify-center text-[#B4975A] shadow-sm active:scale-95 transition-transform"><i data-lucide="timer" class="w-4 h-4"></i></button>
                     <button onclick="window.openLeaveCalendarModal()" class="w-9 h-9 bg-white border border-[#E8E4DB] rounded-xl flex items-center justify-center text-[#B4975A] shadow-sm active:scale-95 transition-transform"><i data-lucide="calendar-days" class="w-4 h-4"></i></button>
                     <button onclick="window.openScheduleEdit()" class="w-9 h-9 bg-white border border-[#E8E4DB] rounded-xl flex items-center justify-center text-[#B4975A] shadow-sm active:scale-95 transition-transform"><i data-lucide="pencil" class="w-4 h-4"></i></button>
-                    <button onclick="window.openScheduleGenerator()" class="w-9 h-9 bg-white border border-[#E8E4DB] rounded-xl flex items-center justify-center text-[#B4975A] shadow-sm active:scale-95 transition-transform"><i data-lucide="layout-grid" class="w-4 h-4"></i></button>
                     <input type="file" id="schedule-excel-input" accept=".xlsx,.xls" class="hidden" onchange="window.handleScheduleExcelUpload(event)" />
                 </div>
                 <!-- 3행: A,B,C(좌) / 날짜선택(중) / 수정일+법정공휴일(우) -->
@@ -2267,6 +2294,18 @@
                         <div class="flex items-center justify-end gap-1"><span id="schedule-holiday-info" class="text-[9px] text-[#D81B60] font-semibold tracking-tighter">(법정공휴일 : 0개)</span><button onclick="window.deleteCurrentSchedule()" class="text-[#8A847E] active:scale-95 transition-all"><i data-lucide="trash-2" class="w-3 h-3"></i></button></div>
                     </div>
                 </div>
+            </div>
+            <!-- 마커 가이드 -->
+            <div class="w-full flex items-center justify-center gap-5 mb-2 py-2 px-3 bg-white/70 rounded-xl border border-[#E8D8BD] text-[11px] font-bold text-[#5d4b3d]">
+                <span class="flex items-center gap-1.5">
+                    <span style="width:22px;height:16px;border-radius:4px;border:1.5px dashed #9a9a9a;display:inline-block;flex-shrink:0;"></span>신청
+                </span>
+                <span class="flex items-center gap-1.5">
+                    <span style="width:22px;height:16px;border-radius:4px;background:#dce9ff;border:1px solid #9bbbe8;display:inline-block;flex-shrink:0;position:relative;overflow:hidden;"><span style="position:absolute;right:0;top:0;border-top:8px solid #4b7fd4;border-left:8px solid transparent;"></span></span>변경
+                </span>
+                <span class="flex items-center gap-1.5">
+                    <span style="width:26px;height:16px;border-radius:4px;background:#d9faf1;border:1px solid #4db5a9;display:inline-flex;align-items:center;justify-content:center;font-size:8px;color:#167b72;font-weight:900;flex-shrink:0;">1h</span>시간찾기
+                </span>
             </div>
             <div class="w-full bg-[#FFFDF8] border border-[#E8D8BD] rounded-2xl shadow-[0_8px_28px_rgba(139,115,85,0.12)] overflow-hidden mb-6"><div id="schedule-calendar-grid" class="grid grid-cols-7 border-t-0"></div></div>
         </div>
@@ -2490,7 +2529,7 @@
         <button onclick="window.adjustLeaveHistoryMonth(-1)" class="w-8 h-8 rounded-full bg-white border border-[#E8E4DB] flex items-center justify-center text-[#8B7355] active:scale-95 shadow-sm"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
         <span id="leave-history-month-text" class="text-[15px] font-bold text-[#2F2924] min-w-[96px] text-center">2026년 5월</span>
         <button onclick="window.adjustLeaveHistoryMonth(1)" class="w-8 h-8 rounded-full bg-white border border-[#E8E4DB] flex items-center justify-center text-[#8B7355] active:scale-95 shadow-sm"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
-        <button onclick="window.openScheduleGenerator()" class="absolute right-5 w-8 h-8 rounded-xl bg-white border border-[#E8E4DB] flex items-center justify-center text-[#B4975A] shadow-sm active:scale-95"><i data-lucide="layout-grid" class="w-4 h-4"></i></button>
+        <button onclick="window.open('schedule.html','_blank')" class="absolute right-5 w-8 h-8 rounded-xl bg-white border border-[#E8E4DB] flex items-center justify-center text-[#B4975A] shadow-sm active:scale-95"><i data-lucide="layout-grid" class="w-4 h-4"></i></button>
     </div>
     <div id="leave-history-list" class="flex-1 overflow-y-auto p-5 pb-24 no-scrollbar"></div>
 </div>
