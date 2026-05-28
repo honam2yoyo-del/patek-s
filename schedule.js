@@ -178,11 +178,17 @@ function render() {
 
   renderFooter(staffNames, sMeta, tUsed);
   renderStats(staffNames, sMeta);
-  // 법정공휴일 수 업데이트
+  // 법정공휴일 + 주말 합산 업데이트
   let holCount = 0;
-  for (let d=1; d<=total; d++) { if (HOLIDAYS[ds(curYear,curMonth,d)]) holCount++; }
+  const offSet = new Set();
+  for (let d=1; d<=total; d++) {
+    const date = ds(curYear,curMonth,d);
+    const dow  = new Date(curYear,curMonth-1,d).getDay();
+    if (HOLIDAYS[date]) holCount++;
+    if (dow===0 || dow===6 || HOLIDAYS[date]) offSet.add(d);
+  }
   const hcEl = document.getElementById('holiday-count');
-  if (hcEl) hcEl.textContent = `법정공휴일 ${holCount}일`;
+  if (hcEl) hcEl.textContent = `법정공휴일 ${holCount}일 · 주말 포함 ${offSet.size}일`;
 
   document.getElementById('loading').style.display='none';
   document.getElementById('table-wrap').style.display='block';
