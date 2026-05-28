@@ -173,6 +173,14 @@
     window.regPosition = '사원';
     window.editPosition = '사원';
 
+    window.timeRequests = [];
+    let unsubscribeTimeRequests = null;
+    window.timeRequestSelectedDate = null;
+    window.timeRequestEditId = null;
+    window.timeRequestEditHours = null;
+    window.timeHistoryYear = null;
+    window.timeHistoryMonth = null;
+
     const PUBLIC_HOLIDAYS_2026 = {
         "2026-01-01": "신정", "2026-02-16": "설날 연휴", "2026-02-17": "설날", "2026-02-18": "설날 연휴",
         "2026-03-01": "삼일절", "2026-03-02": "대체공휴일", "2026-05-05": "어린이날", "2026-05-24": "부처님오신날",
@@ -215,7 +223,8 @@
             if(unsubscribeLeaveRequests) unsubscribeLeaveRequests();
             if(unsubscribeStaffs) unsubscribeStaffs();
             if(unsubscribeCalEvents) unsubscribeCalEvents();
-            
+            if(unsubscribeTimeRequests) unsubscribeTimeRequests();
+
             hideAllPages();
             const loginPage = document.getElementById('login-page');
             if(loginPage) loginPage.style.display = 'flex';
@@ -229,7 +238,7 @@
             'page-album-modal', 'page-profile-modal', 'page-staff-modal',
             'page-cal-event-modal', 'page-schedule-edit-modal',
             'page-leave-calendar-modal', 'page-leave-history-modal',
-            'page-my-schedule-modal'
+            'page-my-schedule-modal', 'page-time-request-modal', 'page-time-history-modal'
         ];
         pages.forEach(id => {
             const el = document.getElementById(id);
@@ -254,7 +263,7 @@
                 } else if (data.approved === true) {
                     hideAllPages();
                     document.getElementById('app-container').style.display = 'flex'; 
-                    fetchStaffs(); fetchNotices(); fetchAlbums(user); fetchSchedules(); fetchLeaveRequests(); fetchCalEvents();
+                    fetchStaffs(); fetchNotices(); fetchAlbums(user); fetchSchedules(); fetchLeaveRequests(); fetchCalEvents(); fetchTimeRequests();
                     lucide.createIcons();
                 } else {
                     hideAllPages();
@@ -951,6 +960,15 @@
         });
     }
 
+    function fetchTimeRequests() {
+        if (!db) return;
+        unsubscribeTimeRequests = onSnapshot(collection(db, 'artifacts', 'patek-s', 'public', 'data', 'time_requests'), (snapshot) => {
+            window.timeRequests = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+            window.renderScheduleSheet();
+            if (document.getElementById('page-my-schedule-modal')?.style.display === 'flex') window.renderMySchedule();
+        });
+    }
+
     window.adjustScheduleMonth = function(amount) {
         window.scheduleMonth += amount;
         if (window.scheduleMonth > 12) { window.scheduleMonth = 1; window.scheduleYear += 1; } 
@@ -1142,7 +1160,7 @@
     window.renderScheduleSheet = function() {
         const year = window.scheduleYear; const month = window.scheduleMonth;
         const totalDays = getDaysInMonth(year, month); const currentMonthKey = `${year}-${String(month).padStart(2, '0')}`;
-        const monthScheduleDoc = window.schedulesData[currentMonthKey]; 
+        const monthScheduleDoc = window.schedulesData[currentMonthKey];
         const staffData = monthScheduleDoc ? monthScheduleDoc.staffs : {};
 
         const metaInfo = document.getElementById('schedule-meta-info');
@@ -1170,7 +1188,7 @@
 
         const firstDayShift = new Date(year, month - 1, 1).getDay();
         const totalCells = Math.ceil((firstDayShift + totalDays) / 7) * 7;
-        
+
         const codeMeta = {
             'A': { bg: '#FAD7D5', text: '#6E2626', border: '#F0B9B7' },
             'B': { bg: '#D9E7FA', text: '#234B7A', border: '#BFD2EF' },
@@ -1181,11 +1199,11 @@
 
         const recentChanges = monthScheduleDoc ? (monthScheduleDoc.recentChanges || {}) : {};
         const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-        function hasRecentChanges(day) {
-            return Object.values(recentChanges).some(sc => {
-                const c = sc[day] || sc[String(day)];
-                return c && c.at && c.at > sevenDaysAgo;
-            });
+
+        function hasPersonRecentChange(staffName, day) {
+            const sc = recentChanges[staffName] || {};
+            const c = sc[day] || sc[String(day)];
+            return c && c.at && c.at > sevenDaysAgo;
         }
 
         function compactName(name) {
@@ -1194,18 +1212,13 @@
 
         function getDayGroups(day) {
             const groups = { A: [], B: [], C: [] };
-            if (!staffData || Object.keys(staffData).length === 0) return groups; 
-            
+            if (!staffData || Object.keys(staffData).length === 0) return groups;
             const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
             const scheduleStaffs = (monthScheduleDoc && monthScheduleDoc.staffNames) ? monthScheduleDoc.staffNames : window.storeStaffs;
-
             scheduleStaffs.forEach(staffName => {
                 const userDays = staffData[staffName] || {};
                 let code = userDays[day] || userDays[String(day)] || '';
-                
-                let finalCode = '';
-                let isHalf = false;
-
+                let finalCode = ''; let isHalf = false;
                 const leavesOnDay = window.leaveRequests.filter(r => r.name === staffName && dateStr >= r.startDate && dateStr <= r.endDate);
                 if (leavesOnDay.length > 0) {
                     const req = leavesOnDay[0];
@@ -1221,22 +1234,19 @@
                     if (rawCode === 'A반' || rawCode === 'A반차') { finalCode = 'A'; isHalf = true; }
                     if (rawCode === 'B반' || rawCode === 'B반차') { finalCode = 'B'; isHalf = true; }
                 }
-
                 if (finalCode === 'A' || finalCode === 'B' || finalCode === 'C') {
-                    groups[finalCode].push({ name: compactName(staffName), isHalf });
+                    const changed = hasPersonRecentChange(staffName, day);
+                    const timeReq = (window.timeRequests || []).find(r => r.name === staffName && r.date === dateStr);
+                    groups[finalCode].push({ name: compactName(staffName), fullName: staffName, isHalf, changed, timeHours: timeReq ? timeReq.hours : null });
                 }
             });
-
             ['A', 'B', 'C'].forEach(c => {
                 groups[c].sort((a, b) => {
-                    let idxA = staffOrder.indexOf(a.name);
-                    let idxB = staffOrder.indexOf(b.name);
-                    if(idxA === -1) idxA = 999;
-                    if(idxB === -1) idxB = 999;
+                    let idxA = staffOrder.indexOf(a.name); let idxB = staffOrder.indexOf(b.name);
+                    if(idxA === -1) idxA = 999; if(idxB === -1) idxB = 999;
                     return idxA - idxB;
                 });
             });
-
             return groups;
         }
 
@@ -1253,11 +1263,12 @@
             const pills = ['A', 'B', 'C'].map(code => {
                 if (!groups[code] || groups[code].length === 0) return '';
                 const meta = codeMeta[code];
-                
                 const formattedNames = groups[code].map(item => {
-                    return item.isHalf ? `${item.name} <span class="text-[7px] text-gray-500 font-bold tracking-tighter">(반차)</span>` : item.name;
+                    const changeBadge = item.changed ? `<span style="font-size:5px;background:#3F9DF5;color:white;padding:1px 2px;border-radius:2px;margin-left:1px;vertical-align:middle;display:inline-block;line-height:1.2;">변</span>` : '';
+                    const timeBadge = item.timeHours ? `<span style="font-size:5px;background:#B4975A;color:white;padding:1px 2px;border-radius:2px;margin-right:1px;vertical-align:middle;display:inline-block;line-height:1.2;">${item.timeHours}</span>` : '';
+                    const halfText = item.isHalf ? ` <span class="text-[7px] text-gray-500 font-bold tracking-tighter">(반차)</span>` : '';
+                    return `${timeBadge}${item.name}${changeBadge}${halfText}`;
                 }).join('<br>');
-
                 return `<div class="schedule-pill !py-[2px] !leading-[1.25]" style="background:${meta.bg}; color:${meta.text}; border-color:${meta.border};">${formattedNames}</div>`;
             }).join('');
 
@@ -1268,7 +1279,6 @@
                 calEventMarkup = `<div class="${color} text-[8px] font-bold px-1 py-[1.5px] rounded-[3px] shadow-sm text-center w-full mb-0.5 leading-tight break-words whitespace-normal">${events[0].reason || events[0].type}</div>`;
             }
 
-            const changeIndicator = hasRecentChanges(day) ? `<span class="absolute bottom-0.5 right-0.5 text-[6px] font-bold text-white bg-[#3F9DF5] px-[3px] py-[1.5px] rounded-sm leading-none tracking-tight">변경</span>` : '';
             grid.innerHTML += `
                 <div class="min-h-[82px] p-1 border-r border-b border-[#E8D8BD] bg-[#FFFDF8] flex flex-col relative overflow-hidden">
                     <div class="flex items-center justify-between mb-0.5 px-0.5">
@@ -1277,7 +1287,6 @@
                     </div>
                     ${calEventMarkup}
                     <div class="space-y-0.5 flex-1 flex flex-col justify-start overflow-y-auto no-scrollbar">${pills}</div>
-                    ${changeIndicator}
                 </div>
             `;
         }
@@ -1320,33 +1329,50 @@
     window.renderScheduleEditGrid = function(staffName) {
         const year = window.scheduleYear; const month = window.scheduleMonth;
         const totalDays = getDaysInMonth(year, month);
+        const firstDow = new Date(year, month - 1, 1).getDay();
         const currentMonthKey = `${year}-${String(month).padStart(2, '0')}`;
         const staffData = (window.schedulesData[currentMonthKey] || {}).staffs || {};
         const userDays = staffData[staffName] || {};
         const changedDays = window.scheduleEditChangedCells[staffName] || {};
+        const dayNames = ['일','월','화','수','목','금','토'];
 
-        let html = `<div class="bg-white border border-[#E8E4DB] rounded-xl p-4 shadow-sm"><div class="font-bold text-[#B4975A] mb-3 border-b border-[#F0EFEA] pb-2 text-[15px]">${staffName}의 근무표</div><div class="grid grid-cols-4 gap-2">`;
+        let html = `<div class="bg-white border border-[#E8E4DB] rounded-xl shadow-sm overflow-hidden">
+            <div class="font-bold text-[#B4975A] border-b border-[#F0EFEA] px-3 py-2.5 text-[14px]">${staffName}의 근무표</div>
+            <div class="grid grid-cols-7 border-b border-[#E8E4DB]">`;
+        dayNames.forEach((n, i) => {
+            const c = i===0 ? 'text-[#E53935]' : (i===6 ? 'text-[#1E88E5]' : 'text-[#666]');
+            html += `<div class="py-2 text-center text-[10px] font-bold ${c} bg-[#FFFDF8]">${n}</div>`;
+        });
+        html += `</div><div class="grid grid-cols-7">`;
+
+        for (let i = 0; i < firstDow; i++) html += `<div class="min-h-[58px] bg-[#FFFDF8]/40 border-r border-b border-[#F0EFEA]"></div>`;
+
         for (let d = 1; d <= totalDays; d++) {
+            const dow = new Date(year, month - 1, d).getDay();
+            const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            const isHoliday = PUBLIC_HOLIDAYS_2026[dateStr] !== undefined;
             const rawVal = userDays[d] || userDays[String(d)] || '';
-            const isHoliday = rawVal === '' || rawVal === '/' || rawVal === '휴' || rawVal === '휴무';
             const isChanged = !!changedDays[d];
             const isSelected = window.scheduleEditSelectedDay === d;
-            const borderColor = (isChanged || isSelected) ? '#3F9DF5' : '#E5E5E5';
-            const boxShadow = (isChanged || isSelected) ? '0 0 0 1.5px #3F9DF5' : 'none';
-            html += `
-                <div id="edit-day-cell-${d}" class="flex flex-col items-center rounded p-1.5 bg-[#FCFBF9] border" style="border-color:${borderColor};box-shadow:${boxShadow};">
-                    <span class="text-[10px] text-[#999] font-bold mb-1">${d}일</span>
-                    <select data-staff="${staffName}" data-day="${d}" onfocus="window.onScheduleEditFocus(${d})" onchange="window.onScheduleEditChange(this)" class="schedule-input-select w-full text-xs font-bold text-center outline-none bg-transparent">
-                        <option value="" ${isHoliday ? 'selected' : ''}>휴무</option>
-                        <option value="A" ${rawVal === 'A' ? 'selected' : ''}>A</option>
-                        <option value="B" ${rawVal === 'B' ? 'selected' : ''}>B</option>
-                        <option value="C" ${rawVal === 'C' ? 'selected' : ''}>C</option>
-                        <option value="A반" ${rawVal === 'A반' ? 'selected' : ''}>A반</option>
-                        <option value="B반" ${rawVal === 'B반' ? 'selected' : ''}>B반</option>
-                        <option value="연차" ${(rawVal === '연' || rawVal === '연차') ? 'selected' : ''}>연차</option>
-                    </select>
-                </div>`;
+            const noRight = dow === 6 ? '' : 'border-r';
+            const dc = (isHoliday || dow===0) ? 'text-[#E53935]' : (dow===6 ? 'text-[#1E88E5]' : 'text-[#2F2924]');
+            const hlBg = (isChanged || isSelected) ? 'bg-[#EEF6FF]' : 'bg-white';
+            const hlBorder = (isChanged || isSelected) ? 'border-[#3F9DF5]' : '';
+            const isOff = !rawVal || rawVal === '/' || rawVal === '휴' || rawVal === '휴무';
+            const opts = [
+                {v:'',l:'휴무'},{v:'A',l:'A'},{v:'B',l:'B'},{v:'C',l:'C'},
+                {v:'A반',l:'A반'},{v:'B반',l:'B반'},{v:'연차',l:'연차'}
+            ].map(o => `<option value="${o.v}" ${(rawVal===o.v||(isOff&&o.v==='')?'selected':'')}>${o.l}</option>`).join('');
+
+            html += `<div id="edit-day-cell-${d}" class="min-h-[58px] p-1 flex flex-col items-center ${noRight} border-b border-[#F0EFEA] ${hlBg} ${hlBorder}" style="${(isChanged||isSelected)?'border-color:#3F9DF5;':'' }">
+                <span class="text-[10px] font-bold ${dc} mb-0.5">${d}</span>
+                <select data-staff="${staffName}" data-day="${d}" onfocus="window.onScheduleEditFocus(${d})" onchange="window.onScheduleEditChange(this)" class="schedule-input-select w-full text-[9px] font-bold text-center outline-none bg-transparent border-0 appearance-none cursor-pointer rounded">${opts}</select>
+            </div>`;
         }
+
+        const lastDow = new Date(year, month - 1, totalDays).getDay();
+        const trail = lastDow === 6 ? 0 : 6 - lastDow;
+        for (let i = 0; i < trail; i++) html += `<div class="min-h-[58px] bg-[#FFFDF8]/40 ${i<trail-1?'border-r':''} border-b border-[#F0EFEA]"></div>`;
         html += `</div></div>`;
         document.getElementById('schedule-edit-grid-area').innerHTML = html;
     };
@@ -1457,15 +1483,16 @@
         });
         html += `</div><div class="grid grid-cols-7">`;
         for (let i = 0; i < firstDow; i++) html += `<div class="min-h-[52px] bg-[#FFFDF8]/40 border-r border-b border-[#F0EFEA]"></div>`;
-        dayData.forEach(({ d, dayOfWeek, isHoliday, code, isOff, calEv }) => {
+        dayData.forEach(({ d, dayOfWeek, isHoliday, code, isOff, calEv, timeHours }) => {
             const noRightBorder = dayOfWeek === 6 ? '' : 'border-r';
             const dc = (isHoliday || dayOfWeek === 0) ? 'text-[#E53935]' : (dayOfWeek === 6 ? 'text-[#1E88E5]' : 'text-[#333]');
             const meta = codeMeta[code];
             const badge = meta
                 ? `<span class="inline-block text-[8.5px] font-bold px-1.5 py-[1.5px] rounded-[4px] mt-0.5 leading-tight" style="background:${meta.bg};color:${meta.text};">${meta.label}</span>`
                 : `<span class="inline-block text-[8px] font-bold text-[#CCC] mt-0.5">휴</span>`;
+            const timeBadge = timeHours ? `<div class="text-[7px] font-bold rounded px-0.5 py-[1px] w-full text-center leading-tight mt-0.5" style="background:#F8F3E7;color:#B4975A;">${timeHours}h</div>` : '';
             const evBadge = calEv ? `<div class="text-[7px] font-bold rounded px-0.5 leading-tight mt-0.5 truncate w-full text-center ${calEv.type === '정기휴무' ? 'bg-[#A0A0A0] text-white' : 'bg-[#96F56E] text-[#333]'}">${calEv.reason || calEv.type}</div>` : '';
-            html += `<div class="min-h-[52px] p-[3px] flex flex-col items-center ${noRightBorder} border-b border-[#F0EFEA] bg-white"><span class="text-[11px] font-bold ${dc} leading-none mt-0.5">${d}</span>${badge}${evBadge}</div>`;
+            html += `<div class="min-h-[52px] p-[3px] flex flex-col items-center ${noRightBorder} border-b border-[#F0EFEA] bg-white"><span class="text-[11px] font-bold ${dc} leading-none mt-0.5">${d}</span>${badge}${timeBadge}${evBadge}</div>`;
         });
         const lastDow = dayData.length > 0 ? dayData[dayData.length - 1].dayOfWeek : 0;
         const trail = lastDow === 6 ? 0 : 6 - lastDow;
@@ -1476,65 +1503,87 @@
 
     function buildAnnualStatsHtml(year, userName) {
         const ANNUAL_TOTAL = 20;
-        let annualUsed = 0, annualWeekendOff = 0;
+        let annualA = 0, annualB = 0, annualC = 0, annualUsed = 0, annualWeekendOff = 0;
         const monthCounts = Array(12).fill(0);
-        for (const [key, doc] of Object.entries(window.schedulesData || {})) {
+        for (const [key, sdoc] of Object.entries(window.schedulesData || {})) {
             if (!key.startsWith(String(year))) continue;
             const m = parseInt(key.split('-')[1]) - 1;
-            const uDays = ((doc.staffs || {})[userName] || {});
+            const uDays = ((sdoc.staffs || {})[userName] || {});
             const days = getDaysInMonth(year, m + 1);
             for (let d = 1; d <= days; d++) {
-                const v = uDays[d] || uDays[String(d)] || '';
+                const v = (uDays[d] || uDays[String(d)] || '').toUpperCase();
                 const ds = `${year}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
                 const dow = new Date(year, m, d).getDay();
                 const isHol = PUBLIC_HOLIDAYS_2026[ds] !== undefined;
-                if (v === '연차') { annualUsed++; monthCounts[m]++; }
-                else if ((!v || v === '휴' || v === '휴무') && (dow === 0 || dow === 6 || isHol)) annualWeekendOff++;
+                if (v === 'A' || v === 'A반') annualA++;
+                else if (v === 'B' || v === 'B반') annualB++;
+                else if (v === 'C') annualC++;
+                else if (v === '연차') { annualUsed++; monthCounts[m]++; }
+                else if (!v && (dow === 0 || dow === 6 || isHol)) annualWeekendOff++;
             }
         }
         (window.leaveRequests || []).forEach(r => {
             if (r.name !== userName || !r.startDate.startsWith(String(year))) return;
             const diff = Math.ceil((new Date(r.endDate||r.startDate) - new Date(r.startDate)) / 86400000) + 1;
             if (r.type === '연차') { annualUsed += diff; monthCounts[new Date(r.startDate).getMonth()] += diff; }
+            else if (r.type === 'A' || r.type === 'A반') annualA += diff;
+            else if (r.type === 'B' || r.type === 'B반') annualB += diff;
         });
         const annualRemain = Math.max(0, ANNUAL_TOTAL - annualUsed);
-        const maxC = Math.max(...monthCounts, 1);
-        const bars = monthCounts.map((cnt, i) => {
-            const isCur = (i + 1 === window.scheduleMonth && year === window.scheduleYear);
-            const barH = Math.max(Math.round((cnt / maxC) * 24), 2);
-            const barColor = isCur ? '#B4975A' : (cnt > 0 ? '#D9E7FA' : '#E8E4DB');
-            return `<div class="flex-1 flex flex-col items-center gap-0.5">
-                <span class="text-[10px] font-bold ${isCur ? 'text-[#B4975A]' : 'text-[#555]'}">${cnt||0}</span>
-                <div class="w-4 rounded-t-sm" style="height:${barH}px;background:${barColor};"></div>
-                <span class="text-[9px] text-[#999]">${i+1}</span>
-            </div>`;
+
+        const monthRow1 = Array.from({length:12},(_,i)=>`<td class="text-center text-[10px] font-bold text-[#666] py-1.5 px-0.5 border border-[#F0EFEA] bg-[#FFFDF8]">${i+1}월</td>`).join('');
+        const monthRow2 = monthCounts.map((cnt,i)=>{
+            const isCur = (i+1===window.scheduleMonth && year===window.scheduleYear);
+            return `<td class="text-center text-[11px] font-bold py-1.5 border border-[#F0EFEA] ${isCur?'text-[#B4975A] bg-[#FBF6EC]':'text-[#333] bg-white'}">${cnt||0}</td>`;
         }).join('');
+
         return `<div class="bg-white rounded-2xl border border-[#F0EFEA] shadow-sm p-4 mb-4">
-            <div class="flex items-center justify-between mb-3">
-                <h3 class="text-[13px] font-bold text-[#3A3532]">연간 누적 현황</h3>
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-[14px] font-bold text-[#3A3532]">연간 누적 현황</h3>
                 <span class="text-[11px] font-bold text-[#B4975A] bg-[#F8F3E7] px-2 py-0.5 rounded">${year}년</span>
             </div>
-            <div class="grid grid-cols-2 gap-2 mb-4">
-                <div class="bg-[#F4FCF4] rounded-xl p-3 text-center border border-[#D8EDD8]">
-                    <div class="text-[10px] text-[#666] font-semibold mb-0.5">연차 사용</div>
-                    <div class="text-[18px] font-bold text-[#2E7D32]">${annualUsed}<span class="text-[11px] text-[#666] ml-0.5 font-semibold">일</span></div>
+            <div class="bg-[#FFFDF8] rounded-2xl border border-[#F0E8D0] p-3 mb-3">
+                <div class="grid grid-cols-3 divide-x divide-[#F0E8D0]">
+                    <div class="flex flex-col items-center px-2">
+                        <span class="text-[9px] text-[#888] font-semibold mb-1">총 연차</span>
+                        <span class="text-[22px] font-bold text-[#333]">${ANNUAL_TOTAL}</span>
+                    </div>
+                    <div class="flex flex-col items-center px-2">
+                        <span class="text-[9px] text-[#888] font-semibold mb-1">사용연차</span>
+                        <span class="text-[22px] font-bold text-[#B4975A]">${annualUsed}</span>
+                    </div>
+                    <div class="flex flex-col items-center px-2">
+                        <span class="text-[9px] text-[#888] font-semibold mb-1">남은 연차</span>
+                        <span class="text-[22px] font-bold text-[#2E7D32]">${annualRemain}</span>
+                    </div>
                 </div>
-                <div class="bg-[#F4FCF4] rounded-xl p-3 text-center border border-[#D8EDD8]">
-                    <div class="text-[10px] text-[#666] font-semibold mb-0.5">남은 연차</div>
-                    <div class="text-[18px] font-bold text-[#2E7D32]">${annualRemain}<span class="text-[11px] text-[#666] ml-0.5 font-semibold">일</span></div>
+            </div>
+            <div class="grid grid-cols-4 gap-1.5 mb-4">
+                <div class="rounded-xl p-2.5 text-center border" style="background:#FAD7D5;border-color:#F0B9B7">
+                    <div class="text-[9px] font-bold mb-0.5" style="color:#6E2626">A</div>
+                    <div class="text-[18px] font-bold" style="color:#6E2626">${annualA}</div>
                 </div>
-                <div class="bg-[#FFFCF0] rounded-xl p-3 text-center border border-[#F0E8C8]">
-                    <div class="text-[10px] text-[#666] font-semibold mb-0.5">시간외수당 주 합계</div>
-                    <div class="text-[18px] font-bold text-[#B8860B]">0<span class="text-[11px] text-[#666] ml-0.5 font-semibold">시간</span></div>
+                <div class="rounded-xl p-2.5 text-center border" style="background:#D9E7FA;border-color:#BFD2EF">
+                    <div class="text-[9px] font-bold mb-0.5" style="color:#234B7A">B</div>
+                    <div class="text-[18px] font-bold" style="color:#234B7A">${annualB}</div>
                 </div>
-                <div class="bg-[#FFF0F4] rounded-xl p-3 text-center border border-[#F0D8E0]">
-                    <div class="text-[10px] text-[#666] font-semibold mb-0.5">주말·공휴일 휴무</div>
-                    <div class="text-[18px] font-bold text-[#C2185B]">${annualWeekendOff}<span class="text-[11px] text-[#666] ml-0.5 font-semibold">회</span></div>
+                <div class="rounded-xl p-2.5 text-center border" style="background:#FFE7B8;border-color:#F4D08C">
+                    <div class="text-[9px] font-bold mb-0.5" style="color:#7A4F14">C</div>
+                    <div class="text-[18px] font-bold" style="color:#7A4F14">${annualC}</div>
+                </div>
+                <div class="rounded-xl p-2.5 text-center border bg-[#F2F2F2] border-[#E0E0E0]">
+                    <div class="text-[9px] font-bold text-[#666] mb-0.5">주말·공휴</div>
+                    <div class="text-[18px] font-bold text-[#666]">${annualWeekendOff}</div>
                 </div>
             </div>
             <div class="border-t border-[#F0EFEA] pt-3">
                 <div class="text-[10px] font-bold text-[#888] mb-2">월별 연차 현황</div>
-                <div class="flex items-end gap-0.5">${bars}</div>
+                <div class="overflow-x-auto no-scrollbar">
+                    <table class="w-full" style="min-width:360px;border-collapse:collapse;">
+                        <tr>${monthRow1}</tr>
+                        <tr>${monthRow2}</tr>
+                    </table>
+                </div>
             </div>
         </div>`;
     }
@@ -1556,7 +1605,11 @@
         const ANNUAL_TOTAL = 20;
         const userDays = (userName && staffData[userName]) ? staffData[userName] : {};
         const dayData = [];
-        let monthAnnualUsed = 0, countA = 0, countOff = 0;
+        let monthAnnualUsed = 0, countA = 0, countB = 0, countWeekendOff = 0;
+
+        const totalAllowance = window.currentUserData?.timeAllowance || 0;
+        const usedTimeHours = (window.timeRequests || []).filter(r => r.name === userName).reduce((s,r) => s + (r.hours||0), 0);
+        const remainingTimeHours = Math.max(0, totalAllowance - usedTimeHours);
 
         for (let d = 1; d <= totalDays; d++) {
             const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
@@ -1567,16 +1620,18 @@
             if (leave) code = leave.type;
             const isOff = !code || code === '' || code === '/' || code === '휴' || code === '휴무';
             if (code === 'A' || code === 'A반') countA++;
+            else if (code === 'B' || code === 'B반') countB++;
             else if (code === '연차') monthAnnualUsed++;
-            else if (isOff) countOff++;
+            else if (isOff && (dayOfWeek === 0 || dayOfWeek === 6 || isHoliday)) countWeekendOff++;
             const calEv = window.calEvents.find(e => e.date === dateStr);
-            dayData.push({ d, dayOfWeek, isHoliday, code, isOff, calEv });
+            const timeReq = (window.timeRequests || []).find(r => r.name === userName && r.date === dateStr);
+            dayData.push({ d, dayOfWeek, isHoliday, code, isOff, calEv, timeHours: timeReq?.hours || null });
         }
 
         let totalAnnualUsed = 0;
-        for (const [key, doc] of Object.entries(window.schedulesData || {})) {
+        for (const [key, sdoc] of Object.entries(window.schedulesData || {})) {
             if (!key.startsWith(String(year))) continue;
-            const uDays = ((doc.staffs||{})[userName]||{});
+            const uDays = ((sdoc.staffs||{})[userName]||{});
             const m = parseInt(key.split('-')[1]);
             const days = getDaysInMonth(year, m);
             for (let d = 1; d <= days; d++) { if ((uDays[d]||uDays[String(d)]||'') === '연차') totalAnnualUsed++; }
@@ -1587,37 +1642,210 @@
         });
         const annualRemain = Math.max(0, ANNUAL_TOTAL - totalAnnualUsed);
 
+        const cardBase = 'bg-white rounded-2xl shadow-sm border border-[#F0EFEA]';
         const statsHtml = `
-            <div class="grid grid-cols-2 gap-2.5 mb-3">
-                <div class="bg-white rounded-2xl p-3 shadow-sm border border-[#F0EFEA] flex items-center gap-2.5">
-                    <div class="w-10 h-10 rounded-full bg-[#E8F5E9] flex items-center justify-center shrink-0"><i data-lucide="calendar-check" class="w-5 h-5 text-[#388E3C]"></i></div>
-                    <div><div class="text-[10px] text-[#888] font-semibold leading-none mb-0.5">연차 사용</div><div class="text-[20px] font-bold text-[#333] leading-none">${monthAnnualUsed}<span class="text-[11px] font-semibold text-[#888] ml-0.5">일</span></div></div>
+            <div class="grid grid-cols-2 gap-2.5 mb-2.5">
+                <div class="${cardBase} p-3 flex items-center gap-2.5">
+                    <div class="w-10 h-10 rounded-full bg-[#F8F3E7] flex items-center justify-center shrink-0"><i data-lucide="calendar-check" class="w-5 h-5 text-[#B4975A]"></i></div>
+                    <div><div class="text-[10px] text-[#888] font-semibold leading-none mb-0.5">연차 사용</div><div class="text-[20px] font-bold text-[#333] leading-none">${monthAnnualUsed.toFixed(1)}<span class="text-[11px] font-semibold text-[#888] ml-0.5">일</span></div></div>
                 </div>
-                <div class="bg-white rounded-2xl p-3 shadow-sm border border-[#F0EFEA] flex items-center gap-2.5">
-                    <div class="w-10 h-10 rounded-full bg-[#E8F5E9] flex items-center justify-center shrink-0"><i data-lucide="user-check" class="w-5 h-5 text-[#388E3C]"></i></div>
-                    <div><div class="text-[10px] text-[#888] font-semibold leading-none mb-0.5">남은 연차</div><div class="text-[20px] font-bold text-[#333] leading-none">${annualRemain}<span class="text-[11px] font-semibold text-[#888] ml-0.5">일</span></div></div>
+                <div class="${cardBase} p-3 flex items-center gap-2.5">
+                    <div class="w-10 h-10 rounded-full bg-[#F8F3E7] flex items-center justify-center shrink-0"><i data-lucide="leaf" class="w-5 h-5 text-[#B4975A]"></i></div>
+                    <div><div class="text-[10px] text-[#888] font-semibold leading-none mb-0.5">남은 연차</div><div class="text-[20px] font-bold text-[#333] leading-none">${annualRemain.toFixed(1)}<span class="text-[11px] font-semibold text-[#888] ml-0.5">일</span></div></div>
                 </div>
             </div>
-            <div class="grid grid-cols-3 gap-2 mb-4">
-                <div class="bg-white rounded-2xl p-2.5 shadow-sm border border-[#F0EFEA] flex flex-col items-center text-center">
-                    <div class="w-9 h-9 rounded-full bg-[#FAD7D5] flex items-center justify-center mb-1.5"><i data-lucide="user" class="w-4 h-4 text-[#6E2626]"></i></div>
-                    <div class="text-[9px] text-[#888] font-semibold mb-0.5">A조</div>
-                    <div class="text-[17px] font-bold text-[#333]">${countA}<span class="text-[10px] font-semibold text-[#888] ml-0.5">회</span></div>
+            <div class="grid grid-cols-2 gap-2.5 mb-2.5">
+                <div class="${cardBase} p-3 flex items-center gap-2.5">
+                    <div class="w-10 h-10 rounded-full bg-[#F2F2F2] flex items-center justify-center shrink-0"><i data-lucide="sun" class="w-5 h-5 text-[#888]"></i></div>
+                    <div><div class="text-[10px] text-[#888] font-semibold leading-none mb-0.5">주말·공휴일 휴무</div><div class="text-[20px] font-bold text-[#333] leading-none">${countWeekendOff}<span class="text-[11px] font-semibold text-[#888] ml-0.5">회</span></div></div>
                 </div>
-                <div class="bg-white rounded-2xl p-2.5 shadow-sm border border-[#F0EFEA] flex flex-col items-center text-center">
-                    <div class="w-9 h-9 rounded-full bg-[#F2F2F2] flex items-center justify-center mb-1.5"><i data-lucide="home" class="w-4 h-4 text-[#888]"></i></div>
-                    <div class="text-[9px] text-[#888] font-semibold mb-0.5">휴무</div>
-                    <div class="text-[17px] font-bold text-[#333]">${countOff}<span class="text-[10px] font-semibold text-[#888] ml-0.5">회</span></div>
+                <div class="${cardBase} p-3 flex items-center gap-2.5">
+                    <div class="w-10 h-10 rounded-full bg-[#FFF9E6] flex items-center justify-center shrink-0"><i data-lucide="timer" class="w-5 h-5 text-[#B8860B]"></i></div>
+                    <div><div class="text-[10px] text-[#888] font-semibold leading-none mb-0.5">시간찾기 잔여</div><div class="text-[20px] font-bold text-[#333] leading-none">${remainingTimeHours.toFixed(1)}<span class="text-[11px] font-semibold text-[#888] ml-0.5">시간</span></div></div>
                 </div>
-                <div class="bg-white rounded-2xl p-2.5 shadow-sm border border-[#F0EFEA] flex flex-col items-center text-center">
-                    <div class="w-9 h-9 rounded-full bg-[#FFF9C4] flex items-center justify-center mb-1.5"><i data-lucide="clock" class="w-4 h-4 text-[#F57F17]"></i></div>
-                    <div class="text-[9px] text-[#888] font-semibold mb-0.5">시간외수당 주</div>
-                    <div class="text-[17px] font-bold text-[#333]">0<span class="text-[10px] font-semibold text-[#888] ml-0.5">시간</span></div>
+            </div>
+            <div class="grid grid-cols-2 gap-2.5 mb-4">
+                <div class="${cardBase} p-3 flex items-center gap-2.5">
+                    <div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style="background:#FAD7D5"><i data-lucide="user" class="w-5 h-5" style="color:#6E2626"></i></div>
+                    <div><div class="text-[10px] text-[#888] font-semibold leading-none mb-0.5">A조</div><div class="text-[20px] font-bold leading-none" style="color:#6E2626">${countA}<span class="text-[11px] font-semibold text-[#888] ml-0.5">회</span></div></div>
+                </div>
+                <div class="${cardBase} p-3 flex items-center gap-2.5">
+                    <div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style="background:#D9E7FA"><i data-lucide="user" class="w-5 h-5" style="color:#234B7A"></i></div>
+                    <div><div class="text-[10px] text-[#888] font-semibold leading-none mb-0.5">B조</div><div class="text-[20px] font-bold leading-none" style="color:#234B7A">${countB}<span class="text-[11px] font-semibold text-[#888] ml-0.5">회</span></div></div>
                 </div>
             </div>`;
 
         container.innerHTML = statsHtml + buildMyScheduleCalendarHtml(year, month, dayData) + buildAnnualStatsHtml(year, userName);
         lucide.createIcons();
+    };
+
+    window.openTimeRequestModal = function(dateStr) {
+        window.timeRequestSelectedDate = dateStr || null;
+        window.timeRequestEditId = null;
+        window.timeRequestEditHours = null;
+        document.getElementById('time-request-note-input').value = '';
+        window.renderTimeRequestCalendar();
+        window.renderTimeHoursButtons(null);
+        window.updateTimeRequestRemaining();
+        document.getElementById('page-time-request-modal').style.display = 'flex';
+        lucide.createIcons();
+    };
+
+    window.closeTimeRequestModal = function() {
+        document.getElementById('page-time-request-modal').style.display = 'none';
+    };
+
+    window.renderTimeRequestCalendar = function() {
+        const year = window.scheduleYear; const month = window.scheduleMonth;
+        const totalDays = getDaysInMonth(year, month);
+        const firstDow = new Date(year, month - 1, 1).getDay();
+        const container = document.getElementById('time-request-calendar-grid');
+        if (!container) return; container.innerHTML = '';
+
+        for (let i = 0; i < firstDow; i++) container.innerHTML += `<div class="min-h-[36px] bg-[#FAF9F5] border border-[#F0EFEA] rounded-md"></div>`;
+
+        for (let d = 1; d <= totalDays; d++) {
+            const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            const dow = new Date(year, month-1, d).getDay();
+            const isHol = PUBLIC_HOLIDAYS_2026[dateStr] !== undefined;
+            const isSelected = window.timeRequestSelectedDate === dateStr;
+            const dc = (isHol||dow===0)?'text-[#E53935]':(dow===6?'text-[#1E88E5]':'text-[#333]');
+            const bg = isSelected ? 'bg-[#B4975A] text-white' : 'bg-white hover:bg-[#F8F3E7]';
+            const dateColor = isSelected ? 'text-white' : dc;
+            container.innerHTML += `<div onclick="window.selectTimeRequestDate('${dateStr}')" class="min-h-[36px] flex flex-col items-center justify-center border border-[#F0EFEA] rounded-md cursor-pointer transition-all active:scale-95 ${bg}">
+                <span class="text-[11px] font-bold ${dateColor}">${d}</span>
+            </div>`;
+        }
+    };
+
+    window.selectTimeRequestDate = function(dateStr) {
+        window.timeRequestSelectedDate = dateStr;
+        window.renderTimeRequestCalendar();
+        window.updateTimeRequestRemaining();
+    };
+
+    window.renderTimeHoursButtons = function(selected) {
+        const hoursOptions = [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4];
+        const container = document.getElementById('time-hours-buttons');
+        if (!container) return;
+        container.innerHTML = hoursOptions.map(h => {
+            const isSel = selected === h;
+            return `<button onclick="window.selectTimeHours(${h})" class="py-2 rounded-xl text-[12px] font-bold border transition-all active:scale-95 ${isSel ? 'bg-[#B4975A] text-white border-[#B4975A]' : 'bg-white text-[#4A443F] border-[#E8E4DB]'}">${h}</button>`;
+        }).join('');
+    };
+
+    window.selectTimeHours = function(h) {
+        window.timeRequestEditHours = h;
+        window.renderTimeHoursButtons(h);
+        window.updateTimeRequestRemaining();
+    };
+
+    window.updateTimeRequestRemaining = function() {
+        const userName = window.currentUserData?.name;
+        const totalAllowance = window.currentUserData?.timeAllowance || 0;
+        const used = (window.timeRequests || []).filter(r => r.name === userName && r.id !== window.timeRequestEditId)
+            .reduce((s, r) => s + (r.hours || 0), 0);
+        const remaining = Math.max(0, totalAllowance - used);
+        const el = document.getElementById('time-request-remaining');
+        if (el) el.innerText = `잔여: ${remaining}시간 (전체: ${totalAllowance}시간)`;
+        const el2 = document.getElementById('time-request-remaining-warning');
+        if (el2) el2.style.display = (window.timeRequestEditHours && window.timeRequestEditHours > remaining) ? 'block' : 'none';
+    };
+
+    window.submitTimeRequest = async function() {
+        if (!currentUser) return;
+        if (!window.timeRequestSelectedDate) { window.showCustomAlert("날짜를 선택해주세요."); return; }
+        if (!window.timeRequestEditHours) { window.showCustomAlert("시간을 선택해주세요."); return; }
+        const userName = window.currentUserData?.name;
+        const totalAllowance = window.currentUserData?.timeAllowance || 0;
+        const used = (window.timeRequests || []).filter(r => r.name === userName && r.id !== window.timeRequestEditId)
+            .reduce((s, r) => s + (r.hours || 0), 0);
+        const remaining = Math.max(0, totalAllowance - used);
+        if (window.timeRequestEditHours > remaining) { window.showCustomAlert(`잔여 시간(${remaining}시간)을 초과할 수 없습니다.`); return; }
+        const note = document.getElementById('time-request-note-input').value.trim();
+        document.getElementById('loading-overlay').style.display = 'flex';
+        try {
+            if (window.timeRequestEditId) {
+                await updateDoc(doc(db, 'artifacts', 'patek-s', 'public', 'data', 'time_requests', window.timeRequestEditId), {
+                    date: window.timeRequestSelectedDate, hours: window.timeRequestEditHours, note, updatedAt: new Date().toISOString()
+                });
+                window.showCustomAlert("수정되었습니다.");
+            } else {
+                await addDoc(collection(db, 'artifacts', 'patek-s', 'public', 'data', 'time_requests'), {
+                    uid: currentUser.uid, name: userName, date: window.timeRequestSelectedDate,
+                    hours: window.timeRequestEditHours, note, createdAt: new Date().toISOString()
+                });
+                window.showCustomAlert("신청이 완료되었습니다.");
+            }
+            window.closeTimeRequestModal();
+        } catch(e) { window.showCustomAlert("오류가 발생했습니다."); }
+        finally { document.getElementById('loading-overlay').style.display = 'none'; }
+    };
+
+    window.openTimeHistoryModal = function() {
+        if (!window.timeHistoryYear) window.timeHistoryYear = window.scheduleYear;
+        if (!window.timeHistoryMonth) window.timeHistoryMonth = window.scheduleMonth;
+        window.renderTimeHistoryList();
+        document.getElementById('page-time-history-modal').style.display = 'flex';
+        lucide.createIcons();
+    };
+
+    window.closeTimeHistoryModal = function() { document.getElementById('page-time-history-modal').style.display = 'none'; };
+
+    window.adjustTimeHistoryMonth = function(amount) {
+        window.timeHistoryMonth = (window.timeHistoryMonth || window.scheduleMonth) + amount;
+        if (window.timeHistoryMonth > 12) { window.timeHistoryMonth = 1; window.timeHistoryYear = (window.timeHistoryYear || window.scheduleYear) + 1; }
+        else if (window.timeHistoryMonth < 1) { window.timeHistoryMonth = 12; window.timeHistoryYear = (window.timeHistoryYear || window.scheduleYear) - 1; }
+        window.renderTimeHistoryList(); lucide.createIcons();
+    };
+
+    window.renderTimeHistoryList = function() {
+        const yr = window.timeHistoryYear || window.scheduleYear;
+        const mo = window.timeHistoryMonth || window.scheduleMonth;
+        const monthStr = `${yr}-${String(mo).padStart(2,'0')}`;
+        const el = document.getElementById('time-history-month-text');
+        if (el) el.innerText = `${yr}년 ${mo}월`;
+        const userName = window.currentUserData?.name;
+        const list = document.getElementById('time-history-list'); if (!list) return; list.innerHTML = '';
+        const filtered = (window.timeRequests || []).filter(r => r.name === userName && r.date && r.date.startsWith(monthStr));
+        filtered.sort((a,b) => (a.date||'').localeCompare(b.date||''));
+        if (filtered.length === 0) { list.innerHTML = `<div class="text-center py-12 text-[#999] text-sm">이 달에는 신청 내역이 없습니다.</div>`; return; }
+        filtered.forEach(req => {
+            list.innerHTML += `<div class="bg-[#FCFBF9] p-4 rounded-xl border border-[#F0EFEA] shadow-sm flex justify-between items-center mb-3">
+                <div>
+                    <div class="text-sm font-bold text-[#333] mb-1">${req.date} <span class="text-[#B4975A] bg-[#F8F3E7] px-2 py-0.5 rounded text-[11px] ml-1 font-bold">${req.hours}시간</span></div>
+                    ${req.note ? `<div class="text-xs text-[#999] font-medium italic">${req.note}</div>` : ''}
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="window.editTimeRequest('${req.id}')" class="p-2.5 text-[#B4975A] hover:bg-[#F8F3E7] rounded-lg transition-colors border border-[#E8D8C0] bg-white shadow-sm active:scale-95"><i data-lucide="pencil" class="w-4 h-4"></i></button>
+                    <button onclick="window.deleteTimeRequest('${req.id}')" class="p-2.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors border border-red-100 bg-white shadow-sm active:scale-95"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                </div>
+            </div>`;
+        });
+        lucide.createIcons();
+    };
+
+    window.editTimeRequest = function(id) {
+        const req = (window.timeRequests || []).find(r => r.id === id);
+        if (!req) return;
+        window.timeRequestEditId = id;
+        window.timeRequestSelectedDate = req.date;
+        window.timeRequestEditHours = req.hours;
+        document.getElementById('time-request-note-input').value = req.note || '';
+        window.renderTimeRequestCalendar();
+        window.renderTimeHoursButtons(req.hours);
+        window.updateTimeRequestRemaining();
+        document.getElementById('page-time-history-modal').style.display = 'none';
+        document.getElementById('page-time-request-modal').style.display = 'flex';
+        lucide.createIcons();
+    };
+
+    window.deleteTimeRequest = function(id) {
+        window.showCustomConfirm("시간 찾기 신청을 취소하시겠습니까?", async () => {
+            document.getElementById('loading-overlay').style.display = 'flex';
+            try { await deleteDoc(doc(db, 'artifacts', 'patek-s', 'public', 'data', 'time_requests', id)); window.renderTimeHistoryList(); window.showCustomAlert("취소되었습니다."); }
+            catch(e) { window.showCustomAlert("취소 실패"); } finally { document.getElementById('loading-overlay').style.display = 'none'; }
+        });
     };
 
     window.openLeaveCalendarModal = function() {
@@ -1868,7 +2096,7 @@
                         <button type="button" onclick="window.openScheduleMonthPicker()" class="relative h-full flex items-center justify-center px-2 min-w-[90px] cursor-pointer active:bg-[#F8EFE3] bg-transparent border-0">
                             <span id="main-cal-month-text" class="text-[14px] font-bold text-[#2F2924] pointer-events-none whitespace-nowrap">2026년 5월</span>
                         </button>
-                        <input type="month" id="main-cal-month-picker" onchange="window.handleMonthPicker(this.value)" class="absolute opacity-0 pointer-events-none w-1 h-1" />
+                        <input type="month" id="main-cal-month-picker" tabindex="-1" onchange="window.handleMonthPicker(this.value)" class="absolute opacity-0 pointer-events-none w-1 h-1" />
                         <button onclick="window.adjustScheduleMonth(1)" class="w-9 h-full flex items-center justify-center text-[#B17A2A] active:bg-[#F8EFE3]"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
                     </div>
                 </div>
@@ -1900,6 +2128,7 @@
                         <button onclick="window.openMySchedule()" class="w-6 h-6 bg-white border border-[#E8E4DB] rounded-lg flex items-center justify-center text-[#B4975A] shadow-sm active:scale-95"><i data-lucide="user" class="w-3.5 h-3.5"></i></button>
                         <button onclick="window.openLeaveCalendarModal()" class="w-6 h-6 bg-white border border-[#E8E4DB] rounded-lg flex items-center justify-center text-[#B4975A] shadow-sm active:scale-95"><i data-lucide="calendar-days" class="w-3.5 h-3.5"></i></button>
                         <button onclick="window.openScheduleEdit()" class="w-6 h-6 bg-white border border-[#E8E4DB] rounded-lg flex items-center justify-center text-[#B4975A] shadow-sm active:scale-95"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>
+                        <button onclick="window.openTimeRequestModal()" class="w-6 h-6 bg-white border border-[#E8E4DB] rounded-lg flex items-center justify-center text-[#B4975A] shadow-sm active:scale-95"><i data-lucide="timer" class="w-3.5 h-3.5"></i></button>
                         <button onclick="window.triggerScheduleExcelUpload()" class="w-6 h-6 bg-white border border-[#E8E4DB] rounded-lg flex items-center justify-center text-[#B4975A] shadow-sm active:scale-95"><i data-lucide="plus" class="w-3.5 h-3.5"></i></button>
                         <input type="file" id="schedule-excel-input" accept=".xlsx,.xls" class="hidden" onchange="window.handleScheduleExcelUpload(event)" />
                     </div>
@@ -1909,7 +2138,7 @@
                     <div class="relative flex items-center rounded-xl border border-[#D8B98B] bg-[#FFFDF8] shadow-sm overflow-hidden h-9">
                         <button onclick="window.adjustScheduleMonth(-1)" class="w-9 h-full flex items-center justify-center text-[#B17A2A] active:bg-[#F8EFE3]"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
                         <button type="button" onclick="window.openScheduleMonthPicker()" class="relative h-full flex items-center justify-center px-2 min-w-[90px] cursor-pointer active:bg-[#F8EFE3] bg-transparent border-0"><span id="schedule-month-text" class="text-[14px] font-bold text-[#2F2924] pointer-events-none whitespace-nowrap">2026년 5월</span></button>
-                        <input type="month" id="schedule-month-picker" onchange="window.handleMonthPicker(this.value)" class="absolute opacity-0 pointer-events-none w-1 h-1" />
+                        <input type="month" id="schedule-month-picker" tabindex="-1" onchange="window.handleMonthPicker(this.value)" class="absolute opacity-0 pointer-events-none w-1 h-1" />
                         <button onclick="window.adjustScheduleMonth(1)" class="w-9 h-full flex items-center justify-center text-[#B17A2A] active:bg-[#F8EFE3]"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
                     </div>
                     <div class="flex flex-col items-end gap-0.5 pt-0.5">
@@ -2023,7 +2252,7 @@
 </div>
 
 <!-- 개인 근무표 모달 -->
-<div id="page-my-schedule-modal" style="display: none;" class="fixed inset-0 w-full max-w-md mx-auto bg-[#FAF9F5] z-[80] flex-col font-sans">
+<div id="page-my-schedule-modal" style="display: none;" class="fixed inset-0 w-full max-w-md mx-auto bg-[#FAF9F5] z-[200] flex-col font-sans">
     <div class="bg-[#FAF9F5] flex-shrink-0 border-b border-[#F0EFEA]" style="padding-top: max(4px, env(safe-area-inset-top));">
         <div class="relative flex items-center justify-between px-5 pt-1 pb-0">
             <div class="w-8 h-8"></div>
@@ -2045,7 +2274,7 @@
             </button>
         </div>
     </div>
-    <div id="my-schedule-content" class="flex-1 overflow-y-auto no-scrollbar px-4 pt-3 pb-24"></div>
+    <div id="my-schedule-content" class="flex-1 overflow-y-auto no-scrollbar px-4 pt-3 pb-8"></div>
 </div>
 
 <!-- 근무표 수정 모달 -->
@@ -2068,7 +2297,7 @@
             <div class="relative shrink-0 flex items-center rounded-xl border border-[#D8B98B] bg-[#FFFDF8] shadow-sm overflow-hidden h-9">
                 <button onclick="window.adjustScheduleMonth(-1)" class="w-9 h-full flex items-center justify-center text-[#B17A2A] active:bg-[#F8EFE3]"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
                 <button type="button" onclick="window.openScheduleMonthPicker()" class="relative h-full flex items-center justify-center px-2 min-w-[90px] cursor-pointer active:bg-[#F8EFE3] bg-transparent border-0"><span id="leave-month-text" class="text-[14px] font-bold text-[#2F2924] pointer-events-none whitespace-nowrap">2026년 5월</span></button>
-                <input type="month" id="leave-month-picker" onchange="window.handleMonthPicker(this.value)" class="absolute opacity-0 pointer-events-none w-1 h-1" />
+                <input type="month" id="leave-month-picker" tabindex="-1" onchange="window.handleMonthPicker(this.value)" class="absolute opacity-0 pointer-events-none w-1 h-1" />
                 <button onclick="window.adjustScheduleMonth(1)" class="w-9 h-full flex items-center justify-center text-[#B17A2A] active:bg-[#F8EFE3]"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
             </div>
         </div>
@@ -2285,6 +2514,62 @@
             <button onclick="window.deleteSingleAlbum()" class="w-full py-3.5 mt-2 mb-6 bg-white border border-[#E8D8D8] text-[#A06C6C] rounded-[12px] font-sans font-semibold text-[13px] tracking-wide hover:bg-[#FFF5F5] transition-colors shadow-sm">이 사진 삭제하기</button>
         </div>
     </div>
+</div>
+
+<!-- 시간 찾기 신청 모달 -->
+<div id="page-time-request-modal" style="display: none;" class="fixed inset-0 w-full max-w-md mx-auto bg-[#FAF9F5] z-[220] flex-col font-sans">
+    <div class="bg-[#FAF9F5] flex-shrink-0 border-b border-[#F0EFEA]" style="padding-top: max(4px, env(safe-area-inset-top));">
+        <div class="relative flex items-center justify-between px-5 pt-1 pb-0">
+            <div class="w-8 h-8"></div>
+            <img src="log.png" alt="Patek Philippe" class="w-24 h-auto object-contain" />
+            <button onclick="window.closeTimeRequestModal()" class="w-8 h-8 flex items-center justify-center text-[#8A847E] active:scale-95">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+        <div class="text-center py-1 pb-3">
+            <h2 class="text-[17px] font-bold text-[#333]">시간 찾기 신청</h2>
+        </div>
+    </div>
+    <div class="flex-1 overflow-y-auto no-scrollbar px-4 pt-4 pb-32">
+        <div class="mb-4">
+            <div class="text-[11px] font-bold text-[#666] mb-2 ml-1">날짜 선택</div>
+            <div class="grid grid-cols-7 gap-1 text-center font-bold text-[11px] text-[#666] mb-1">
+                <div class="text-[#E53935]">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div class="text-[#1E88E5]">토</div>
+            </div>
+            <div id="time-request-calendar-grid" class="grid grid-cols-7 gap-1"></div>
+        </div>
+        <div class="mb-4">
+            <div class="text-[11px] font-bold text-[#666] mb-2 ml-1">시간 선택</div>
+            <div id="time-hours-buttons" class="grid grid-cols-4 gap-2"></div>
+        </div>
+        <div class="mb-4">
+            <div id="time-request-remaining" class="text-[12px] font-bold text-[#B4975A] text-center py-2 bg-[#F8F3E7] rounded-xl"></div>
+            <div id="time-request-remaining-warning" style="display:none;" class="text-[11px] font-bold text-red-500 text-center mt-1">잔여 시간을 초과했습니다.</div>
+        </div>
+        <div class="mb-4">
+            <div class="text-[11px] font-bold text-[#666] mb-2 ml-1">메모 (선택사항)</div>
+            <input id="time-request-note-input" type="text" placeholder="메모를 입력하세요" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-2.5 outline-none text-xs font-semibold" />
+        </div>
+    </div>
+    <div class="absolute bottom-0 w-full p-4 bg-white border-t border-[#F0EFEA] flex flex-col gap-2" style="padding-bottom: max(16px, env(safe-area-inset-bottom));">
+        <button onclick="window.submitTimeRequest()" class="w-full bg-[#B4975A] text-white py-3 rounded-xl text-[14px] font-bold shadow-md active:scale-95">신청하기</button>
+        <button onclick="window.openTimeHistoryModal()" class="w-full bg-white border border-[#E5E5E5] text-[#8B7355] py-2.5 rounded-xl text-[12px] font-bold active:scale-95 flex items-center justify-center gap-1">신청 내역 보기 <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i></button>
+    </div>
+</div>
+
+<!-- 시간 찾기 내역 모달 -->
+<div id="page-time-history-modal" style="display: none;" class="fixed inset-0 w-full max-w-md mx-auto bg-[#FAF9F5] z-[230] flex-col font-sans">
+    <div class="pb-4 bg-[#FAF9F5] flex-shrink-0 relative flex flex-col items-center" style="padding-top: max(4px, env(safe-area-inset-top));">
+        <button onclick="window.closeTimeHistoryModal()" class="absolute right-6 top-10 text-[#999] p-2"><i data-lucide="x" class="w-6 h-6"></i></button>
+        <img src="log.png" alt="Patek Philippe" class="w-24 h-auto object-contain mt-1 mb-3" />
+        <h2 class="text-xl font-serif text-[#333]">시간 찾기 내역</h2>
+    </div>
+    <div class="flex items-center justify-center gap-3 py-3 px-5 border-b border-[#F0EFEA] shrink-0 bg-[#FAF9F5]">
+        <button onclick="window.adjustTimeHistoryMonth(-1)" class="w-8 h-8 rounded-full bg-white border border-[#E8E4DB] flex items-center justify-center text-[#8B7355] active:scale-95 shadow-sm"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+        <span id="time-history-month-text" class="text-[15px] font-bold text-[#2F2924] min-w-[96px] text-center">2026년 5월</span>
+        <button onclick="window.adjustTimeHistoryMonth(1)" class="w-8 h-8 rounded-full bg-white border border-[#E8E4DB] flex items-center justify-center text-[#8B7355] active:scale-95 shadow-sm"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+    </div>
+    <div id="time-history-list" class="flex-1 overflow-y-auto p-5 pb-24 no-scrollbar"></div>
 </div>
 
 <!-- ==========================================
