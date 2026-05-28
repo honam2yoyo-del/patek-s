@@ -160,8 +160,13 @@
     
     window.leaveRangeStart = null;
     window.leaveRangeEnd = null;
-    window.leaveType = '휴무'; 
-    window.selectedCalEventDate = null; 
+    window.leaveType = '휴무';
+    window.selectedCalEventDate = null;
+    window.leaveHistoryYear = null;
+    window.leaveHistoryMonth = null;
+    window.scheduleEditSelectedStaff = null;
+    window.scheduleEditChangedCells = {};
+    window.scheduleEditSelectedDay = null;
 
     window.regProfileImageData = '';
     window.editProfileImageData = '';
@@ -1139,7 +1144,7 @@
 
         const metaInfo = document.getElementById('schedule-meta-info');
         if (metaInfo) {
-            if (monthScheduleDoc && monthScheduleDoc.lastUpdated) metaInfo.innerHTML = `<span class="schedule-meta-line text-[9px] text-[#8A847E]">수정일: ${monthScheduleDoc.lastUpdated.split(' ')[0]}</span><span class="schedule-meta-line text-[9px] text-[#8A847E] mt-0.5 w-[65px] truncate">수정자: ${monthScheduleDoc.updatedBy || '시스템'}</span>`;
+            if (monthScheduleDoc && monthScheduleDoc.lastUpdated) metaInfo.innerHTML = `<span class="schedule-meta-line text-[9px] text-[#8A847E]">수정일: ${monthScheduleDoc.lastUpdated.split(' ')[0]}</span>`;
             else metaInfo.innerHTML = '<span class="schedule-meta-line text-[9px] text-[#A8A29D]">근무표 없음</span>';
         }
 
@@ -1170,6 +1175,15 @@
         };
 
         const staffOrder = ['영세', '인주', '용석', '혜지', '승범', '영지'];
+
+        const recentChanges = monthScheduleDoc ? (monthScheduleDoc.recentChanges || {}) : {};
+        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+        function hasRecentChanges(day) {
+            return Object.values(recentChanges).some(sc => {
+                const c = sc[day] || sc[String(day)];
+                return c && c.at && c.at > sevenDaysAgo;
+            });
+        }
 
         function compactName(name) {
             return String(name || '').trim().replace(/^옥/, '').replace(/^엄/, '').replace(/^장/, '').replace(/^최/, '').replace(/^이/, '').replace(/^형/, '');
@@ -1251,6 +1265,7 @@
                 calEventMarkup = `<div class="${color} text-[8px] font-bold px-1 py-[1.5px] rounded-[3px] shadow-sm text-center w-full mb-0.5 leading-tight break-words whitespace-normal">${events[0].reason || events[0].type}</div>`;
             }
 
+            const changeIndicator = hasRecentChanges(day) ? `<span class="absolute bottom-0.5 right-0.5 text-[6px] font-bold text-white bg-[#3F9DF5] px-[3px] py-[1.5px] rounded-sm leading-none tracking-tight">변경</span>` : '';
             grid.innerHTML += `
                 <div class="min-h-[82px] p-1 border-r border-b border-[#E8D8BD] bg-[#FFFDF8] flex flex-col relative overflow-hidden">
                     <div class="flex items-center justify-between mb-0.5 px-0.5">
@@ -1259,6 +1274,7 @@
                     </div>
                     ${calEventMarkup}
                     <div class="space-y-0.5 flex-1 flex flex-col justify-start overflow-y-auto no-scrollbar">${pills}</div>
+                    ${changeIndicator}
                 </div>
             `;
         }
@@ -1268,43 +1284,103 @@
     window.openScheduleEdit = function() {
         if (!currentUser) return;
         const year = window.scheduleYear; const month = window.scheduleMonth;
-        const totalDays = getDaysInMonth(year, month); const currentMonthKey = `${year}-${String(month).padStart(2, '0')}`;
-        const staffData = (window.schedulesData[currentMonthKey] || {}).staffs || {};
-
         document.getElementById('edit-schedule-title').innerText = `${year}년 ${month}월 근무표 작성`;
-        const container = document.getElementById('edit-staff-rows-container'); container.innerHTML = '';
-
-        window.storeStaffs.forEach(staffName => {
-            const userDays = staffData[staffName] || {};
-            let staffSection = `<div class="bg-white border border-[#E8E4DB] rounded-xl p-4 shadow-sm mb-4"><div class="font-bold text-[#B4975A] mb-3 border-b border-[#F0EFEA] pb-2 text-[15px]">${staffName}의 근무표 입력</div><div class="grid grid-cols-4 gap-2">`;
-            for (let d = 1; d <= totalDays; d++) {
-                const curVal = userDays[d] || '';
-                staffSection += `
-                    <div class="flex flex-col items-center border border-[#E5E5E5] rounded p-1.5 bg-[#FCFBF9]">
-                        <span class="text-[10px] text-[#999] font-bold mb-1">${d}일</span>
-                        <select data-staff="${staffName}" data-day="${d}" class="schedule-input-select w-full text-xs font-bold text-center outline-none bg-transparent">
-                            <option value="" ${curVal === '' ? 'selected' : ''}>- (휴무)</option>
-                            <option value="A" ${curVal === 'A' ? 'selected' : ''}>A</option>
-                            <option value="B" ${curVal === 'B' ? 'selected' : ''}>B</option>
-                            <option value="C" ${curVal === 'C' ? 'selected' : ''}>C</option>
-                            <option value="A반" ${curVal === 'A반' ? 'selected' : ''}>A반</option>
-                            <option value="B반" ${curVal === 'B반' ? 'selected' : ''}>B반</option>
-                            <option value="휴무" ${['/', '휴', '휴무'].includes(curVal) ? 'selected' : ''}>휴(/)</option>
-                            <option value="연차" ${curVal === '연' || curVal === '연차' ? 'selected' : ''}>연차</option>
-                        </select>
-                    </div>`;
-            }
-            staffSection += `</div></div>`; container.innerHTML += staffSection;
-        });
+        window.scheduleEditSelectedStaff = null;
+        window.scheduleEditChangedCells = {};
+        window.scheduleEditSelectedDay = null;
+        window.renderScheduleEditStaffSelector();
         document.getElementById('page-schedule-edit-modal').style.display = 'flex';
     };
 
-    window.closeScheduleEdit = function() { 
-        document.getElementById('page-schedule-edit-modal').style.display = 'none'; 
+    window.renderScheduleEditStaffSelector = function() {
+        const currentMonthKey = `${window.scheduleYear}-${String(window.scheduleMonth).padStart(2, '0')}`;
+        const staffNames = (window.schedulesData[currentMonthKey] || {}).staffNames || window.storeStaffs;
+        const container = document.getElementById('edit-staff-rows-container');
+        let html = `<div class="flex flex-wrap gap-2 mb-5">`;
+        staffNames.forEach(name => {
+            const isSel = window.scheduleEditSelectedStaff === name;
+            html += `<button onclick="window.selectScheduleEditStaff('${name}')" class="px-4 py-2 rounded-xl text-[13px] font-bold border transition-all active:scale-95 ${isSel ? 'bg-[#B4975A] text-white border-[#B4975A] shadow-md' : 'bg-white text-[#4A443F] border-[#E8E4DB] shadow-sm'}">${name}</button>`;
+        });
+        html += `</div><div id="schedule-edit-grid-area">`;
+        if (!window.scheduleEditSelectedStaff) html += `<div class="text-center text-[#999] py-16 text-sm">위에서 직원을 선택하세요</div>`;
+        html += `</div>`;
+        container.innerHTML = html;
+        if (window.scheduleEditSelectedStaff) window.renderScheduleEditGrid(window.scheduleEditSelectedStaff);
+    };
+
+    window.selectScheduleEditStaff = function(name) {
+        window.scheduleEditSelectedStaff = name;
+        window.scheduleEditSelectedDay = null;
+        window.renderScheduleEditStaffSelector();
+    };
+
+    window.renderScheduleEditGrid = function(staffName) {
+        const year = window.scheduleYear; const month = window.scheduleMonth;
+        const totalDays = getDaysInMonth(year, month);
+        const currentMonthKey = `${year}-${String(month).padStart(2, '0')}`;
+        const staffData = (window.schedulesData[currentMonthKey] || {}).staffs || {};
+        const userDays = staffData[staffName] || {};
+        const changedDays = window.scheduleEditChangedCells[staffName] || {};
+
+        let html = `<div class="bg-white border border-[#E8E4DB] rounded-xl p-4 shadow-sm"><div class="font-bold text-[#B4975A] mb-3 border-b border-[#F0EFEA] pb-2 text-[15px]">${staffName}의 근무표</div><div class="grid grid-cols-4 gap-2">`;
+        for (let d = 1; d <= totalDays; d++) {
+            const rawVal = userDays[d] || userDays[String(d)] || '';
+            const isHoliday = rawVal === '' || rawVal === '/' || rawVal === '휴' || rawVal === '휴무';
+            const isChanged = !!changedDays[d];
+            const isSelected = window.scheduleEditSelectedDay === d;
+            const borderColor = (isChanged || isSelected) ? '#3F9DF5' : '#E5E5E5';
+            const boxShadow = (isChanged || isSelected) ? '0 0 0 1.5px #3F9DF5' : 'none';
+            html += `
+                <div id="edit-day-cell-${d}" class="flex flex-col items-center rounded p-1.5 bg-[#FCFBF9] border" style="border-color:${borderColor};box-shadow:${boxShadow};">
+                    <span class="text-[10px] text-[#999] font-bold mb-1">${d}일</span>
+                    <select data-staff="${staffName}" data-day="${d}" onfocus="window.onScheduleEditFocus(${d})" onchange="window.onScheduleEditChange(this)" class="schedule-input-select w-full text-xs font-bold text-center outline-none bg-transparent">
+                        <option value="" ${isHoliday ? 'selected' : ''}>휴무</option>
+                        <option value="A" ${rawVal === 'A' ? 'selected' : ''}>A</option>
+                        <option value="B" ${rawVal === 'B' ? 'selected' : ''}>B</option>
+                        <option value="C" ${rawVal === 'C' ? 'selected' : ''}>C</option>
+                        <option value="A반" ${rawVal === 'A반' ? 'selected' : ''}>A반</option>
+                        <option value="B반" ${rawVal === 'B반' ? 'selected' : ''}>B반</option>
+                        <option value="연차" ${(rawVal === '연' || rawVal === '연차') ? 'selected' : ''}>연차</option>
+                    </select>
+                </div>`;
+        }
+        html += `</div></div>`;
+        document.getElementById('schedule-edit-grid-area').innerHTML = html;
+    };
+
+    window.onScheduleEditFocus = function(day) {
+        const prevDay = window.scheduleEditSelectedDay;
+        window.scheduleEditSelectedDay = day;
+        const staffName = window.scheduleEditSelectedStaff;
+        const changedDays = window.scheduleEditChangedCells[staffName] || {};
+        [prevDay, day].forEach(d => {
+            if (!d) return;
+            const cell = document.getElementById(`edit-day-cell-${d}`);
+            if (!cell) return;
+            const active = !!changedDays[d] || d === day;
+            cell.style.borderColor = active ? '#3F9DF5' : '#E5E5E5';
+            cell.style.boxShadow = active ? '0 0 0 1.5px #3F9DF5' : 'none';
+        });
+    };
+
+    window.onScheduleEditChange = function(selectEl) {
+        const staff = selectEl.dataset.staff;
+        const day = parseInt(selectEl.dataset.day);
+        if (!window.scheduleEditChangedCells[staff]) window.scheduleEditChangedCells[staff] = {};
+        window.scheduleEditChangedCells[staff][day] = true;
+        window.scheduleEditSelectedDay = day;
+        const cell = document.getElementById(`edit-day-cell-${day}`);
+        if (cell) { cell.style.borderColor = '#3F9DF5'; cell.style.boxShadow = '0 0 0 1.5px #3F9DF5'; }
+    };
+
+    window.closeScheduleEdit = function() {
+        document.getElementById('page-schedule-edit-modal').style.display = 'none';
     };
 
     window.saveScheduleSheet = async function() {
         if (!currentUser) return;
+        const staffName = window.scheduleEditSelectedStaff;
+        if (!staffName) { window.showCustomAlert("직원을 선택해주세요."); return; }
         document.getElementById('loading-overlay').style.display = 'flex';
 
         const year = window.scheduleYear;
@@ -1312,34 +1388,35 @@
         const currentMonthKey = `${year}-${String(month).padStart(2, '0')}`;
 
         const selects = document.querySelectorAll('.schedule-input-select');
-        const updatedStaffs = {};
+        const newDayData = {};
+        selects.forEach(sel => { newDayData[sel.dataset.day] = sel.value; });
 
-        selects.forEach(sel => {
-            const staff = sel.dataset.staff;
-            const day = sel.dataset.day;
-            const val = sel.value;
-
-            if (!updatedStaffs[staff]) {
-                updatedStaffs[staff] = {};
-            }
-            updatedStaffs[staff][day] = val;
-        });
+        const existingDoc = window.schedulesData[currentMonthKey] || {};
+        const existingStaffs = existingDoc.staffs || {};
+        const oldDays = existingStaffs[staffName] || {};
+        const mergedStaffs = { ...existingStaffs, [staffName]: newDayData };
 
         const now = new Date();
         const formattedDate = `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-        
-        const updaterName = window.currentUserData?.name || (currentUser ? (currentUser.displayName || currentUser.email) : '알 수 없음');
+
+        const recentChanges = existingDoc.recentChanges ? JSON.parse(JSON.stringify(existingDoc.recentChanges)) : {};
+        recentChanges[staffName] = recentChanges[staffName] || {};
+        Object.keys(newDayData).forEach(day => {
+            const oldVal = oldDays[day] || oldDays[parseInt(day)] || '';
+            const newVal = newDayData[day];
+            if (oldVal !== newVal) recentChanges[staffName][day] = { from: oldVal, to: newVal, at: now.toISOString() };
+        });
 
         try {
             const docRef = doc(db, 'artifacts', 'patek-s', 'public', 'data', 'schedules', currentMonthKey);
             await setDoc(docRef, {
-                staffs: updatedStaffs,
+                staffs: mergedStaffs,
                 lastUpdated: formattedDate,
-                updatedBy: updaterName
+                updatedBy: window.currentUserData?.name || (currentUser ? (currentUser.displayName || currentUser.email) : '알 수 없음'),
+                recentChanges
             }, { merge: true });
-
             window.closeScheduleEdit();
-            window.showCustomAlert(`${year}년 ${month}월 근무표가 저장되었습니다.`);
+            window.showCustomAlert(`${staffName}의 ${year}년 ${month}월 근무표가 저장되었습니다.`);
         } catch(e) {
             console.error(e);
             window.showCustomAlert("근무표 저장 오류가 발생했습니다.");
@@ -1413,7 +1490,7 @@
                 let shortName = String(req.name || '').trim(); if (shortName.length >= 3) shortName = shortName.slice(-2);
                 let displayText = `${shortName} ${req.type === '휴무' ? '' : req.type}${regionSuffix}`;
 
-                staffNamesMarkup += `<div class="text-[10px] font-bold rounded px-1 py-[2px] w-full text-center leading-tight mt-[2px] shadow-sm whitespace-normal break-words text-[#333333]" style="background-color: ${bgColor};">${displayText}</div>`;
+                staffNamesMarkup += `<div class="text-[10px] font-bold rounded px-1 py-[2px] w-full text-center leading-tight mt-[2px] shadow-sm truncate text-[#333333]" style="background-color: ${bgColor};">${displayText}</div>`;
             });
 
             const dayCell = document.createElement('div');
@@ -1476,11 +1553,33 @@
     };
 
     window.openLeaveHistoryModal = function() {
+        if (!window.leaveHistoryYear) window.leaveHistoryYear = window.scheduleYear;
+        if (!window.leaveHistoryMonth) window.leaveHistoryMonth = window.scheduleMonth;
+        window.renderLeaveHistoryList();
+        document.getElementById('page-leave-history-modal').style.display = 'flex'; lucide.createIcons();
+    };
+
+    window.adjustLeaveHistoryMonth = function(amount) {
+        window.leaveHistoryMonth = (window.leaveHistoryMonth || window.scheduleMonth) + amount;
+        if (window.leaveHistoryMonth > 12) { window.leaveHistoryMonth = 1; window.leaveHistoryYear = (window.leaveHistoryYear || window.scheduleYear) + 1; }
+        else if (window.leaveHistoryMonth < 1) { window.leaveHistoryMonth = 12; window.leaveHistoryYear = (window.leaveHistoryYear || window.scheduleYear) - 1; }
+        window.renderLeaveHistoryList(); lucide.createIcons();
+    };
+
+    window.renderLeaveHistoryList = function() {
+        const yr = window.leaveHistoryYear || window.scheduleYear;
+        const mo = window.leaveHistoryMonth || window.scheduleMonth;
+        const monthStr = `${yr}-${String(mo).padStart(2, '0')}`;
+        const monthTextEl = document.getElementById('leave-history-month-text');
+        if (monthTextEl) monthTextEl.innerText = `${yr}년 ${mo}월`;
         const listContainer = document.getElementById('leave-history-list'); listContainer.innerHTML = '';
-        if (window.leaveRequests.length === 0) { listContainer.innerHTML = `<div class="text-center py-12 text-[#999] text-sm">등록된 신청 내역이 존재하지 않습니다.</div>`; } 
-        else {
+        const filtered = window.leaveRequests.filter(req => req.startDate && req.startDate.startsWith(monthStr));
+        filtered.sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
+        if (filtered.length === 0) {
+            listContainer.innerHTML = `<div class="text-center py-12 text-[#999] text-sm">이 달에는 신청 내역이 없습니다.</div>`;
+        } else {
             const cMap = { '휴무': 'bg-[#FFE146] text-[#333]', 'A': 'bg-[#FFC8CD] text-[#333]', 'A반': 'bg-[#FFC8CD] text-[#333]', 'B': 'bg-[#FFC8CD] text-[#333]', 'B반': 'bg-[#FFC8CD] text-[#333]' };
-            window.leaveRequests.forEach(req => {
+            filtered.forEach(req => {
                 const diffDays = Math.ceil((new Date(req.endDate) - new Date(req.startDate)) / (1000 * 60 * 60 * 24)) + 1;
                 const canDelete = currentUser && currentUser.uid === req.uid;
                 const badgeClass = cMap[req.type || '휴무'] || 'bg-gray-200 text-gray-800';
@@ -1495,7 +1594,7 @@
                     </div>`;
             });
         }
-        document.getElementById('page-leave-history-modal').style.display = 'flex'; lucide.createIcons();
+        lucide.createIcons();
     };
 
     window.closeLeaveHistoryModal = function() { document.getElementById('page-leave-history-modal').style.display = 'none'; };
@@ -1503,7 +1602,7 @@
     window.deleteLeaveRequest = function(id) {
         window.showCustomConfirm("신청을 취소하시겠습니까?", async () => {
             document.getElementById('loading-overlay').style.display = 'flex';
-            try { await deleteDoc(doc(db, 'artifacts', 'patek-s', 'public', 'data', 'leave_requests', id)); window.openLeaveHistoryModal(); window.showCustomAlert("취소되었습니다."); } 
+            try { await deleteDoc(doc(db, 'artifacts', 'patek-s', 'public', 'data', 'leave_requests', id)); window.renderLeaveHistoryList(); window.showCustomAlert("취소되었습니다."); }
             catch(e) { window.showCustomAlert("취소 실패"); } finally { document.getElementById('loading-overlay').style.display = 'none'; }
         });
     };
@@ -1795,7 +1894,12 @@
 
 <div id="page-leave-history-modal" style="display: none;" class="fixed inset-0 w-full max-w-md mx-auto bg-[#FAF9F5] z-[220] flex-col font-sans">
     <div class="pb-4 bg-[#FAF9F5] flex-shrink-0 relative flex flex-col items-center" style="padding-top: max(4px, env(safe-area-inset-top));"><button onclick="window.closeLeaveHistoryModal()" class="absolute right-6 top-10 text-[#999] p-2"><i data-lucide="x" class="w-6 h-6"></i></button><img src="log.png" alt="Patek Philippe" class="w-24 h-auto object-contain mt-1 mb-3" /><h2 class="text-xl font-serif text-[#333]">휴무 신청 내역</h2></div>
-    <div id="leave-history-list" class="flex-1 overflow-y-auto p-5 space-y-3 pb-24 no-scrollbar"></div>
+    <div class="flex items-center justify-center gap-3 py-3 px-5 border-b border-[#F0EFEA] shrink-0 bg-[#FAF9F5]">
+        <button onclick="window.adjustLeaveHistoryMonth(-1)" class="w-8 h-8 rounded-full bg-white border border-[#E8E4DB] flex items-center justify-center text-[#8B7355] active:scale-95 shadow-sm"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+        <span id="leave-history-month-text" class="text-[15px] font-bold text-[#2F2924] min-w-[96px] text-center">2026년 5월</span>
+        <button onclick="window.adjustLeaveHistoryMonth(1)" class="w-8 h-8 rounded-full bg-white border border-[#E8E4DB] flex items-center justify-center text-[#8B7355] active:scale-95 shadow-sm"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+    </div>
+    <div id="leave-history-list" class="flex-1 overflow-y-auto p-5 pb-24 no-scrollbar"></div>
 </div>
 
 <!-- ==========================================
