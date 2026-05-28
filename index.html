@@ -619,29 +619,59 @@
     window.enterNoticeEditMode = function() { setNoticeDetailMode('edit'); };
 
     window.openNoticeDetail = async function(id) {
-        const notice = window.appNotices.find(n => n.id === id); if (!notice) return;
-        window.selectedNoticeId = id; document.getElementById('page-notice-detail').style.display = 'flex'; document.getElementById('bottom-nav-bar').style.display = 'none';
+        try {
+            const notice = window.appNotices.find(n => n.id === id); 
+            if (!notice) return;
 
-        const catStyle = CATEGORIES[notice.category] || CATEGORIES['매장']; const rDate = getNoticeRegisterDate(notice) || '-'; const dDate = getNoticeDeadlineDate(notice) || '-';
-        document.getElementById('view-notice-category').innerText = notice.category || '매장'; document.getElementById('view-notice-category').style.backgroundColor = catStyle.bg; document.getElementById('view-notice-category').style.color = catStyle.text;
-        document.getElementById('view-notice-title').innerText = notice.title || ''; document.getElementById('view-notice-content').innerText = notice.content || '';
-        document.getElementById('view-notice-register-date').innerText = rDate; document.getElementById('view-notice-deadline-date').innerText = dDate; document.getElementById('view-notice-count').innerText = `${notice.readers?.length || 0} / ${MAX_READERS}`;
-        
-        const vs = document.getElementById('view-notice-status');
-        vs.innerText = notice.completed === true ? '완료된 공지' : '진행 중인 공지'; vs.className = notice.completed === true ? 'text-xs font-bold text-[#777] bg-[#EFEFEF] px-2 py-1 rounded-md' : 'text-xs font-bold text-[#B4975A] bg-[#F8F3E7] px-2 py-1 rounded-md';
+            window.selectedNoticeId = id; 
+            document.getElementById('page-notice-detail').style.display = 'flex'; 
+            document.getElementById('bottom-nav-bar').style.display = 'none';
 
-        window.noticeEditCategory = notice.category || '매장'; applyEditCategoryStyles();
-        document.getElementById('detail-edit-title').value = notice.title || ''; document.getElementById('detail-edit-register-date').value = rDate === '-' ? '' : rDate;
-        document.getElementById('detail-edit-deadline-date').value = dDate === '-' ? '' : dDate; document.getElementById('detail-edit-content').value = notice.content || '';
-        document.getElementById('detail-edit-count').innerText = `${notice.readers?.length || 0} / ${MAX_READERS}`;
+            const catStyle = CATEGORIES[notice.category] || CATEGORIES['매장']; 
+            const rDate = getNoticeRegisterDate(notice) || '-'; 
+            const dDate = getNoticeDeadlineDate(notice) || '-';
 
-        setNoticeDetailMode('view');
+            document.getElementById('view-notice-category').innerText = notice.category || '매장'; 
+            document.getElementById('view-notice-category').style.backgroundColor = catStyle.bg; 
+            document.getElementById('view-notice-category').style.color = catStyle.text;
+            
+            document.getElementById('view-notice-title').innerText = notice.title || ''; 
+            document.getElementById('view-notice-content').innerText = notice.content || '';
+            document.getElementById('view-notice-register-date').innerText = rDate; 
+            document.getElementById('view-notice-deadline-date').innerText = dDate; 
+            
+            const readersCount = notice.readers ? notice.readers.length : 0;
+            document.getElementById('view-notice-count').innerText = `${readersCount} / ${MAX_READERS}`;
+            
+            const vs = document.getElementById('view-notice-status');
+            vs.innerText = notice.completed === true ? '완료된 공지' : '진행 중인 공지'; 
+            vs.className = notice.completed === true ? 'text-xs font-bold text-[#777] bg-[#EFEFEF] px-2 py-1 rounded-md' : 'text-xs font-bold text-[#B4975A] bg-[#F8F3E7] px-2 py-1 rounded-md';
 
-        if (!notice.readers || !notice.readers.includes(currentUser.uid)) {
-            const currentReaders = notice.readers || [];
-            if (currentReaders.length < MAX_READERS) { currentReaders.push(currentUser.uid); await updateDoc(doc(db, 'notices', notice.id), { readers: currentReaders }); document.getElementById('view-notice-count').innerText = `${currentReaders.length} / ${MAX_READERS}`; document.getElementById('detail-edit-count').innerText = `${currentReaders.length} / ${MAX_READERS}`; }
+            window.noticeEditCategory = notice.category || '매장'; 
+            applyEditCategoryStyles();
+
+            document.getElementById('detail-edit-title').value = notice.title || ''; 
+            document.getElementById('detail-edit-register-date').value = rDate === '-' ? '' : rDate;
+            document.getElementById('detail-edit-deadline-date').value = dDate === '-' ? '' : dDate; 
+            document.getElementById('detail-edit-content').value = notice.content || '';
+            document.getElementById('detail-edit-count').innerText = `${readersCount} / ${MAX_READERS}`;
+
+            setNoticeDetailMode('view');
+
+            // ⭐️ 유저 읽음 카운트 처리 시 발생할 수 있는 에러 사전 방지
+            if (currentUser && currentUser.uid) {
+                const currentReaders = notice.readers || [];
+                if (!currentReaders.includes(currentUser.uid) && currentReaders.length < MAX_READERS) { 
+                    currentReaders.push(currentUser.uid); 
+                    await updateDoc(doc(db, 'notices', notice.id), { readers: currentReaders }); 
+                    document.getElementById('view-notice-count').innerText = `${currentReaders.length} / ${MAX_READERS}`; 
+                    document.getElementById('detail-edit-count').innerText = `${currentReaders.length} / ${MAX_READERS}`; 
+                }
+            }
+            lucide.createIcons();
+        } catch (error) {
+            console.error("공지사항 열기 오류:", error);
         }
-        lucide.createIcons();
     };
 
     window.saveNoticeEdit = async function() {
