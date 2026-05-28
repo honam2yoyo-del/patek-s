@@ -239,7 +239,7 @@
             'page-cal-event-modal', 'page-schedule-edit-modal',
             'page-leave-calendar-modal', 'page-leave-history-modal',
             'page-my-schedule-modal', 'page-time-request-modal', 'page-time-history-modal',
-            'staff-name-picker-overlay'
+            'staff-name-picker-overlay', 'page-schedule-generator'
         ];
         pages.forEach(id => {
             const el = document.getElementById(id);
@@ -1261,16 +1261,15 @@
             const dateColor = isHoliday || isSunday ? 'text-[#B35C5C]' : (isSaturday ? 'text-[#4F74A8]' : 'text-[#2F2924]');
             const groups = getDayGroups(day);
 
-            const pills = ['A', 'B', 'C'].map(code => {
-                if (!groups[code] || groups[code].length === 0) return '';
+            const pills = ['A', 'B', 'C'].flatMap(code => {
+                if (!groups[code] || groups[code].length === 0) return [];
                 const meta = codeMeta[code];
-                const formattedNames = groups[code].map(item => {
+                return groups[code].map(item => {
                     const changeBadge = item.changed ? `<span style="font-size:5px;background:#3F9DF5;color:white;padding:1px 2px;border-radius:2px;margin-left:1px;vertical-align:middle;display:inline-block;line-height:1.2;">변</span>` : '';
                     const timeBadge = item.timeHours ? `<span style="font-size:5px;background:#B4975A;color:white;padding:1px 2px;border-radius:2px;margin-right:1px;vertical-align:middle;display:inline-block;line-height:1.2;">${item.timeHours}</span>` : '';
-                    const halfText = item.isHalf ? ` <span class="text-[7px] text-gray-500 font-bold tracking-tighter">(반차)</span>` : '';
-                    return `${timeBadge}${item.name}${changeBadge}${halfText}`;
-                }).join('<br>');
-                return `<div class="schedule-pill !py-[2px] !leading-[1.25]" style="background:${meta.bg}; color:${meta.text}; border-color:${meta.border};">${formattedNames}</div>`;
+                    const halfText = item.isHalf ? `<span style="font-size:6px;opacity:0.7;">(반)</span>` : '';
+                    return `<div class="schedule-pill !py-[2px] !leading-[1.25]" style="background:${meta.bg}; color:${meta.text}; border-color:${meta.border};">${timeBadge}${item.name}${changeBadge}${halfText}</div>`;
+                });
             }).join('');
 
             const events = window.calEvents.filter(e => e.date === dateStr);
@@ -1877,6 +1876,92 @@
         });
     };
 
+    window.openScheduleGenerator = function() {
+        window.renderScheduleGenerator();
+        document.getElementById('page-schedule-generator').style.display = 'flex';
+        lucide.createIcons();
+    };
+    window.closeScheduleGenerator = function() {
+        document.getElementById('page-schedule-generator').style.display = 'none';
+    };
+    window.renderScheduleGenerator = function() {
+        const year = window.scheduleYear; const month = window.scheduleMonth;
+        const totalDays = getDaysInMonth(year, month);
+        const currentMonthKey = `${year}-${String(month).padStart(2,'0')}`;
+        const monthScheduleDoc = window.schedulesData[currentMonthKey];
+        const staffNames = (monthScheduleDoc && monthScheduleDoc.staffNames) ? monthScheduleDoc.staffNames : window.storeStaffs;
+        const el = document.getElementById('schedule-generator-title');
+        if (el) el.innerText = `${year}년 ${month}월 스케줄 생성기`;
+
+        const matrix = {};
+        staffNames.forEach(n => { matrix[n] = {}; });
+        (window.leaveRequests || []).forEach(req => {
+            if (!matrix[req.name]) return;
+            const start = new Date(req.startDate); const end = new Date(req.endDate || req.startDate);
+            for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+                if (d.getFullYear() === year && d.getMonth() + 1 === month) matrix[req.name][d.getDate()] = req.type;
+            }
+        });
+
+        const codeMeta = {
+            '휴무':{ bg:'#FFE146', text:'#555' }, 'A':{ bg:'#FAD7D5', text:'#6E2626' }, 'A반':{ bg:'#FAD7D5', text:'#6E2626' },
+            'B':{ bg:'#D9E7FA', text:'#234B7A' }, 'B반':{ bg:'#D9E7FA', text:'#234B7A' },
+            'C':{ bg:'#FFE7B8', text:'#7A4F14' }, '연차':{ bg:'#C8E6C9', text:'#2E7D32' }
+        };
+
+        const dayHeaders = Array.from({length:totalDays},(_,i)=>{
+            const d=i+1; const ds=`${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            const dow=new Date(year,month-1,d).getDay(); const isHol=PUBLIC_HOLIDAYS_2026[ds]!==undefined;
+            const c=(isHol||dow===0)?'#E53935':(dow===6?'#1E88E5':'#333');
+            const dayName=['일','월','화','수','목','금','토'][dow];
+            return `<th style="min-width:52px;padding:6px 2px;text-align:center;background:#F8F6F0;border:1px solid #E8D8BD;"><div style="font-size:13px;font-weight:700;color:${c};">${d}</div><div style="font-size:10px;color:${c};opacity:.7;">${dayName}</div></th>`;
+        }).join('');
+
+        const rows = staffNames.map(name => {
+            const cells = Array.from({length:totalDays},(_,i)=>{
+                const d=i+1; const code=matrix[name][d]||'';
+                const meta=codeMeta[code];
+                if(!code) return `<td style="min-width:52px;padding:4px 2px;border:1px solid #E8D8BD;background:white;"></td>`;
+                return `<td style="min-width:52px;padding:4px 2px;border:1px solid #E8D8BD;background:${meta.bg};"><div style="font-size:11px;font-weight:800;text-align:center;color:${meta.text};">${code}</div></td>`;
+            }).join('');
+            return `<tr><td style="min-width:72px;padding:8px 10px;font-size:13px;font-weight:700;color:#333;white-space:nowrap;border:1px solid #E8D8BD;background:#FFFDF8;position:sticky;left:0;z-index:1;">${name}</td>${cells}</tr>`;
+        }).join('');
+
+        document.getElementById('schedule-generator-content').innerHTML = `
+            <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+                <table style="border-collapse:collapse;min-width:${72+totalDays*52}px;">
+                    <thead><tr>
+                        <th style="min-width:72px;padding:8px 10px;text-align:left;font-size:12px;font-weight:700;background:#F8F6F0;border:1px solid #E8D8BD;position:sticky;left:0;z-index:2;color:#555;">직원</th>
+                        ${dayHeaders}
+                    </tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>`;
+    };
+    window.exportScheduleGenerator = function() {
+        if (!window.XLSX) { window.showCustomAlert("엑셀 라이브러리 로딩 중입니다. 잠시 후 다시 시도해주세요."); return; }
+        const year = window.scheduleYear; const month = window.scheduleMonth;
+        const totalDays = getDaysInMonth(year, month);
+        const currentMonthKey = `${year}-${String(month).padStart(2,'0')}`;
+        const monthScheduleDoc = window.schedulesData[currentMonthKey];
+        const staffNames = (monthScheduleDoc && monthScheduleDoc.staffNames) ? monthScheduleDoc.staffNames : window.storeStaffs;
+        const matrix = {};
+        staffNames.forEach(n => { matrix[n] = {}; });
+        (window.leaveRequests || []).forEach(req => {
+            if (!matrix[req.name]) return;
+            const start = new Date(req.startDate); const end = new Date(req.endDate || req.startDate);
+            for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+                if (d.getFullYear() === year && d.getMonth() + 1 === month) matrix[req.name][d.getDate()] = req.type;
+            }
+        });
+        const header = ['직원', ...Array.from({length:totalDays},(_,i)=>`${i+1}일`)];
+        const rows = staffNames.map(name => [name, ...Array.from({length:totalDays},(_,i)=>matrix[name][i+1]||'')]);
+        const ws = window.XLSX.utils.aoa_to_sheet([header, ...rows]);
+        const wb = window.XLSX.utils.book_new();
+        window.XLSX.utils.book_append_sheet(wb, ws, `${year}년${month}월`);
+        window.XLSX.writeFile(wb, `스케줄_${year}년${month}월.xlsx`);
+    };
+
     window.openLeaveCalendarModal = function() {
         window.leaveRangeStart = null; window.leaveRangeEnd = null;
         document.getElementById('leave-reason-input').value = '';
@@ -1940,8 +2025,9 @@
                 let bgColor = '#FFE146'; if (req.type !== '휴무') bgColor = '#FFC8CD';
                 let shortName = String(req.name || '').trim(); if (shortName.length >= 3) shortName = shortName.slice(-2);
                 let displayText = `${shortName} ${req.type === '휴무' ? '' : req.type}${regionSuffix}`;
-
-                staffNamesMarkup += `<div class="text-[8px] font-bold rounded px-0.5 py-[1px] w-full text-center leading-tight mt-[2px] shadow-sm whitespace-nowrap overflow-hidden text-[#333333]" style="background-color: ${bgColor};">${displayText}</div>`;
+                const isLocked = req.type === 'A' || req.type === 'A반' || req.type === 'B' || req.type === 'B반';
+                const lockBadge = isLocked ? `<span style="font-size:6px;line-height:1;vertical-align:middle;margin-right:1px;">🔒</span>` : '';
+                staffNamesMarkup += `<div class="text-[8px] font-bold rounded px-0.5 py-[1px] w-full text-center leading-tight mt-[2px] shadow-sm whitespace-nowrap overflow-hidden text-[#333333]" style="background-color: ${bgColor};">${lockBadge}${displayText}</div>`;
             });
 
             const dayCell = document.createElement('div');
@@ -2160,7 +2246,7 @@
                     <button onclick="window.openTimeRequestModal()" class="w-9 h-9 bg-white border border-[#E8E4DB] rounded-xl flex items-center justify-center text-[#B4975A] shadow-sm active:scale-95 transition-transform"><i data-lucide="timer" class="w-4 h-4"></i></button>
                     <button onclick="window.openLeaveCalendarModal()" class="w-9 h-9 bg-white border border-[#E8E4DB] rounded-xl flex items-center justify-center text-[#B4975A] shadow-sm active:scale-95 transition-transform"><i data-lucide="calendar-days" class="w-4 h-4"></i></button>
                     <button onclick="window.openScheduleEdit()" class="w-9 h-9 bg-white border border-[#E8E4DB] rounded-xl flex items-center justify-center text-[#B4975A] shadow-sm active:scale-95 transition-transform"><i data-lucide="pencil" class="w-4 h-4"></i></button>
-                    <button onclick="window.triggerScheduleExcelUpload()" class="w-9 h-9 bg-white border border-[#E8E4DB] rounded-xl flex items-center justify-center text-[#B4975A] shadow-sm active:scale-95 transition-transform"><i data-lucide="file-up" class="w-4 h-4"></i></button>
+                    <button onclick="window.openScheduleGenerator()" class="w-9 h-9 bg-white border border-[#E8E4DB] rounded-xl flex items-center justify-center text-[#B4975A] shadow-sm active:scale-95 transition-transform"><i data-lucide="layout-grid" class="w-4 h-4"></i></button>
                     <input type="file" id="schedule-excel-input" accept=".xlsx,.xls" class="hidden" onchange="window.handleScheduleExcelUpload(event)" />
                 </div>
                 <!-- 3행: A,B,C(좌) / 날짜선택(중) / 수정일+법정공휴일(우) -->
@@ -2344,7 +2430,7 @@
     <div class="pb-4 bg-[#FAF9F5] flex-shrink-0 relative flex flex-col items-center" style="padding-top: max(4px, env(safe-area-inset-top));">
         <button onclick="window.closeLeaveCalendarModal()" class="absolute right-6 top-10 text-[#999] p-2"><i data-lucide="x" class="w-6 h-6"></i></button>
         <img src="log.png" alt="Patek Philippe" class="w-24 h-auto object-contain mb-2" />
-        <h2 class="text-[17px] font-bold text-[#333]">휴무 신청</h2>
+        <h2 class="text-[17px] font-bold text-[#333]">스케줄 신청</h2>
     </div>
 
     <div class="flex-1 overflow-y-auto px-5 pb-4 no-scrollbar">
@@ -2399,11 +2485,12 @@
 </div>
 
 <div id="page-leave-history-modal" style="display: none;" class="fixed inset-0 w-full max-w-md mx-auto bg-[#FAF9F5] z-[220] flex-col font-sans">
-    <div class="pb-4 bg-[#FAF9F5] flex-shrink-0 relative flex flex-col items-center" style="padding-top: max(4px, env(safe-area-inset-top));"><button onclick="window.closeLeaveHistoryModal()" class="absolute right-6 top-10 text-[#999] p-2"><i data-lucide="x" class="w-6 h-6"></i></button><img src="log.png" alt="Patek Philippe" class="w-24 h-auto object-contain mt-1 mb-3" /><h2 class="text-xl font-serif text-[#333]">휴무 신청 내역</h2></div>
-    <div class="flex items-center justify-center gap-3 py-3 px-5 border-b border-[#F0EFEA] shrink-0 bg-[#FAF9F5]">
+    <div class="pb-4 bg-[#FAF9F5] flex-shrink-0 relative flex flex-col items-center" style="padding-top: max(4px, env(safe-area-inset-top));"><button onclick="window.closeLeaveHistoryModal()" class="absolute right-6 top-10 text-[#999] p-2"><i data-lucide="x" class="w-6 h-6"></i></button><img src="log.png" alt="Patek Philippe" class="w-24 h-auto object-contain mt-1 mb-3" /><h2 class="text-[17px] font-bold text-[#333]">스케줄 신청 내역</h2></div>
+    <div class="flex items-center justify-center gap-3 py-3 px-5 border-b border-[#F0EFEA] shrink-0 bg-[#FAF9F5] relative">
         <button onclick="window.adjustLeaveHistoryMonth(-1)" class="w-8 h-8 rounded-full bg-white border border-[#E8E4DB] flex items-center justify-center text-[#8B7355] active:scale-95 shadow-sm"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
         <span id="leave-history-month-text" class="text-[15px] font-bold text-[#2F2924] min-w-[96px] text-center">2026년 5월</span>
         <button onclick="window.adjustLeaveHistoryMonth(1)" class="w-8 h-8 rounded-full bg-white border border-[#E8E4DB] flex items-center justify-center text-[#8B7355] active:scale-95 shadow-sm"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+        <button onclick="window.openScheduleGenerator()" class="absolute right-5 w-8 h-8 rounded-xl bg-white border border-[#E8E4DB] flex items-center justify-center text-[#B4975A] shadow-sm active:scale-95"><i data-lucide="layout-grid" class="w-4 h-4"></i></button>
     </div>
     <div id="leave-history-list" class="flex-1 overflow-y-auto p-5 pb-24 no-scrollbar"></div>
 </div>
@@ -2625,6 +2712,25 @@
         <button onclick="window.adjustTimeHistoryMonth(1)" class="w-8 h-8 rounded-full bg-white border border-[#E8E4DB] flex items-center justify-center text-[#8B7355] active:scale-95 shadow-sm"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
     </div>
     <div id="time-history-list" class="flex-1 overflow-y-auto p-5 pb-24 no-scrollbar"></div>
+</div>
+
+<!-- 스케줄 생성기 (PC 최적화 가로 달력) -->
+<div id="page-schedule-generator" style="display: none;" class="fixed inset-0 w-full max-w-md mx-auto bg-[#FAF9F5] z-[250] flex-col font-sans">
+    <div class="bg-white flex-shrink-0 border-b border-[#E8E4DB]" style="padding-top: max(4px, env(safe-area-inset-top));">
+        <div class="flex items-center justify-between px-4 py-2.5">
+            <h2 id="schedule-generator-title" class="text-[15px] font-bold text-[#333]">스케줄 생성기</h2>
+            <div class="flex items-center gap-2">
+                <button onclick="window.exportScheduleGenerator()" class="flex items-center gap-1.5 px-3 py-1.5 bg-[#E8F4E8] text-[#2E7D32] rounded-lg text-[11px] font-bold border border-[#C8E6C9] active:scale-95 shadow-sm"><i data-lucide="download" class="w-3.5 h-3.5"></i>엑셀</button>
+                <button onclick="window.closeScheduleGenerator()" class="w-8 h-8 flex items-center justify-center text-[#8A847E] active:scale-95"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+        </div>
+        <div class="flex items-center justify-center gap-3 pb-2.5">
+            <button onclick="window.adjustScheduleMonth(-1); window.renderScheduleGenerator();" class="w-8 h-8 rounded-full bg-white border border-[#E8E4DB] flex items-center justify-center text-[#B4975A] active:scale-95 shadow-sm"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+            <span id="schedule-generator-month-text" class="text-[14px] font-bold text-[#2F2924]">2026년 5월</span>
+            <button onclick="window.adjustScheduleMonth(1); window.renderScheduleGenerator();" class="w-8 h-8 rounded-full bg-white border border-[#E8E4DB] flex items-center justify-center text-[#B4975A] active:scale-95 shadow-sm"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+        </div>
+    </div>
+    <div id="schedule-generator-content" class="flex-1 overflow-auto p-2 bg-[#FAF9F5]"></div>
 </div>
 
 <!-- ==========================================
