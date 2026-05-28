@@ -188,11 +188,12 @@ function render() {
     if (dow===0 || dow===6 || HOLIDAYS[date]) offSet.add(d);
   }
   const hcEl = document.getElementById('holiday-count');
-  if (hcEl) hcEl.textContent = `법정공휴일 ${holCount}일 · 주말 포함 ${offSet.size}일`;
+  if (hcEl) hcEl.textContent = `법정공휴일 ${offSet.size}일`;
 
   document.getElementById('loading').style.display='none';
   document.getElementById('table-wrap').style.display='block';
   document.getElementById('footer-area').style.display='flex';
+  requestAnimationFrame(autoScaleTable);
 }
 
 /* ── 푸터 렌더 ── */
@@ -344,6 +345,22 @@ window.handlePaste = function(e) {
   const text = (e.clipboardData||window.clipboardData).getData('text/plain').trim();
   document.execCommand('insertText',false,text);
 };
+
+/* 화면 크기에 맞게 테이블 자동 축소 */
+function autoScaleTable() {
+  const wrap = document.getElementById('table-wrap');
+  const tbl  = document.getElementById('sched-table');
+  if (!wrap || !tbl) return;
+  tbl.style.zoom = '';
+  const ratio = (wrap.clientWidth - 4) / tbl.scrollWidth;
+  if (ratio < 1) {
+    tbl.style.zoom = ratio;
+    wrap.style.overflowX = 'hidden';
+  } else {
+    wrap.style.overflowX = '';
+  }
+}
+window.addEventListener('resize', autoScaleTable);
 
 /* 셀 포커스 시 텍스트 전체 선택 (엑셀처럼) */
 document.getElementById('table-wrap').addEventListener('focus', function(e) {
