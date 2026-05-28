@@ -557,6 +557,8 @@
         document.getElementById('page-' + tabId).classList.add('active');
         document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
         btnElement.classList.add('active');
+        const mySchedModal = document.getElementById('page-my-schedule-modal');
+        if (mySchedModal && mySchedModal.style.display !== 'none') mySchedModal.style.display = 'none';
         if (tabId === 'notice') { applyNoticeFilterButtonStyles(); window.renderNotices(); }
         if (tabId === 'calendar') { window.renderMainCalendar(); }
     };
@@ -1437,79 +1439,185 @@
         document.getElementById('page-my-schedule-modal').style.display = 'none';
     };
 
+    function buildMyScheduleCalendarHtml(year, month, dayData) {
+        const firstDow = new Date(year, month - 1, 1).getDay();
+        const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+        const codeMeta = {
+            'A':   { bg: '#FAD7D5', text: '#6E2626', label: 'A' },
+            'B':   { bg: '#D9E7FA', text: '#234B7A', label: 'B' },
+            'C':   { bg: '#FFE7B8', text: '#7A4F14', label: 'C' },
+            'A반': { bg: '#FAD7D5', text: '#6E2626', label: 'A반' },
+            'B반': { bg: '#D9E7FA', text: '#234B7A', label: 'B반' },
+            '연차': { bg: '#C8E6C9', text: '#2E7D32', label: '연차' },
+        };
+        let html = `<div class="bg-white border border-[#E8D8BD] rounded-2xl overflow-hidden shadow-sm mb-4"><div class="grid grid-cols-7 border-b border-[#E8D8BD]">`;
+        dayNames.forEach((n, i) => {
+            const c = i === 0 ? 'text-[#E53935]' : (i === 6 ? 'text-[#1E88E5]' : 'text-[#666]');
+            html += `<div class="py-2 text-center text-[11px] font-bold ${c} bg-[#FFFDF8]">${n}</div>`;
+        });
+        html += `</div><div class="grid grid-cols-7">`;
+        for (let i = 0; i < firstDow; i++) html += `<div class="min-h-[52px] bg-[#FFFDF8]/40 border-r border-b border-[#F0EFEA]"></div>`;
+        dayData.forEach(({ d, dayOfWeek, isHoliday, code, isOff, calEv }) => {
+            const noRightBorder = dayOfWeek === 6 ? '' : 'border-r';
+            const dc = (isHoliday || dayOfWeek === 0) ? 'text-[#E53935]' : (dayOfWeek === 6 ? 'text-[#1E88E5]' : 'text-[#333]');
+            const meta = codeMeta[code];
+            const badge = meta
+                ? `<span class="inline-block text-[8.5px] font-bold px-1.5 py-[1.5px] rounded-[4px] mt-0.5 leading-tight" style="background:${meta.bg};color:${meta.text};">${meta.label}</span>`
+                : `<span class="inline-block text-[8px] font-bold text-[#CCC] mt-0.5">휴</span>`;
+            const evBadge = calEv ? `<div class="text-[7px] font-bold rounded px-0.5 leading-tight mt-0.5 truncate w-full text-center ${calEv.type === '정기휴무' ? 'bg-[#A0A0A0] text-white' : 'bg-[#96F56E] text-[#333]'}">${calEv.reason || calEv.type}</div>` : '';
+            html += `<div class="min-h-[52px] p-[3px] flex flex-col items-center ${noRightBorder} border-b border-[#F0EFEA] bg-white"><span class="text-[11px] font-bold ${dc} leading-none mt-0.5">${d}</span>${badge}${evBadge}</div>`;
+        });
+        const lastDow = dayData.length > 0 ? dayData[dayData.length - 1].dayOfWeek : 0;
+        const trail = lastDow === 6 ? 0 : 6 - lastDow;
+        for (let i = 0; i < trail; i++) html += `<div class="min-h-[52px] bg-[#FFFDF8]/40 ${i < trail - 1 ? 'border-r' : ''} border-b border-[#F0EFEA]"></div>`;
+        html += `</div></div>`;
+        return html;
+    }
+
+    function buildAnnualStatsHtml(year, userName) {
+        const ANNUAL_TOTAL = 20;
+        let annualUsed = 0, annualWeekendOff = 0;
+        const monthCounts = Array(12).fill(0);
+        for (const [key, doc] of Object.entries(window.schedulesData || {})) {
+            if (!key.startsWith(String(year))) continue;
+            const m = parseInt(key.split('-')[1]) - 1;
+            const uDays = ((doc.staffs || {})[userName] || {});
+            const days = getDaysInMonth(year, m + 1);
+            for (let d = 1; d <= days; d++) {
+                const v = uDays[d] || uDays[String(d)] || '';
+                const ds = `${year}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                const dow = new Date(year, m, d).getDay();
+                const isHol = PUBLIC_HOLIDAYS_2026[ds] !== undefined;
+                if (v === '연차') { annualUsed++; monthCounts[m]++; }
+                else if ((!v || v === '휴' || v === '휴무') && (dow === 0 || dow === 6 || isHol)) annualWeekendOff++;
+            }
+        }
+        (window.leaveRequests || []).forEach(r => {
+            if (r.name !== userName || !r.startDate.startsWith(String(year))) return;
+            const diff = Math.ceil((new Date(r.endDate||r.startDate) - new Date(r.startDate)) / 86400000) + 1;
+            if (r.type === '연차') { annualUsed += diff; monthCounts[new Date(r.startDate).getMonth()] += diff; }
+        });
+        const annualRemain = Math.max(0, ANNUAL_TOTAL - annualUsed);
+        const maxC = Math.max(...monthCounts, 1);
+        const bars = monthCounts.map((cnt, i) => {
+            const isCur = (i + 1 === window.scheduleMonth && year === window.scheduleYear);
+            const barH = Math.max(Math.round((cnt / maxC) * 24), 2);
+            const barColor = isCur ? '#B4975A' : (cnt > 0 ? '#D9E7FA' : '#E8E4DB');
+            return `<div class="flex-1 flex flex-col items-center gap-0.5">
+                <span class="text-[10px] font-bold ${isCur ? 'text-[#B4975A]' : 'text-[#555]'}">${cnt||0}</span>
+                <div class="w-4 rounded-t-sm" style="height:${barH}px;background:${barColor};"></div>
+                <span class="text-[9px] text-[#999]">${i+1}</span>
+            </div>`;
+        }).join('');
+        return `<div class="bg-white rounded-2xl border border-[#F0EFEA] shadow-sm p-4 mb-4">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-[13px] font-bold text-[#3A3532]">연간 누적 현황</h3>
+                <span class="text-[11px] font-bold text-[#B4975A] bg-[#F8F3E7] px-2 py-0.5 rounded">${year}년</span>
+            </div>
+            <div class="grid grid-cols-2 gap-2 mb-4">
+                <div class="bg-[#F4FCF4] rounded-xl p-3 text-center border border-[#D8EDD8]">
+                    <div class="text-[10px] text-[#666] font-semibold mb-0.5">연차 사용</div>
+                    <div class="text-[18px] font-bold text-[#2E7D32]">${annualUsed}<span class="text-[11px] text-[#666] ml-0.5 font-semibold">일</span></div>
+                </div>
+                <div class="bg-[#F4FCF4] rounded-xl p-3 text-center border border-[#D8EDD8]">
+                    <div class="text-[10px] text-[#666] font-semibold mb-0.5">남은 연차</div>
+                    <div class="text-[18px] font-bold text-[#2E7D32]">${annualRemain}<span class="text-[11px] text-[#666] ml-0.5 font-semibold">일</span></div>
+                </div>
+                <div class="bg-[#FFFCF0] rounded-xl p-3 text-center border border-[#F0E8C8]">
+                    <div class="text-[10px] text-[#666] font-semibold mb-0.5">시간외수당 주 합계</div>
+                    <div class="text-[18px] font-bold text-[#B8860B]">0<span class="text-[11px] text-[#666] ml-0.5 font-semibold">시간</span></div>
+                </div>
+                <div class="bg-[#FFF0F4] rounded-xl p-3 text-center border border-[#F0D8E0]">
+                    <div class="text-[10px] text-[#666] font-semibold mb-0.5">주말·공휴일 휴무</div>
+                    <div class="text-[18px] font-bold text-[#C2185B]">${annualWeekendOff}<span class="text-[11px] text-[#666] ml-0.5 font-semibold">회</span></div>
+                </div>
+            </div>
+            <div class="border-t border-[#F0EFEA] pt-3">
+                <div class="text-[10px] font-bold text-[#888] mb-2">월별 연차 현황</div>
+                <div class="flex items-end gap-0.5">${bars}</div>
+            </div>
+        </div>`;
+    }
+
     window.renderMySchedule = function() {
         const year = window.scheduleYear; const month = window.scheduleMonth;
         const totalDays = getDaysInMonth(year, month);
         const currentMonthKey = `${year}-${String(month).padStart(2, '0')}`;
         const monthScheduleDoc = window.schedulesData[currentMonthKey];
         const staffData = monthScheduleDoc ? (monthScheduleDoc.staffs || {}) : {};
-
         const userName = window.currentUserData?.name;
+
         const monthTitleEl = document.getElementById('my-schedule-month-title');
         if (monthTitleEl) monthTitleEl.innerText = `${year}년 ${month}월`;
-        const nameEl = document.getElementById('my-schedule-name');
-        if (nameEl) nameEl.innerText = userName || '내 근무표';
 
         const container = document.getElementById('my-schedule-content');
-        if (!container) return; container.innerHTML = '';
+        if (!container) return;
 
+        const ANNUAL_TOTAL = 20;
         const userDays = (userName && staffData[userName]) ? staffData[userName] : {};
-        const myCodeMeta = {
-            'A':   { bg: '#FAD7D5', text: '#6E2626', label: 'A조' },
-            'B':   { bg: '#D9E7FA', text: '#234B7A', label: 'B조' },
-            'C':   { bg: '#FFE7B8', text: '#7A4F14', label: 'C조' },
-            'A반': { bg: '#FAD7D5', text: '#6E2626', label: 'A반차' },
-            'B반': { bg: '#D9E7FA', text: '#234B7A', label: 'B반차' },
-            '연차': { bg: '#E8F8E8', text: '#2E7D32', label: '연차' },
-        };
-        let countA = 0, countB = 0, countC = 0, countOff = 0;
-        const rows = [];
+        const dayData = [];
+        let monthAnnualUsed = 0, countA = 0, countOff = 0;
 
         for (let d = 1; d <= totalDays; d++) {
-            const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+            const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
             const dayOfWeek = new Date(year, month - 1, d).getDay();
             const isHoliday = PUBLIC_HOLIDAYS_2026[dateStr] !== undefined;
-            const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
             let code = userDays[d] || userDays[String(d)] || '';
-
             const leave = window.leaveRequests.find(r => r.name === userName && dateStr >= r.startDate && dateStr <= r.endDate);
             if (leave) code = leave.type;
-
             const isOff = !code || code === '' || code === '/' || code === '휴' || code === '휴무';
-            if (code === 'A') countA++;
-            else if (code === 'B') countB++;
-            else if (code === 'C') countC++;
+            if (code === 'A' || code === 'A반') countA++;
+            else if (code === '연차') monthAnnualUsed++;
             else if (isOff) countOff++;
-
-            const meta = myCodeMeta[code] || { bg: '#F2F2F2', text: '#888', label: '휴무' };
             const calEv = window.calEvents.find(e => e.date === dateStr);
-            rows.push({ d, dayName: dayNames[dayOfWeek], dayOfWeek, isHoliday, code, meta, isOff, calEv });
+            dayData.push({ d, dayOfWeek, isHoliday, code, isOff, calEv });
         }
 
-        container.innerHTML = `
-            <div class="grid grid-cols-4 gap-2 mb-4">
-                <div class="bg-[#FAD7D5] rounded-xl p-2.5 text-center"><div class="text-[9px] font-bold text-[#6E2626] mb-0.5">A조</div><div class="text-[18px] font-bold text-[#6E2626]">${countA}</div></div>
-                <div class="bg-[#D9E7FA] rounded-xl p-2.5 text-center"><div class="text-[9px] font-bold text-[#234B7A] mb-0.5">B조</div><div class="text-[18px] font-bold text-[#234B7A]">${countB}</div></div>
-                <div class="bg-[#FFE7B8] rounded-xl p-2.5 text-center"><div class="text-[9px] font-bold text-[#7A4F14] mb-0.5">C조</div><div class="text-[18px] font-bold text-[#7A4F14]">${countC}</div></div>
-                <div class="bg-[#F2F2F2] rounded-xl p-2.5 text-center"><div class="text-[9px] font-bold text-[#777] mb-0.5">휴무</div><div class="text-[18px] font-bold text-[#777]">${countOff}</div></div>
+        let totalAnnualUsed = 0;
+        for (const [key, doc] of Object.entries(window.schedulesData || {})) {
+            if (!key.startsWith(String(year))) continue;
+            const uDays = ((doc.staffs||{})[userName]||{});
+            const m = parseInt(key.split('-')[1]);
+            const days = getDaysInMonth(year, m);
+            for (let d = 1; d <= days; d++) { if ((uDays[d]||uDays[String(d)]||'') === '연차') totalAnnualUsed++; }
+        }
+        (window.leaveRequests||[]).forEach(r => {
+            if (r.name !== userName || r.type !== '연차' || !r.startDate.startsWith(String(year))) return;
+            totalAnnualUsed += Math.ceil((new Date(r.endDate||r.startDate) - new Date(r.startDate)) / 86400000) + 1;
+        });
+        const annualRemain = Math.max(0, ANNUAL_TOTAL - totalAnnualUsed);
+
+        const statsHtml = `
+            <div class="grid grid-cols-2 gap-2.5 mb-3">
+                <div class="bg-white rounded-2xl p-3 shadow-sm border border-[#F0EFEA] flex items-center gap-2.5">
+                    <div class="w-10 h-10 rounded-full bg-[#E8F5E9] flex items-center justify-center shrink-0"><i data-lucide="calendar-check" class="w-5 h-5 text-[#388E3C]"></i></div>
+                    <div><div class="text-[10px] text-[#888] font-semibold leading-none mb-0.5">연차 사용</div><div class="text-[20px] font-bold text-[#333] leading-none">${monthAnnualUsed}<span class="text-[11px] font-semibold text-[#888] ml-0.5">일</span></div></div>
+                </div>
+                <div class="bg-white rounded-2xl p-3 shadow-sm border border-[#F0EFEA] flex items-center gap-2.5">
+                    <div class="w-10 h-10 rounded-full bg-[#E8F5E9] flex items-center justify-center shrink-0"><i data-lucide="user-check" class="w-5 h-5 text-[#388E3C]"></i></div>
+                    <div><div class="text-[10px] text-[#888] font-semibold leading-none mb-0.5">남은 연차</div><div class="text-[20px] font-bold text-[#333] leading-none">${annualRemain}<span class="text-[11px] font-semibold text-[#888] ml-0.5">일</span></div></div>
+                </div>
             </div>
-            <div class="space-y-1.5">
-                ${rows.map(({ d, dayName, dayOfWeek, isHoliday, code, meta, isOff, calEv }) => {
-                    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-                    const dayColor = (isHoliday || dayOfWeek === 0) ? 'text-[#D81B60]' : (dayOfWeek === 6 ? 'text-[#3B5EAA]' : 'text-[#333]');
-                    const rowBg = isOff ? 'bg-[#F8F8F8]' : 'bg-white';
-                    const calEvMarkup = calEv ? `<span class="text-[8px] font-bold px-1.5 py-0.5 rounded ml-1 ${calEv.type === '정기휴무' ? 'bg-[#A0A0A0] text-white' : 'bg-[#96F56E] text-[#333]'}">${calEv.reason || calEv.type}</span>` : '';
-                    return `<div class="${rowBg} border border-[#F0EFEA] rounded-xl px-3 py-2.5 flex items-center justify-between shadow-sm">
-                        <div class="flex items-center gap-2">
-                            <span class="text-[13px] font-bold ${dayColor} w-[30px] shrink-0">${d}일</span>
-                            <span class="text-[11px] font-bold ${dayColor} w-[14px] shrink-0">${dayName}</span>
-                            ${calEvMarkup}
-                        </div>
-                        <span class="text-[12px] font-bold px-3 py-1 rounded-lg shrink-0" style="background:${meta.bg};color:${meta.text};">${meta.label}</span>
-                    </div>`;
-                }).join('')}
-            </div>
-        `;
+            <div class="grid grid-cols-3 gap-2 mb-4">
+                <div class="bg-white rounded-2xl p-2.5 shadow-sm border border-[#F0EFEA] flex flex-col items-center text-center">
+                    <div class="w-9 h-9 rounded-full bg-[#FAD7D5] flex items-center justify-center mb-1.5"><i data-lucide="user" class="w-4 h-4 text-[#6E2626]"></i></div>
+                    <div class="text-[9px] text-[#888] font-semibold mb-0.5">A조</div>
+                    <div class="text-[17px] font-bold text-[#333]">${countA}<span class="text-[10px] font-semibold text-[#888] ml-0.5">회</span></div>
+                </div>
+                <div class="bg-white rounded-2xl p-2.5 shadow-sm border border-[#F0EFEA] flex flex-col items-center text-center">
+                    <div class="w-9 h-9 rounded-full bg-[#F2F2F2] flex items-center justify-center mb-1.5"><i data-lucide="home" class="w-4 h-4 text-[#888]"></i></div>
+                    <div class="text-[9px] text-[#888] font-semibold mb-0.5">휴무</div>
+                    <div class="text-[17px] font-bold text-[#333]">${countOff}<span class="text-[10px] font-semibold text-[#888] ml-0.5">회</span></div>
+                </div>
+                <div class="bg-white rounded-2xl p-2.5 shadow-sm border border-[#F0EFEA] flex flex-col items-center text-center">
+                    <div class="w-9 h-9 rounded-full bg-[#FFF9C4] flex items-center justify-center mb-1.5"><i data-lucide="clock" class="w-4 h-4 text-[#F57F17]"></i></div>
+                    <div class="text-[9px] text-[#888] font-semibold mb-0.5">시간외수당 주</div>
+                    <div class="text-[17px] font-bold text-[#333]">0<span class="text-[10px] font-semibold text-[#888] ml-0.5">시간</span></div>
+                </div>
+            </div>`;
+
+        container.innerHTML = statsHtml + buildMyScheduleCalendarHtml(year, month, dayData) + buildAnnualStatsHtml(year, userName);
+        lucide.createIcons();
     };
 
     window.openLeaveCalendarModal = function() {
@@ -1915,18 +2023,29 @@
 </div>
 
 <!-- 개인 근무표 모달 -->
-<div id="page-my-schedule-modal" style="display: none;" class="fixed inset-0 w-full max-w-md mx-auto bg-[#FAF9F5] z-[200] flex-col font-sans">
-    <div class="pb-3 bg-[#FAF9F5] flex-shrink-0 relative flex flex-col items-center border-b border-[#F0EFEA]" style="padding-top: max(4px, env(safe-area-inset-top));">
-        <button onclick="window.closeMySchedule()" class="absolute right-6 top-10 text-[#999] p-2 active:scale-95"><i data-lucide="x" class="w-6 h-6"></i></button>
-        <img src="log.png" alt="Patek Philippe" class="w-24 h-auto object-contain mb-2" />
-        <div id="my-schedule-name" class="text-[16px] font-bold text-[#333] mb-2">내 근무표</div>
-        <div class="flex items-center gap-3">
-            <button onclick="window.adjustScheduleMonth(-1); window.renderMySchedule(); lucide.createIcons();" class="w-8 h-8 rounded-full bg-white border border-[#E8E4DB] flex items-center justify-center text-[#8B7355] active:scale-95 shadow-sm"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
-            <span id="my-schedule-month-title" class="text-[15px] font-bold text-[#2F2924] min-w-[90px] text-center">2026년 5월</span>
-            <button onclick="window.adjustScheduleMonth(1); window.renderMySchedule(); lucide.createIcons();" class="w-8 h-8 rounded-full bg-white border border-[#E8E4DB] flex items-center justify-center text-[#8B7355] active:scale-95 shadow-sm"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+<div id="page-my-schedule-modal" style="display: none;" class="fixed inset-0 w-full max-w-md mx-auto bg-[#FAF9F5] z-[80] flex-col font-sans">
+    <div class="bg-[#FAF9F5] flex-shrink-0 border-b border-[#F0EFEA]" style="padding-top: max(4px, env(safe-area-inset-top));">
+        <div class="relative flex items-center justify-between px-5 pt-1 pb-0">
+            <div class="w-8 h-8"></div>
+            <img src="log.png" alt="Patek Philippe" class="w-24 h-auto object-contain" />
+            <button onclick="window.closeMySchedule()" class="w-8 h-8 flex items-center justify-center text-[#8A847E] active:scale-95 transition-transform">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+        <div class="text-center py-1">
+            <h2 class="text-[17px] font-bold text-[#333]">개인 스케줄</h2>
+        </div>
+        <div class="flex items-center justify-center gap-4 pb-3">
+            <button onclick="window.adjustScheduleMonth(-1); window.renderMySchedule(); lucide.createIcons();" class="w-8 h-8 rounded-full bg-white border border-[#E8E4DB] flex items-center justify-center text-[#B4975A] active:scale-95 shadow-sm">
+                <i data-lucide="chevron-left" class="w-4 h-4"></i>
+            </button>
+            <span id="my-schedule-month-title" class="text-[15px] font-bold text-[#2F2924] min-w-[100px] text-center">2026년 5월</span>
+            <button onclick="window.adjustScheduleMonth(1); window.renderMySchedule(); lucide.createIcons();" class="w-8 h-8 rounded-full bg-white border border-[#E8E4DB] flex items-center justify-center text-[#B4975A] active:scale-95 shadow-sm">
+                <i data-lucide="chevron-right" class="w-4 h-4"></i>
+            </button>
         </div>
     </div>
-    <div id="my-schedule-content" class="flex-1 overflow-y-auto px-4 pb-8 pt-3 no-scrollbar"></div>
+    <div id="my-schedule-content" class="flex-1 overflow-y-auto no-scrollbar px-4 pt-3 pb-24"></div>
 </div>
 
 <!-- 근무표 수정 모달 -->
