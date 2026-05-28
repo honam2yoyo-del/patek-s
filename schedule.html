@@ -90,6 +90,7 @@ thead .s-annual, thead .s-name { z-index:15; background:#EDE0CB; }
   user-select:text; -webkit-user-select:text;
 }
 .td-edit:focus { box-shadow:inset 0 0 0 2px #1A56DB; background:#EEF4FF !important; }
+.td-edit.cell-copied { outline:2px dashed #1A56DB !important; outline-offset:-1px; background:#E8F2FF !important; }
 .td-edit[data-req="1"] { background:#FFE146; }
 .td-edit[data-caloff="1"] { background:#BEBEBE !important; color:#fff !important; }
 .td-edit[data-event="1"] { background:#C8F0B4 !important; }
@@ -108,9 +109,23 @@ thead .s-annual, thead .s-name { z-index:15; background:#EDE0CB; }
 .time-chip { display:flex; align-items:center; gap:5px; padding:5px 10px; background:#D9FAF1; border:1px solid #4DB5A9; border-radius:20px; font-size:12px; font-weight:800; color:#167B72; white-space:nowrap; }
 
 @media print {
-  header, #footer-area { display:none !important; }
+  @page { size: A4 landscape; margin: 8mm; }
+  header { display:none !important; }
   body { background:white; }
+  main { padding:4px 6px; }
+  #table-wrap { overflow:visible; border:1px solid #D8C9A8; box-shadow:none; }
   .s-annual, .s-name { position:static; }
+  .td-edit, .th-d, .th-w { min-width:20px !important; max-width:20px !important; font-size:8px !important; padding:2px 0 !important; }
+  .s-annual { min-width:30px !important; max-width:30px !important; font-size:9px !important; padding:4px 2px !important; }
+  .s-name { min-width:42px !important; max-width:42px !important; font-size:10px !important; padding:5px 4px !important; }
+  .th-sum, .td-sum { min-width:24px !important; font-size:9px !important; padding:3px 1px !important; }
+  #footer-area { display:flex !important; margin-top:8px; padding:8px 10px; gap:14px; page-break-inside:avoid; }
+  .ft-shift-tbl th, .ft-shift-tbl td { font-size:10px; padding:3px 8px; }
+  .time-chip { font-size:10px; padding:3px 8px; }
+  #stats-area { display:block !important; margin-top:8px; page-break-inside:avoid; }
+  .stats-wrap { gap:10px !important; }
+  .stats-tbl th { font-size:9px !important; padding:5px 6px !important; }
+  .stats-tbl td { font-size:10px !important; padding:4px 6px !important; }
 }
 </style>
 </head>
@@ -195,6 +210,7 @@ thead .s-annual, thead .s-name { z-index:15; background:#EDE0CB; }
       <div id="time-chips" class="time-grid"></div>
     </div>
   </div>
+  <div id="stats-area" style="display:none; margin-top:16px;"></div>
 </main>
 
 <script type="module">
@@ -215,6 +231,8 @@ const DEF_TIME   = { '엄인주':0.5,'장용석':1.5,'최혜지':1.5,'형영지'
 
 let curYear=2026, curMonth=7;
 let schedulesData={}, leaveRequests=[], calEvents=[], timeRequests=[], staffList=[];
+let copiedValue=null, copiedEl=null;
+function clearCopyMode() { if(copiedEl){copiedEl.classList.remove('cell-copied');copiedEl=null;} copiedValue=null; }
 
 const pad = n => String(n).padStart(2,'0');
 const getDays = (y,m) => new Date(y,m,0).getDate();
@@ -375,6 +393,7 @@ function render() {
     </table>`;
 
   renderFooter(staffNames, sMeta, tUsed);
+  renderStats(staffNames, sMeta);
   // 법정공휴일 수 업데이트
   let holCount = 0;
   for (let d=1; d<=total; d++) { if (HOLIDAYS[ds(curYear,curMonth,d)]) holCount++; }
@@ -415,6 +434,91 @@ function renderFooter(staffNames, sMeta, tUsed) {
     : chips.map(c=>`<span class="time-chip">${c.name}: ${c.rem.toFixed(1)}h</span>`).join('');
 }
 
+/* ── 직원별 현황 표 렌더 ── */
+function renderStats(staffNames, sMeta) {
+  const statsArea = document.getElementById('stats-area');
+  if (!statsArea) return;
+
+  const tUsed = {};
+  timeRequests.forEach(r => { tUsed[r.name] = (tUsed[r.name]||0)+(r.hours||0); });
+
+  function calcStats(allYear) {
+    return staffNames.map(name => {
+      let cA=0, cB=0, cC=0, cAnn=0, cWkOff=0;
+      const mKey = `${curYear}-${pad(curMonth)}`;
+      const docsToCheck = allYear
+        ? Object.entries(schedulesData).filter(([k]) => k.startsWith(String(curYear)))
+        : [[mKey, schedulesData[mKey]||{}]];
+      docsToCheck.forEach(([key, docData]) => {
+        const m = parseInt(key.split('-')[1]);
+        const days = getDays(curYear, m);
+        const uD = (docData.staffs||{})[name]||{};
+        for (let d=1; d<=days; d++) {
+          const dStr = ds(curYear, m, d);
+          const dow = new Date(curYear, m-1, d).getDay();
+          const isHol = !!HOLIDAYS[dStr];
+          let code = uD[d]||uD[String(d)]||'';
+          const lv = leaveRequests.find(r => r.name===name && dStr>=r.startDate && dStr<=(r.endDate||r.startDate));
+          if (lv) code = lv.type;
+          const u = String(code).trim().toUpperCase();
+          if (u==='A'||u==='A반') cA++;
+          else if (u==='B'||u==='B반') cB++;
+          else if (u==='C') cC++;
+          else if (u==='연차'||u==='연') cAnn++;
+          else if (dow===0||dow===6||isHol) cWkOff++;
+        }
+      });
+      const meta = sMeta[name]||{time:DEF_TIME[name]||0};
+      const remain = Math.max(0, (meta.time||0)-(tUsed[name]||0));
+      return { name, cA, cB, cC, cAnn, cWkOff, remain };
+    });
+  }
+
+  const monthStats = calcStats(false);
+  const yearStats  = calcStats(true);
+
+  const thS = 'padding:6px 8px;font-size:10px;font-weight:800;color:white;text-align:center;border-right:1px solid rgba(255,255,255,.2);white-space:nowrap;';
+  const tdS = 'padding:5px 8px;font-size:11px;font-weight:600;text-align:center;border-bottom:1px solid #F0EFEA;';
+
+  function buildTable(title, stats, headerBg) {
+    const rows = stats.map(s => `
+      <tr>
+        <td class="stats-tbl" style="${tdS}text-align:left;font-weight:700;color:#333;">${s.name}</td>
+        <td class="stats-tbl" style="${tdS}color:#B4975A;">${s.cAnn.toFixed(1)}</td>
+        <td class="stats-tbl" style="${tdS}color:#6E2626;">${s.cA}</td>
+        <td class="stats-tbl" style="${tdS}color:#234B7A;">${s.cB}</td>
+        <td class="stats-tbl" style="${tdS}color:#7A4F14;">${s.cC}</td>
+        <td class="stats-tbl" style="${tdS}color:#555;">${s.cWkOff}</td>
+        <td class="stats-tbl" style="${tdS}color:#167B72;">${s.remain>0?s.remain.toFixed(1)+'h':'-'}</td>
+      </tr>`).join('');
+    return `
+      <div style="flex:1;min-width:320px;">
+        <div style="font-size:13px;font-weight:800;color:#333;margin-bottom:8px;">${title}</div>
+        <div style="overflow-x:auto;border-radius:12px;border:1px solid #E8E4DB;box-shadow:0 2px 8px rgba(0,0,0,.06);">
+          <table style="width:100%;border-collapse:collapse;min-width:300px;">
+            <thead><tr style="background:${headerBg};">
+              <th class="stats-tbl" style="${thS}text-align:left;">직원</th>
+              <th class="stats-tbl" style="${thS}">연차사용</th>
+              <th class="stats-tbl" style="${thS}">A조</th>
+              <th class="stats-tbl" style="${thS}">B조</th>
+              <th class="stats-tbl" style="${thS}">C조</th>
+              <th class="stats-tbl" style="${thS}">주말·공휴일</th>
+              <th class="stats-tbl" style="${thS}border-right:none;">시간찾기잔여</th>
+            </tr></thead>
+            <tbody style="background:white;">${rows}</tbody>
+          </table>
+        </div>
+      </div>`;
+  }
+
+  statsArea.style.display = 'block';
+  statsArea.innerHTML = `
+    <div class="stats-wrap" style="display:flex;gap:16px;flex-wrap:wrap;">
+      ${buildTable(`${curYear}년 ${curMonth}월 현황`, monthStats, '#B4975A')}
+      ${buildTable(`${curYear}년 누적 현황`, yearStats, '#7A6B5A')}
+    </div>`;
+}
+
 /* ── 인라인 편집 ── */
 window.normalizeCell = function(el) {
   const raw = el.textContent.trim();
@@ -425,7 +529,24 @@ window.normalizeCell = function(el) {
 
 window.handleKey = function(e, el) {
   if (e.key==='Enter') { e.preventDefault(); el.blur(); }
-  if (e.key==='Tab') { e.preventDefault(); el.blur(); const cells=document.querySelectorAll('.td-edit'); const idx=Array.from(cells).indexOf(el); if(cells[idx+(e.shiftKey?-1:1)]) cells[idx+(e.shiftKey?-1:1)].focus(); }
+  if (e.key==='Escape') { e.preventDefault(); clearCopyMode(); el.blur(); }
+  if (e.key==='Tab') {
+    e.preventDefault(); el.blur();
+    const cells=document.querySelectorAll('.td-edit');
+    const idx=Array.from(cells).indexOf(el);
+    if(cells[idx+(e.shiftKey?-1:1)]) cells[idx+(e.shiftKey?-1:1)].focus();
+  }
+  if (e.ctrlKey && e.key.toLowerCase()==='c') {
+    copiedValue = el.textContent.trim();
+    if(copiedEl) copiedEl.classList.remove('cell-copied');
+    copiedEl = el; el.classList.add('cell-copied');
+  }
+  if (e.ctrlKey && e.key.toLowerCase()==='v' && copiedValue!==null) {
+    e.preventDefault();
+    el.textContent = copiedValue;
+    normalizeCell(el);
+    clearCopyMode();
+  }
 };
 
 window.handlePaste = function(e) {
@@ -433,6 +554,16 @@ window.handlePaste = function(e) {
   const text = (e.clipboardData||window.clipboardData).getData('text/plain').trim();
   document.execCommand('insertText',false,text);
 };
+
+/* 셀 포커스 시 텍스트 전체 선택 (엑셀처럼) */
+document.getElementById('table-wrap').addEventListener('focus', function(e) {
+  if (!e.target.classList.contains('td-edit')) return;
+  const range = document.createRange();
+  range.selectNodeContents(e.target);
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+}, true);
 
 function updateRowSummary(tr) {
   if (!tr) return;
