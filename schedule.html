@@ -6,390 +6,498 @@
 <title>스케줄 생성기 – Patek-S</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Pretendard', 'Malgun Gothic', Arial, sans-serif; background: #FAF9F5; color: #333; min-height: 100vh; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Malgun Gothic','맑은 고딕',Arial,sans-serif; background:#f8f5ef; color:#3a2a1f; min-height:100vh; }
 
-  #app { display: flex; flex-direction: column; min-height: 100vh; }
+/* ── 로그인 오버레이 ── */
+#login-overlay {
+  position:fixed; inset:0; background:rgba(250,249,245,.96);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:999;
+}
+#login-overlay img { height:60px; margin-bottom:20px; }
+#login-overlay h2 { font-size:22px; font-weight:800; color:#333; margin-bottom:8px; }
+#login-overlay p { font-size:14px; color:#888; margin-bottom:28px; }
+.google-btn {
+  display:flex; align-items:center; gap:10px;
+  background:white; border:1.5px solid #E8E4DB; border-radius:50px;
+  padding:12px 24px; font-size:15px; font-weight:700; color:#4A443F;
+  cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.08); transition:.15s;
+}
+.google-btn:hover { box-shadow:0 4px 16px rgba(0,0,0,.12); transform:translateY(-1px); }
 
-  header {
-    background: white;
-    border-bottom: 1px solid #E8E4DB;
-    padding: 14px 24px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-  }
-  header .logo { display: flex; align-items: center; gap: 12px; }
-  header img { height: 36px; object-fit: contain; }
-  header h1 { font-size: 20px; font-weight: 800; color: #333; }
+/* ── 설정 패널 ── */
+#settings-overlay {
+  position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:500;
+  display:none; align-items:center; justify-content:center;
+}
+#settings-panel {
+  background:white; border-radius:20px; padding:28px; width:520px; max-width:92vw;
+  max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,.2);
+}
+#settings-panel h3 { font-size:18px; font-weight:800; margin-bottom:16px; }
+.settings-table { width:100%; border-collapse:collapse; font-size:13px; }
+.settings-table th { background:#F8F6F0; padding:8px 10px; text-align:center; font-weight:700; border:1px solid #E8E4DB; }
+.settings-table td { padding:6px 8px; border:1px solid #E8E4DB; text-align:center; }
+.settings-table input { width:70px; padding:4px 6px; border:1px solid #ccc; border-radius:6px; text-align:center; font-size:13px; }
+.settings-save-btn { width:100%; margin-top:16px; padding:12px; background:#B4975A; color:white; border:none; border-radius:12px; font-size:15px; font-weight:800; cursor:pointer; }
+.settings-save-btn:hover { background:#9A7B42; }
+.settings-close-btn { position:absolute; top:16px; right:20px; background:none; border:none; font-size:22px; cursor:pointer; color:#999; }
 
-  .controls {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-  .month-nav {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: #FFFDF8;
-    border: 2px solid #D8B98B;
-    border-radius: 12px;
-    padding: 6px 14px;
-  }
-  .month-nav button {
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-size: 20px;
-    color: #B4975A;
-    line-height: 1;
-    padding: 0 4px;
-  }
-  .month-nav button:hover { color: #8B6B2E; }
-  #month-title { font-size: 17px; font-weight: 800; color: #2F2924; min-width: 110px; text-align: center; }
+/* ── 헤더 ── */
+header {
+  background:white; border-bottom:1px solid #E8E4DB;
+  padding:10px 20px; display:flex; align-items:center; justify-content:space-between;
+  position:sticky; top:0; z-index:100; box-shadow:0 2px 8px rgba(0,0,0,.04);
+  flex-wrap:wrap; gap:8px;
+}
+.header-logo { display:flex; align-items:center; gap:10px; }
+.header-logo img { height:32px; object-fit:contain; }
+.header-logo span { font-size:18px; font-weight:800; color:#333; }
+.month-nav {
+  display:flex; align-items:center; gap:6px;
+  background:#FFFDF8; border:2px solid #D8B98B; border-radius:12px; padding:5px 12px;
+}
+.month-nav button { background:none; border:none; cursor:pointer; font-size:22px; color:#B4975A; line-height:1; }
+.month-nav button:hover { color:#8B6B2E; }
+#month-title { font-size:16px; font-weight:800; color:#2F2924; min-width:100px; text-align:center; }
+.hdr-btns { display:flex; gap:8px; align-items:center; }
+.btn { display:inline-flex; align-items:center; gap:5px; padding:7px 14px; border-radius:9px; font-size:12px; font-weight:800; border:none; cursor:pointer; transition:.15s; }
+.btn:hover { opacity:.85; } .btn:active { transform:scale(.97); }
+.btn-gold { background:#F8F3E7; color:#8B6B2E; border:1.5px solid #D8B98B; }
+.btn-green { background:#E8F5E9; color:#2E7D32; border:1.5px solid #C8E6C9; }
+.btn-blue { background:#E3F2FD; color:#1565C0; border:1.5px solid #BBDEFB; }
+.btn-red { background:#FFF3E0; color:#E65100; border:1.5px solid #FFCC80; }
 
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 16px;
-    border-radius: 10px;
-    font-size: 13px;
-    font-weight: 700;
-    border: none;
-    cursor: pointer;
-    transition: all 0.15s;
-  }
-  .btn:active { transform: scale(0.97); }
-  .btn-excel { background: #E8F5E9; color: #2E7D32; border: 1px solid #C8E6C9; }
-  .btn-excel:hover { background: #C8E6C9; }
-  .btn-print { background: #E3F2FD; color: #1565C0; border: 1px solid #BBDEFB; }
-  .btn-print:hover { background: #BBDEFB; }
+/* ── 메인 ── */
+main { padding:16px 20px 24px; }
+#loading { text-align:center; padding:60px; color:#888; font-size:16px; }
 
-  .legend {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    padding: 10px 24px;
-    background: white;
-    border-bottom: 1px solid #F0EFEA;
-    flex-wrap: wrap;
-  }
-  .legend span { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: #555; }
-  .legend-dot { width: 20px; height: 14px; border-radius: 4px; display: inline-block; }
+/* ── 테이블 래퍼 ── */
+#table-wrap { overflow-x:auto; border-radius:14px; border:2px solid #E1CDB0; box-shadow:0 6px 24px rgba(139,115,85,.12); background:white; }
 
-  main { flex: 1; padding: 20px 24px; overflow: hidden; }
+/* ── 메인 테이블 ── */
+.sched-table { border-collapse:collapse; min-width:max-content; background:white; }
+.sched-table th, .sched-table td { border:1px solid #E5D8C2; }
 
-  #loading { text-align: center; padding: 60px; color: #888; font-size: 15px; }
+/* 고정 컬럼 */
+.col-stick { position:sticky; z-index:5; }
+.col-annual { left:0; min-width:52px; max-width:52px; background:#F8F6F0; }
+.col-name { left:52px; min-width:72px; max-width:72px; background:#F8F6F0; border-right:2px solid #C8B8A0 !important; }
+thead .col-annual, thead .col-name { z-index:15; background:#EDE8DF; }
 
-  #table-wrap { overflow-x: auto; border-radius: 16px; border: 1.5px solid #E1CDB0; box-shadow: 0 4px 20px rgba(139,115,85,0.1); }
+/* 헤더행 */
+.th-num { min-width:34px; padding:6px 2px; text-align:center; font-size:12px; font-weight:800; background:#F8F6F0; }
+.th-dow { min-width:34px; padding:4px 2px; text-align:center; font-size:11px; font-weight:700; background:#F8F6F0; }
+.th-sum { min-width:36px; padding:6px 3px; text-align:center; font-size:11px; font-weight:800; background:#EDE8DF; }
 
-  table { border-collapse: collapse; min-width: max-content; background: white; }
-  thead { position: sticky; top: 0; z-index: 10; }
+.th-sun .th-num, .th-sun .th-dow { color:#C74A4A; }
+.th-sat .th-num, .th-sat .th-dow { color:#2F70B9; }
+.th-hol .th-num, .th-hol .th-dow { color:#C74A4A; }
 
-  th.sticky-col, td.sticky-col {
-    position: sticky;
-    left: 0;
-    z-index: 5;
-    background: #F8F6F0;
-    min-width: 90px;
-    max-width: 90px;
-    white-space: nowrap;
-  }
-  thead th.sticky-col { z-index: 15; background: #F0EBE0; }
+/* 데이터 행 */
+.td-annual { padding:6px 4px; text-align:center; font-size:12px; font-weight:800; color:#6B4E1A; min-width:52px; }
+.td-name { padding:7px 10px; font-size:13px; font-weight:800; color:#333; white-space:nowrap; min-width:72px; }
+.td-cell { min-width:34px; max-width:34px; padding:3px 2px; vertical-align:top; }
+.td-sum { min-width:36px; padding:5px 4px; text-align:center; font-size:12px; font-weight:800; color:#333; background:#FDFAF5; }
 
-  th {
-    padding: 10px 6px;
-    background: #F8F6F0;
-    border: 1px solid #E8D8BD;
-    font-size: 12px;
-    font-weight: 700;
-    text-align: center;
-    color: #555;
-    min-width: 54px;
-  }
-  th.day-sun { color: #C74A4A; }
-  th.day-sat { color: #2F70B9; }
-  th.day-hol { color: #C74A4A; }
+/* 셀 내 칩 */
+.chip {
+  display:block; width:100%; padding:3px 1px; border-radius:4px;
+  font-size:10px; font-weight:900; text-align:center; border:1px solid transparent;
+  line-height:1.2; white-space:nowrap; overflow:hidden;
+}
+.chip.requested { border-style:dashed !important; border-width:1.5px !important; }
+.chip-a { background:#FAD7D5; color:#6E2626; border-color:#F0B9B7; }
+.chip-b { background:#D9E7FA; color:#234B7A; border-color:#BFD2EF; }
+.chip-c { background:#FFE7B8; color:#7A4F14; border-color:#F4D08C; }
+.chip-ann { background:#C8E6C9; color:#2E7D32; border-color:#A5D6A7; }
+.chip-kyung { background:#E1F0FA; color:#0D5D9A; border-color:#90CAF9; }
+.chip-off {
+  background:repeating-linear-gradient(-45deg,#F2EFE8,#F2EFE8 2px,transparent 2px,transparent 7px);
+  min-height:18px; border-color:transparent !important;
+}
 
-  td {
-    padding: 6px 4px;
-    border: 1px solid #E8D8BD;
-    vertical-align: top;
-    min-width: 54px;
-    background: white;
-  }
-  td.sticky-col {
-    font-size: 13px;
-    font-weight: 700;
-    color: #333;
-    padding: 8px 12px;
-    border-right: 2px solid #D8C9B0;
-  }
+/* 컬럼 배경 (calEvent) */
+.col-bg-closedday { background-color:#FFF8B0 !important; }
+.col-bg-holiday   { background-color:#FFE8C0 !important; }
+.col-bg-event     { background-color:#DFFFCF !important; }
 
-  .cell-chip {
-    display: block;
-    width: 100%;
-    padding: 3px 2px;
-    border-radius: 4px;
-    font-size: 10px;
-    font-weight: 800;
-    text-align: center;
-    border: 1px solid transparent;
-    margin-bottom: 2px;
-    line-height: 1.2;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .cell-chip.requested { border-style: dashed !important; border-width: 1.5px !important; }
+/* 요약 특이값 */
+.td-used-leave { color:#B4975A; font-weight:900; }
+.td-remain-leave { color:#2E7D32; font-weight:900; }
 
-  .chip-a { background: #FAD7D5; color: #6E2626; border-color: #F0B9B7; }
-  .chip-b { background: #D9E7FA; color: #234B7A; border-color: #BFD2EF; }
-  .chip-c { background: #FFE7B8; color: #7A4F14; border-color: #F4D08C; }
-  .chip-off { background: #F2F2F2; color: #777; border-color: #DDD; }
-  .chip-annual { background: #C8E6C9; color: #2E7D32; border-color: #A5D6A7; }
-
-  .empty-cell { background: #FAFAF8; }
-  .weekend-cell { background: #FEFCF8; }
-  .holiday-cell { background: #FFF5F5; }
-
-  @media print {
-    header, .legend, .controls { display: none !important; }
-    body { background: white; }
-    #table-wrap { box-shadow: none; border: 1px solid #ccc; }
-    th, td { font-size: 10px; padding: 4px 2px; }
-    td.sticky-col, th.sticky-col { position: static; }
-  }
+/* ── 하단 레전드 ── */
+.footer-wrap { display:flex; flex-wrap:wrap; gap:24px; margin-top:18px; padding:14px 18px; background:white; border-radius:12px; border:1px solid #E8E4DB; font-size:13px; }
+.shift-legend-block h4 { font-size:12px; font-weight:800; color:#666; margin-bottom:8px; }
+.shift-legend-block table { border-collapse:collapse; }
+.shift-legend-block th, .shift-legend-block td { padding:4px 12px; border:1px solid #E8E4DB; font-size:12px; }
+.shift-legend-block th { background:#F8F6F0; font-weight:800; }
+.time-remain-block h4 { font-size:12px; font-weight:800; color:#666; margin-bottom:8px; }
+.time-chip { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; background:#D9FAF1; border:1px solid #4DB5A9; border-radius:20px; font-size:12px; font-weight:800; color:#167B72; margin:3px; }
+.marker-guide { display:flex; gap:16px; align-items:center; font-size:12px; color:#555; }
+.marker-guide span { display:inline-flex; align-items:center; gap:5px; }
+.mg-box { width:22px; height:15px; border-radius:4px; display:inline-block; }
 </style>
 </head>
 <body>
-<div id="app">
-  <header>
-    <div class="logo">
-      <img src="log.png" alt="Patek-S" onerror="this.style.display='none'" />
-      <h1>스케줄 생성기</h1>
-    </div>
-    <div class="controls">
-      <div class="month-nav">
-        <button id="prev-btn">‹</button>
-        <span id="month-title">로딩 중...</span>
-        <button id="next-btn">›</button>
-      </div>
-      <button class="btn btn-excel" id="export-btn">⬇ 엑셀 다운로드</button>
-      <button class="btn btn-print" onclick="window.print()">🖨 인쇄</button>
-    </div>
-  </header>
 
-  <div class="legend">
-    <span><span class="legend-dot" style="background:#FAD7D5;border:1px solid #F0B9B7;"></span>A조</span>
-    <span><span class="legend-dot" style="background:#D9E7FA;border:1px solid #BFD2EF;"></span>B조</span>
-    <span><span class="legend-dot" style="background:#FFE7B8;border:1px solid #F4D08C;"></span>C조</span>
-    <span><span class="legend-dot" style="background:#F2F2F2;border:1px solid #DDD;"></span>휴무</span>
-    <span><span class="legend-dot" style="background:#C8E6C9;border:1px solid #A5D6A7;"></span>연차</span>
-    <span><span class="legend-dot" style="border:1.5px dashed #9a9a9a;background:transparent;"></span>신청됨</span>
-  </div>
-
-  <main>
-    <div id="loading">Firebase 데이터 로딩 중...</div>
-    <div id="table-wrap" style="display:none;"></div>
-  </main>
+<!-- 로그인 오버레이 -->
+<div id="login-overlay">
+  <img src="log.png" alt="Patek-S" onerror="this.style.display='none'" />
+  <h2>스케줄 생성기</h2>
+  <p>Google 계정으로 로그인해주세요</p>
+  <button class="google-btn" id="login-btn">
+    <svg width="20" height="20" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+    Google 계정으로 시작하기
+  </button>
 </div>
+
+<!-- 설정 패널 -->
+<div id="settings-overlay">
+  <div id="settings-panel" style="position:relative;">
+    <button class="settings-close-btn" onclick="document.getElementById('settings-overlay').style.display='none'">✕</button>
+    <h3>직원별 설정</h3>
+    <p style="font-size:12px;color:#888;margin-bottom:14px;">연차 배분과 시간찾기 잔여 시간을 입력 후 저장하세요.</p>
+    <table class="settings-table">
+      <thead><tr><th>이름</th><th>연차 배분 (일)</th><th>시간찾기 잔여 (h)</th></tr></thead>
+      <tbody id="settings-tbody"></tbody>
+    </table>
+    <button class="settings-save-btn" id="settings-save-btn">저장하기</button>
+  </div>
+</div>
+
+<!-- 헤더 -->
+<header>
+  <div class="header-logo">
+    <img src="log.png" alt="Patek-S" onerror="this.style.display='none'" />
+    <span>스케줄 생성기</span>
+  </div>
+  <div class="month-nav">
+    <button id="prev-btn">‹</button>
+    <span id="month-title">로딩 중...</span>
+    <button id="next-btn">›</button>
+  </div>
+  <div class="hdr-btns">
+    <button class="btn btn-gold" id="settings-btn">⚙ 직원 설정</button>
+    <button class="btn btn-green" id="export-btn">⬇ 엑셀</button>
+    <button class="btn btn-blue" onclick="window.print()">🖨 인쇄</button>
+    <button class="btn btn-red" id="logout-btn">로그아웃</button>
+  </div>
+</header>
+
+<main>
+  <div id="loading">로딩 중...</div>
+  <div id="table-wrap" style="display:none;"></div>
+  <div id="footer-area" style="display:none;" class="footer-wrap">
+    <div class="shift-legend-block">
+      <h4>근무 시간</h4>
+      <table>
+        <tr><th></th><th>평일</th><th>주말</th></tr>
+        <tr><td style="background:#FAD7D5;font-weight:800;color:#6E2626;padding:3px 10px;">A</td><td>10:00 ~ 18:00</td><td>10:00 ~ 18:00</td></tr>
+        <tr><td style="background:#D9E7FA;font-weight:800;color:#234B7A;padding:3px 10px;">B</td><td>12:00 ~ 20:00</td><td>12:30 ~ 20:30</td></tr>
+        <tr><td style="background:#FFE7B8;font-weight:800;color:#7A4F14;padding:3px 10px;">C</td><td>10:00 ~ 20:00</td><td>10:00 ~ 20:30</td></tr>
+      </table>
+    </div>
+    <div class="time-remain-block">
+      <h4>시간찾기 잔여</h4>
+      <div id="time-remain-chips"></div>
+    </div>
+    <div>
+      <h4 style="font-size:12px;font-weight:800;color:#666;margin-bottom:8px;">범례</h4>
+      <div class="marker-guide">
+        <span><span class="mg-box" style="border:1.5px dashed #9a9a9a;"></span>신청됨</span>
+        <span><span class="mg-box chip-a"></span>A조</span>
+        <span><span class="mg-box chip-b"></span>B조</span>
+        <span><span class="mg-box chip-c"></span>C조</span>
+        <span><span class="mg-box chip-ann"></span>연차</span>
+        <span><span class="mg-box chip-kyung"></span>경조</span>
+        <span><span class="mg-box" style="background:repeating-linear-gradient(-45deg,#F2EFE8,#F2EFE8 2px,transparent 2px,transparent 7px);border:1px solid #E0E0E0;"></span>휴무</span>
+      </div>
+    </div>
+  </div>
+</main>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getFirestore, collection, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, collection, onSnapshot, doc, updateDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCt7aQXA5eFdnDTMHlRhjPAkyH4b8UB6HY",
-  authDomain: "patek-s.firebaseapp.com",
-  projectId: "patek-s",
-  storageBucket: "patek-s.firebasestorage.app",
-  messagingSenderId: "786016749285",
-  appId: "1:786016749285:web:58538eec1cf7e72068b60c"
+  apiKey:"AIzaSyCt7aQXA5eFdnDTMHlRhjPAkyH4b8UB6HY",
+  authDomain:"patek-s.firebaseapp.com", projectId:"patek-s",
+  storageBucket:"patek-s.firebasestorage.app", messagingSenderId:"786016749285",
+  appId:"1:786016749285:web:58538eec1cf7e72068b60c"
 };
-
 const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
 const db = getFirestore(app);
+const provider = new GoogleAuthProvider();
 
 const PUBLIC_HOLIDAYS = {
   "2026-01-01":"신정","2026-02-16":"설날연휴","2026-02-17":"설날","2026-02-18":"설날연휴",
   "2026-03-01":"삼일절","2026-03-02":"대체공휴일","2026-05-05":"어린이날","2026-05-24":"부처님오신날",
-  "2026-05-25":"대체공휴일","2026-06-03":"전국동시지방선거","2026-06-06":"현충일","2026-08-15":"광복절",
+  "2026-05-25":"대체공휴일","2026-06-03":"지방선거","2026-06-06":"현충일","2026-08-15":"광복절",
   "2026-08-17":"대체공휴일","2026-09-24":"추석연휴","2026-09-25":"추석","2026-09-26":"추석연휴",
   "2026-09-28":"대체공휴일","2026-10-03":"개천절","2026-10-05":"대체공휴일","2026-10-09":"한글날","2026-12-25":"기독탄신일"
 };
+const DAY_NAMES = ['일','월','화','수','목','금','토'];
 
-const DEFAULT_STAFFS = ['옥영세','엄인주','장용석','최혜지','이승범','형영지'];
+// 초기 설정값 (이미지 기준)
+const DEFAULT_ANNUAL = { '옥영세':15.0,'엄인주':13.5,'장용석':10.5,'최혜지':17.0,'이승범':6.0,'형영지':9.0 };
+const DEFAULT_TIME   = { '엄인주':0.5,'장용석':1.5,'최혜지':1.5,'형영지':0.5 };
 
-let curYear = new Date().getFullYear();
-let curMonth = new Date().getMonth() + 1;
-let schedulesData = {};
-let leaveRequests = [];
-let staffsData = {};
+let curYear = 2026, curMonth = 6;
+let schedulesData = {}, leaveRequests = [], calEvents = [], timeRequests = [], staffList = [];
 
-function getDays(y, m) { return new Date(y, m, 0).getDate(); }
-function pad(n) { return String(n).padStart(2, '0'); }
+function pad(n){ return String(n).padStart(2,'0'); }
+function getDays(y,m){ return new Date(y,m,0).getDate(); }
+function ds(y,m,d){ return `${y}-${pad(m)}-${pad(d)}`; }
 
+/* ── 렌더 ── */
 function render() {
   const totalDays = getDays(curYear, curMonth);
   const monthKey = `${curYear}-${pad(curMonth)}`;
   document.getElementById('month-title').textContent = `${curYear}년 ${curMonth}월`;
 
   const monthDoc = schedulesData[monthKey] || {};
-  const staffNames = monthDoc.staffNames || DEFAULT_STAFFS;
+  const staffNames = monthDoc.staffNames || Object.keys(DEFAULT_ANNUAL);
 
-  // Build request matrix from leaveRequests
+  // leave matrix: name → day → { type, requested }
   const reqMatrix = {};
   staffNames.forEach(n => { reqMatrix[n] = {}; });
   leaveRequests.forEach(req => {
     if (!reqMatrix[req.name]) return;
-    const start = new Date(req.startDate);
-    const end = new Date(req.endDate || req.startDate);
-    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-      if (d.getFullYear() === curYear && d.getMonth() + 1 === curMonth) {
-        reqMatrix[req.name][d.getDate()] = { type: req.type, requested: true };
-      }
+    const s = new Date(req.startDate), e = new Date(req.endDate || req.startDate);
+    for (let d = new Date(s); d <= e; d.setDate(d.getDate()+1)) {
+      if (d.getFullYear()===curYear && d.getMonth()+1===curMonth)
+        reqMatrix[req.name][d.getDate()] = { type:req.type, requested:true };
     }
   });
 
-  // Build schedule matrix from schedulesData
-  const schedMatrix = {};
-  staffNames.forEach(n => {
-    schedMatrix[n] = {};
-    const uDays = (monthDoc.staffs || {})[n] || {};
-    for (let d = 1; d <= totalDays; d++) {
-      schedMatrix[n][d] = uDays[d] || uDays[String(d)] || '';
-    }
+  // cal event map: dateStr → event
+  const calMap = {};
+  calEvents.forEach(e => { calMap[e.date] = e; });
+
+  // time request: name → totalUsed
+  const timeUsed = {};
+  timeRequests.forEach(r => { timeUsed[r.name] = (timeUsed[r.name]||0) + (r.hours||0); });
+
+  // staff meta from staffList
+  const staffMeta = {};
+  staffList.forEach(s => {
+    staffMeta[s.name] = {
+      annualLeave: s.annualLeave ?? DEFAULT_ANNUAL[s.name] ?? 15,
+      timeAllowance: s.timeAllowance ?? DEFAULT_TIME[s.name] ?? 0
+    };
   });
 
-  // Build header row
-  let dayHeaders = `<th class="sticky-col" rowspan="2">직원</th>`;
+  /* ── 요일/날짜 헤더 ── */
+  let thNums = `<th class="col-stick col-annual th-sum" rowspan="2">연차</th>
+    <th class="col-stick col-name th-sum" rowspan="2">이름</th>`;
+  let thDows = '';
   for (let d = 1; d <= totalDays; d++) {
-    const dateStr = `${curYear}-${pad(curMonth)}-${pad(d)}`;
+    const date = ds(curYear, curMonth, d);
     const dow = new Date(curYear, curMonth-1, d).getDay();
-    const isHol = PUBLIC_HOLIDAYS[dateStr];
-    const dayNames = ['일','월','화','수','목','금','토'];
+    const isHol = !!PUBLIC_HOLIDAYS[date];
+    const calEv = calMap[date];
+    const isClosed = calEv?.type === '정기휴무';
+    const isEvent  = calEv?.type === '행사';
     let cls = '';
-    if (isHol || dow === 0) cls = 'day-sun';
-    else if (dow === 6) cls = 'day-sat';
-    dayHeaders += `<th class="${cls}" title="${isHol||''}">${d}<br><span style="font-size:10px;font-weight:600;">${dayNames[dow]}</span>${isHol ? `<br><span style="font-size:9px;color:#C74A4A;">${isHol}</span>` : ''}</th>`;
+    if (isClosed) cls = 'th-sun'; else if (isHol || dow===0) cls = 'th-sun'; else if (dow===6) cls = 'th-sat';
+    thNums += `<th class="th-num ${cls}">${d}</th>`;
+    thDows += `<th class="th-dow ${cls}">${DAY_NAMES[dow]}${isHol?'*':''}</th>`;
   }
+  const sumCols = ['DO','A','B','C','사용연차','남은연차'];
+  sumCols.forEach(s => { thNums += `<th class="th-sum" rowspan="2" style="min-width:40px;">${s}</th>`; });
 
-  // Build rows
+  /* ── 직원 행 ── */
   let rows = '';
   staffNames.forEach(name => {
-    let cells = `<td class="sticky-col">${name}</td>`;
+    const meta = staffMeta[name] || { annualLeave: DEFAULT_ANNUAL[name]??15, timeAllowance: DEFAULT_TIME[name]??0 };
+    const sched = (monthDoc.staffs || {})[name] || {};
+    let cntA=0, cntB=0, cntC=0, cntAnn=0, cntOff=0;
+
+    let cells = '';
     for (let d = 1; d <= totalDays; d++) {
-      const dateStr = `${curYear}-${pad(curMonth)}-${pad(d)}`;
-      const dow = new Date(curYear, curMonth-1, d).getDay();
-      const isHol = PUBLIC_HOLIDAYS[dateStr];
-      let cellCls = dow === 6 ? 'weekend-cell' : (dow === 0 || isHol ? 'holiday-cell' : '');
+      const date = ds(curYear, curMonth, d);
+      const calEv = calMap[date];
+      const isClosed = calEv?.type === '정기휴무';
+      const isEvent  = calEv?.type === '행사';
+      const isHol    = !!PUBLIC_HOLIDAYS[date];
+      const dow      = new Date(curYear, curMonth-1, d).getDay();
 
+      // 배경색 결정
+      let bgCls = '';
+      if (isClosed) bgCls = 'col-bg-closedday';
+      else if (isHol) bgCls = 'col-bg-holiday';
+      else if (isEvent) bgCls = 'col-bg-event';
+
+      // 코드 결정
       const req = reqMatrix[name][d];
-      const sched = schedMatrix[name][d] || '';
-
-      // Determine effective code: req overrides schedule
-      let code = '';
-      let isRequested = false;
-      if (req) {
-        code = req.type;
-        isRequested = true;
-      } else {
-        code = sched;
+      let code = '', isRequested = false;
+      if (req) { code = req.type; isRequested = true; }
+      else {
+        const raw = String(sched[d] || sched[String(d)] || '').trim().toUpperCase();
+        if (raw === 'A' || raw === 'A반') code = raw === 'A반' ? 'A반' : 'A';
+        else if (raw === 'B' || raw === 'B반') code = raw === 'B반' ? 'B반' : 'B';
+        else if (raw === 'C') code = 'C';
+        else if (raw === '연차' || raw === '연') code = '연차';
+        else if (raw === '경' || raw === '경조') code = '경조';
       }
 
-      const normalize = (c) => {
-        if (!c) return '';
-        const u = String(c).trim().toUpperCase();
-        if (u === 'A' || u === 'A반') return u === 'A반' ? 'A반' : 'A';
-        if (u === 'B' || u === 'B반') return u === 'B반' ? 'B반' : 'B';
-        if (u === 'C') return 'C';
-        if (u === '연차' || u === '연') return '연차';
-        if (!u || u === '/' || u === '휴' || u === '휴무') return '';
-        return '';
-      };
+      // 카운트
+      const normCode = code.replace('반','').replace('조','');
+      if (normCode === 'A') cntA++;
+      else if (normCode === 'B') cntB++;
+      else if (normCode === 'C') cntC++;
+      else if (code === '연차') cntAnn++;
+      else cntOff++;
 
-      const normCode = normalize(code);
-      const chipMap = { 'A':'chip-a', 'A반':'chip-a', 'B':'chip-b', 'B반':'chip-b', 'C':'chip-c', '연차':'chip-annual' };
-      const chipCls = chipMap[normCode] || '';
-      const reqCls = isRequested ? ' requested' : '';
-
+      // 칩
       let chipHtml = '';
-      if (normCode) {
-        chipHtml = `<span class="cell-chip ${chipCls}${reqCls}">${normCode}</span>`;
+      if (code === 'A' || code === 'A반') {
+        chipHtml = `<span class="chip chip-a${isRequested?' requested':''}">${code}</span>`;
+      } else if (code === 'B' || code === 'B반') {
+        chipHtml = `<span class="chip chip-b${isRequested?' requested':''}">${code}</span>`;
+      } else if (code === 'C') {
+        chipHtml = `<span class="chip chip-c${isRequested?' requested':''}">${code}</span>`;
+      } else if (code === '연차') {
+        chipHtml = `<span class="chip chip-ann${isRequested?' requested':''}">연</span>`;
+      } else if (code === '경조') {
+        chipHtml = `<span class="chip chip-kyung${isRequested?' requested':''}">경</span>`;
+      } else {
+        chipHtml = `<span class="chip chip-off"></span>`;
       }
 
-      cells += `<td class="${cellCls}">${chipHtml}</td>`;
+      cells += `<td class="td-cell ${bgCls}">${chipHtml}</td>`;
     }
-    rows += `<tr>${cells}</tr>`;
+
+    const annualAlloc = meta.annualLeave;
+    const annualRemain = (annualAlloc - cntAnn).toFixed(1);
+    rows += `<tr>
+      <td class="td-annual col-stick col-annual">${annualAlloc}</td>
+      <td class="td-name col-stick col-name">${name}</td>
+      ${cells}
+      <td class="td-sum">${cntOff}</td>
+      <td class="td-sum" style="color:#6E2626;">${cntA}</td>
+      <td class="td-sum" style="color:#234B7A;">${cntB}</td>
+      <td class="td-sum" style="color:#7A4F14;">${cntC}</td>
+      <td class="td-sum td-used-leave">${cntAnn}.0</td>
+      <td class="td-sum td-remain-leave">${annualRemain}</td>
+    </tr>`;
   });
 
   document.getElementById('table-wrap').innerHTML = `
-    <table>
-      <thead><tr>${dayHeaders}</tr></thead>
+    <table class="sched-table">
+      <thead>
+        <tr>${thNums}</tr>
+        <tr>${thDows}</tr>
+      </thead>
       <tbody>${rows}</tbody>
     </table>`;
+
+  // 시간찾기 잔여 칩
+  const chipsEl = document.getElementById('time-remain-chips');
+  if (chipsEl) {
+    chipsEl.innerHTML = staffNames
+      .filter(n => (staffMeta[n]?.timeAllowance || DEFAULT_TIME[n] || 0) > 0)
+      .map(n => {
+        const alloc = staffMeta[n]?.timeAllowance || DEFAULT_TIME[n] || 0;
+        const used = timeUsed[n] || 0;
+        const remain = Math.max(0, alloc - used).toFixed(1);
+        return `<span class="time-chip">${n}: ${remain}h</span>`;
+      }).join('');
+  }
+
   document.getElementById('loading').style.display = 'none';
   document.getElementById('table-wrap').style.display = 'block';
+  document.getElementById('footer-area').style.display = 'flex';
 }
 
-// Firebase listeners
-onSnapshot(collection(db, 'artifacts', 'patek-s', 'public', 'data', 'schedules'), snap => {
-  schedulesData = {};
-  snap.docs.forEach(d => { schedulesData[d.id] = d.data(); });
-  render();
+/* ── 설정 패널 ── */
+function openSettings() {
+  const monthKey = `${curYear}-${pad(curMonth)}`;
+  const staffNames = (schedulesData[monthKey]?.staffNames) || Object.keys(DEFAULT_ANNUAL);
+  const tbody = document.getElementById('settings-tbody');
+  tbody.innerHTML = staffNames.map(name => {
+    const meta = staffList.find(s => s.name === name) || {};
+    const annual = meta.annualLeave ?? DEFAULT_ANNUAL[name] ?? 15;
+    const time   = meta.timeAllowance ?? DEFAULT_TIME[name] ?? 0;
+    return `<tr>
+      <td style="font-weight:700;">${name}</td>
+      <td><input type="number" step="0.5" min="0" value="${annual}" id="set-annual-${name}" /></td>
+      <td><input type="number" step="0.5" min="0" value="${time}" id="set-time-${name}" /></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('settings-overlay').style.display = 'flex';
+}
+
+document.getElementById('settings-btn').addEventListener('click', openSettings);
+document.getElementById('settings-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('settings-overlay'))
+    document.getElementById('settings-overlay').style.display = 'none';
 });
 
-onSnapshot(collection(db, 'artifacts', 'patek-s', 'public', 'data', 'leave_requests'), snap => {
-  leaveRequests = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  render();
+document.getElementById('settings-save-btn').addEventListener('click', async () => {
+  const monthKey = `${curYear}-${pad(curMonth)}`;
+  const staffNames = (schedulesData[monthKey]?.staffNames) || Object.keys(DEFAULT_ANNUAL);
+  const updates = [];
+  staffNames.forEach(name => {
+    const aEl = document.getElementById(`set-annual-${name}`);
+    const tEl = document.getElementById(`set-time-${name}`);
+    if (!aEl || !tEl) return;
+    const annualLeave = parseFloat(aEl.value) || 0;
+    const timeAllowance = parseFloat(tEl.value) || 0;
+    const staff = staffList.find(s => s.name === name);
+    if (staff?.id) {
+      updates.push(updateDoc(doc(db,'users',staff.id), { annualLeave, timeAllowance }));
+    }
+  });
+  try {
+    await Promise.all(updates);
+    document.getElementById('settings-overlay').style.display = 'none';
+    alert('저장됐습니다!');
+  } catch(e) { alert('저장 실패: ' + e.message); }
 });
 
-// Month navigation
-document.getElementById('prev-btn').addEventListener('click', () => {
-  curMonth--;
-  if (curMonth < 1) { curMonth = 12; curYear--; }
-  render();
-});
-document.getElementById('next-btn').addEventListener('click', () => {
-  curMonth++;
-  if (curMonth > 12) { curMonth = 1; curYear++; }
-  render();
-});
-
-// Excel export
+/* ── 엑셀 내보내기 ── */
 document.getElementById('export-btn').addEventListener('click', () => {
-  if (!window.XLSX) { alert('XLSX 라이브러리 로딩 중입니다.'); return; }
+  if (!window.XLSX) { alert('라이브러리 로딩 중입니다.'); return; }
   const totalDays = getDays(curYear, curMonth);
   const monthKey = `${curYear}-${pad(curMonth)}`;
   const monthDoc = schedulesData[monthKey] || {};
-  const staffNames = monthDoc.staffNames || DEFAULT_STAFFS;
+  const staffNames = monthDoc.staffNames || Object.keys(DEFAULT_ANNUAL);
 
-  const reqMatrix = {};
-  staffNames.forEach(n => { reqMatrix[n] = {}; });
-  leaveRequests.forEach(req => {
-    if (!reqMatrix[req.name]) return;
-    const start = new Date(req.startDate);
-    const end = new Date(req.endDate || req.startDate);
-    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-      if (d.getFullYear() === curYear && d.getMonth() + 1 === curMonth) reqMatrix[req.name][d.getDate()] = req.type;
-    }
-  });
-
-  const header = ['직원', ...Array.from({length:totalDays}, (_,i) => `${i+1}일`)];
+  const header = ['연차','이름', ...Array.from({length:totalDays},(_,i)=>`${i+1}`), 'DO','A','B','C','사용연차','남은연차'];
   const data = staffNames.map(name => {
-    const uDays = (monthDoc.staffs || {})[name] || {};
-    return [name, ...Array.from({length:totalDays}, (_,i) => {
-      const d = i+1;
-      const req = reqMatrix[name][d];
-      return req || uDays[d] || uDays[String(d)] || '';
-    })];
+    const meta = staffList.find(s=>s.name===name) || {};
+    const annual = meta.annualLeave ?? DEFAULT_ANNUAL[name] ?? 15;
+    const sched = (monthDoc.staffs||{})[name]||{};
+    const reqM = {};
+    leaveRequests.forEach(req => {
+      if (req.name!==name) return;
+      const s=new Date(req.startDate), e=new Date(req.endDate||req.startDate);
+      for(let d=new Date(s);d<=e;d.setDate(d.getDate()+1))
+        if(d.getFullYear()===curYear&&d.getMonth()+1===curMonth) reqM[d.getDate()]=req.type;
+    });
+    let cA=0,cB=0,cC=0,cAnn=0,cOff=0;
+    const cells = Array.from({length:totalDays},(_,i)=>{
+      const d=i+1;
+      const req=reqM[d];
+      let code='';
+      if(req) code=req;
+      else { const raw=String(sched[d]||sched[String(d)]||'').trim().toUpperCase();
+        if(raw==='A'||raw==='A반') code=raw==='A반'?'A반':'A';
+        else if(raw==='B'||raw==='B반') code=raw==='B반'?'B반':'B';
+        else if(raw==='C') code='C';
+        else if(raw==='연차'||raw==='연') code='연';
+        else if(raw==='경'||raw==='경조') code='경';
+      }
+      const n=code.replace('반','').replace('조','');
+      if(n==='A') cA++; else if(n==='B') cB++; else if(n==='C') cC++; else if(code==='연') cAnn++; else cOff++;
+      return code||'/';
+    });
+    return [annual, name, ...cells, cOff, cA, cB, cC, cAnn, (annual-cAnn).toFixed(1)];
   });
 
   const ws = window.XLSX.utils.aoa_to_sheet([header, ...data]);
@@ -397,6 +505,51 @@ document.getElementById('export-btn').addEventListener('click', () => {
   window.XLSX.utils.book_append_sheet(wb, ws, `${curYear}년${curMonth}월`);
   window.XLSX.writeFile(wb, `스케줄_${curYear}년${curMonth}월.xlsx`);
 });
+
+/* ── Firebase 리스너 (로그인 후) ── */
+function startListeners() {
+  onSnapshot(collection(db,'artifacts','patek-s','public','data','schedules'), snap => {
+    schedulesData={};
+    snap.docs.forEach(d=>{schedulesData[d.id]=d.data();});
+    render();
+  });
+  onSnapshot(collection(db,'artifacts','patek-s','public','data','leave_requests'), snap => {
+    leaveRequests=snap.docs.map(d=>({id:d.id,...d.data()}));
+    render();
+  });
+  onSnapshot(collection(db,'artifacts','patek-s','public','data','cal_events'), snap => {
+    calEvents=snap.docs.map(d=>({id:d.id,...d.data()}));
+    render();
+  });
+  onSnapshot(collection(db,'artifacts','patek-s','public','data','time_requests'), snap => {
+    timeRequests=snap.docs.map(d=>({id:d.id,...d.data()}));
+    render();
+  });
+  onSnapshot(collection(db,'users'), snap => {
+    staffList=snap.docs.map(d=>({id:d.id,...d.data()})).filter(s=>s.approved===true);
+    render();
+  });
+}
+
+/* ── 인증 ── */
+onAuthStateChanged(auth, user => {
+  if (user) {
+    document.getElementById('login-overlay').style.display = 'none';
+    startListeners();
+  } else {
+    document.getElementById('login-overlay').style.display = 'flex';
+  }
+});
+
+document.getElementById('login-btn').addEventListener('click', async () => {
+  try { await signInWithPopup(auth, provider); }
+  catch(e) { if(e.code!=='auth/popup-closed-by-user') alert('로그인 오류: '+e.message); }
+});
+document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
+
+/* ── 월 네비게이션 ── */
+document.getElementById('prev-btn').addEventListener('click', ()=>{ curMonth--; if(curMonth<1){curMonth=12;curYear--;} render(); });
+document.getElementById('next-btn').addEventListener('click', ()=>{ curMonth++; if(curMonth>12){curMonth=1;curYear++;} render(); });
 </script>
 </body>
 </html>
