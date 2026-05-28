@@ -1,0 +1,121 @@
+﻿* { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:'Malgun Gothic','맑은 고딕',Arial,sans-serif; background:#f8f5ef; color:#3a2a1f; min-height:100vh; }
+
+/* ── 로그인 ── */
+#login-overlay { position:fixed; inset:0; background:rgba(250,249,245,.97); display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:999; }
+#login-overlay img { height:56px; margin-bottom:18px; }
+#login-overlay h2 { font-size:22px; font-weight:800; color:#333; margin-bottom:6px; }
+#login-overlay p { font-size:14px; color:#888; margin-bottom:26px; }
+.google-btn { display:flex; align-items:center; gap:10px; background:white; border:1.5px solid #E8E4DB; border-radius:50px; padding:12px 24px; font-size:15px; font-weight:700; color:#4A443F; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.08); transition:.15s; }
+.google-btn:hover { box-shadow:0 4px 16px rgba(0,0,0,.12); transform:translateY(-1px); }
+
+/* ── 오버레이 공통 ── */
+.overlay { position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:500; display:none; align-items:center; justify-content:center; }
+.panel { background:white; border-radius:20px; padding:26px; width:500px; max-width:94vw; max-height:88vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,.2); position:relative; }
+.panel h3 { font-size:17px; font-weight:800; margin-bottom:10px; }
+.panel p { font-size:13px; color:#666; margin-bottom:14px; line-height:1.6; }
+.panel-close { position:absolute; top:14px; right:18px; background:none; border:none; font-size:22px; cursor:pointer; color:#999; }
+
+/* ── 설정 패널 ── */
+.settings-tbl { width:100%; border-collapse:collapse; font-size:13px; }
+.settings-tbl th { background:#F8F6F0; padding:7px 10px; font-weight:800; border:1px solid #E8E4DB; text-align:center; }
+.settings-tbl td { padding:6px 8px; border:1px solid #E8E4DB; text-align:center; }
+.settings-tbl input { width:70px; padding:4px 6px; border:1px solid #ccc; border-radius:6px; text-align:center; font-size:13px; }
+
+/* ── 신청 반영 패널 ── */
+#apply-list { border:1px solid #E8E4DB; border-radius:10px; overflow:hidden; margin-bottom:16px; max-height:260px; overflow-y:auto; }
+#apply-list table { width:100%; border-collapse:collapse; font-size:12px; }
+#apply-list th { background:#F8F6F0; padding:7px 10px; font-weight:800; border-bottom:1px solid #E8E4DB; text-align:center; }
+#apply-list td { padding:6px 10px; border-bottom:1px solid #F0EFEA; text-align:center; }
+#apply-list tr:last-child td { border-bottom:none; }
+.code-badge { display:inline-block; padding:2px 7px; border-radius:4px; font-size:11px; font-weight:800; background:#FFE146; color:#555; }
+
+/* ── 헤더 ── */
+header { background:white; border-bottom:1px solid #E8E4DB; padding:9px 18px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; box-shadow:0 2px 8px rgba(0,0,0,.04); flex-wrap:wrap; gap:8px; }
+.h-logo { display:flex; align-items:center; gap:10px; }
+.h-logo img { height:30px; object-fit:contain; }
+.h-logo span { font-size:17px; font-weight:800; color:#333; }
+.month-nav { display:flex; align-items:center; gap:6px; background:#FFFDF8; border:2px solid #D8B98B; border-radius:11px; padding:5px 12px; }
+.month-nav button { background:none; border:none; cursor:pointer; font-size:20px; color:#B4975A; line-height:1; }
+#month-title { font-size:15px; font-weight:800; color:#2F2924; min-width:96px; text-align:center; }
+.hdr-btns { display:flex; gap:7px; align-items:center; flex-wrap:wrap; }
+.btn { display:inline-flex; align-items:center; gap:5px; padding:7px 13px; border-radius:9px; font-size:12px; font-weight:800; border:none; cursor:pointer; transition:.15s; white-space:nowrap; }
+.btn:active { transform:scale(.97); }
+.btn-gold  { background:#F8F3E7; color:#8B6B2E; border:1.5px solid #D8B98B; }
+.btn-apply { background:#E8F0FE; color:#1A56DB; border:1.5px solid #A3C0FF; }
+.btn-save  { background:#E8F5E9; color:#2E7D32; border:1.5px solid #C8E6C9; }
+.btn-excel { background:#F0F4FF; color:#3B5EAA; border:1.5px solid #B3C4F0; }
+.btn-print { background:#F5F5F5; color:#555; border:1.5px solid #DDD; }
+.btn-red   { background:#FFF3E0; color:#E65100; border:1.5px solid #FFCC80; }
+.panel-save-btn { width:100%; margin-top:14px; padding:12px; background:#1A56DB; color:white; border:none; border-radius:12px; font-size:14px; font-weight:800; cursor:pointer; }
+.panel-save-btn:hover { background:#1344B8; }
+.panel-cancel-btn { width:100%; margin-top:8px; padding:11px; background:#F2EFE8; color:#4A443F; border:none; border-radius:12px; font-size:14px; font-weight:800; cursor:pointer; }
+
+/* ── 메인 ── */
+main { padding:14px 18px 24px; }
+#loading { text-align:center; padding:60px; color:#888; font-size:16px; }
+#table-wrap { overflow-x:auto; border-radius:12px; border:2px solid #D8C9A8; box-shadow:0 4px 20px rgba(139,115,85,.1); }
+
+/* ── 스케줄 테이블 ── */
+.sched { border-collapse:collapse; min-width:max-content; background:white; }
+.sched th, .sched td { border:1px solid #E0D3BB; }
+
+/* 고정 컬럼 */
+.s-annual { position:sticky; left:0; z-index:5; min-width:48px; max-width:48px; background:#F5F0E8; font-size:12px; font-weight:800; color:#7A5E28; text-align:center; padding:6px 3px; }
+.s-name   { position:sticky; left:48px; z-index:5; min-width:68px; max-width:68px; background:#F5F0E8; font-size:13px; font-weight:800; color:#333; padding:7px 9px; white-space:nowrap; border-right:2px solid #C8B095 !important; }
+thead .s-annual, thead .s-name { z-index:15; background:#EDE0CB; }
+
+/* 날짜 헤더 */
+.th-d { min-width:30px; max-width:30px; padding:5px 1px; text-align:center; font-size:12px; font-weight:800; background:#F5F0E8; }
+.th-w { min-width:30px; max-width:30px; padding:3px 1px; text-align:center; font-size:10px; font-weight:700; background:#F5F0E8; }
+.red-hdr { color:#C74A4A !important; }
+.week-sep { border-right:2.5px solid #8B7355 !important; }
+
+/* 요약 헤더 */
+.th-sum { min-width:36px; padding:5px 3px; text-align:center; font-size:11px; font-weight:800; background:#EDE0CB; }
+
+/* 데이터 셀 */
+.td-edit {
+  min-width:30px; max-width:30px; padding:3px 1px;
+  text-align:center; font-size:11px; font-weight:800;
+  vertical-align:middle; cursor:text; outline:none;
+  user-select:text; -webkit-user-select:text;
+}
+.td-edit:focus { box-shadow:inset 0 0 0 2px #1A56DB; background:#EEF4FF !important; }
+.td-edit.cell-copied { outline:2px dashed #1A56DB !important; outline-offset:-1px; background:#E8F2FF !important; }
+.td-edit[data-req="1"] { background:#FFE146; }
+.td-edit[data-caloff="1"] { background:#BEBEBE !important; color:#fff !important; }
+.td-edit[data-event="1"] { background:#C8F0B4 !important; }
+.td-sum { min-width:36px; padding:5px 4px; text-align:center; font-size:12px; font-weight:800; color:#333; background:#FDFAF5; }
+.td-a { color:#6E2626; } .td-b { color:#234B7A; } .td-c { color:#7A4F14; }
+
+/* ── 푸터 ── */
+#footer-area { display:none; flex-wrap:wrap; gap:20px; margin-top:16px; padding:14px 16px; background:white; border-radius:12px; border:1px solid #E8E4DB; }
+.ft-block h4 { font-size:12px; font-weight:800; color:#777; margin-bottom:8px; letter-spacing:.3px; text-transform:uppercase; }
+.ft-shift-tbl { border-collapse:collapse; font-size:12px; }
+.ft-shift-tbl th { background:#F8F6F0; padding:5px 12px; font-weight:800; border:1px solid #E8E4DB; }
+.ft-shift-tbl td { padding:4px 12px; border:1px solid #E8E4DB; }
+.region-list { font-size:12px; line-height:1.8; color:#444; min-width:200px; }
+.region-list .no-data { color:#bbb; font-style:italic; }
+.time-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+.time-chip { display:flex; align-items:center; gap:5px; padding:5px 10px; background:#D9FAF1; border:1px solid #4DB5A9; border-radius:20px; font-size:12px; font-weight:800; color:#167B72; white-space:nowrap; }
+
+@media print {
+  @page { size: A4 landscape; margin: 8mm; }
+  header { display:none !important; }
+  body { background:white; }
+  main { padding:4px 6px; }
+  #table-wrap { overflow:visible; border:1px solid #D8C9A8; box-shadow:none; }
+  .s-annual, .s-name { position:static; }
+  .td-edit, .th-d, .th-w { min-width:20px !important; max-width:20px !important; font-size:8px !important; padding:2px 0 !important; }
+  .s-annual { min-width:30px !important; max-width:30px !important; font-size:9px !important; padding:4px 2px !important; }
+  .s-name { min-width:42px !important; max-width:42px !important; font-size:10px !important; padding:5px 4px !important; }
+  .th-sum, .td-sum { min-width:24px !important; font-size:9px !important; padding:3px 1px !important; }
+  #footer-area { display:flex !important; margin-top:8px; padding:8px 10px; gap:14px; page-break-inside:avoid; }
+  .ft-shift-tbl th, .ft-shift-tbl td { font-size:10px; padding:3px 8px; }
+  .time-chip { font-size:10px; padding:3px 8px; }
+  #stats-area { display:block !important; margin-top:8px; page-break-inside:avoid; }
+  .stats-wrap { gap:10px !important; }
+  .stats-tbl th { font-size:9px !important; padding:5px 6px !important; }
+  .stats-tbl td { font-size:10px !important; padding:4px 6px !important; }
+}

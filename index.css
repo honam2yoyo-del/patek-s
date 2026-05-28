@@ -1,0 +1,104 @@
+﻿        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+        
+        body {
+            font-family: 'Pretendard', -apple-system, sans-serif;
+            background-color: #FAF9F5;
+            margin: 0; padding: 0;
+            color: #333;
+            -webkit-tap-highlight-color: transparent;
+            overscroll-behavior-y: none;
+        }
+        
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .page {
+            display: none;
+            position: absolute; 
+            top: 0; left: 0; right: 0; bottom: 0;
+            overflow-y: auto;
+            padding-bottom: max(110px, calc(80px + env(safe-area-inset-bottom)));
+            animation: fadeIn 0.2s ease-out;
+        }
+        .page.active { display: block; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .nav-item { transition: color 0.2s; }
+        .nav-item.active { color: #B4975A; }
+        .nav-item.active svg { stroke: #B4975A; }
+
+        #loading-overlay { position: fixed; top:0; left:0; width:100%; height:100vh; background:rgba(250,249,245,0.9); z-index: 99999; display: flex; justify-content: center; align-items: center; flex-direction: column; }
+        .spinner { border: 3px solid #E8E4DB; border-top: 3px solid #B4975A; border-radius: 50%; width: 36px; height: 36px; animation: spin 1s linear infinite; margin-bottom: 16px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .schedule-table { table-layout: fixed; width: 100%; }
+        .schedule-table th, .schedule-table td { border: 1px solid #E2E0D9; text-align: center; vertical-align: middle; font-size: 7.5px; padding: 3px 0; line-height: 1; overflow: hidden; word-break: keep-all; }
+        .schedule-table th:nth-child(1), .schedule-table td:nth-child(1) { width: 18px; }
+        .schedule-table th:nth-child(2), .schedule-table td:nth-child(2) { width: 26px; }
+        
+        .schedule-table th { background-color: #F8F6F0; font-weight: 700; color: #555552; }
+        
+        .schedule-pill {
+            width: 100%;
+            border: 1px solid;
+            border-radius: 4px;
+            padding: 3px 1px;
+            font-size: 7.5px;
+            letter-spacing: -0.5px;
+            font-weight: 800;
+            line-height: 1.3;
+            text-align: center;
+            white-space: normal;
+            word-break: keep-all;
+            box-sizing: border-box;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.45);
+            position: relative;
+            overflow: visible;
+        }
+        .schedule-pill.requested { border-style: dashed !important; border-width: 1.5px !important; }
+        .schedule-pill.changed::after {
+            content: "";
+            position: absolute;
+            top: -1px; right: -1px;
+            border-top: 9px solid #4b7fd4;
+            border-left: 9px solid transparent;
+        }
+        .day-time-badge {
+            position: absolute;
+            right: 3px; bottom: 3px;
+            min-width: 26px; height: 15px;
+            border-radius: 5px;
+            border: 1px solid #4db5a9;
+            background: #d9faf1;
+            color: #167b72;
+            font-size: 8px;
+            font-weight: 900;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 3;
+            pointer-events: none;
+        }
+        .schedule-meta-line { display: block; max-width: 100%; overflow: visible; text-overflow: unset; white-space: normal; }
+
+        .form-input {
+            width: 100%;
+            box-sizing: border-box;
+            background-color: #FFFFFF;
+            border: 1px solid #E5E5E5;
+            border-radius: 12px;
+            padding: 12px 14px;
+            outline: none;
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+            transition: border-color 0.2s;
+            text-align: left;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        .form-input:focus { border-color: #B4975A; }
