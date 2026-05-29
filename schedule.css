@@ -85,7 +85,10 @@ thead .s-annual, thead .s-name { z-index:15; background:#EDE0CB; }
 .td-edit.cell-copied { outline:2px dashed #1A56DB !important; outline-offset:-1px; background:#E8F2FF !important; }
 .td-edit[data-req="1"] { background:#FFE146; }
 .td-edit[data-caloff="1"] { background:#B8B5B5 !important; color:#fff !important; }
-.td-edit[data-event="1"] { background:#C3E19E !important; }
+.td-edit[data-evtype="행사"] { background:#C3E19E !important; }
+.td-edit[data-evtype="고객"] { background:#FFEE9C !important; }
+.td-edit[data-evtype="교육"] { background:#8BCBE2 !important; }
+.td-edit[data-evtype="기타"] { background:#E8DBFF !important; }
 .td-sum { min-width:36px; padding:5px 4px; text-align:center; font-size:12px; font-weight:800; color:#333; background:#FDFAF5; }
 .td-a { color:#6E2626; } .td-b { color:#234B7A; } .td-c { color:#7A4F14; }
 

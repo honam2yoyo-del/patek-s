@@ -96,12 +96,14 @@ function render() {
     const dow  = new Date(curYear,curMonth-1,d).getDay();
     const isHol = !!HOLIDAYS[date];
     const cal   = calMap[date];
-    const isClosed = cal?.type==='정기휴무';
-    const isEvent  = cal?.type==='행사';
+    const calType  = cal?.type || '';
+    const isClosed = calType === '정기휴무';
+    const isEvent  = calType !== '' && calType !== '정기휴무';
     const isSunday = dow===0;
     const isRed    = isHol || dow===0 || dow===6;
     const wSep     = isSunday ? ' week-sep' : '';
-    const colBg    = isClosed ? 'background:#B8B5B5;' : isEvent ? 'background:#C3E19E;' : '';
+    const SCH_EV_BG = {'정기휴무':'#B8B5B5','행사':'#C3E19E','고객':'#FFEE9C','교육':'#8BCBE2','기타':'#E8DBFF'};
+    const colBg    = calType ? `background:${SCH_EV_BG[calType]||'#C3E19E'};` : '';
     const rCls     = isRed ? ' red-hdr' : '';
     thD += `<th class="th-d${wSep}${rCls}" style="${colBg}">${d}</th>`;
     thW += `<th class="th-w${wSep}${rCls}" style="${colBg}">${DNAMES[dow]}${isHol?'*':''}</th>`;
@@ -119,8 +121,9 @@ function render() {
       const date  = ds(curYear,curMonth,d);
       const dow   = new Date(curYear,curMonth-1,d).getDay();
       const cal   = calMap[date];
-      const isClosed = cal?.type==='정기휴무';
-      const isEvent  = cal?.type==='행사';
+      const calType2 = cal?.type || '';
+      const isClosed = calType2 === '정기휴무';
+      const isEvent  = calType2 !== '' && calType2 !== '정기휴무';
       const isSunday = dow===0;
 
       const schedVal = schM[name][d];   // admin-set or ''
@@ -146,7 +149,7 @@ function render() {
 
       // 셀 스타일
       let dataClosed = isClosed ? ' data-caloff="1"' : '';
-      let dataEvent  = isEvent  ? ' data-event="1"' : '';
+      let dataEvent  = isEvent ? ` data-evtype="${calType2}"` : '';
       let dataReq    = (!isClosed && !isEvent && isReq) ? ' data-req="1"' : '';
       const wSep = isSunday ? ' week-sep' : '';
 

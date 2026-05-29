@@ -24,6 +24,13 @@
         '백화점': { bg: '#E5E5E5', text: '#7A7A7A' },
         '행사': { bg: '#EBE2FB', text: '#8E67C9' }
     };
+    const CAL_EVENT_STYLES = {
+        '정기휴무': { bg: '#B8B5B5', text: '#FFFFFF' },
+        '행사':     { bg: '#C3E19E', text: '#333333' },
+        '고객':     { bg: '#FFEE9C', text: '#333333' },
+        '교육':     { bg: '#8BCBE2', text: '#333333' },
+        '기타':     { bg: '#E8DBFF', text: '#333333' },
+    };
     const MAX_READERS = 6;
 
     let currentUser = null;
@@ -941,15 +948,20 @@
             let dayTextClass = "text-[#333]";
             if (isHoliday) dayTextClass = "text-[#D81B60]"; else if (dayOfWeek === 0) dayTextClass = "text-red-500"; else if (dayOfWeek === 6) dayTextClass = "text-blue-500";
 
-            const events = window.calEvents.filter(e => e.date === dateStr); let cellClass = "bg-white hover:bg-slate-50"; let contentHtml = "";
+            const events = window.calEvents.filter(e => e.date === dateStr);
+            let calEvBgColor = '';
+            let contentHtml = "";
             if (events.length > 0) {
                 const ev = events[0];
-                if (ev.type === '정기휴무') { cellClass = "bg-[#B8B5B5]"; dayTextClass = "text-white"; contentHtml = `<div class="text-[10px] font-bold text-white text-center w-full mt-1 whitespace-normal break-words leading-tight">${ev.reason || '정기휴무'}</div>`; } 
-                else if (ev.type === '행사') { cellClass = "bg-[#C3E19E]"; dayTextClass = "text-[#333]"; contentHtml = `<div class="text-[10px] font-bold text-[#333] text-center w-full mt-1 whitespace-normal break-words leading-tight">${ev.reason || '행사'}</div>`; }
+                const evS = CAL_EVENT_STYLES[ev.type] || { bg: '#C3E19E', text: '#333333' };
+                calEvBgColor = evS.bg;
+                dayTextClass = evS.text === '#FFFFFF' ? 'text-white' : 'text-[#333]';
+                contentHtml = `<div class="text-[10px] font-bold text-center w-full mt-1 whitespace-normal break-words leading-tight" style="color:${evS.text};">${ev.reason || ev.type}</div>`;
             }
 
             const dayCell = document.createElement('div');
-            dayCell.className = `min-h-[70px] h-full p-1 border border-[#F0EFEA] flex flex-col items-center justify-start cursor-pointer transition-colors relative ${cellClass}`;
+            dayCell.className = `min-h-[70px] h-full p-1 border border-[#F0EFEA] flex flex-col items-center justify-start cursor-pointer transition-colors relative ${calEvBgColor ? '' : 'bg-white hover:bg-slate-50'}`;
+            if (calEvBgColor) dayCell.style.backgroundColor = calEvBgColor;
             dayCell.onclick = () => window.openCalEventModal(dateStr, events[0]);
 
             dayCell.innerHTML = `
@@ -973,7 +985,7 @@
     function updateCalEventTypeUI() {
         const type = window.calEventType;
         document.querySelectorAll('.cal-type-btn').forEach(btn => {
-            if (btn.innerText.trim() === type) { btn.style.backgroundColor = type === '정기휴무' ? '#B8B5B5' : '#C3E19E'; btn.style.color = type === '정기휴무' ? '#FFFFFF' : '#333333'; btn.style.borderColor = btn.style.backgroundColor; } 
+            if (btn.innerText.trim() === type) { const s = CAL_EVENT_STYLES[type] || { bg: '#C3E19E', text: '#333333' }; btn.style.backgroundColor = s.bg; btn.style.color = s.text; btn.style.borderColor = s.bg; }
             else { btn.style.backgroundColor = '#FFFFFF'; btn.style.color = '#666666'; btn.style.borderColor = '#E5E5E5'; }
         });
     }
@@ -1180,8 +1192,8 @@
             const events = window.calEvents.filter(e => e.date === dateStr);
             let calEventMarkup = '';
             if (events.length > 0) {
-                const color = events[0].type === '정기휴무' ? 'bg-[#B8B5B5] text-white' : 'bg-[#C3E19E] text-[#333]';
-                calEventMarkup = `<div class="${color} text-[8px] font-bold px-1 py-[1.5px] rounded-[3px] shadow-sm text-center w-full mb-0.5 leading-tight break-words whitespace-normal">${events[0].reason || events[0].type}</div>`;
+                const evS = CAL_EVENT_STYLES[events[0].type] || { bg: '#C3E19E', text: '#333333' };
+                calEventMarkup = `<div class="text-[8px] font-bold px-1 py-[1.5px] rounded-[3px] shadow-sm text-center w-full mb-0.5 leading-tight break-words whitespace-normal" style="background-color:${evS.bg};color:${evS.text};">${events[0].reason || events[0].type}</div>`;
             }
 
             grid.innerHTML += `
@@ -1425,7 +1437,11 @@
                 ? `<span class="inline-block text-[8.5px] font-bold px-1.5 py-[1.5px] rounded-[4px] mt-0.5 leading-tight" style="background:${meta.bg};color:${meta.text};">${meta.label}</span>`
                 : `<span class="inline-block text-[8px] font-bold text-[#CCC] mt-0.5">휴</span>`;
             const timeBadge = timeHours ? `<div class="text-[7px] font-bold rounded px-0.5 py-[1px] w-full text-center leading-tight mt-0.5" style="background:#F8F3E7;color:#B4975A;">${timeHours}h</div>` : '';
-            const evBadge = calEv ? `<div class="text-[7px] font-bold rounded px-0.5 leading-tight mt-0.5 truncate w-full text-center ${calEv.type === '정기휴무' ? 'bg-[#B8B5B5] text-white' : 'bg-[#C3E19E] text-[#333]'}">${calEv.reason || calEv.type}</div>` : '';
+            let evBadge = '';
+            if (calEv) {
+                const evS = CAL_EVENT_STYLES[calEv.type] || { bg: '#C3E19E', text: '#333333' };
+                evBadge = `<div class="text-[7px] font-bold rounded px-0.5 leading-tight mt-0.5 truncate w-full text-center" style="background-color:${evS.bg};color:${evS.text};">${calEv.reason || calEv.type}</div>`;
+            }
             html += `<div class="min-h-[52px] p-[3px] flex flex-col items-center ${noRightBorder} border-b border-[#F0EFEA] bg-white"><span class="text-[11px] font-bold ${dc} leading-none mt-0.5">${d}</span>${badge}${timeBadge}${evBadge}</div>`;
         });
         const lastDow = dayData.length > 0 ? dayData[dayData.length - 1].dayOfWeek : 0;
@@ -2035,9 +2051,11 @@
             let dayTextClass = isHoliday ? "text-[#D81B60]" : (dayOfWeek === 0 ? "text-red-500" : (dayOfWeek === 6 ? "text-blue-500" : "text-[#333]"));
             
             let cellBg = "bg-white";
+            let calEvBg2 = '';
             if (calEventsOnDay.length > 0) {
-                if (calEventsOnDay[0].type === '정기휴무') { cellBg = "bg-[#B8B5B5]"; dayTextClass = "text-white"; }
-                else if (calEventsOnDay[0].type === '행사') { cellBg = "bg-[#C3E19E]"; dayTextClass = "text-[#333]"; }
+                const leEvS = CAL_EVENT_STYLES[calEventsOnDay[0].type] || { bg: '#C3E19E', text: '#333333' };
+                calEvBg2 = leEvS.bg;
+                dayTextClass = leEvS.text === '#FFFFFF' ? 'text-white' : 'text-[#333]';
             } else if (window.leaveRangeStart && window.leaveRangeEnd) {
                 if (dateStr >= window.leaveRangeStart && dateStr <= window.leaveRangeEnd) cellBg = "bg-[#DDEBFF]";
             } else if (window.leaveRangeStart && dateStr === window.leaveRangeStart) {
@@ -2049,7 +2067,7 @@
             let staffNamesMarkup = "";
             
             if (calEventsOnDay.length > 0) {
-                staffNamesMarkup += `<div class="text-[8px] font-bold rounded px-0.5 py-[1px] w-full text-center leading-tight mt-[2px] whitespace-nowrap overflow-hidden text-[${calEventsOnDay[0].type === '정기휴무' ? '#FFF' : '#333'}]">${calEventsOnDay[0].reason || calEventsOnDay[0].type}</div>`;
+                staffNamesMarkup += `<div class="text-[8px] font-bold rounded px-0.5 py-[1px] w-full text-center leading-tight mt-[2px] whitespace-nowrap overflow-hidden" style="color:${(CAL_EVENT_STYLES[calEventsOnDay[0].type]||{text:'#333333'}).text};">${calEventsOnDay[0].reason || calEventsOnDay[0].type}</div>`;
             }
 
             matchedRequests.forEach(req => {
@@ -2061,9 +2079,10 @@
             });
 
             const dayCell = document.createElement('div');
-            let finalBg = cellBg !== "bg-white" ? cellBg : (overbookedBg || "bg-white hover:bg-slate-50");
-            
+            let finalBg = calEvBg2 ? '' : (cellBg !== "bg-white" ? cellBg : (overbookedBg || "bg-white hover:bg-slate-50"));
+
             dayCell.className = `min-h-[70px] h-full p-1 border border-[#F0EFEA] flex flex-col items-center justify-start cursor-pointer transition-colors relative ${finalBg}`;
+            if (calEvBg2) dayCell.style.backgroundColor = calEvBg2;
             dayCell.onclick = () => window.handleLeaveCalendarCellClick(dateStr);
 
             dayCell.innerHTML = `
