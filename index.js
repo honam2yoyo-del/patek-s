@@ -1435,7 +1435,7 @@
             const meta = codeMeta[code];
             const badge = meta
                 ? `<span class="inline-block text-[8.5px] font-bold px-1.5 py-[1.5px] rounded-[4px] mt-0.5 leading-tight" style="background:${meta.bg};color:${meta.text};">${meta.label}</span>`
-                : `<span class="inline-block text-[8px] font-bold text-[#CCC] mt-0.5">휴</span>`;
+                : `<span class="inline-block text-[8px] font-bold text-[#CCC] mt-0.5">휴무</span>`;
             const timeBadge = timeHours ? `<div class="text-[7px] font-bold rounded px-0.5 py-[1px] w-full text-center leading-tight mt-0.5" style="background:#F8F3E7;color:#B4975A;">${timeHours}h</div>` : '';
             let evBadge = '';
             if (calEv) {
@@ -1961,8 +1961,8 @@
                             <th class="${thCls}">A조</th>
                             <th class="${thCls}">B조</th>
                             <th class="${thCls}">C조</th>
-                            <th class="${thCls}">주말·공휴일 휴무</th>
-                            <th class="${thCls}">시간찾기 잔여</th>
+                            <th class="${thCls}">주말·공휴일<br>휴무</th>
+                            <th class="${thCls}">시간찾기</th>
                         </tr></thead>
                         <tbody>${rows}</tbody>
                     </table>

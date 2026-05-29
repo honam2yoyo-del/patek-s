@@ -269,9 +269,11 @@ function renderStats(staffNames, sMeta) {
           else if (dow===0||dow===6||isHol) cWkOff++;
         }
       });
-      const meta = sMeta[name]||{time:DEF_TIME[name]||0};
+      const meta = sMeta[name]||{annual:DEF_ANNUAL[name]??15, time:DEF_TIME[name]||0};
+      const annAlloc = meta.annual ?? DEF_ANNUAL[name] ?? 15;
+      const annRemain = annAlloc - cAnn;
       const remain = Math.max(0, (meta.time||0)-(tUsed[name]||0));
-      return { name, cA, cB, cC, cAnn, cWkOff, remain };
+      return { name, cA, cB, cC, cAnn, cWkOff, remain, annAlloc, annRemain };
     });
   }
 
@@ -285,12 +287,13 @@ function renderStats(staffNames, sMeta) {
     const rows = stats.map(s => `
       <tr>
         <td class="stats-tbl" style="${tdS}text-align:left;font-weight:700;color:#333;">${s.name}</td>
+        <td class="stats-tbl" style="${tdS}color:#555;">${s.annAlloc}</td>
         <td class="stats-tbl" style="${tdS}color:#B4975A;">${s.cAnn.toFixed(1)}</td>
+        <td class="stats-tbl" style="${tdS}color:#2E7D32;">${s.annRemain.toFixed(1)}</td>
         <td class="stats-tbl" style="${tdS}color:#6E2626;">${s.cA}</td>
         <td class="stats-tbl" style="${tdS}color:#234B7A;">${s.cB}</td>
         <td class="stats-tbl" style="${tdS}color:#7A4F14;">${s.cC}</td>
         <td class="stats-tbl" style="${tdS}color:#555;">${s.cWkOff}</td>
-        <td class="stats-tbl" style="${tdS}color:#7A5200;">${s.remain>0?s.remain.toFixed(1)+'h':'-'}</td>
       </tr>`).join('');
     return `
       <div style="flex:1;min-width:320px;">
@@ -299,12 +302,13 @@ function renderStats(staffNames, sMeta) {
           <table style="width:100%;border-collapse:collapse;min-width:300px;">
             <thead><tr style="background:${headerBg};">
               <th class="stats-tbl" style="${thS}text-align:left;">직원</th>
-              <th class="stats-tbl" style="${thS}">연차사용</th>
-              <th class="stats-tbl" style="${thS}">A조</th>
-              <th class="stats-tbl" style="${thS}">B조</th>
-              <th class="stats-tbl" style="${thS}">C조</th>
-              <th class="stats-tbl" style="${thS}">주말·공휴일</th>
-              <th class="stats-tbl" style="${thS}border-right:none;">시간찾기잔여</th>
+              <th class="stats-tbl" style="${thS}">총연차</th>
+              <th class="stats-tbl" style="${thS}">사용</th>
+              <th class="stats-tbl" style="${thS}">잔여</th>
+              <th class="stats-tbl" style="${thS}">A</th>
+              <th class="stats-tbl" style="${thS}">B</th>
+              <th class="stats-tbl" style="${thS}">C</th>
+              <th class="stats-tbl" style="${thS}border-right:none;">주말·공휴일</th>
             </tr></thead>
             <tbody style="background:white;">${rows}</tbody>
           </table>
