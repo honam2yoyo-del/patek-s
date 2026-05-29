@@ -365,12 +365,8 @@ function autoScaleTable() {
   if (!wrap || !tbl) return;
   tbl.style.zoom = '';
   const ratio = (wrap.clientWidth - 4) / tbl.scrollWidth;
-  if (ratio < 1) {
-    tbl.style.zoom = ratio;
-    wrap.style.overflowX = 'hidden';
-  } else {
-    wrap.style.overflowX = '';
-  }
+  tbl.style.zoom = ratio;   // 작으면 줄이고, 크면 늘려서 항상 꽉 채움
+  wrap.style.overflowX = 'hidden';
 }
 window.addEventListener('resize', autoScaleTable);
 
