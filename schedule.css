@@ -66,8 +66,8 @@ main { padding:14px 18px 24px; }
 thead .s-annual, thead .s-name { z-index:15; background:#EDE0CB; }
 
 /* 날짜 헤더 */
-.th-d { min-width:30px; max-width:30px; padding:5px 1px; text-align:center; font-size:13px; font-weight:bold; background:#F5F0E8; }
-.th-w { min-width:30px; max-width:30px; padding:3px 1px; text-align:center; font-size:11px; font-weight:bold; background:#F5F0E8; }
+.th-d { min-width:30px; max-width:30px; padding:5px 1px; text-align:center; font-size:14px; font-weight:bold; background:#F5F0E8; text-shadow:0 0 1px currentColor, 0 0 1px currentColor; }
+.th-w { min-width:30px; max-width:30px; padding:3px 1px; text-align:center; font-size:12px; font-weight:bold; background:#F5F0E8; text-shadow:0 0 0.8px currentColor, 0 0 0.8px currentColor; }
 .red-hdr { color:#C74A4A !important; }
 .week-sep { border-right:2.5px solid #8B7355 !important; }
 
@@ -89,7 +89,16 @@ thead .s-annual, thead .s-name { z-index:15; background:#EDE0CB; }
 .td-edit[data-evtype="고객"] { background:#FFEE9C !important; }
 .td-edit[data-evtype="교육"] { background:#8BCBE2 !important; }
 .td-edit[data-evtype="기타"] { background:#E8DBFF !important; }
-.td-slash { font-size:18px !important; line-height:1; padding:0 !important; }
+.td-slash {
+  color: transparent !important;
+  background: linear-gradient(
+    to top right,
+    transparent calc(50% - 0.8px),
+    #888 calc(50% - 0.8px),
+    #888 calc(50% + 0.8px),
+    transparent calc(50% + 0.8px)
+  ) !important;
+}
 .td-sum { min-width:36px; padding:5px 4px; text-align:center; font-size:12px; font-weight:800; color:#333; background:#FDFAF5; }
 .td-a { color:#6E2626; } .td-b { color:#234B7A; } .td-c { color:#7A4F14; }
 
@@ -99,7 +108,7 @@ thead .s-annual, thead .s-name { z-index:15; background:#EDE0CB; }
 .ft-shift-tbl { border-collapse:collapse; font-size:12px; }
 .ft-shift-tbl th { background:#F8F6F0; padding:5px 12px; font-weight:800; border:1px solid #E8E4DB; }
 .ft-shift-tbl td { padding:4px 12px; border:1px solid #E8E4DB; }
-.region-list { font-size:12px; line-height:1.8; color:#444; min-width:200px; }
+.region-list { font-size:12px; line-height:1.8; color:#444; }
 .region-list .no-data { color:#bbb; font-style:italic; }
 .time-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
 .time-chip { display:flex; align-items:center; gap:5px; padding:5px 10px; background:#FFE6AA; border:1px solid #E8C050; border-radius:20px; font-size:12px; font-weight:800; color:#7A5200; white-space:nowrap; }
