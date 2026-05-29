@@ -108,7 +108,7 @@ function render() {
     thD += `<th class="th-d${wSep}${rCls}" style="${colBg}">${d}</th>`;
     thW += `<th class="th-w${wSep}${rCls}" style="${colBg}">${DNAMES[dow]}${isHol?'*':''}</th>`;
   }
-  ['DO','A','B','C','사용연차','남은연차'].forEach(s => { thD += `<th class="th-sum" rowspan="2">${s}</th>`; });
+  ['DO','A','B','C','사용연차','남은연차','시간찾기'].forEach(s => { thD += `<th class="th-sum" rowspan="2">${s}</th>`; });
 
   /* ── 데이터 행 ── */
   let rows = '';
@@ -153,12 +153,16 @@ function render() {
       let dataReq    = (!isClosed && !isEvent && isReq) ? ' data-req="1"' : '';
       const wSep = isSunday ? ' week-sep' : '';
 
-      cells += `<td class="td-edit${wSep}" contenteditable="true" data-staff="${name}" data-day="${d}"${dataClosed}${dataEvent}${dataReq} onblur="normalizeCell(this)" onkeydown="handleKey(event,this)" onpaste="handlePaste(event)">${disp}</td>`;
+      const slashCls = disp === '/' ? ' td-slash' : '';
+      cells += `<td class="td-edit${wSep}${slashCls}" contenteditable="true" data-staff="${name}" data-day="${d}"${dataClosed}${dataEvent}${dataReq} onblur="normalizeCell(this)" onkeydown="handleKey(event,this)" onpaste="handlePaste(event)">${disp}</td>`;
     }
 
     const annual  = meta.annual;
     const annUsed = cAnn;
     const annRem  = (annual - annUsed).toFixed(1);
+    const timeAlloc = meta.time || DEF_TIME[name] || 0;
+    const timeRem   = Math.max(0, timeAlloc - (tUsed[name]||0));
+    const timeDisp  = timeAlloc > 0 ? timeRem.toFixed(1) : '-';
 
     rows += `<tr>
       <td class="s-annual">${annual}</td>
@@ -170,6 +174,7 @@ function render() {
       <td class="td-sum td-c" data-col="c">${cC}</td>
       <td class="td-sum" data-col="uann">${annUsed}.0</td>
       <td class="td-sum" data-col="rann" style="color:#2E7D32;">${annRem}</td>
+      <td class="td-sum" data-col="time" style="color:#7A5200;">${timeDisp}</td>
     </tr>`;
   });
 
@@ -308,7 +313,6 @@ function renderStats(staffNames, sMeta) {
   statsArea.style.display = 'block';
   statsArea.innerHTML = `
     <div class="stats-wrap" style="display:flex;gap:16px;flex-wrap:wrap;">
-      ${buildTable(`${curYear}년 ${curMonth}월 현황`, monthStats, '#B4975A')}
       ${buildTable(`${curYear}년 누적 현황`, yearStats, '#7A6B5A')}
     </div>`;
 }
@@ -318,6 +322,7 @@ window.normalizeCell = function(el) {
   const raw = el.textContent.trim();
   const norm = dispCode(raw);
   if (el.textContent !== norm) el.textContent = norm;
+  el.classList.toggle('td-slash', norm === '/');
   updateRowSummary(el.closest('tr'));
 };
 
