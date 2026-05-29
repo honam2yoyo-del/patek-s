@@ -101,7 +101,7 @@ function render() {
     const isSunday = dow===0;
     const isRed    = isHol || dow===0 || dow===6;
     const wSep     = isSunday ? ' week-sep' : '';
-    const colBg    = isClosed ? 'background:#BEBEBE;' : isEvent ? 'background:#C8F0B4;' : '';
+    const colBg    = isClosed ? 'background:#B8B5B5;' : isEvent ? 'background:#C3E19E;' : '';
     const rCls     = isRed ? ' red-hdr' : '';
     thD += `<th class="th-d${wSep}${rCls}" style="${colBg}">${d}</th>`;
     thW += `<th class="th-w${wSep}${rCls}" style="${colBg}">${DNAMES[dow]}${isHol?'*':''}</th>`;
@@ -280,7 +280,7 @@ function renderStats(staffNames, sMeta) {
         <td class="stats-tbl" style="${tdS}color:#234B7A;">${s.cB}</td>
         <td class="stats-tbl" style="${tdS}color:#7A4F14;">${s.cC}</td>
         <td class="stats-tbl" style="${tdS}color:#555;">${s.cWkOff}</td>
-        <td class="stats-tbl" style="${tdS}color:#167B72;">${s.remain>0?s.remain.toFixed(1)+'h':'-'}</td>
+        <td class="stats-tbl" style="${tdS}color:#7A5200;">${s.remain>0?s.remain.toFixed(1)+'h':'-'}</td>
       </tr>`).join('');
     return `
       <div style="flex:1;min-width:320px;">

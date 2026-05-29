@@ -944,8 +944,8 @@
             const events = window.calEvents.filter(e => e.date === dateStr); let cellClass = "bg-white hover:bg-slate-50"; let contentHtml = "";
             if (events.length > 0) {
                 const ev = events[0];
-                if (ev.type === '정기휴무') { cellClass = "bg-[#A0A0A0]"; dayTextClass = "text-white"; contentHtml = `<div class="text-[10px] font-bold text-white text-center w-full mt-1 whitespace-normal break-words leading-tight">${ev.reason || '정기휴무'}</div>`; } 
-                else if (ev.type === '행사') { cellClass = "bg-[#96F56E]"; dayTextClass = "text-[#333]"; contentHtml = `<div class="text-[10px] font-bold text-[#333] text-center w-full mt-1 whitespace-normal break-words leading-tight">${ev.reason || '행사'}</div>`; }
+                if (ev.type === '정기휴무') { cellClass = "bg-[#B8B5B5]"; dayTextClass = "text-white"; contentHtml = `<div class="text-[10px] font-bold text-white text-center w-full mt-1 whitespace-normal break-words leading-tight">${ev.reason || '정기휴무'}</div>`; } 
+                else if (ev.type === '행사') { cellClass = "bg-[#C3E19E]"; dayTextClass = "text-[#333]"; contentHtml = `<div class="text-[10px] font-bold text-[#333] text-center w-full mt-1 whitespace-normal break-words leading-tight">${ev.reason || '행사'}</div>`; }
             }
 
             const dayCell = document.createElement('div');
@@ -973,7 +973,7 @@
     function updateCalEventTypeUI() {
         const type = window.calEventType;
         document.querySelectorAll('.cal-type-btn').forEach(btn => {
-            if (btn.innerText.trim() === type) { btn.style.backgroundColor = type === '정기휴무' ? '#A0A0A0' : '#96F56E'; btn.style.color = type === '정기휴무' ? '#FFFFFF' : '#333333'; btn.style.borderColor = btn.style.backgroundColor; } 
+            if (btn.innerText.trim() === type) { btn.style.backgroundColor = type === '정기휴무' ? '#B8B5B5' : '#C3E19E'; btn.style.color = type === '정기휴무' ? '#FFFFFF' : '#333333'; btn.style.borderColor = btn.style.backgroundColor; } 
             else { btn.style.backgroundColor = '#FFFFFF'; btn.style.color = '#666666'; btn.style.borderColor = '#E5E5E5'; }
         });
     }
@@ -1180,7 +1180,7 @@
             const events = window.calEvents.filter(e => e.date === dateStr);
             let calEventMarkup = '';
             if (events.length > 0) {
-                const color = events[0].type === '정기휴무' ? 'bg-[#A0A0A0] text-white' : 'bg-[#96F56E] text-[#333]';
+                const color = events[0].type === '정기휴무' ? 'bg-[#B8B5B5] text-white' : 'bg-[#C3E19E] text-[#333]';
                 calEventMarkup = `<div class="${color} text-[8px] font-bold px-1 py-[1.5px] rounded-[3px] shadow-sm text-center w-full mb-0.5 leading-tight break-words whitespace-normal">${events[0].reason || events[0].type}</div>`;
             }
 
@@ -1425,7 +1425,7 @@
                 ? `<span class="inline-block text-[8.5px] font-bold px-1.5 py-[1.5px] rounded-[4px] mt-0.5 leading-tight" style="background:${meta.bg};color:${meta.text};">${meta.label}</span>`
                 : `<span class="inline-block text-[8px] font-bold text-[#CCC] mt-0.5">휴</span>`;
             const timeBadge = timeHours ? `<div class="text-[7px] font-bold rounded px-0.5 py-[1px] w-full text-center leading-tight mt-0.5" style="background:#F8F3E7;color:#B4975A;">${timeHours}h</div>` : '';
-            const evBadge = calEv ? `<div class="text-[7px] font-bold rounded px-0.5 leading-tight mt-0.5 truncate w-full text-center ${calEv.type === '정기휴무' ? 'bg-[#A0A0A0] text-white' : 'bg-[#96F56E] text-[#333]'}">${calEv.reason || calEv.type}</div>` : '';
+            const evBadge = calEv ? `<div class="text-[7px] font-bold rounded px-0.5 leading-tight mt-0.5 truncate w-full text-center ${calEv.type === '정기휴무' ? 'bg-[#B8B5B5] text-white' : 'bg-[#C3E19E] text-[#333]'}">${calEv.reason || calEv.type}</div>` : '';
             html += `<div class="min-h-[52px] p-[3px] flex flex-col items-center ${noRightBorder} border-b border-[#F0EFEA] bg-white"><span class="text-[11px] font-bold ${dc} leading-none mt-0.5">${d}</span>${badge}${timeBadge}${evBadge}</div>`;
         });
         const lastDow = dayData.length > 0 ? dayData[dayData.length - 1].dayOfWeek : 0;
@@ -1935,7 +1935,7 @@
                     <td class="${tdCls}" style="color:#234B7A;">${s.cB}</td>
                     <td class="${tdCls}" style="color:#7A4F14;">${s.cC}</td>
                     <td class="${tdCls} text-[#555]">${s.cWkOff}</td>
-                    <td class="${tdCls} text-[#167B72]">${s.remain>0?s.remain.toFixed(1)+'h':'-'}</td>
+                    <td class="${tdCls} text-[#7A5200]">${s.remain>0?s.remain.toFixed(1)+'h':'-'}</td>
                 </tr>`).join('');
             return `<div class="mb-5">
                 <div class="text-[13px] font-bold text-[#333] mb-2">${title}</div>
@@ -2036,8 +2036,8 @@
             
             let cellBg = "bg-white";
             if (calEventsOnDay.length > 0) {
-                if (calEventsOnDay[0].type === '정기휴무') { cellBg = "bg-[#A0A0A0]"; dayTextClass = "text-white"; }
-                else if (calEventsOnDay[0].type === '행사') { cellBg = "bg-[#96F56E]"; dayTextClass = "text-[#333]"; }
+                if (calEventsOnDay[0].type === '정기휴무') { cellBg = "bg-[#B8B5B5]"; dayTextClass = "text-white"; }
+                else if (calEventsOnDay[0].type === '행사') { cellBg = "bg-[#C3E19E]"; dayTextClass = "text-[#333]"; }
             } else if (window.leaveRangeStart && window.leaveRangeEnd) {
                 if (dateStr >= window.leaveRangeStart && dateStr <= window.leaveRangeEnd) cellBg = "bg-[#DDEBFF]";
             } else if (window.leaveRangeStart && dateStr === window.leaveRangeStart) {
