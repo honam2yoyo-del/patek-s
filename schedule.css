@@ -84,7 +84,16 @@ thead .s-annual, thead .s-name { z-index:15; background:#EDE0CB; }
 .td-edit:focus { box-shadow:inset 0 0 0 2px #1A56DB; background:#EEF4FF !important; }
 .td-edit.cell-copied { outline:2px dashed #1A56DB !important; outline-offset:-1px; background:#E8F2FF !important; }
 .td-edit[data-req="1"] { background:#FFE146; }
-.td-edit[data-caloff="1"] { background:#B8B5B5 !important; color:#fff !important; }
+.td-edit[data-caloff="1"] {
+  background: linear-gradient(
+    to bottom right,
+    transparent calc(50% - 0.8px),
+    rgba(255,255,255,0.7) calc(50% - 0.8px),
+    rgba(255,255,255,0.7) calc(50% + 0.8px),
+    transparent calc(50% + 0.8px)
+  ) #B8B5B5 !important;
+  color: transparent !important;
+}
 .td-edit[data-evtype="행사"] { background:#C3E19E !important; }
 .td-edit[data-evtype="고객"] { background:#FFEE9C !important; }
 .td-edit[data-evtype="교육"] { background:#8BCBE2 !important; }
@@ -92,7 +101,7 @@ thead .s-annual, thead .s-name { z-index:15; background:#EDE0CB; }
 .td-slash {
   color: transparent !important;
   background: linear-gradient(
-    to top right,
+    to bottom right,
     transparent calc(50% - 0.8px),
     #888 calc(50% - 0.8px),
     #888 calc(50% + 0.8px),

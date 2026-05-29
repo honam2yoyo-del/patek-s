@@ -200,7 +200,6 @@ function render() {
 
   document.getElementById('loading').style.display='none';
   document.getElementById('table-wrap').style.display='block';
-  document.getElementById('time-remain-area').style.display='block';
   document.getElementById('footer-area').style.display='flex';
   requestAnimationFrame(autoScaleTable);
 }
@@ -224,16 +223,15 @@ function renderFooter(staffNames, sMeta, tUsed) {
     ).join('');
   }
 
-  // 시간찾기 잔여 — 표 오른쪽 아래 별도 영역
+  // 시간찾기 잔여
   const timeArea = document.getElementById('time-remain-area');
   const chips = staffNames
     .map(n => { const alloc=(sMeta[n]?.time||DEF_TIME[n]||0); const rem=Math.max(0,alloc-(tUsed[n]||0)); return rem>0?{name:n,rem}:null; })
     .filter(Boolean);
   if (timeArea) {
     timeArea.innerHTML = chips.length===0
-      ? ''
-      : `<span style="font-size:11px;font-weight:800;color:#7A5200;margin-right:6px;">시간찾기 잔여</span>` +
-        chips.map(c=>`<span class="time-chip">${c.name}: ${c.rem.toFixed(1)}h</span>`).join('');
+      ? '<span style="color:#bbb;font-size:12px;">없음</span>'
+      : chips.map(c=>`<span class="time-chip">${c.name}: ${c.rem.toFixed(1)}h</span>`).join('');
   }
 }
 
