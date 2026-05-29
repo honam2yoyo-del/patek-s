@@ -1799,9 +1799,7 @@
     };
 
     window.openScheduleGenerator = function() {
-        window.renderScheduleGenerator();
-        document.getElementById('page-schedule-generator').style.display = 'flex';
-        lucide.createIcons();
+        window.open('schedule.html', '_blank');
     };
     window.closeScheduleGenerator = function() {
         document.getElementById('page-schedule-generator').style.display = 'none';
