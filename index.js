@@ -1942,8 +1942,9 @@
         const thCls = 'px-2 py-2 text-[10px] font-bold text-white text-center whitespace-nowrap border-r border-white/20 last:border-r-0';
         const tdCls = 'px-2 py-2 text-[12px] font-semibold text-center border-b border-[#F0EFEA]';
 
-        function buildTable(title, stats, bg) {
-            const rows = stats.map(s => `
+        function buildTable(title, stats, bg, isYearly) {
+            const rows = isYearly
+                ? stats.map(s => `
                 <tr class="hover:bg-[#FDFCF8]">
                     <td class="${tdCls} text-left font-bold text-[#333]">${s.name}</td>
                     <td class="${tdCls} text-[#555]">${s.annAlloc}</td>
@@ -1953,21 +1954,38 @@
                     <td class="${tdCls}" style="color:#234B7A;">${s.cB}</td>
                     <td class="${tdCls}" style="color:#7A4F14;">${s.cC}</td>
                     <td class="${tdCls} text-[#555]">${s.cWkOff}</td>
+                </tr>`).join('')
+                : stats.map(s => `
+                <tr class="hover:bg-[#FDFCF8]">
+                    <td class="${tdCls} text-left font-bold text-[#333]">${s.name}</td>
+                    <td class="${tdCls} text-[#B4975A]">${s.cAnn.toFixed(1)}</td>
+                    <td class="${tdCls}" style="color:#6E2626;">${s.cA}</td>
+                    <td class="${tdCls}" style="color:#234B7A;">${s.cB}</td>
+                    <td class="${tdCls}" style="color:#7A4F14;">${s.cC}</td>
+                    <td class="${tdCls} text-[#555]">${s.cWkOff}</td>
+                    <td class="${tdCls} text-[#7A5200]">${s.remain>0?s.remain.toFixed(1)+'h':'-'}</td>
                 </tr>`).join('');
+            const headers = isYearly
+                ? `<th class="${thCls} text-left">직원</th>
+                   <th class="${thCls}">총연차</th>
+                   <th class="${thCls}">사용</th>
+                   <th class="${thCls}">잔여</th>
+                   <th class="${thCls}">A조</th>
+                   <th class="${thCls}">B조</th>
+                   <th class="${thCls}">C조</th>
+                   <th class="${thCls}">주말·공휴일<br>휴무</th>`
+                : `<th class="${thCls} text-left">직원</th>
+                   <th class="${thCls}">연차 사용</th>
+                   <th class="${thCls}">A조</th>
+                   <th class="${thCls}">B조</th>
+                   <th class="${thCls}">C조</th>
+                   <th class="${thCls}">주말·공휴일<br>휴무</th>
+                   <th class="${thCls}">시간찾기</th>`;
             return `<div class="mb-5">
                 <div class="text-[13px] font-bold text-[#333] mb-2">${title}</div>
                 <div class="overflow-x-auto no-scrollbar rounded-xl border border-[#F0EFEA] shadow-sm">
                     <table class="w-full border-collapse" style="min-width:420px;">
-                        <thead><tr style="background:${bg};">
-                            <th class="${thCls} text-left">직원</th>
-                            <th class="${thCls}">총연차</th>
-                            <th class="${thCls}">사용</th>
-                            <th class="${thCls}">잔여</th>
-                            <th class="${thCls}">A조</th>
-                            <th class="${thCls}">B조</th>
-                            <th class="${thCls}">C조</th>
-                            <th class="${thCls}">주말·공휴일</th>
-                        </tr></thead>
+                        <thead><tr style="background:${bg};">${headers}</tr></thead>
                         <tbody>${rows}</tbody>
                     </table>
                 </div>
@@ -1976,8 +1994,8 @@
 
         const container = document.getElementById('staff-stats-content');
         if (container) container.innerHTML =
-            buildTable(`${year}년 ${month}월 현황`, monthStats, '#B4975A') +
-            buildTable(`${year}년 누적 현황`, yearStats, '#7A6B5A');
+            buildTable(`${year}년 ${month}월 현황`, monthStats, '#B4975A', false) +
+            buildTable(`${year}년 누적 현황`, yearStats, '#7A6B5A', true);
     };
 
     window.openLeaveCalendarModal = function() {
