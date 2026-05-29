@@ -1930,7 +1930,9 @@
                 const alloc = staffObj.timeAllowance ?? 0;
                 const used = (window.timeRequests||[]).filter(r=>r.name===name).reduce((s,r)=>s+(r.hours||0),0);
                 const remain = Math.max(0, alloc - used);
-                return { name, cA, cB, cC, cAnn, cWkOff, remain };
+                const annAlloc = staffObj.annualLeave ?? 15;
+                const annRemain = annAlloc - cAnn;
+                return { name, cA, cB, cC, cAnn, cWkOff, remain, annAlloc, annRemain };
             });
         }
 
@@ -1944,12 +1946,13 @@
             const rows = stats.map(s => `
                 <tr class="hover:bg-[#FDFCF8]">
                     <td class="${tdCls} text-left font-bold text-[#333]">${s.name}</td>
+                    <td class="${tdCls} text-[#555]">${s.annAlloc}</td>
                     <td class="${tdCls} text-[#B4975A]">${s.cAnn.toFixed(1)}</td>
+                    <td class="${tdCls}" style="color:#2E7D32;">${s.annRemain.toFixed(1)}</td>
                     <td class="${tdCls}" style="color:#6E2626;">${s.cA}</td>
                     <td class="${tdCls}" style="color:#234B7A;">${s.cB}</td>
                     <td class="${tdCls}" style="color:#7A4F14;">${s.cC}</td>
                     <td class="${tdCls} text-[#555]">${s.cWkOff}</td>
-                    <td class="${tdCls} text-[#7A5200]">${s.remain>0?s.remain.toFixed(1)+'h':'-'}</td>
                 </tr>`).join('');
             return `<div class="mb-5">
                 <div class="text-[13px] font-bold text-[#333] mb-2">${title}</div>
@@ -1957,12 +1960,13 @@
                     <table class="w-full border-collapse" style="min-width:420px;">
                         <thead><tr style="background:${bg};">
                             <th class="${thCls} text-left">직원</th>
-                            <th class="${thCls}">연차 사용</th>
+                            <th class="${thCls}">총연차</th>
+                            <th class="${thCls}">사용</th>
+                            <th class="${thCls}">잔여</th>
                             <th class="${thCls}">A조</th>
                             <th class="${thCls}">B조</th>
                             <th class="${thCls}">C조</th>
-                            <th class="${thCls}">주말·공휴일<br>휴무</th>
-                            <th class="${thCls}">시간찾기</th>
+                            <th class="${thCls}">주말·공휴일</th>
                         </tr></thead>
                         <tbody>${rows}</tbody>
                     </table>
