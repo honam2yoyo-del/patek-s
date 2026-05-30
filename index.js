@@ -1184,7 +1184,7 @@
                 .sort((a,b)=>(a.type==='판매일정'||a.type==='고객')?-1:(b.type==='판매일정'||b.type==='고객')?1:a.date.localeCompare(b.date))
                 .slice(0,3);
             weekContent.innerHTML = weekEvs.length===0
-                ? `<div style="font-size:12px;color:#AAA;${FF}">이번 주 일정 없음</div>`
+                ? `<div style="font-size:11px;color:#AAA;white-space:nowrap;${FF}">이번 주 일정 없음</div>`
                 : weekEvs.map(ev=>{
                     const evS = CAL_EVENT_STYLES[ev.type]||CAL_EVENT_STYLES['기타'];
                     const [,em,ed] = ev.date.split('-');
