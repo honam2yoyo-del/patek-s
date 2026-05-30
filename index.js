@@ -39,12 +39,11 @@
     window.setCalFilter = function(filter) {
         window.calFilter = filter;
         const filterColorMap = {
-            '전체':     { bg: '#B8860B', text: '#FFFFFF',  border: '#B8860B' },
-            '판매':     { bg: '#FFF3D8', text: '#7B4A00',  border: '#E4B95D' },
-            '행사':     { bg: '#EEF8E8', text: '#4B7C2F',  border: '#9DCB75' },
-            '교육':     { bg: '#EAF4FF', text: '#27659A',  border: '#8DB8E8' },
-            '정기휴무': { bg: '#F2F2F2', text: '#555555',  border: '#C9C9C9' },
-            '기타':     { bg: '#F5EDFA', text: '#6A4A7C',  border: '#C9AEDB' },
+            '전체': { bg: '#B8860B', text: '#FFFFFF',  border: '#B8860B' },
+            '판매': { bg: '#FFF3D8', text: '#7B4A00',  border: '#E4B95D' },
+            '행사': { bg: '#EEF8E8', text: '#4B7C2F',  border: '#9DCB75' },
+            '교육': { bg: '#EAF4FF', text: '#27659A',  border: '#8DB8E8' },
+            '기타': { bg: '#F5EDFA', text: '#6A4A7C',  border: '#C9AEDB' },
         };
         document.querySelectorAll('.cal-filter-btn').forEach(btn => {
             const active = btn.dataset.filter === filter;
@@ -990,7 +989,7 @@
         container.innerHTML = '';
 
         const filterKey = window.calFilter || '전체';
-        const filterTypeMap = { '판매':['판매일정','고객'], '행사':['행사'], '교육':['교육'], '정기휴무':['정기휴무'], '기타':['기타'] };
+        const filterTypeMap = { '판매':['판매일정','고객'], '행사':['행사'], '교육':['교육'], '기타':['기타'] };
         const FF = 'font-family:\'Malgun Gothic\',\'맑은 고딕\',sans-serif;';
 
         // 이번 달 전체 이벤트
@@ -999,13 +998,13 @@
             return ey===year && em===month;
         });
 
-        // 요약 카드
-        const counts = {'판매일정':0,'행사':0,'교육':0,'정기휴무':0,'기타':0};
-        monthEvents.forEach(e=>{ const k=calTypeName(e.type); if(counts[k]!==undefined) counts[k]++; });
+        // 요약 카드 (오늘 이후 일정만 카운트)
+        const todayStr = new Date().toISOString().split('T')[0];
+        const counts = {'판매일정':0,'행사':0,'교육':0,'기타':0};
+        monthEvents.filter(e=>e.date>=todayStr).forEach(e=>{ const k=calTypeName(e.type); if(counts[k]!==undefined) counts[k]++; });
         const summaryEl = document.getElementById('cal-summary-card');
         if (summaryEl) {
             const summaryItems = [
-                {k:'정기휴무', label:'정기휴무', dot:'#C9C9C9'},
                 {k:'판매일정', label:'판매일정', dot:'#E4B95D'},
                 {k:'행사',     label:'행사',     dot:'#7CB65C'},
                 {k:'교육',     label:'교육',     dot:'#5B9AD6'},
