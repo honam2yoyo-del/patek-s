@@ -259,9 +259,9 @@
     </div>
 </div>
 
-<!-- 날짜별 일정 바텀시트 -->
-<div id="cal-date-sheet" style="display:none;" class="fixed inset-0 w-full max-w-md mx-auto bg-black/40 backdrop-blur-[2px] z-[350] flex-col items-end justify-end font-sans" onclick="window.closeCalDateSheet()">
-    <div class="w-full bg-[#FAF9F5] rounded-t-[26px] shadow-2xl" onclick="event.stopPropagation()" style="padding-bottom: max(24px, env(safe-area-inset-bottom));">
+<!-- 날짜별 일정 모달 -->
+<div id="cal-date-sheet" style="display:none;" class="fixed inset-0 w-full max-w-md mx-auto bg-black/40 backdrop-blur-[2px] z-[350] flex-col items-center justify-center p-6 font-sans" onclick="window.closeCalDateSheet()">
+    <div class="bg-[#FCFBF9] rounded-2xl w-full max-w-[340px] shadow-2xl border border-[#E8E4DB] flex flex-col overflow-hidden" onclick="event.stopPropagation()">
         <div class="flex items-center justify-between px-5 pt-5 pb-3 border-b border-[#F0EFEA]">
             <div id="cal-date-sheet-label" class="text-[16px] font-bold text-[#2B1A12]"></div>
             <div class="flex items-center gap-2">
@@ -269,7 +269,7 @@
                 <button onclick="window.closeCalDateSheet()" class="w-8 h-8 flex items-center justify-center text-[#8A847E] active:scale-95"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
         </div>
-        <div id="cal-date-sheet-content" class="px-5 pt-2 pb-2 max-h-[55vh] overflow-y-auto no-scrollbar"></div>
+        <div id="cal-date-sheet-content" class="px-5 pt-3 pb-5 max-h-[60vh] overflow-y-auto no-scrollbar"></div>
     </div>
 </div>
 
@@ -286,28 +286,34 @@
         <div class="space-y-3">
             <div>
                 <label class="block text-[11px] font-bold text-[#666] mb-1.5 ml-1">일정 종류</label>
-                <div class="grid grid-cols-2 gap-2 mb-2">
-                    <button type="button" onclick="window.setCalEventType('판매일정')" class="cal-type-btn py-2 rounded-lg text-[12px] font-bold border transition-colors bg-white text-[#666] border-[#E5E5E5]">판매일정</button>
-                    <button type="button" onclick="window.setCalEventType('행사')" class="cal-type-btn py-2 rounded-lg text-[12px] font-bold border transition-colors bg-white text-[#666] border-[#E5E5E5]">행사</button>
-                </div>
-                <div class="grid grid-cols-3 gap-2">
-                    <button type="button" onclick="window.setCalEventType('교육')" class="cal-type-btn py-2 rounded-lg text-[12px] font-bold border transition-colors bg-white text-[#666] border-[#E5E5E5]">교육</button>
-                    <button type="button" onclick="window.setCalEventType('정기휴무')" class="cal-type-btn py-2 rounded-lg text-[12px] font-bold border transition-colors bg-white text-[#666] border-[#E5E5E5]">정기휴무</button>
-                    <button type="button" onclick="window.setCalEventType('기타')" class="cal-type-btn py-2 rounded-lg text-[12px] font-bold border transition-colors bg-white text-[#666] border-[#E5E5E5]">기타</button>
+                <div class="grid grid-cols-5 gap-1">
+                    <button type="button" onclick="window.setCalEventType('판매일정')" class="cal-type-btn py-2 rounded-lg text-[10px] font-bold border transition-colors bg-white text-[#666] border-[#E5E5E5]">판매일정</button>
+                    <button type="button" onclick="window.setCalEventType('행사')" class="cal-type-btn py-2 rounded-lg text-[10px] font-bold border transition-colors bg-white text-[#666] border-[#E5E5E5]">행사</button>
+                    <button type="button" onclick="window.setCalEventType('교육')" class="cal-type-btn py-2 rounded-lg text-[10px] font-bold border transition-colors bg-white text-[#666] border-[#E5E5E5]">교육</button>
+                    <button type="button" onclick="window.setCalEventType('정기휴무')" class="cal-type-btn py-2 rounded-lg text-[10px] font-bold border transition-colors bg-white text-[#666] border-[#E5E5E5]">정기휴무</button>
+                    <button type="button" onclick="window.setCalEventType('기타')" class="cal-type-btn py-2 rounded-lg text-[10px] font-bold border transition-colors bg-white text-[#666] border-[#E5E5E5]">기타</button>
                 </div>
             </div>
             <!-- 판매일정 전용 필드 -->
             <div id="cal-sales-fields" style="display:none;" class="space-y-2">
-                <input id="cal-event-time-input" type="text" placeholder="시간 (예: 14:00)" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-2.5 outline-none text-xs font-semibold" />
+                <input id="cal-event-time-input" type="text" placeholder="시간 (예: 14:00)" onblur="window.formatTimeInput(this)" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-2.5 outline-none text-xs font-semibold" />
                 <input id="cal-event-customer-input" type="text" placeholder="고객명" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-2.5 outline-none text-xs font-semibold" />
                 <input id="cal-event-model-input" type="text" placeholder="모델명" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-2.5 outline-none text-xs font-semibold" />
-                <input id="cal-event-assignee-input" type="text" placeholder="담당자" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-2.5 outline-none text-xs font-semibold" />
+                <div>
+                    <div class="text-[10px] font-bold text-[#666] mb-1.5 ml-1">담당자</div>
+                    <div id="cal-assignee-picker" class="flex flex-wrap gap-1"></div>
+                    <input id="cal-event-assignee-input" type="hidden" value="" />
+                </div>
             </div>
             <!-- 기타 타입 내용 -->
             <div id="cal-reason-field">
                 <label class="block text-[11px] font-bold text-[#666] mb-1.5 ml-1">상세 내용</label>
                 <input id="cal-event-reason-input" type="text" placeholder="예: 매장 정기휴점, 팝업 행사 등" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-2.5 outline-none text-xs font-semibold" />
-                <input id="cal-event-assignee2-input" type="text" placeholder="담당자 (선택)" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-2.5 outline-none text-xs font-semibold mt-2" />
+                <div class="mt-2">
+                    <div class="text-[10px] font-bold text-[#666] mb-1.5 ml-1">담당자 (선택)</div>
+                    <div id="cal-assignee2-picker" class="flex flex-wrap gap-1"></div>
+                    <input id="cal-event-assignee2-input" type="hidden" value="" />
+                </div>
             </div>
         </div>
         <div class="mt-5 flex flex-col gap-2">

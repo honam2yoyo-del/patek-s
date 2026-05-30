@@ -1064,11 +1064,48 @@
         window.renderCalendarBottom();
     };
 
+    window.formatTimeInput = function(input) {
+        const v = input.value.replace(/[^0-9]/g, '');
+        if (!v) return;
+        let h, m;
+        if (v.length <= 2) {
+            h = parseInt(v); m = 0;
+        } else if (v.length === 3) {
+            h = parseInt(v[0]); m = parseInt(v.slice(1));
+        } else {
+            h = parseInt(v.slice(0, 2)); m = parseInt(v.slice(2, 4));
+        }
+        if (h >= 0 && h <= 23 && m >= 0 && m <= 59) {
+            input.value = String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+        }
+    };
+
+    window.renderAssigneePicker = function(containerId, selectedName) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        const allNames = (window.staffList||[]).map(s=>s.name).filter(Boolean);
+        const names = allNames.length > 0 ? allNames : (window.storeStaffs||[]);
+        const inputId = containerId === 'cal-assignee-picker' ? 'cal-event-assignee-input' : 'cal-event-assignee2-input';
+        container.innerHTML = names.map(name => {
+            const active = name === selectedName;
+            return `<button type="button" onclick="window.selectCalAssignee('${name}','${containerId}','${inputId}')"
+                style="padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;border:1px solid ${active?'#B4975A':'#E5E5E5'};background:${active?'#B4975A':'#FFFFFF'};color:${active?'#FFFFFF':'#555555'};cursor:pointer;margin-bottom:2px;">${name}</button>`;
+        }).join('');
+    };
+
+    window.selectCalAssignee = function(name, containerId, inputId) {
+        const input = document.getElementById(inputId);
+        if (!input) return;
+        input.value = input.value === name ? '' : name;
+        window.renderAssigneePicker(containerId, input.value);
+    };
+
     window.openCalEventModal = function(dateStr, existingEvent) {
         window.selectedCalEventDate = dateStr;
         window.editingCalEventId = existingEvent ? existingEvent.id : null;
         document.getElementById('cal-event-date-text').innerText = dateStr;
         const getEl = id => { const el = document.getElementById(id); return el || { value:'' }; };
+        let assigneeVal = '';
         if (existingEvent) {
             const t = existingEvent.type === '고객' ? '판매일정' : existingEvent.type;
             window.calEventType = t;
@@ -1076,8 +1113,9 @@
             getEl('cal-event-time-input').value = existingEvent.time || '';
             getEl('cal-event-customer-input').value = existingEvent.customerName || '';
             getEl('cal-event-model-input').value = existingEvent.modelName || '';
-            getEl('cal-event-assignee-input').value = existingEvent.assignee || '';
-            getEl('cal-event-assignee2-input').value = existingEvent.assignee || '';
+            assigneeVal = existingEvent.assignee || '';
+            getEl('cal-event-assignee-input').value = assigneeVal;
+            getEl('cal-event-assignee2-input').value = assigneeVal;
             document.getElementById('cal-event-delete-btn').style.display = (currentUser && currentUser.uid === existingEvent.uid) ? 'block' : 'none';
         } else {
             window.calEventType = '판매일정';
@@ -1087,6 +1125,8 @@
             document.getElementById('cal-event-delete-btn').style.display = 'none';
         }
         updateCalEventTypeUI();
+        window.renderAssigneePicker('cal-assignee-picker', assigneeVal);
+        window.renderAssigneePicker('cal-assignee2-picker', assigneeVal);
         document.getElementById('page-cal-event-modal').style.display = 'flex';
     };
 
