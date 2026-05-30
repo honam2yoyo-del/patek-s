@@ -974,7 +974,7 @@
         container.innerHTML = '';
 
         const filterKey = window.calFilter || '전체';
-        const filterTypeMap = { '판매':['판매일정','고객'], '행사':['행사'], '교육':['교육'], '휴무':['정기휴무'], '기타':['기타'] };
+        const filterTypeMap = { '판매':['판매일정','고객'], '행사':['행사'], '교육':['교육'], '정기휴무':['정기휴무'], '기타':['기타'] };
         const FF = 'font-family:\'Malgun Gothic\',\'맑은 고딕\',sans-serif;';
 
         // 이번 달 전체 이벤트
@@ -989,18 +989,19 @@
         const summaryEl = document.getElementById('cal-summary-card');
         if (summaryEl) {
             const summaryItems = [
-                {k:'정기휴무',label:'정기휴무',dot:'#C9C9C9'},
-                {k:'판매일정',label:'판매일정',dot:'#E4B95D'},
-                {k:'행사',label:'행사',dot:'#9DCB75'},
-                {k:'교육',label:'교육',dot:'#8DB8E8'},
-                {k:'기타',label:'기타',dot:'#C9AEDB'},
+                {k:'정기휴무', label:'정기휴무', icon:'calendar-x',    color:'#9E9085'},
+                {k:'판매일정', label:'판매일정', icon:'tag',            color:'#E4B95D'},
+                {k:'행사',     label:'행사',     icon:'users',          color:'#9DCB75'},
+                {k:'교육',     label:'교육',     icon:'graduation-cap', color:'#8DB8E8'},
+                {k:'기타',     label:'기타',     icon:'file-text',      color:'#C9AEDB'},
             ];
             summaryEl.innerHTML = summaryItems.map(i=>`
-                <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;border-right:1px solid #F0E8D8;${FF}">
-                    <div style="width:8px;height:8px;border-radius:50%;background:${i.dot};margin-bottom:3px;"></div>
-                    <div style="font-size:22px;font-weight:600;color:#2B1A12;line-height:1.1;">${counts[i.k]}</div>
-                    <div style="font-size:11px;color:#5A4A3A;margin-top:2px;">${i.label}</div>
+                <div class="flex flex-col items-center justify-center py-3 gap-0.5">
+                    <i data-lucide="${i.icon}" class="w-5 h-5 mb-0.5" style="color:${i.color};"></i>
+                    <span class="text-[10px] text-[#6E5A47] leading-none">${i.label}</span>
+                    <span class="text-[22px] font-semibold text-[#2B1A12] leading-tight">${counts[i.k]}</span>
                 </div>`).join('');
+            lucide.createIcons();
         }
 
         // 필터 적용
