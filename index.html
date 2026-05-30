@@ -281,7 +281,13 @@
             <button onclick="window.closeCalEventModal()" class="text-[#999] active:scale-95"><i data-lucide="x" class="w-5 h-5"></i></button>
         </div>
         <div class="mb-4 text-center">
-            <span id="cal-event-date-text" class="text-sm font-semibold text-[#8B7355] bg-[#F8EFE3] px-3 py-1 rounded-lg"></span>
+            <div class="relative inline-flex items-center justify-center">
+                <div class="text-sm font-semibold text-[#8B7355] bg-[#F8EFE3] px-3 py-1.5 rounded-lg inline-flex items-center gap-1.5">
+                    <i data-lucide="calendar" class="w-3.5 h-3.5 flex-shrink-0"></i>
+                    <span id="cal-event-date-text"></span>
+                </div>
+                <input type="date" id="cal-event-date-picker" onchange="window.handleCalEventDateChange(this.value)" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
+            </div>
         </div>
         <div class="space-y-3">
             <div>

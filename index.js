@@ -1100,10 +1100,21 @@
         window.renderAssigneePicker(containerId, input.value);
     };
 
+    window.handleCalEventDateChange = function(val) {
+        if (!val) return;
+        window.selectedCalEventDate = val;
+        const [,m,d] = val.split('-');
+        const DOW = ['일','월','화','수','목','금','토'];
+        const dow = DOW[new Date(val).getDay()];
+        const el = document.getElementById('cal-event-date-text');
+        if (el) el.innerText = `${parseInt(m)}월 ${parseInt(d)}일 (${dow})`;
+        const picker = document.getElementById('cal-event-date-picker');
+        if (picker) picker.value = val;
+    };
+
     window.openCalEventModal = function(dateStr, existingEvent) {
-        window.selectedCalEventDate = dateStr;
         window.editingCalEventId = existingEvent ? existingEvent.id : null;
-        document.getElementById('cal-event-date-text').innerText = dateStr;
+        window.handleCalEventDateChange(dateStr);
         const getEl = id => { const el = document.getElementById(id); return el || { value:'' }; };
         let assigneeVal = '';
         if (existingEvent) {
