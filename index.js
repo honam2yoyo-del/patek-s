@@ -38,11 +38,26 @@
 
     window.setCalFilter = function(filter) {
         window.calFilter = filter;
+        const filterColorMap = {
+            '전체':     { bg: '#B8860B', text: '#FFFFFF',  border: '#B8860B' },
+            '판매':     { bg: '#FFF3D8', text: '#7B4A00',  border: '#E4B95D' },
+            '행사':     { bg: '#EEF8E8', text: '#4B7C2F',  border: '#9DCB75' },
+            '교육':     { bg: '#EAF4FF', text: '#27659A',  border: '#8DB8E8' },
+            '정기휴무': { bg: '#F2F2F2', text: '#555555',  border: '#C9C9C9' },
+            '기타':     { bg: '#F5EDFA', text: '#6A4A7C',  border: '#C9AEDB' },
+        };
         document.querySelectorAll('.cal-filter-btn').forEach(btn => {
             const active = btn.dataset.filter === filter;
-            btn.style.backgroundColor = active ? '#B8860B' : '#FFFFFF';
-            btn.style.color = active ? '#FFFFFF' : '#2B1A12';
-            btn.style.borderColor = active ? '#B8860B' : '#E0C897';
+            if (active) {
+                const c = filterColorMap[filter] || filterColorMap['전체'];
+                btn.style.backgroundColor = c.bg;
+                btn.style.color = c.text;
+                btn.style.borderColor = c.border;
+            } else {
+                btn.style.backgroundColor = '#FFFFFF';
+                btn.style.color = '#2B1A12';
+                btn.style.borderColor = '#E0C897';
+            }
         });
         window.renderMainCalendar();
     };
@@ -50,6 +65,7 @@
     window.selectCalDate = function(dateStr) {
         window.selectedCalDate = dateStr;
         window.renderMainCalendar();
+        window.openCalDateSheet(dateStr);
     };
 
     function calEvLabel(ev) {
@@ -989,19 +1005,20 @@
         const summaryEl = document.getElementById('cal-summary-card');
         if (summaryEl) {
             const summaryItems = [
-                {k:'정기휴무', label:'정기휴무', icon:'calendar-x',    color:'#9E9085'},
-                {k:'판매일정', label:'판매일정', icon:'tag',            color:'#E4B95D'},
-                {k:'행사',     label:'행사',     icon:'users',          color:'#9DCB75'},
-                {k:'교육',     label:'교육',     icon:'graduation-cap', color:'#8DB8E8'},
-                {k:'기타',     label:'기타',     icon:'file-text',      color:'#C9AEDB'},
+                {k:'정기휴무', label:'정기휴무', dot:'#C9C9C9'},
+                {k:'판매일정', label:'판매일정', dot:'#E4B95D'},
+                {k:'행사',     label:'행사',     dot:'#7CB65C'},
+                {k:'교육',     label:'교육',     dot:'#5B9AD6'},
+                {k:'기타',     label:'기타',     dot:'#C9AEDB'},
             ];
             summaryEl.innerHTML = summaryItems.map(i=>`
-                <div class="flex flex-col items-center justify-center py-1.5 gap-0">
-                    <i data-lucide="${i.icon}" class="w-4 h-4" style="color:${i.color};"></i>
-                    <span class="text-[9px] text-[#6E5A47] leading-none mt-0.5">${i.label}</span>
-                    <span class="text-[16px] font-semibold text-[#2B1A12] leading-tight">${counts[i.k]}</span>
+                <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:5px 2px;">
+                    <div style="display:flex;align-items:center;gap:2px;white-space:nowrap;">
+                        <span style="color:${i.dot};font-size:9px;line-height:1;flex-shrink:0;">●</span>
+                        <span style="font-size:9px;color:#6E5A47;white-space:nowrap;">${i.label}</span>
+                    </div>
+                    <span style="font-size:16px;font-weight:600;color:#2B1A12;line-height:1.3;">${counts[i.k]}</span>
                 </div>`).join('');
-            lucide.createIcons();
         }
 
         // 필터 적용
@@ -1131,46 +1148,6 @@
         const FF = "font-family:'Malgun Gothic','맑은 고딕',sans-serif;";
         const DOW = ['일','월','화','수','목','금','토'];
 
-        // 선택된 날짜 카드
-        const selCard = document.getElementById('cal-selected-card');
-        if (selCard) {
-            const dateStr = window.selectedCalDate;
-            if (!dateStr) {
-                selCard.innerHTML = `<div style="font-size:13px;font-weight:700;color:#2B1A12;margin-bottom:8px;${FF}">선택한 날짜 일정</div>
-                    <div style="font-size:11px;color:#9E9085;${FF}">날짜를 선택하세요</div>`;
-            } else {
-                const dayEvs = (window.calEvents||[]).filter(e=>e.date===dateStr);
-                const [,m,d] = dateStr.split('-');
-                const dowStr = DOW[new Date(dateStr).getDay()];
-                const dateLabel = `${parseInt(m)}월 ${parseInt(d)}일 (${dowStr})`;
-                const addBtn = `<button onclick="window.openCalEventModal('${dateStr}',null)"
-                    style="font-size:11px;font-weight:700;color:#A87924;border:1px solid #D8B98B;border-radius:8px;padding:4px 10px;background:#FFFFFF;cursor:pointer;${FF}">+ 추가</button>`;
-                const evRows = dayEvs.length===0
-                    ? `<div style="font-size:12px;color:#AAA;margin-top:6px;${FF}">일정 없음</div>`
-                    : dayEvs.map(ev=>{
-                        const evS = CAL_EVENT_STYLES[ev.type]||CAL_EVENT_STYLES['기타'];
-                        const isSales = ev.type==='판매일정'||ev.type==='고객';
-                        const badge = `<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:5px;white-space:nowrap;background:${evS.bg};color:${evS.text};border:1px solid ${evS.border};${FF}">${calTypeName(ev.type)}</span>`;
-                        const timeStr = ev.time || '';
-                        const content = isSales ? [ev.customerName,ev.modelName].filter(Boolean).join(' ') : (ev.reason||'');
-                        const assignee = ev.assignee ? `담당:${ev.assignee}` : '';
-                        return `<div style="display:flex;align-items:center;gap:4px;padding:6px 0;border-bottom:1px solid #EFE3D2;min-height:32px;">
-                            <div style="flex-shrink:0;">${badge}</div>
-                            <div style="font-size:11px;color:#6E5A47;flex-shrink:0;white-space:nowrap;${FF}">${timeStr}</div>
-                            <div style="font-size:11px;color:#2B1A12;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${FF}">${content}</div>
-                            <div style="font-size:10px;color:#8A6428;flex-shrink:0;white-space:nowrap;${FF}">${assignee}</div>
-                        </div>`;
-                    }).join('');
-                selCard.innerHTML = `
-                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-                        <div style="font-size:13px;font-weight:700;color:#2B1A12;${FF}">선택한 날짜 일정</div>
-                        ${addBtn}
-                    </div>
-                    <div style="font-size:15px;font-weight:600;color:#C21B1B;margin-bottom:6px;${FF}">${dateLabel}</div>
-                    ${evRows}`;
-            }
-        }
-
         // 이번 주 주요 일정 카드
         const weekContent = document.getElementById('cal-week-content');
         if (weekContent) {
@@ -1182,9 +1159,9 @@
             const weekEvs = (window.calEvents||[])
                 .filter(e=>e.date>=sunStr&&e.date<=satStr)
                 .sort((a,b)=>(a.type==='판매일정'||a.type==='고객')?-1:(b.type==='판매일정'||b.type==='고객')?1:a.date.localeCompare(b.date))
-                .slice(0,3);
+                .slice(0,5);
             weekContent.innerHTML = weekEvs.length===0
-                ? `<div style="font-size:11px;color:#AAA;white-space:nowrap;${FF}">이번 주 일정 없음</div>`
+                ? `<div style="font-size:12px;color:#AAA;${FF}">이번 주 일정 없음</div>`
                 : weekEvs.map(ev=>{
                     const evS = CAL_EVENT_STYLES[ev.type]||CAL_EVENT_STYLES['기타'];
                     const [,em,ed] = ev.date.split('-');
@@ -1192,15 +1169,71 @@
                     const isSales = ev.type==='판매일정'||ev.type==='고객';
                     const content = isSales ? [ev.customerName,ev.modelName].filter(Boolean).join(' ') : (ev.reason||ev.type);
                     const timeStr = ev.time || (ev.type==='정기휴무'?'종일':'');
-                    return `<div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:10px;last-child:margin-bottom:0;">
-                        <div style="width:8px;height:8px;border-radius:50%;background:${evS.dot||evS.border};margin-top:4px;flex-shrink:0;"></div>
-                        <div style="flex:1;min-width:0;">
-                            <div style="font-size:12px;color:#6E5A47;margin-bottom:1px;${FF}">${parseInt(em)}/${parseInt(ed)} (${evDow}) ${content}</div>
-                            <div style="font-size:11px;color:#9E9085;${FF}">${timeStr}</div>
-                        </div>
+                    return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #F5EDE0;">
+                        <div style="width:8px;height:8px;border-radius:50%;background:${evS.dot||evS.border};flex-shrink:0;"></div>
+                        <div style="font-size:11px;font-weight:700;color:${evS.text};background:${evS.bg};border:1px solid ${evS.border};border-radius:5px;padding:1px 6px;white-space:nowrap;flex-shrink:0;${FF}">${calTypeName(ev.type)}</div>
+                        <div style="font-size:12px;color:#6E5A47;white-space:nowrap;flex-shrink:0;${FF}">${parseInt(em)}/${parseInt(ed)} (${evDow})</div>
+                        <div style="font-size:12px;color:#2B1A12;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${FF}">${content}${timeStr?' · '+timeStr:''}</div>
                     </div>`;
                 }).join('');
         }
+    };
+
+    window.openCalDateSheet = function(dateStr) {
+        const DOW = ['일','월','화','수','목','금','토'];
+        const [,m,d] = dateStr.split('-');
+        const dowStr = DOW[new Date(dateStr).getDay()];
+        const label = document.getElementById('cal-date-sheet-label');
+        if (label) label.innerText = `${parseInt(m)}월 ${parseInt(d)}일 (${dowStr})`;
+        window.renderCalDateSheet(dateStr);
+        const sheet = document.getElementById('cal-date-sheet');
+        if (sheet) { sheet.style.display = 'flex'; lucide.createIcons(); }
+    };
+
+    window.closeCalDateSheet = function() {
+        const sheet = document.getElementById('cal-date-sheet');
+        if (sheet) sheet.style.display = 'none';
+    };
+
+    window.openCalEventFromSheet = function() {
+        const dateStr = window.selectedCalDate;
+        window.closeCalDateSheet();
+        window.openCalEventModal(dateStr, null);
+    };
+
+    window.editCalEventFromSheet = function(eventId) {
+        const ev = (window.calEvents||[]).find(e=>e.id===eventId);
+        if (!ev) return;
+        window.closeCalDateSheet();
+        window.openCalEventModal(window.selectedCalDate, ev);
+    };
+
+    window.renderCalDateSheet = function(dateStr) {
+        const FF = "font-family:'Malgun Gothic','맑은 고딕',sans-serif;";
+        const content = document.getElementById('cal-date-sheet-content');
+        if (!content) return;
+        const dayEvs = (window.calEvents||[]).filter(e=>e.date===dateStr);
+        if (dayEvs.length === 0) {
+            content.innerHTML = `<div style="font-size:13px;color:#AAA;text-align:center;padding:24px 0;${FF}">등록된 일정이 없습니다</div>`;
+            return;
+        }
+        content.innerHTML = dayEvs.map(ev => {
+            const evS = CAL_EVENT_STYLES[ev.type]||CAL_EVENT_STYLES['기타'];
+            const isSales = ev.type==='판매일정'||ev.type==='고객';
+            const typeName = calTypeName(ev.type);
+            const badge = `<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;background:${evS.bg};color:${evS.text};border:1px solid ${evS.border};white-space:nowrap;${FF}">${typeName}</span>`;
+            const timeStr = ev.time || '';
+            const mainContent = isSales ? [ev.customerName,ev.modelName].filter(Boolean).join(' ') : (ev.reason||'');
+            const assignee = ev.assignee ? `담당: ${ev.assignee}` : '';
+            return `<div onclick="window.editCalEventFromSheet('${ev.id}')"
+                style="display:flex;align-items:center;gap:8px;padding:11px 0;border-bottom:1px solid #F0E8D8;cursor:pointer;">
+                <div style="flex-shrink:0;">${badge}</div>
+                ${timeStr?`<div style="font-size:12px;color:#6E5A47;white-space:nowrap;flex-shrink:0;${FF}">${timeStr}</div>`:''}
+                <div style="font-size:12px;color:#2B1A12;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${FF}">${mainContent}</div>
+                ${assignee?`<div style="font-size:11px;color:#8A6428;white-space:nowrap;flex-shrink:0;${FF}">${assignee}</div>`:''}
+                <div style="color:#C2B8AA;flex-shrink:0;font-size:14px;">›</div>
+            </div>`;
+        }).join('');
     };
 
     window.triggerScheduleExcelUpload = function() { document.getElementById('schedule-excel-input').click(); };
