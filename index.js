@@ -1607,15 +1607,15 @@
             const dc = (isHoliday || dayOfWeek === 0) ? 'text-[#E53935]' : (dayOfWeek === 6 ? 'text-[#1E88E5]' : 'text-[#333]');
             const meta = codeMeta[code];
             const badge = meta
-                ? `<span class="inline-block text-[8.5px] font-bold px-1.5 py-[1.5px] rounded-[4px] mt-0.5 leading-tight" style="background:${meta.bg};color:${meta.text};">${meta.label}</span>`
-                : `<span class="inline-block text-[8px] font-bold text-[#CCC] mt-0.5">휴무</span>`;
-            const timeBadge = timeHours ? `<div class="text-[7px] font-bold rounded px-0.5 py-[1px] w-full text-center leading-tight mt-0.5" style="background:#F8F3E7;color:#B4975A;">${timeHours}h</div>` : '';
+                ? `<span class="inline-block text-[10.5px] font-bold px-1 py-[1px] rounded-[3px] mt-0.5 leading-tight" style="background:${meta.bg};color:${meta.text};">${meta.label}</span>`
+                : `<span class="inline-block text-[10px] font-bold text-[#CCC] mt-0.5">휴무</span>`;
+            const timeBadge = timeHours ? `<div class="text-[8px] font-bold rounded px-0.5 py-[1px] w-full text-left leading-tight mt-0.5" style="background:#F8F3E7;color:#B4975A;">${timeHours}h</div>` : '';
             let evBadge = '';
             if (calEv) {
                 const evS = CAL_EVENT_STYLES[calEv.type] || { bg: '#C3E19E', text: '#333333' };
-                evBadge = `<div class="text-[7px] font-bold rounded px-0.5 leading-tight mt-0.5 truncate w-full text-center" style="background-color:${evS.bg};color:${evS.text};">${calEv.reason || calEv.type}</div>`;
+                evBadge = `<div class="text-[8px] font-bold rounded px-0.5 leading-tight mt-0.5 truncate w-full text-left" style="background-color:${evS.bg};color:${evS.text};">${calEv.reason || calEv.type}</div>`;
             }
-            html += `<div class="min-h-[52px] p-[3px] flex flex-col items-center ${noRightBorder} border-b border-[#F0EFEA] bg-white"><span class="text-[11px] font-bold ${dc} leading-none mt-0.5">${d}</span>${badge}${timeBadge}${evBadge}</div>`;
+            html += `<div class="min-h-[52px] p-[3px] flex flex-col items-start ${noRightBorder} border-b border-[#F0EFEA] bg-white"><span class="text-[11px] font-bold ${dc} leading-none mt-0.5">${d}</span>${badge}${timeBadge}${evBadge}</div>`;
         });
         const lastDow = dayData.length > 0 ? dayData[dayData.length - 1].dayOfWeek : 0;
         const trail = lastDow === 6 ? 0 : 6 - lastDow;
@@ -1765,36 +1765,36 @@
         });
         const annualRemain = Math.max(0, ANNUAL_TOTAL - totalAnnualUsed);
 
-        const cardBase = 'bg-white rounded-2xl shadow-sm border border-[#F0EFEA]';
+        const cardBase = 'bg-white rounded-xl shadow-sm border border-[#F0EFEA]';
         const statsHtml = `
-            <div class="grid grid-cols-2 gap-2.5 mb-2.5">
-                <div class="${cardBase} p-3 flex items-center gap-2.5">
-                    <div class="w-10 h-10 rounded-full bg-[#F8F3E7] flex items-center justify-center shrink-0"><i data-lucide="calendar-check" class="w-5 h-5 text-[#B4975A]"></i></div>
-                    <div><div class="text-[10px] text-[#888] font-semibold leading-none mb-0.5">연차 사용</div><div class="text-[20px] font-bold text-[#333] leading-none">${monthAnnualUsed.toFixed(1)}<span class="text-[11px] font-semibold text-[#888] ml-0.5">일</span></div></div>
+            <div class="grid grid-cols-2 gap-2 mb-2">
+                <div class="${cardBase} px-2.5 py-2 flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-full bg-[#F8F3E7] flex items-center justify-center shrink-0"><i data-lucide="calendar-check" class="w-4 h-4 text-[#B4975A]"></i></div>
+                    <div><div class="text-[9px] text-[#888] font-semibold leading-none mb-0.5">연차 사용</div><div class="text-[15px] font-bold text-[#333] leading-none">${monthAnnualUsed.toFixed(1)}<span class="text-[10px] font-semibold text-[#888] ml-0.5">일</span></div></div>
                 </div>
-                <div class="${cardBase} p-3 flex items-center gap-2.5">
-                    <div class="w-10 h-10 rounded-full bg-[#F8F3E7] flex items-center justify-center shrink-0"><i data-lucide="leaf" class="w-5 h-5 text-[#B4975A]"></i></div>
-                    <div><div class="text-[10px] text-[#888] font-semibold leading-none mb-0.5">남은 연차</div><div class="text-[20px] font-bold text-[#333] leading-none">${annualRemain.toFixed(1)}<span class="text-[11px] font-semibold text-[#888] ml-0.5">일</span></div></div>
-                </div>
-            </div>
-            <div class="grid grid-cols-2 gap-2.5 mb-2.5">
-                <div class="${cardBase} p-3 flex items-center gap-2.5">
-                    <div class="w-10 h-10 rounded-full bg-[#F2F2F2] flex items-center justify-center shrink-0"><i data-lucide="sun" class="w-5 h-5 text-[#888]"></i></div>
-                    <div><div class="text-[10px] text-[#888] font-semibold leading-none mb-0.5">주말·공휴일 휴무</div><div class="text-[20px] font-bold text-[#333] leading-none">${countWeekendOff}<span class="text-[11px] font-semibold text-[#888] ml-0.5">회</span></div></div>
-                </div>
-                <div class="${cardBase} p-3 flex items-center gap-2.5">
-                    <div class="w-10 h-10 rounded-full bg-[#FFF9E6] flex items-center justify-center shrink-0"><i data-lucide="timer" class="w-5 h-5 text-[#B8860B]"></i></div>
-                    <div><div class="text-[10px] text-[#888] font-semibold leading-none mb-0.5">시간찾기 잔여</div><div class="text-[20px] font-bold text-[#333] leading-none">${remainingTimeHours.toFixed(1)}<span class="text-[11px] font-semibold text-[#888] ml-0.5">시간</span></div></div>
+                <div class="${cardBase} px-2.5 py-2 flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-full bg-[#F8F3E7] flex items-center justify-center shrink-0"><i data-lucide="leaf" class="w-4 h-4 text-[#B4975A]"></i></div>
+                    <div><div class="text-[9px] text-[#888] font-semibold leading-none mb-0.5">남은 연차</div><div class="text-[15px] font-bold text-[#333] leading-none">${annualRemain.toFixed(1)}<span class="text-[10px] font-semibold text-[#888] ml-0.5">일</span></div></div>
                 </div>
             </div>
-            <div class="grid grid-cols-2 gap-2.5 mb-4">
-                <div class="${cardBase} p-3 flex items-center gap-2.5">
-                    <div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style="background:#FAD7D5"><i data-lucide="user" class="w-5 h-5" style="color:#6E2626"></i></div>
-                    <div><div class="text-[10px] text-[#888] font-semibold leading-none mb-0.5">A조</div><div class="text-[20px] font-bold leading-none" style="color:#6E2626">${countA}<span class="text-[11px] font-semibold text-[#888] ml-0.5">회</span></div></div>
+            <div class="grid grid-cols-2 gap-2 mb-2">
+                <div class="${cardBase} px-2.5 py-2 flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-full bg-[#F2F2F2] flex items-center justify-center shrink-0"><i data-lucide="sun" class="w-4 h-4 text-[#888]"></i></div>
+                    <div><div class="text-[9px] text-[#888] font-semibold leading-none mb-0.5">주말·공휴일</div><div class="text-[15px] font-bold text-[#333] leading-none">${countWeekendOff}<span class="text-[10px] font-semibold text-[#888] ml-0.5">회</span></div></div>
                 </div>
-                <div class="${cardBase} p-3 flex items-center gap-2.5">
-                    <div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style="background:#D9E7FA"><i data-lucide="user" class="w-5 h-5" style="color:#234B7A"></i></div>
-                    <div><div class="text-[10px] text-[#888] font-semibold leading-none mb-0.5">B조</div><div class="text-[20px] font-bold leading-none" style="color:#234B7A">${countB}<span class="text-[11px] font-semibold text-[#888] ml-0.5">회</span></div></div>
+                <div class="${cardBase} px-2.5 py-2 flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-full bg-[#FFF9E6] flex items-center justify-center shrink-0"><i data-lucide="timer" class="w-4 h-4 text-[#B8860B]"></i></div>
+                    <div><div class="text-[9px] text-[#888] font-semibold leading-none mb-0.5">시간찾기 잔여</div><div class="text-[15px] font-bold text-[#333] leading-none">${remainingTimeHours.toFixed(1)}<span class="text-[10px] font-semibold text-[#888] ml-0.5">시간</span></div></div>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2 mb-3">
+                <div class="${cardBase} px-2.5 py-2 flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style="background:#FAD7D5"><i data-lucide="user" class="w-4 h-4" style="color:#6E2626"></i></div>
+                    <div><div class="text-[9px] text-[#888] font-semibold leading-none mb-0.5">A조</div><div class="text-[15px] font-bold leading-none" style="color:#6E2626">${countA}<span class="text-[10px] font-semibold text-[#888] ml-0.5">회</span></div></div>
+                </div>
+                <div class="${cardBase} px-2.5 py-2 flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style="background:#D9E7FA"><i data-lucide="user" class="w-4 h-4" style="color:#234B7A"></i></div>
+                    <div><div class="text-[9px] text-[#888] font-semibold leading-none mb-0.5">B조</div><div class="text-[15px] font-bold leading-none" style="color:#234B7A">${countB}<span class="text-[10px] font-semibold text-[#888] ml-0.5">회</span></div></div>
                 </div>
             </div>`;
 
