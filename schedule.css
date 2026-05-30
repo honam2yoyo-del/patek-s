@@ -94,10 +94,11 @@ thead .s-annual, thead .s-name { z-index:15; background:#EDE0CB; }
   ) #B8B5B5 !important;
   color: transparent !important;
 }
-.td-edit[data-evtype="행사"] { background:#C3E19E !important; }
-.td-edit[data-evtype="고객"] { background:#FFEE9C !important; }
-.td-edit[data-evtype="교육"] { background:#8BCBE2 !important; }
-.td-edit[data-evtype="기타"] { background:#E8DBFF !important; }
+.td-edit[data-evtype="행사"]    { background:#EEF8E6 !important; }
+.td-edit[data-evtype="판매일정"] { background:#FFF4D6 !important; }
+.td-edit[data-evtype="고객"]    { background:#FFF4D6 !important; }
+.td-edit[data-evtype="교육"]    { background:#EAF3FF !important; }
+.td-edit[data-evtype="기타"]    { background:#F4EEFB !important; }
 .td-slash {
   color: transparent !important;
   background: linear-gradient(

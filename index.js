@@ -25,12 +25,45 @@
         '행사': { bg: '#EBE2FB', text: '#8E67C9' }
     };
     const CAL_EVENT_STYLES = {
-        '정기휴무': { bg: '#B8B5B5', text: '#FFFFFF' },
-        '행사':     { bg: '#C3E19E', text: '#333333' },
-        '고객':     { bg: '#FFEE9C', text: '#333333' },
-        '교육':     { bg: '#8BCBE2', text: '#333333' },
-        '기타':     { bg: '#E8DBFF', text: '#333333' },
+        '판매일정': { bg: '#FFF4D6', border: '#D8B46A', text: '#8A6A21' },
+        '고객':     { bg: '#FFF4D6', border: '#D8B46A', text: '#8A6A21' }, // 하위호환
+        '행사':     { bg: '#EEF8E6', border: '#A9C97E', text: '#5B7D31' },
+        '교육':     { bg: '#EAF3FF', border: '#89AEE8', text: '#3D68A6' },
+        '정기휴무': { bg: '#F2F2F2', border: '#BDBDBD', text: '#666666' },
+        '기타':     { bg: '#F4EEFB', border: '#B8A0D9', text: '#725D97' },
     };
+    window.calFilter = '전체';
+    window.selectedCalDate = null;
+    window.editingCalEventId = null;
+
+    window.setCalFilter = function(filter) {
+        window.calFilter = filter;
+        document.querySelectorAll('.cal-filter-btn').forEach(btn => {
+            const active = btn.dataset.filter === filter;
+            btn.style.backgroundColor = active ? '#8B7355' : '#FFFFFF';
+            btn.style.color = active ? '#FFFFFF' : '#8A847E';
+            btn.style.borderColor = active ? '#8B7355' : '#E8E4DB';
+        });
+        window.renderMainCalendar();
+    };
+
+    window.selectCalDate = function(dateStr) {
+        window.selectedCalDate = dateStr;
+        window.renderMainCalendar();
+    };
+
+    function calEvLabel(ev) {
+        const isSales = ev.type === '판매일정' || ev.type === '고객';
+        if (isSales) {
+            const parts = [ev.time, ev.customerName, ev.modelName].filter(Boolean);
+            return parts.length > 0 ? parts.join(' ') : (ev.reason || ev.type);
+        }
+        return ev.reason || ev.type;
+    }
+
+    function calTypeName(type) {
+        return type === '고객' ? '판매일정' : type;
+    }
     const MAX_READERS = 6;
 
     let currentUser = null;
@@ -938,77 +971,217 @@
         const year = window.scheduleYear; const month = window.scheduleMonth;
         const container = document.getElementById('main-calendar-grid'); if (!container) return; container.innerHTML = '';
 
-        const firstDay = new Date(year, month - 1, 1).getDay(); const totalDays = getDaysInMonth(year, month);
+        const filterKey = window.calFilter || '전체';
+        const filterTypeMap = { '판매': ['판매일정','고객'], '행사': ['행사'], '교육': ['교육'], '휴무': ['정기휴무'], '기타': ['기타'] };
+
+        // 이번 달 이벤트
+        const monthEvents = (window.calEvents || []).filter(e => {
+            const [ey, em] = e.date.split('-').map(Number);
+            return ey === year && em === month;
+        });
+
+        // 월별 집계
+        const counts = { '판매일정': 0, '행사': 0, '교육': 0, '정기휴무': 0, '기타': 0 };
+        monthEvents.forEach(e => { const k = calTypeName(e.type); if (counts[k] !== undefined) counts[k]++; });
+        const countEl = document.getElementById('cal-monthly-count');
+        if (countEl) {
+            const items = [
+                { k:'판매일정', label:'판매', color:'#8A6A21' },
+                { k:'행사', label:'행사', color:'#5B7D31' },
+                { k:'교육', label:'교육', color:'#3D68A6' },
+                { k:'정기휴무', label:'정기휴무', color:'#666666' },
+                { k:'기타', label:'기타', color:'#725D97' },
+            ];
+            countEl.innerHTML = items.map(i =>
+                `<span style="color:${i.color};">· ${i.label} ${counts[i.k]}</span>`
+            ).join('');
+        }
+
+        // 필터 적용
+        const filtered = filterKey === '전체' ? monthEvents
+            : monthEvents.filter(e => (filterTypeMap[filterKey] || []).includes(e.type));
+
+        const firstDay = new Date(year, month - 1, 1).getDay();
+        const totalDays = getDaysInMonth(year, month);
         const firstDayShift = firstDay === 0 ? 6 : firstDay - 1;
-        for (let i = 0; i < firstDayShift; i++) container.innerHTML += `<div class="min-h-[70px] bg-[#FAF9F5] border border-[#F0EFEA]"></div>`;
+        for (let i = 0; i < firstDayShift; i++) container.innerHTML += `<div class="min-h-[72px] bg-[#FAF9F5] border border-[#F0EFEA]"></div>`;
 
         for (let d = 1; d <= totalDays; d++) {
-            const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-            const dayOfWeek = new Date(year, month - 1, d).getDay(); const isHoliday = PUBLIC_HOLIDAYS_2026[dateStr] !== undefined;
-            let dayTextClass = "text-[#333]";
-            if (isHoliday) dayTextClass = "text-[#D81B60]"; else if (dayOfWeek === 0) dayTextClass = "text-red-500"; else if (dayOfWeek === 6) dayTextClass = "text-blue-500";
+            const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            const dayOfWeek = new Date(year, month-1, d).getDay();
+            const isHoliday = PUBLIC_HOLIDAYS_2026[dateStr] !== undefined;
+            let dayTextClass = 'text-[#333]';
+            if (isHoliday) dayTextClass = 'text-[#D81B60]';
+            else if (dayOfWeek === 0) dayTextClass = 'text-red-500';
+            else if (dayOfWeek === 6) dayTextClass = 'text-blue-500';
 
-            const events = window.calEvents.filter(e => e.date === dateStr);
-            let calEvBgColor = '';
-            let contentHtml = "";
-            if (events.length > 0) {
-                const ev = events[0];
-                const evS = CAL_EVENT_STYLES[ev.type] || { bg: '#C3E19E', text: '#333333' };
-                calEvBgColor = evS.bg;
-                dayTextClass = evS.text === '#FFFFFF' ? 'text-white' : 'text-[#333]';
-                contentHtml = `<div class="text-[10px] font-bold text-center w-full mt-1 whitespace-normal break-words leading-tight" style="color:${evS.text};">${ev.reason || ev.type}</div>`;
-            }
+            // 판매일정 우선 정렬
+            const dayEvs = filtered.filter(e => e.date === dateStr)
+                .sort((a,b) => (a.type==='판매일정'||a.type==='고객') ? -1 : (b.type==='판매일정'||b.type==='고객') ? 1 : 0);
+            const show = dayEvs.slice(0, 2);
+            const overflow = dayEvs.length - 2;
+            const isSelected = window.selectedCalDate === dateStr;
+
+            const evHtml = show.map(ev => {
+                const evS = CAL_EVENT_STYLES[ev.type] || CAL_EVENT_STYLES['기타'];
+                const label = calEvLabel(ev);
+                return `<div class="w-full text-[8px] font-bold px-1 py-[1.5px] rounded-[3px] mb-[1px] truncate leading-tight"
+                    style="background:${evS.bg};color:${evS.text};border:0.5px solid ${evS.border};">${label}</div>`;
+            }).join('') + (overflow > 0 ? `<div class="text-[8px] font-bold text-[#8B7355]">+${overflow}</div>` : '');
 
             const dayCell = document.createElement('div');
-            dayCell.className = `min-h-[70px] h-full p-1 border border-[#F0EFEA] flex flex-col items-center justify-start cursor-pointer transition-colors relative ${calEvBgColor ? '' : 'bg-white hover:bg-slate-50'}`;
-            if (calEvBgColor) dayCell.style.backgroundColor = calEvBgColor;
-            dayCell.onclick = () => window.openCalEventModal(dateStr, events[0]);
-
+            dayCell.className = `min-h-[72px] h-full p-1 border flex flex-col items-start justify-start cursor-pointer transition-colors relative
+                ${isSelected ? 'border-[#B4975A] bg-[#FFF8ED] ring-1 ring-[#D8B98B]' : 'border-[#F0EFEA] bg-white hover:bg-[#FAFAF8]'}`;
+            dayCell.onclick = () => window.selectCalDate(dateStr);
             dayCell.innerHTML = `
-                <div class="w-full flex justify-between shrink-0"><span class="text-xs font-bold ${dayTextClass}">${d}</span>${isHoliday ? `<span class="text-[8px] text-[#D81B60] truncate font-sans ml-1 mt-0.5">${PUBLIC_HOLIDAYS_2026[dateStr]}</span>` : ''}</div>
-                <div class="w-full flex-1 flex flex-col justify-center items-center">${contentHtml}</div>
-            `;
+                <div class="w-full flex justify-between shrink-0 mb-0.5">
+                    <span class="text-[11px] font-bold ${dayTextClass}">${d}</span>
+                    ${isHoliday ? `<span class="text-[7px] text-[#D81B60] truncate ml-0.5 mt-0.5">${PUBLIC_HOLIDAYS_2026[dateStr]}</span>` : ''}
+                </div>
+                <div class="w-full flex flex-col">${evHtml}</div>`;
             container.appendChild(dayCell);
         }
+
+        // 하단 카드 업데이트
+        window.renderCalendarBottom();
     };
 
     window.openCalEventModal = function(dateStr, existingEvent) {
-        window.selectedCalEventDate = dateStr; document.getElementById('cal-event-date-text').innerText = dateStr;
-        if (existingEvent) { window.calEventType = existingEvent.type; document.getElementById('cal-event-reason-input').value = existingEvent.reason || ''; document.getElementById('cal-event-delete-btn').style.display = (currentUser && currentUser.uid === existingEvent.uid) ? 'block' : 'none'; } 
-        else { window.calEventType = '정기휴무'; document.getElementById('cal-event-reason-input').value = ''; document.getElementById('cal-event-delete-btn').style.display = 'none'; }
-        updateCalEventTypeUI(); document.getElementById('page-cal-event-modal').style.display = 'flex';
+        window.selectedCalEventDate = dateStr;
+        window.editingCalEventId = existingEvent ? existingEvent.id : null;
+        document.getElementById('cal-event-date-text').innerText = dateStr;
+        if (existingEvent) {
+            const t = existingEvent.type === '고객' ? '판매일정' : existingEvent.type;
+            window.calEventType = t;
+            document.getElementById('cal-event-reason-input').value = existingEvent.reason || '';
+            document.getElementById('cal-event-time-input').value = existingEvent.time || '';
+            document.getElementById('cal-event-customer-input').value = existingEvent.customerName || '';
+            document.getElementById('cal-event-model-input').value = existingEvent.modelName || '';
+            document.getElementById('cal-event-delete-btn').style.display = (currentUser && currentUser.uid === existingEvent.uid) ? 'block' : 'none';
+        } else {
+            window.calEventType = '판매일정';
+            document.getElementById('cal-event-reason-input').value = '';
+            document.getElementById('cal-event-time-input').value = '';
+            document.getElementById('cal-event-customer-input').value = '';
+            document.getElementById('cal-event-model-input').value = '';
+            document.getElementById('cal-event-delete-btn').style.display = 'none';
+        }
+        updateCalEventTypeUI();
+        document.getElementById('page-cal-event-modal').style.display = 'flex';
     };
 
     window.closeCalEventModal = function() { document.getElementById('page-cal-event-modal').style.display = 'none'; };
     window.setCalEventType = function(type) { window.calEventType = type; updateCalEventTypeUI(); };
-    
+
     function updateCalEventTypeUI() {
         const type = window.calEventType;
         document.querySelectorAll('.cal-type-btn').forEach(btn => {
-            if (btn.innerText.trim() === type) { const s = CAL_EVENT_STYLES[type] || { bg: '#C3E19E', text: '#333333' }; btn.style.backgroundColor = s.bg; btn.style.color = s.text; btn.style.borderColor = s.bg; }
+            const btnType = btn.innerText.trim();
+            const match = btnType === type || (btnType === '판매일정' && type === '고객');
+            if (match) { const s = CAL_EVENT_STYLES[type] || CAL_EVENT_STYLES['기타']; btn.style.backgroundColor = s.bg; btn.style.color = s.text; btn.style.borderColor = s.border || s.bg; }
             else { btn.style.backgroundColor = '#FFFFFF'; btn.style.color = '#666666'; btn.style.borderColor = '#E5E5E5'; }
         });
+        const salesFields = document.getElementById('cal-sales-fields');
+        const reasonField = document.getElementById('cal-reason-field');
+        const isSales = type === '판매일정' || type === '고객';
+        if (salesFields) salesFields.style.display = isSales ? 'block' : 'none';
+        if (reasonField) reasonField.style.display = isSales ? 'none' : 'block';
     }
 
     window.saveCalEvent = async function() {
-        if (!currentUser) return; const reason = document.getElementById('cal-event-reason-input').value.trim();
-        if (!reason) { window.showCustomAlert("달력에 표시될 내용을 입력해주세요."); return; }
+        if (!currentUser) return;
+        const isSales = window.calEventType === '판매일정' || window.calEventType === '고객';
+        const reason = document.getElementById('cal-event-reason-input').value.trim();
+        const time = document.getElementById('cal-event-time-input').value.trim();
+        const customerName = document.getElementById('cal-event-customer-input').value.trim();
+        const modelName = document.getElementById('cal-event-model-input').value.trim();
+        if (!isSales && !reason) { window.showCustomAlert("달력에 표시될 내용을 입력해주세요."); return; }
+        if (isSales && !customerName && !reason) { window.showCustomAlert("고객명 또는 내용을 입력해주세요."); return; }
         document.getElementById('loading-overlay').style.display = 'flex';
         try {
-            const dateStr = window.selectedCalEventDate; const existing = window.calEvents.find(e => e.date === dateStr);
-            const payload = { date: dateStr, type: window.calEventType, reason: reason, uid: currentUser.uid, name: window.currentUserData?.name || '관리자', updatedAt: new Date().toISOString() };
-            if (existing) await updateDoc(doc(db, 'artifacts', 'patek-s', 'public', 'data', 'cal_events', existing.id), payload);
-            else await addDoc(collection(db, 'artifacts', 'patek-s', 'public', 'data', 'cal_events'), payload);
-            window.closeCalEventModal(); window.showCustomAlert("일정이 저장되었습니다.");
+            const dateStr = window.selectedCalEventDate;
+            const payload = { date: dateStr, type: window.calEventType, reason: reason || '',
+                time, customerName, modelName,
+                uid: currentUser.uid, name: window.currentUserData?.name || '관리자', updatedAt: new Date().toISOString() };
+            const editId = window.editingCalEventId;
+            if (editId) await updateDoc(doc(db, 'artifacts','patek-s','public','data','cal_events', editId), payload);
+            else await addDoc(collection(db, 'artifacts','patek-s','public','data','cal_events'), payload);
+            window.closeCalEventModal();
+            window.showCustomAlert("일정이 저장되었습니다.");
         } catch(e) { window.showCustomAlert("저장 중 오류 발생"); } finally { document.getElementById('loading-overlay').style.display = 'none'; }
     };
 
     window.deleteCalEvent = function() {
+        const editId = window.editingCalEventId;
         window.showCustomConfirm("이 일정을 삭제하시겠습니까?", async () => {
             document.getElementById('loading-overlay').style.display = 'flex';
-            try { const existing = window.calEvents.find(e => e.date === window.selectedCalEventDate); if (existing) await deleteDoc(doc(db, 'artifacts', 'patek-s', 'public', 'data', 'cal_events', existing.id)); window.closeCalEventModal(); } 
-            catch(e) { window.showCustomAlert("삭제 실패"); } finally { document.getElementById('loading-overlay').style.display = 'none'; }
+            try {
+                if (editId) await deleteDoc(doc(db,'artifacts','patek-s','public','data','cal_events', editId));
+                window.closeCalEventModal();
+            } catch(e) { window.showCustomAlert("삭제 실패"); } finally { document.getElementById('loading-overlay').style.display = 'none'; }
         });
+    };
+
+    window.renderCalendarBottom = function() {
+        // 선택된 날짜 카드
+        const selCard = document.getElementById('cal-selected-card');
+        if (selCard) {
+            const dateStr = window.selectedCalDate;
+            if (!dateStr) {
+                selCard.innerHTML = '<div class="text-[11px] font-bold text-[#AAA]">날짜를 선택하면 일정이 표시됩니다</div>';
+            } else {
+                const dayEvs = (window.calEvents||[]).filter(e => e.date === dateStr);
+                const [y,m,d] = dateStr.split('-');
+                const label = `${parseInt(m)}월 ${parseInt(d)}일`;
+                const addBtn = `<button onclick="window.openCalEventModal('${dateStr}', null)"
+                    class="text-[10px] font-bold text-[#B4975A] border border-[#D8B98B] rounded-lg px-2 py-1 active:scale-95">+ 추가</button>`;
+                const evListHtml = dayEvs.length === 0
+                    ? '<div class="text-[12px] text-[#AAA] mt-1">일정 없음</div>'
+                    : dayEvs.map(ev => {
+                        const evS = CAL_EVENT_STYLES[ev.type] || CAL_EVENT_STYLES['기타'];
+                        const lbl = calEvLabel(ev);
+                        const typeBadge = `<span class="text-[9px] font-bold px-1.5 py-0.5 rounded-md" style="background:${evS.bg};color:${evS.text};border:1px solid ${evS.border};">${calTypeName(ev.type)}</span>`;
+                        const canEdit = currentUser && ev.uid === currentUser.uid;
+                        const editBtn = canEdit ? `<button onclick="window.openCalEventModal('${ev.date}', window.calEvents.find(e=>e.id==='${ev.id}'))" class="text-[#BDBDBD] ml-1 shrink-0 active:scale-95"><i data-lucide="pencil" class="w-3 h-3"></i></button>` : '';
+                        return `<div class="flex items-center gap-2 py-1.5 border-b border-[#F5F3EE] last:border-b-0">
+                            <div class="shrink-0">${typeBadge}</div>
+                            <div class="flex-1 min-w-0 text-[12px] font-semibold text-[#333] truncate">${lbl}</div>
+                            ${editBtn}
+                        </div>`;
+                    }).join('');
+                selCard.innerHTML = `<div class="flex items-center justify-between mb-2">
+                    <div class="text-[12px] font-bold text-[#555]">${label} 일정</div>${addBtn}</div>${evListHtml}`;
+                lucide.createIcons();
+            }
+        }
+
+        // 이번 주 카드
+        const weekContent = document.getElementById('cal-week-content');
+        if (weekContent) {
+            const today = new Date();
+            const dow = today.getDay();
+            const diffToMon = dow === 0 ? -6 : 1 - dow;
+            const mon = new Date(today); mon.setDate(today.getDate() + diffToMon);
+            const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+            const fmt = dt => `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+            const monStr = fmt(mon); const sunStr = fmt(sun);
+            const weekEvs = (window.calEvents||[])
+                .filter(e => e.date >= monStr && e.date <= sunStr)
+                .sort((a,b) => (a.type==='판매일정'||a.type==='고객') ? -1 : (b.type==='판매일정'||b.type==='고객') ? 1 : a.date.localeCompare(b.date))
+                .slice(0, 2);
+            weekContent.innerHTML = weekEvs.length === 0
+                ? '<div class="text-[12px] text-[#AAA]">이번 주 일정 없음</div>'
+                : weekEvs.map(ev => {
+                    const evS = CAL_EVENT_STYLES[ev.type] || CAL_EVENT_STYLES['기타'];
+                    const [,em,ed] = ev.date.split('-');
+                    const lbl = calEvLabel(ev);
+                    return `<div class="flex items-center gap-2 py-1.5 border-b border-[#F5F3EE] last:border-b-0">
+                        <span class="text-[9px] font-bold px-1.5 py-0.5 rounded-md shrink-0" style="background:${evS.bg};color:${evS.text};border:1px solid ${evS.border};">${calTypeName(ev.type)}</span>
+                        <span class="text-[11px] text-[#888] shrink-0">${parseInt(em)}/${parseInt(ed)}</span>
+                        <span class="text-[12px] font-semibold text-[#333] truncate">${lbl}</span>
+                    </div>`;
+                }).join('');
+        }
     };
 
     window.triggerScheduleExcelUpload = function() { document.getElementById('schedule-excel-input').click(); };
