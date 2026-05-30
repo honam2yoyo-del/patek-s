@@ -996,10 +996,10 @@
                 {k:'기타',     label:'기타',     icon:'file-text',      color:'#C9AEDB'},
             ];
             summaryEl.innerHTML = summaryItems.map(i=>`
-                <div class="flex flex-col items-center justify-center py-3 gap-0.5">
-                    <i data-lucide="${i.icon}" class="w-5 h-5 mb-0.5" style="color:${i.color};"></i>
-                    <span class="text-[10px] text-[#6E5A47] leading-none">${i.label}</span>
-                    <span class="text-[22px] font-semibold text-[#2B1A12] leading-tight">${counts[i.k]}</span>
+                <div class="flex flex-col items-center justify-center py-1.5 gap-0">
+                    <i data-lucide="${i.icon}" class="w-4 h-4" style="color:${i.color};"></i>
+                    <span class="text-[9px] text-[#6E5A47] leading-none mt-0.5">${i.label}</span>
+                    <span class="text-[16px] font-semibold text-[#2B1A12] leading-tight">${counts[i.k]}</span>
                 </div>`).join('');
             lucide.createIcons();
         }
