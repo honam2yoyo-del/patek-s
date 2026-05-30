@@ -102,7 +102,7 @@ function render() {
     const isSunday = dow===0;
     const isRed    = isHol || dow===0 || dow===6;
     const wSep     = isSunday ? ' week-sep' : '';
-    const SCH_EV_BG = {'정기휴무':'#F2F2F2','행사':'#EEF8E6','판매일정':'#FFF4D6','고객':'#FFF4D6','교육':'#EAF3FF','기타':'#F4EEFB'};
+    const SCH_EV_BG = {'정기휴무':'#F2F2F2','행사':'#EEF8E8','판매일정':'#FFF3D8','고객':'#FFF3D8','교육':'#EAF4FF','기타':'#F5EDFA'};
     const colBg    = calType ? `background:${SCH_EV_BG[calType]||'#C3E19E'};` : '';
     const rCls     = isRed ? ' red-hdr' : '';
     thD += `<th class="th-d${wSep}${rCls}" style="${colBg}">${d}</th>`;

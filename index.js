@@ -25,12 +25,12 @@
         '행사': { bg: '#EBE2FB', text: '#8E67C9' }
     };
     const CAL_EVENT_STYLES = {
-        '판매일정': { bg: '#FFF4D6', border: '#D8B46A', text: '#8A6A21' },
-        '고객':     { bg: '#FFF4D6', border: '#D8B46A', text: '#8A6A21' }, // 하위호환
-        '행사':     { bg: '#EEF8E6', border: '#A9C97E', text: '#5B7D31' },
-        '교육':     { bg: '#EAF3FF', border: '#89AEE8', text: '#3D68A6' },
-        '정기휴무': { bg: '#F2F2F2', border: '#BDBDBD', text: '#666666' },
-        '기타':     { bg: '#F4EEFB', border: '#B8A0D9', text: '#725D97' },
+        '판매일정': { bg: '#FFF3D8', border: '#E4B95D', text: '#7B4A00', dot: '#E4B95D' },
+        '고객':     { bg: '#FFF3D8', border: '#E4B95D', text: '#7B4A00', dot: '#E4B95D' },
+        '행사':     { bg: '#EEF8E8', border: '#9DCB75', text: '#4B7C2F', dot: '#7CB65C' },
+        '교육':     { bg: '#EAF4FF', border: '#8DB8E8', text: '#27659A', dot: '#5B9AD6' },
+        '정기휴무': { bg: '#F2F2F2', border: '#C9C9C9', text: '#555555', dot: '#C9C9C9' },
+        '기타':     { bg: '#F5EDFA', border: '#C9AEDB', text: '#6A4A7C', dot: '#C9AEDB' },
     };
     window.calFilter = '전체';
     window.selectedCalDate = null;
@@ -40,9 +40,9 @@
         window.calFilter = filter;
         document.querySelectorAll('.cal-filter-btn').forEach(btn => {
             const active = btn.dataset.filter === filter;
-            btn.style.backgroundColor = active ? '#8B7355' : '#FFFFFF';
-            btn.style.color = active ? '#FFFFFF' : '#8A847E';
-            btn.style.borderColor = active ? '#8B7355' : '#E8E4DB';
+            btn.style.backgroundColor = active ? '#B8860B' : '#FFFFFF';
+            btn.style.color = active ? '#FFFFFF' : '#2B1A12';
+            btn.style.borderColor = active ? '#B8860B' : '#E0C897';
         });
         window.renderMainCalendar();
     };
@@ -969,80 +969,80 @@
 
     window.renderMainCalendar = function() {
         const year = window.scheduleYear; const month = window.scheduleMonth;
-        const container = document.getElementById('main-calendar-grid'); if (!container) return; container.innerHTML = '';
+        const container = document.getElementById('main-calendar-grid');
+        if (!container) return;
+        container.innerHTML = '';
 
         const filterKey = window.calFilter || '전체';
-        const filterTypeMap = { '판매': ['판매일정','고객'], '행사': ['행사'], '교육': ['교육'], '휴무': ['정기휴무'], '기타': ['기타'] };
+        const filterTypeMap = { '판매':['판매일정','고객'], '행사':['행사'], '교육':['교육'], '휴무':['정기휴무'], '기타':['기타'] };
+        const FF = 'font-family:\'Malgun Gothic\',\'맑은 고딕\',sans-serif;';
 
-        // 이번 달 이벤트
-        const monthEvents = (window.calEvents || []).filter(e => {
-            const [ey, em] = e.date.split('-').map(Number);
-            return ey === year && em === month;
+        // 이번 달 전체 이벤트
+        const monthEvents = (window.calEvents||[]).filter(e => {
+            const [ey,em] = e.date.split('-').map(Number);
+            return ey===year && em===month;
         });
 
-        // 월별 집계
-        const counts = { '판매일정': 0, '행사': 0, '교육': 0, '정기휴무': 0, '기타': 0 };
-        monthEvents.forEach(e => { const k = calTypeName(e.type); if (counts[k] !== undefined) counts[k]++; });
-        const countEl = document.getElementById('cal-monthly-count');
-        if (countEl) {
-            const items = [
-                { k:'판매일정', label:'판매', color:'#8A6A21' },
-                { k:'행사', label:'행사', color:'#5B7D31' },
-                { k:'교육', label:'교육', color:'#3D68A6' },
-                { k:'정기휴무', label:'정기휴무', color:'#666666' },
-                { k:'기타', label:'기타', color:'#725D97' },
+        // 요약 카드
+        const counts = {'판매일정':0,'행사':0,'교육':0,'정기휴무':0,'기타':0};
+        monthEvents.forEach(e=>{ const k=calTypeName(e.type); if(counts[k]!==undefined) counts[k]++; });
+        const summaryEl = document.getElementById('cal-summary-card');
+        if (summaryEl) {
+            const summaryItems = [
+                {k:'정기휴무',label:'정기휴무',dot:'#C9C9C9'},
+                {k:'판매일정',label:'판매일정',dot:'#E4B95D'},
+                {k:'행사',label:'행사',dot:'#9DCB75'},
+                {k:'교육',label:'교육',dot:'#8DB8E8'},
+                {k:'기타',label:'기타',dot:'#C9AEDB'},
             ];
-            countEl.innerHTML = items.map(i =>
-                `<span style="color:${i.color};">· ${i.label} ${counts[i.k]}</span>`
-            ).join('');
+            summaryEl.innerHTML = summaryItems.map(i=>`
+                <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;border-right:1px solid #F0E8D8;${FF}">
+                    <div style="width:8px;height:8px;border-radius:50%;background:${i.dot};margin-bottom:3px;"></div>
+                    <div style="font-size:22px;font-weight:600;color:#2B1A12;line-height:1.1;">${counts[i.k]}</div>
+                    <div style="font-size:11px;color:#5A4A3A;margin-top:2px;">${i.label}</div>
+                </div>`).join('');
         }
 
         // 필터 적용
-        const filtered = filterKey === '전체' ? monthEvents
-            : monthEvents.filter(e => (filterTypeMap[filterKey] || []).includes(e.type));
+        const filtered = filterKey==='전체' ? monthEvents
+            : monthEvents.filter(e=>(filterTypeMap[filterKey]||[]).includes(e.type));
 
-        const firstDay = new Date(year, month - 1, 1).getDay();
+        // 일요일 시작 (Sunday=0)
+        const firstDay = new Date(year, month-1, 1).getDay();
         const totalDays = getDaysInMonth(year, month);
-        const firstDayShift = firstDay === 0 ? 6 : firstDay - 1;
-        for (let i = 0; i < firstDayShift; i++) container.innerHTML += `<div class="min-h-[72px] bg-[#FAF9F5] border border-[#F0EFEA]"></div>`;
-
-        for (let d = 1; d <= totalDays; d++) {
-            const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-            const dayOfWeek = new Date(year, month-1, d).getDay();
-            const isHoliday = PUBLIC_HOLIDAYS_2026[dateStr] !== undefined;
-            let dayTextClass = 'text-[#333]';
-            if (isHoliday) dayTextClass = 'text-[#D81B60]';
-            else if (dayOfWeek === 0) dayTextClass = 'text-red-500';
-            else if (dayOfWeek === 6) dayTextClass = 'text-blue-500';
-
-            // 판매일정 우선 정렬
-            const dayEvs = filtered.filter(e => e.date === dateStr)
-                .sort((a,b) => (a.type==='판매일정'||a.type==='고객') ? -1 : (b.type==='판매일정'||b.type==='고객') ? 1 : 0);
-            const show = dayEvs.slice(0, 2);
-            const overflow = dayEvs.length - 2;
-            const isSelected = window.selectedCalDate === dateStr;
-
-            const evHtml = show.map(ev => {
-                const evS = CAL_EVENT_STYLES[ev.type] || CAL_EVENT_STYLES['기타'];
-                const label = calEvLabel(ev);
-                return `<div class="w-full text-[8px] font-bold px-1 py-[1.5px] rounded-[3px] mb-[1px] truncate leading-tight"
-                    style="background:${evS.bg};color:${evS.text};border:0.5px solid ${evS.border};">${label}</div>`;
-            }).join('') + (overflow > 0 ? `<div class="text-[8px] font-bold text-[#8B7355]">+${overflow}</div>` : '');
-
-            const dayCell = document.createElement('div');
-            dayCell.className = `min-h-[72px] h-full p-1 border flex flex-col items-start justify-start cursor-pointer transition-colors relative
-                ${isSelected ? 'border-[#B4975A] bg-[#FFF8ED] ring-1 ring-[#D8B98B]' : 'border-[#F0EFEA] bg-white hover:bg-[#FAFAF8]'}`;
-            dayCell.onclick = () => window.selectCalDate(dateStr);
-            dayCell.innerHTML = `
-                <div class="w-full flex justify-between shrink-0 mb-0.5">
-                    <span class="text-[11px] font-bold ${dayTextClass}">${d}</span>
-                    ${isHoliday ? `<span class="text-[7px] text-[#D81B60] truncate ml-0.5 mt-0.5">${PUBLIC_HOLIDAYS_2026[dateStr]}</span>` : ''}
-                </div>
-                <div class="w-full flex flex-col">${evHtml}</div>`;
-            container.appendChild(dayCell);
+        // 빈 셀 (일요일 시작이므로 firstDay 그대로)
+        for (let i=0; i<firstDay; i++) {
+            const empty = document.createElement('div');
+            empty.style.cssText = 'min-height:82px;border-right:1px solid #E7D8C0;border-bottom:1px solid #E7D8C0;background:#FFFDF8;';
+            container.appendChild(empty);
         }
 
-        // 하단 카드 업데이트
+        for (let d=1; d<=totalDays; d++) {
+            const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            const dow = new Date(year, month-1, d).getDay();
+            const isHoliday = PUBLIC_HOLIDAYS_2026[dateStr] !== undefined;
+            const dateColor = (isHoliday||dow===0) ? '#D32F2F' : dow===6 ? '#1976D2' : '#2B1A12';
+            const isSelected = window.selectedCalDate === dateStr;
+
+            // 판매일정 우선 정렬
+            const dayEvs = filtered.filter(e=>e.date===dateStr)
+                .sort((a,b)=>(a.type==='판매일정'||a.type==='고객')?-1:(b.type==='판매일정'||b.type==='고객')?1:0);
+            const show = dayEvs.slice(0,2);
+            const overflow = dayEvs.length-2;
+
+            const tagsHtml = show.map(ev=>{
+                const evS = CAL_EVENT_STYLES[ev.type]||CAL_EVENT_STYLES['기타'];
+                const label = calEvLabel(ev);
+                return `<div style="height:18px;border-radius:5px;padding:2px 4px;margin-top:3px;font-size:10.5px;line-height:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border:1px solid ${evS.border};background:${evS.bg};color:${evS.text};${FF}">${label}</div>`;
+            }).join('') + (overflow>0?`<div style="font-size:9px;color:#8A6428;margin-top:2px;${FF}">+${overflow}</div>`:'');
+
+            const cell = document.createElement('div');
+            cell.style.cssText = `min-height:82px;padding:6px 4px;border-right:1px solid #E7D8C0;border-bottom:1px solid #E7D8C0;cursor:pointer;position:relative;overflow:hidden;box-sizing:border-box;${isSelected?'border:2px solid #B8860B;border-radius:8px;background:#FFFDF8;z-index:1;':'background:#FFFFFF;'}`;
+            cell.onclick = () => window.selectCalDate(dateStr);
+            cell.innerHTML = `<div style="font-size:15px;color:${dateColor};font-weight:${isSelected?'700':'400'};line-height:1;${FF}">${d}</div>${tagsHtml}`;
+            container.appendChild(cell);
+        }
+
         window.renderCalendarBottom();
     };
 
@@ -1050,20 +1050,22 @@
         window.selectedCalEventDate = dateStr;
         window.editingCalEventId = existingEvent ? existingEvent.id : null;
         document.getElementById('cal-event-date-text').innerText = dateStr;
+        const getEl = id => { const el = document.getElementById(id); return el || { value:'' }; };
         if (existingEvent) {
             const t = existingEvent.type === '고객' ? '판매일정' : existingEvent.type;
             window.calEventType = t;
-            document.getElementById('cal-event-reason-input').value = existingEvent.reason || '';
-            document.getElementById('cal-event-time-input').value = existingEvent.time || '';
-            document.getElementById('cal-event-customer-input').value = existingEvent.customerName || '';
-            document.getElementById('cal-event-model-input').value = existingEvent.modelName || '';
+            getEl('cal-event-reason-input').value = existingEvent.reason || '';
+            getEl('cal-event-time-input').value = existingEvent.time || '';
+            getEl('cal-event-customer-input').value = existingEvent.customerName || '';
+            getEl('cal-event-model-input').value = existingEvent.modelName || '';
+            getEl('cal-event-assignee-input').value = existingEvent.assignee || '';
+            getEl('cal-event-assignee2-input').value = existingEvent.assignee || '';
             document.getElementById('cal-event-delete-btn').style.display = (currentUser && currentUser.uid === existingEvent.uid) ? 'block' : 'none';
         } else {
             window.calEventType = '판매일정';
-            document.getElementById('cal-event-reason-input').value = '';
-            document.getElementById('cal-event-time-input').value = '';
-            document.getElementById('cal-event-customer-input').value = '';
-            document.getElementById('cal-event-model-input').value = '';
+            ['cal-event-reason-input','cal-event-time-input','cal-event-customer-input',
+             'cal-event-model-input','cal-event-assignee-input','cal-event-assignee2-input']
+                .forEach(id => { getEl(id).value = ''; });
             document.getElementById('cal-event-delete-btn').style.display = 'none';
         }
         updateCalEventTypeUI();
@@ -1091,17 +1093,19 @@
     window.saveCalEvent = async function() {
         if (!currentUser) return;
         const isSales = window.calEventType === '판매일정' || window.calEventType === '고객';
-        const reason = document.getElementById('cal-event-reason-input').value.trim();
-        const time = document.getElementById('cal-event-time-input').value.trim();
-        const customerName = document.getElementById('cal-event-customer-input').value.trim();
-        const modelName = document.getElementById('cal-event-model-input').value.trim();
+        const gv = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+        const reason = gv('cal-event-reason-input');
+        const time = gv('cal-event-time-input');
+        const customerName = gv('cal-event-customer-input');
+        const modelName = gv('cal-event-model-input');
+        const assignee = isSales ? gv('cal-event-assignee-input') : gv('cal-event-assignee2-input');
         if (!isSales && !reason) { window.showCustomAlert("달력에 표시될 내용을 입력해주세요."); return; }
         if (isSales && !customerName && !reason) { window.showCustomAlert("고객명 또는 내용을 입력해주세요."); return; }
         document.getElementById('loading-overlay').style.display = 'flex';
         try {
             const dateStr = window.selectedCalEventDate;
             const payload = { date: dateStr, type: window.calEventType, reason: reason || '',
-                time, customerName, modelName,
+                time, customerName, modelName, assignee,
                 uid: currentUser.uid, name: window.currentUserData?.name || '관리자', updatedAt: new Date().toISOString() };
             const editId = window.editingCalEventId;
             if (editId) await updateDoc(doc(db, 'artifacts','patek-s','public','data','cal_events', editId), payload);
@@ -1123,62 +1127,76 @@
     };
 
     window.renderCalendarBottom = function() {
+        const FF = "font-family:'Malgun Gothic','맑은 고딕',sans-serif;";
+        const DOW = ['일','월','화','수','목','금','토'];
+
         // 선택된 날짜 카드
         const selCard = document.getElementById('cal-selected-card');
         if (selCard) {
             const dateStr = window.selectedCalDate;
             if (!dateStr) {
-                selCard.innerHTML = '<div class="text-[11px] font-bold text-[#AAA]">날짜를 선택하면 일정이 표시됩니다</div>';
+                selCard.innerHTML = `<div style="font-size:13px;font-weight:700;color:#2B1A12;margin-bottom:8px;${FF}">선택한 날짜 일정</div>
+                    <div style="font-size:11px;color:#9E9085;${FF}">날짜를 선택하세요</div>`;
             } else {
-                const dayEvs = (window.calEvents||[]).filter(e => e.date === dateStr);
-                const [y,m,d] = dateStr.split('-');
-                const label = `${parseInt(m)}월 ${parseInt(d)}일`;
-                const addBtn = `<button onclick="window.openCalEventModal('${dateStr}', null)"
-                    class="text-[10px] font-bold text-[#B4975A] border border-[#D8B98B] rounded-lg px-2 py-1 active:scale-95">+ 추가</button>`;
-                const evListHtml = dayEvs.length === 0
-                    ? '<div class="text-[12px] text-[#AAA] mt-1">일정 없음</div>'
-                    : dayEvs.map(ev => {
-                        const evS = CAL_EVENT_STYLES[ev.type] || CAL_EVENT_STYLES['기타'];
-                        const lbl = calEvLabel(ev);
-                        const typeBadge = `<span class="text-[9px] font-bold px-1.5 py-0.5 rounded-md" style="background:${evS.bg};color:${evS.text};border:1px solid ${evS.border};">${calTypeName(ev.type)}</span>`;
-                        const canEdit = currentUser && ev.uid === currentUser.uid;
-                        const editBtn = canEdit ? `<button onclick="window.openCalEventModal('${ev.date}', window.calEvents.find(e=>e.id==='${ev.id}'))" class="text-[#BDBDBD] ml-1 shrink-0 active:scale-95"><i data-lucide="pencil" class="w-3 h-3"></i></button>` : '';
-                        return `<div class="flex items-center gap-2 py-1.5 border-b border-[#F5F3EE] last:border-b-0">
-                            <div class="shrink-0">${typeBadge}</div>
-                            <div class="flex-1 min-w-0 text-[12px] font-semibold text-[#333] truncate">${lbl}</div>
-                            ${editBtn}
+                const dayEvs = (window.calEvents||[]).filter(e=>e.date===dateStr);
+                const [,m,d] = dateStr.split('-');
+                const dowStr = DOW[new Date(dateStr).getDay()];
+                const dateLabel = `${parseInt(m)}월 ${parseInt(d)}일 (${dowStr})`;
+                const addBtn = `<button onclick="window.openCalEventModal('${dateStr}',null)"
+                    style="font-size:11px;font-weight:700;color:#A87924;border:1px solid #D8B98B;border-radius:8px;padding:4px 10px;background:#FFFFFF;cursor:pointer;${FF}">+ 추가</button>`;
+                const evRows = dayEvs.length===0
+                    ? `<div style="font-size:12px;color:#AAA;margin-top:6px;${FF}">일정 없음</div>`
+                    : dayEvs.map(ev=>{
+                        const evS = CAL_EVENT_STYLES[ev.type]||CAL_EVENT_STYLES['기타'];
+                        const isSales = ev.type==='판매일정'||ev.type==='고객';
+                        const badge = `<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:5px;white-space:nowrap;background:${evS.bg};color:${evS.text};border:1px solid ${evS.border};${FF}">${calTypeName(ev.type)}</span>`;
+                        const timeStr = ev.time || '';
+                        const content = isSales ? [ev.customerName,ev.modelName].filter(Boolean).join(' ') : (ev.reason||'');
+                        const assignee = ev.assignee ? `담당:${ev.assignee}` : '';
+                        return `<div style="display:flex;align-items:center;gap:4px;padding:6px 0;border-bottom:1px solid #EFE3D2;min-height:32px;">
+                            <div style="flex-shrink:0;">${badge}</div>
+                            <div style="font-size:11px;color:#6E5A47;flex-shrink:0;white-space:nowrap;${FF}">${timeStr}</div>
+                            <div style="font-size:11px;color:#2B1A12;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${FF}">${content}</div>
+                            <div style="font-size:10px;color:#8A6428;flex-shrink:0;white-space:nowrap;${FF}">${assignee}</div>
                         </div>`;
                     }).join('');
-                selCard.innerHTML = `<div class="flex items-center justify-between mb-2">
-                    <div class="text-[12px] font-bold text-[#555]">${label} 일정</div>${addBtn}</div>${evListHtml}`;
-                lucide.createIcons();
+                selCard.innerHTML = `
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+                        <div style="font-size:13px;font-weight:700;color:#2B1A12;${FF}">선택한 날짜 일정</div>
+                        ${addBtn}
+                    </div>
+                    <div style="font-size:15px;font-weight:600;color:#C21B1B;margin-bottom:6px;${FF}">${dateLabel}</div>
+                    ${evRows}`;
             }
         }
 
-        // 이번 주 카드
+        // 이번 주 주요 일정 카드
         const weekContent = document.getElementById('cal-week-content');
         if (weekContent) {
             const today = new Date();
-            const dow = today.getDay();
-            const diffToMon = dow === 0 ? -6 : 1 - dow;
-            const mon = new Date(today); mon.setDate(today.getDate() + diffToMon);
-            const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
-            const fmt = dt => `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
-            const monStr = fmt(mon); const sunStr = fmt(sun);
+            const sun = new Date(today); sun.setDate(today.getDate()-today.getDay());
+            const sat = new Date(sun); sat.setDate(sun.getDate()+6);
+            const fmt = dt=>`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+            const [sunStr, satStr] = [fmt(sun), fmt(sat)];
             const weekEvs = (window.calEvents||[])
-                .filter(e => e.date >= monStr && e.date <= sunStr)
-                .sort((a,b) => (a.type==='판매일정'||a.type==='고객') ? -1 : (b.type==='판매일정'||b.type==='고객') ? 1 : a.date.localeCompare(b.date))
-                .slice(0, 2);
-            weekContent.innerHTML = weekEvs.length === 0
-                ? '<div class="text-[12px] text-[#AAA]">이번 주 일정 없음</div>'
-                : weekEvs.map(ev => {
-                    const evS = CAL_EVENT_STYLES[ev.type] || CAL_EVENT_STYLES['기타'];
+                .filter(e=>e.date>=sunStr&&e.date<=satStr)
+                .sort((a,b)=>(a.type==='판매일정'||a.type==='고객')?-1:(b.type==='판매일정'||b.type==='고객')?1:a.date.localeCompare(b.date))
+                .slice(0,3);
+            weekContent.innerHTML = weekEvs.length===0
+                ? `<div style="font-size:12px;color:#AAA;${FF}">이번 주 일정 없음</div>`
+                : weekEvs.map(ev=>{
+                    const evS = CAL_EVENT_STYLES[ev.type]||CAL_EVENT_STYLES['기타'];
                     const [,em,ed] = ev.date.split('-');
-                    const lbl = calEvLabel(ev);
-                    return `<div class="flex items-center gap-2 py-1.5 border-b border-[#F5F3EE] last:border-b-0">
-                        <span class="text-[9px] font-bold px-1.5 py-0.5 rounded-md shrink-0" style="background:${evS.bg};color:${evS.text};border:1px solid ${evS.border};">${calTypeName(ev.type)}</span>
-                        <span class="text-[11px] text-[#888] shrink-0">${parseInt(em)}/${parseInt(ed)}</span>
-                        <span class="text-[12px] font-semibold text-[#333] truncate">${lbl}</span>
+                    const evDow = DOW[new Date(ev.date).getDay()];
+                    const isSales = ev.type==='판매일정'||ev.type==='고객';
+                    const content = isSales ? [ev.customerName,ev.modelName].filter(Boolean).join(' ') : (ev.reason||ev.type);
+                    const timeStr = ev.time || (ev.type==='정기휴무'?'종일':'');
+                    return `<div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:10px;last-child:margin-bottom:0;">
+                        <div style="width:8px;height:8px;border-radius:50%;background:${evS.dot||evS.border};margin-top:4px;flex-shrink:0;"></div>
+                        <div style="flex:1;min-width:0;">
+                            <div style="font-size:12px;color:#6E5A47;margin-bottom:1px;${FF}">${parseInt(em)}/${parseInt(ed)} (${evDow}) ${content}</div>
+                            <div style="font-size:11px;color:#9E9085;${FF}">${timeStr}</div>
+                        </div>
                     </div>`;
                 }).join('');
         }

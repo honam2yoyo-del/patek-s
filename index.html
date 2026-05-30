@@ -74,48 +74,54 @@
     <div class="flex-1 relative w-full h-full bg-[#FAF9F5]">
         
         <!-- [탭] 캘린더 -->
-        <div id="page-calendar" class="page active bg-[#FAF9F5] no-scrollbar px-3 pt-1">
-            <div class="flex flex-col items-center w-full text-center">
-                <div class="flex items-center justify-center w-full relative mb-1.5 h-8">
-                    <h2 class="text-xl font-serif text-[#3A3532] font-semibold">캘린더</h2>
-                </div>
-                <div class="w-full flex items-start justify-center gap-2 mb-2">
-                    <div class="relative shrink-0 flex items-center rounded-xl border border-[#D8B98B] bg-[#FFFDF8] shadow-sm overflow-hidden h-9">
-                        <button onclick="window.adjustScheduleMonth(-1)" class="w-9 h-full flex items-center justify-center text-[#B17A2A] active:bg-[#F8EFE3]"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
-                        <button type="button" onclick="window.openScheduleMonthPicker()" class="relative h-full flex items-center justify-center px-2 min-w-[90px] cursor-pointer active:bg-[#F8EFE3] bg-transparent border-0">
-                            <span id="main-cal-month-text" class="text-[14px] font-bold text-[#2F2924] pointer-events-none whitespace-nowrap">2026년 5월</span>
-                        </button>
-                        <input type="month" id="main-cal-month-picker" tabindex="-1" onchange="window.handleMonthPicker(this.value)" class="absolute opacity-0 pointer-events-none w-1 h-1" />
-                        <button onclick="window.adjustScheduleMonth(1)" class="w-9 h-full flex items-center justify-center text-[#B17A2A] active:bg-[#F8EFE3]"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
-                    </div>
-                </div>
+        <div id="page-calendar" class="page active no-scrollbar" style="background:#FFFDF8;font-family:'Malgun Gothic','맑은 고딕',sans-serif;">
+            <!-- 캘린더 제목 + 추가 버튼 -->
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 16px 6px;">
+                <h1 style="font-size:26px;font-weight:700;color:#2B1A12;margin:0;line-height:1;">캘린더</h1>
+                <button onclick="window.openCalEventModal(window.selectedCalDate||new Date().toISOString().split('T')[0],null)"
+                    style="width:42px;height:42px;border-radius:50%;border:2px solid #A87924;color:#A87924;font-size:26px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;cursor:pointer;line-height:1;flex-shrink:0;">+</button>
             </div>
-            <!-- 필터 버튼 -->
-            <div id="cal-filter-bar" class="w-full flex gap-1.5 overflow-x-auto no-scrollbar mb-2">
-                <button data-filter="전체" onclick="window.setCalFilter('전체')" class="cal-filter-btn shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold border bg-[#8B7355] text-white border-[#8B7355]">전체</button>
-                <button data-filter="판매" onclick="window.setCalFilter('판매')" class="cal-filter-btn shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold border bg-white text-[#8A847E] border-[#E8E4DB]">판매</button>
-                <button data-filter="행사" onclick="window.setCalFilter('행사')" class="cal-filter-btn shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold border bg-white text-[#8A847E] border-[#E8E4DB]">행사</button>
-                <button data-filter="교육" onclick="window.setCalFilter('교육')" class="cal-filter-btn shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold border bg-white text-[#8A847E] border-[#E8E4DB]">교육</button>
-                <button data-filter="휴무" onclick="window.setCalFilter('휴무')" class="cal-filter-btn shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold border bg-white text-[#8A847E] border-[#E8E4DB]">휴무</button>
-                <button data-filter="기타" onclick="window.setCalFilter('기타')" class="cal-filter-btn shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold border bg-white text-[#8A847E] border-[#E8E4DB]">기타</button>
+            <!-- 월 선택 -->
+            <div style="height:64px;display:flex;align-items:center;justify-content:center;gap:8px;position:relative;">
+                <button onclick="window.adjustScheduleMonth(-1)" style="width:36px;height:36px;background:transparent;border:none;color:#8A6428;font-size:26px;cursor:pointer;display:flex;align-items:center;justify-content:center;">‹</button>
+                <button type="button" onclick="window.openScheduleMonthPicker()" style="font-size:30px;font-weight:600;color:#2B1A12;background:none;border:none;cursor:pointer;white-space:nowrap;font-family:inherit;">
+                    <span id="main-cal-month-text">2026년 5월</span>
+                </button>
+                <input type="month" id="main-cal-month-picker" tabindex="-1" onchange="window.handleMonthPicker(this.value)" style="position:absolute;opacity:0;pointer-events:none;width:1px;height:1px;" />
+                <button onclick="window.adjustScheduleMonth(1)" style="width:36px;height:36px;background:transparent;border:none;color:#8A6428;font-size:26px;cursor:pointer;display:flex;align-items:center;justify-content:center;">›</button>
             </div>
-            <!-- 월별 집계 -->
-            <div id="cal-monthly-count" class="w-full flex flex-wrap gap-x-3 gap-y-1 text-[11px] font-bold mb-2 px-0.5"></div>
-            <!-- 달력 -->
-            <div class="w-full bg-[#FFFDF8] border border-[#E8D8BD] rounded-2xl shadow-[0_8px_28px_rgba(139,115,85,0.12)] overflow-hidden mb-3 mt-1">
-                <div class="grid grid-cols-7 text-center font-bold text-[11px] text-[#666] py-2 border-b border-[#E8D8BD]">
-                    <div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div class="text-blue-500">토</div><div class="text-red-500">일</div>
-                </div>
-                <div id="main-calendar-grid" class="grid grid-cols-7 border-t-0"></div>
+            <!-- 카테고리 필터 -->
+            <div id="cal-filter-bar" style="display:flex;gap:8px;overflow-x:auto;padding:0 16px 12px;scrollbar-width:none;-webkit-overflow-scrolling:touch;">
+                <button data-filter="전체" onclick="window.setCalFilter('전체')" class="cal-filter-btn" style="flex-shrink:0;padding:7px 16px;border-radius:20px;font-size:13px;font-weight:600;border:1px solid #B8860B;background:#B8860B;color:#FFFFFF;cursor:pointer;font-family:inherit;">전체</button>
+                <button data-filter="판매" onclick="window.setCalFilter('판매')" class="cal-filter-btn" style="flex-shrink:0;padding:7px 16px;border-radius:20px;font-size:13px;font-weight:600;border:1px solid #E0C897;background:#FFFFFF;color:#2B1A12;cursor:pointer;font-family:inherit;">판매</button>
+                <button data-filter="행사" onclick="window.setCalFilter('행사')" class="cal-filter-btn" style="flex-shrink:0;padding:7px 16px;border-radius:20px;font-size:13px;font-weight:600;border:1px solid #E0C897;background:#FFFFFF;color:#2B1A12;cursor:pointer;font-family:inherit;">행사</button>
+                <button data-filter="교육" onclick="window.setCalFilter('교육')" class="cal-filter-btn" style="flex-shrink:0;padding:7px 16px;border-radius:20px;font-size:13px;font-weight:600;border:1px solid #E0C897;background:#FFFFFF;color:#2B1A12;cursor:pointer;font-family:inherit;">교육</button>
+                <button data-filter="휴무" onclick="window.setCalFilter('휴무')" class="cal-filter-btn" style="flex-shrink:0;padding:7px 16px;border-radius:20px;font-size:13px;font-weight:600;border:1px solid #E0C897;background:#FFFFFF;color:#2B1A12;cursor:pointer;font-family:inherit;">정기휴무</button>
+                <button data-filter="기타" onclick="window.setCalFilter('기타')" class="cal-filter-btn" style="flex-shrink:0;padding:7px 16px;border-radius:20px;font-size:13px;font-weight:600;border:1px solid #E0C897;background:#FFFFFF;color:#2B1A12;cursor:pointer;font-family:inherit;">기타</button>
             </div>
-            <!-- 하단 카드 -->
-            <div class="space-y-3 pb-6">
-                <div id="cal-selected-card" class="bg-white rounded-2xl border border-[#E8E4DB] p-4 shadow-sm min-h-[72px]">
-                    <div class="text-[11px] font-bold text-[#AAA]">날짜를 선택하면 일정이 표시됩니다</div>
+            <!-- 카테고리별 요약 카드 -->
+            <div id="cal-summary-card" style="margin:0 16px 16px;height:76px;border-radius:14px;background:#FFFFFF;border:1px solid #E7D8C0;box-shadow:0 4px 12px rgba(80,50,20,0.08);display:grid;grid-template-columns:repeat(5,1fr);"></div>
+            <!-- 월간 캘린더 -->
+            <div style="margin:0 16px;border-radius:12px;overflow:hidden;border:1px solid #E7D8C0;">
+                <div style="display:grid;grid-template-columns:repeat(7,1fr);height:44px;background:#FFFDF8;border-bottom:1px solid #E7D8C0;">
+                    <div style="display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#D32F2F;font-family:inherit;">일</div>
+                    <div style="display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#2B1A12;font-family:inherit;">월</div>
+                    <div style="display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#2B1A12;font-family:inherit;">화</div>
+                    <div style="display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#2B1A12;font-family:inherit;">수</div>
+                    <div style="display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#2B1A12;font-family:inherit;">목</div>
+                    <div style="display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#2B1A12;font-family:inherit;">금</div>
+                    <div style="display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#1976D2;font-family:inherit;">토</div>
                 </div>
-                <div id="cal-week-card" class="bg-white rounded-2xl border border-[#E8E4DB] p-4 shadow-sm">
-                    <div class="text-[12px] font-bold text-[#555] mb-2">이번 주 주요 일정</div>
-                    <div id="cal-week-content" class="text-[12px] text-[#AAA]">로딩 중...</div>
+                <div id="main-calendar-grid" style="display:grid;grid-template-columns:repeat(7,1fr);background:#FFFFFF;"></div>
+            </div>
+            <!-- 하단 카드 (2열) -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 16px 24px;">
+                <div id="cal-selected-card" style="border-radius:14px;background:#FFFFFF;border:1px solid #E7D8C0;box-shadow:0 4px 12px rgba(80,50,20,0.08);padding:14px 12px;min-height:130px;font-family:inherit;">
+                    <div style="font-size:11px;color:#9E9085;">날짜를 선택하세요</div>
+                </div>
+                <div id="cal-week-card" style="border-radius:14px;background:#FFFFFF;border:1px solid #E7D8C0;box-shadow:0 4px 12px rgba(80,50,20,0.08);padding:14px 12px;min-height:130px;font-family:inherit;">
+                    <div style="font-size:13px;font-weight:700;color:#2B1A12;margin-bottom:8px;">이번주 주요 일정</div>
+                    <div id="cal-week-content" style="font-size:12px;color:#AAA;">로딩 중...</div>
                 </div>
             </div>
         </div>
@@ -277,11 +283,13 @@
                 <input id="cal-event-time-input" type="text" placeholder="시간 (예: 14:00)" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-2.5 outline-none text-xs font-semibold" />
                 <input id="cal-event-customer-input" type="text" placeholder="고객명" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-2.5 outline-none text-xs font-semibold" />
                 <input id="cal-event-model-input" type="text" placeholder="모델명" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-2.5 outline-none text-xs font-semibold" />
+                <input id="cal-event-assignee-input" type="text" placeholder="담당자" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-2.5 outline-none text-xs font-semibold" />
             </div>
             <!-- 기타 타입 내용 -->
             <div id="cal-reason-field">
                 <label class="block text-[11px] font-bold text-[#666] mb-1.5 ml-1">상세 내용</label>
                 <input id="cal-event-reason-input" type="text" placeholder="예: 매장 정기휴점, 팝업 행사 등" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-2.5 outline-none text-xs font-semibold" />
+                <input id="cal-event-assignee2-input" type="text" placeholder="담당자 (선택)" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-2.5 outline-none text-xs font-semibold mt-2" />
             </div>
         </div>
         <div class="mt-5 flex flex-col gap-2">
