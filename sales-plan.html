@@ -142,6 +142,23 @@
     .bottom-btn { height:42px;min-width:132px;border-radius:6px;border:1px solid #d9e0ea;background:#fff;font-size:14px;font-weight:900;cursor:pointer; }
     .bottom-btn.primary { background:#075bd8;color:#fff;border-color:#075bd8; }
 
+    /* ── 월 달력 피커 ── */
+    .month-picker-wrap { position:relative; }
+    .mpp-btn { height:44px;border:1px solid #d9e0ea;border-radius:7px;background:#fff;padding:0 14px;font-size:14px;font-weight:700;color:#111827;cursor:pointer;display:flex;align-items:center;gap:8px;white-space:nowrap; }
+    .mpp-btn:hover { border-color:#075bd8; }
+    .mpp-popup { position:absolute;top:calc(100% + 6px);left:0;z-index:999;background:#fff;border:1px solid #d9e0ea;border-radius:10px;padding:14px;box-shadow:0 6px 24px rgba(15,23,42,.14);width:230px; }
+    .mpp-header { display:flex;justify-content:space-between;align-items:center;margin-bottom:12px; }
+    .mpp-year { font-size:16px;font-weight:900;color:#111827; }
+    .mpp-nav { background:none;border:none;cursor:pointer;font-size:20px;color:#0067e8;padding:2px 8px;border-radius:5px;line-height:1; }
+    .mpp-nav:hover { background:#eaf3ff; }
+    .mpp-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:6px; }
+    .mpp-month { padding:9px 0;border:none;background:#f6f8fb;border-radius:7px;cursor:pointer;font-size:13px;font-weight:700;color:#374151;transition:.12s; }
+    .mpp-month:hover { background:#eaf3ff;color:#0067e8; }
+    .mpp-month.sel { background:#075bd8;color:#fff; }
+
+    /* 분기 표시 (선택 불가) */
+    .quarter-badge { height:44px;border:1px solid #d9e0ea;border-radius:7px;background:#f6f8fb;padding:0 18px;font-size:14px;font-weight:900;color:#374151;display:flex;align-items:center;cursor:default;user-select:none;white-space:nowrap; }
+
     /* 모달 */
     .modal-backdrop { display:none;position:fixed;inset:0;background:rgba(15,23,42,.35);z-index:100;justify-content:center;align-items:center; }
     .modal-backdrop.show { display:flex; }
@@ -217,13 +234,22 @@
     <div class="topbar">
       <h1 class="title">월 매출 현황</h1>
       <div class="toolbar">
-        <select class="control" id="monthSelect"></select>
-        <select class="control" id="quarterSelect">
-          <option value="2">2분기</option>
-          <option value="1">1분기</option>
-          <option value="3">3분기</option>
-          <option value="4">4분기</option>
-        </select>
+        <!-- 달력 월 피커 -->
+        <div class="month-picker-wrap" id="monthPickerWrap">
+          <button class="mpp-btn" id="monthPickerBtn">
+            <span>📅</span><span id="monthPickerLabel">2026년 6월</span>
+          </button>
+          <div class="mpp-popup" id="monthPickerPopup" style="display:none;">
+            <div class="mpp-header">
+              <button class="mpp-nav" id="prevYearBtn">‹</button>
+              <span class="mpp-year" id="pickerYearLabel">2026년</span>
+              <button class="mpp-nav" id="nextYearBtn">›</button>
+            </div>
+            <div class="mpp-grid" id="pickerMonthGrid"></div>
+          </div>
+        </div>
+        <!-- 분기 자동 표시 (선택 불가) -->
+        <div class="quarter-badge" id="quarterBadge">2분기</div>
         <button class="btn btn-primary" id="save-btn">💾 저장하기</button>
       </div>
     </div>

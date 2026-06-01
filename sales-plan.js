@@ -44,42 +44,66 @@ let chartData = [];
 let activeFilters = new Set(['전체']);
 let unsubPlan = null;
 
-/* ────────── 월 선택기 ────────── */
-function initMonthSelect() {
-  const sel = document.getElementById('monthSelect');
-  sel.innerHTML = '';
-  for (let y = curYear - 1; y <= curYear + 1; y++) {
-    for (let m = 1; m <= 12; m++) {
-      const opt = document.createElement('option');
-      opt.value = `${y}-${pad(m)}`;
-      opt.textContent = `${y}년 ${m}월`;
-      if (y === curYear && m === curMonth) opt.selected = true;
-      sel.appendChild(opt);
-    }
+/* ────────── 달력 월 피커 ────────── */
+let pickerYear = curYear;
+
+function getQuarterNum(month) { return Math.ceil(month / 3); }
+
+function updateQuarterBadge() {
+  const el = document.getElementById('quarterBadge');
+  if (el) el.textContent = `${getQuarterNum(curMonth)}분기`;
+}
+
+function renderPickerGrid() {
+  document.getElementById('pickerYearLabel').textContent = `${pickerYear}년`;
+  const grid = document.getElementById('pickerMonthGrid');
+  grid.innerHTML = '';
+  for (let m = 1; m <= 12; m++) {
+    const btn = document.createElement('button');
+    btn.className = 'mpp-month' + (pickerYear === curYear && m === curMonth ? ' sel' : '');
+    btn.textContent = `${m}월`;
+    btn.onclick = () => selectMonth(pickerYear, m);
+    grid.appendChild(btn);
   }
-  sel.addEventListener('change', () => {
-    const [y,m] = sel.value.split('-');
-    curYear = parseInt(y); curMonth = parseInt(m);
-    updateMonthLabels();
-    loadMonth();
+}
+
+function selectMonth(year, month) {
+  curYear = year; curMonth = month;
+  document.getElementById('monthPickerLabel').textContent = `${year}년 ${month}월`;
+  document.getElementById('monthPickerPopup').style.display = 'none';
+  updateQuarterBadge();
+  updateMonthLabels();
+  loadMonth();
+}
+
+function initMonthPicker() {
+  pickerYear = curYear;
+  document.getElementById('monthPickerLabel').textContent = `${curYear}년 ${curMonth}월`;
+  updateQuarterBadge();
+
+  document.getElementById('monthPickerBtn').addEventListener('click', e => {
+    e.stopPropagation();
+    pickerYear = curYear;
+    renderPickerGrid();
+    const popup = document.getElementById('monthPickerPopup');
+    popup.style.display = popup.style.display === 'none' ? 'block' : 'none';
   });
+  document.getElementById('prevYearBtn').addEventListener('click', e => { e.stopPropagation(); pickerYear--; renderPickerGrid(); });
+  document.getElementById('nextYearBtn').addEventListener('click', e => { e.stopPropagation(); pickerYear++; renderPickerGrid(); });
+  document.addEventListener('click', () => {
+    const p = document.getElementById('monthPickerPopup');
+    if (p) p.style.display = 'none';
+  });
+  document.getElementById('monthPickerWrap').addEventListener('click', e => e.stopPropagation());
 }
 
 function updateMonthLabels() {
   const m = curMonth;
   document.getElementById('expectedTitle').textContent = `${m}월 예상 매출`;
   document.getElementById('lastYearTitle').textContent = `작년 ${m}월 매출`;
-  document.getElementById('quarterLabelText').textContent = document.getElementById('quarterSelect').value;
-  // 에비뉴엘 모달 labels
-  document.getElementById('avenueLabel1').textContent = `${m-2<1?m+10:m-2}월`;
-  document.getElementById('avenueLabel2').textContent = `${m-1<1?m+11:m-1}월`;
-  document.getElementById('avenueLabel3').textContent = `${m}월`;
+  document.getElementById('quarterLabelText').textContent = getQuarterNum(m);
+  updateQuarterBadge();
 }
-
-document.getElementById('quarterSelect').addEventListener('change', () => {
-  document.getElementById('quarterLabelText').textContent = document.getElementById('quarterSelect').value;
-  recalcQuarter();
-});
 
 /* ────────── Auth ────────── */
 document.getElementById('login-btn').addEventListener('click', async () => {
@@ -88,7 +112,7 @@ document.getElementById('login-btn').addEventListener('click', async () => {
 document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
 onAuthStateChanged(auth, user => {
   document.getElementById('login-overlay').style.display = user ? 'none' : 'flex';
-  if (user) { initMonthSelect(); updateMonthLabels(); loadMonth(); }
+  if (user) { initMonthPicker(); updateMonthLabels(); loadMonth(); }
 });
 
 /* ────────── 데이터 로드 ────────── */
@@ -123,7 +147,7 @@ function applyData(d) {
   sv('f-mpdsMin',         d?.mpdsMin ?? 30);
   sv('f-mpdsCurrent',     d?.mpdsCurrent);
   sv('f-mpdsIncoming',    d?.mpdsIncoming);
-  if (d?.quarterNum) { document.getElementById('quarterSelect').value = String(d.quarterNum); document.getElementById('quarterLabelText').textContent = d.quarterNum; }
+  // 분기는 curMonth에서 자동 계산
 
   chartData = d?.chartData ?? [
     { label:`${curMonth-2<1?curMonth+10:curMonth-2}월`, pcs:null, amount:null },
@@ -447,7 +471,7 @@ async function saveData() {
     centumGoalRate:  gnv('f-centumGoalRate'),
     avenueGoalAmount:gnv('f-avenueGoalAmount'),
     avenueGoalRate:  gnv('f-avenueGoalRate'),
-    quarterNum:      document.getElementById('quarterSelect').value,
+    quarterNum:      getQuarterNum(curMonth),
     quarterGoal:     gnv('f-quarterGoal'),
     quarterPrevTotal:gnv('f-quarterPrevTotal'),
     mpdsMin:         gnv('f-mpdsMin'),
