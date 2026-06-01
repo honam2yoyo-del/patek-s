@@ -6,22 +6,34 @@ const FC = { apiKey:"AIzaSyCt7aQXA5eFdnDTMHlRhjPAkyH4b8UB6HY", authDomain:"patek
 const app  = initializeApp(FC);
 const auth = getAuth(app);
 const db   = getFirestore(app);
-const gp   = new GoogleAuthProvider();
 
 const pad = n => String(n).padStart(2,'0');
-let curYear = new Date().getFullYear();
-let curMonth = new Date().getMonth() + 1;
-let rows = [];
-let unsubPlan = null;
+const fmt = n => (n != null && n !== '' && !isNaN(Number(n))) ? Number(n).toLocaleString('ko-KR') : '-';
+const fmtK = n => { // 억 단위 축약
+  if (!n || isNaN(n)) return '-';
+  n = Number(n);
+  if (n >= 1e8) return (n/1e8).toFixed(1).replace(/\.0$/,'') + '억원';
+  return n.toLocaleString('ko-KR') + '원';
+};
 
-const fmt = n => (n != null && n !== '' && !isNaN(Number(n))) ? Number(n).toLocaleString('ko-KR') : '';
+const STAFF = ['옥영세','엄인주','장용석','최혜지','이승범','형영지'];
+const STATUSES = { confirmed:'컨펌완료', progress:'진행중', pending:'대기', cancel:'취소' };
+const STATUS_BADGE = {
+  '컨펌완료':'badge-blue','진행중':'badge-green','대기':'badge-amber','취소':'badge-red',
+  '':'badge-gray'
+};
+
+let curYear  = new Date().getFullYear();
+let curMonth = new Date().getMonth() + 1;
+let curRows  = []; // 당월 확정 테이블
+let carRows  = []; // 이월 예정 테이블
+let unsubPlan = null;
 
 /* ── Auth ── */
 document.getElementById('login-btn').addEventListener('click', async () => {
-  try { await signInWithPopup(auth, gp); } catch(e) { alert('로그인 실패: ' + e.message); }
+  try { await signInWithPopup(auth, new GoogleAuthProvider()); } catch(e) { alert('로그인 실패: '+e.message); }
 });
 document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
-
 onAuthStateChanged(auth, user => {
   document.getElementById('login-overlay').style.display = user ? 'none' : 'flex';
   if (user) loadMonth();
@@ -29,216 +41,248 @@ onAuthStateChanged(auth, user => {
 
 /* ── 월 이동 ── */
 document.getElementById('prev-btn').addEventListener('click', () => {
-  curMonth--; if(curMonth < 1){ curMonth = 12; curYear--; } loadMonth();
+  curMonth--; if(curMonth<1){curMonth=12;curYear--;} loadMonth();
 });
 document.getElementById('next-btn').addEventListener('click', () => {
-  curMonth++; if(curMonth > 12){ curMonth = 1; curYear++; } loadMonth();
+  curMonth++; if(curMonth>12){curMonth=1;curYear++;} loadMonth();
 });
 
 function loadMonth() {
-  document.getElementById('month-title').textContent = `${curYear}년 ${curMonth}월`;
+  const label = `${curYear}년 ${curMonth}월`;
+  document.getElementById('month-title').textContent = label;
+  document.getElementById('topbar-sub').textContent  = `${label} 매출 현황`;
+  document.getElementById('cur-table-title').textContent = `${curMonth}월 확정 판매 관리`;
+  document.getElementById('car-table-title').textContent = `${curMonth}월 이월 예정 (컨펌전)`;
+
   if (unsubPlan) unsubPlan();
   const docId  = `${curYear}-${pad(curMonth)}`;
-  const docRef = doc(db, 'artifacts', 'patek-s', 'public', 'data', 'sales_plans', docId);
-  unsubPlan = onSnapshot(docRef, snap => {
+  unsubPlan = onSnapshot(doc(db,'artifacts','patek-s','public','data','sales_dashboard',docId), snap => {
     applyToForm(snap.exists() ? snap.data() : null);
-    renderTable();
   });
 }
 
 /* ── 폼 적용 ── */
 function applyToForm(d) {
-  const m = curMonth;
-  const sv = (id, val) => { const el = document.getElementById(id); if(el) el.value = val ?? ''; };
+  const sv = (id,val) => { const el=document.getElementById(id); if(el) el.value = val??''; };
 
-  document.getElementById('doc-title-input').value    = d?.title ?? `${m}월 매출 계획`;
-  document.getElementById('confirmed-label').textContent = `${m}월 확정 매출`;
-  document.getElementById('qty-label').textContent       = `${m}월 예상 Qty`;
+  sv('kpi-confirmed',  d?.confirmedAmount);
+  sv('kpi-accum',      d?.accumAmount);
+  sv('kpi-prev-year',  d?.prevYearAmount);
+  sv('goal-rate',      d?.goalRate);
+  sv('goal-time',      d?.goalTime);
+  sv('goal-remain-amt',d?.goalRemainAmt);
+  sv('mpds-possible',  d?.mpdsPossible);
+  sv('mpds-actual',    d?.mpdsActual);
+  sv('est-pcs',        d?.estPcs);
+  sv('prev-pcs',       d?.prevPcs);
+  sv('notes-input',    d?.notes);
+  sv('quarter-label-input', d?.quarterNum ?? '2');
 
-  sv('prev-month-text',       d?.prevMonthText);
-  sv('remaining-target-text', d?.remainingTargetText);
-  sv('report-date',           d?.reportDate ?? new Date().toISOString().split('T')[0]);
-  sv('month-sales-amount',    d?.monthSalesAmount);
-  sv('month-sales-qty',       d?.monthSalesQty);
-  sv('special-note',          d?.specialNote);
-  sv('special-note-amount',   d?.specialNoteAmount);
-  sv('prev-year-sales',       d?.prevYearSales);
-  sv('confirmed-amount',      d?.confirmedAmount);
-  sv('prev-year-confirmed',   d?.prevYearConfirmed);
-  sv('expected-qty',          d?.expectedQty);
-  sv('prev-year-qty',         d?.prevYearQty);
-  sv('footer-notes',          d?.footerNotes);
+  updateKpiRemaining();
+  updateGoalBar();
+  renderQuarterRows(d?.quarterStores ?? [
+    { name:'센텀',    goal: d?.centumGoal??null,  accum: d?.centumAccum??null,  rate: d?.centumRate??null,  color:'#2563EB' },
+    { name:'에비뉴엘', goal: d?.avenuelGoal??null, accum: d?.avenuelAccum??null, rate: d?.avenuelRate??null, color:'#7C3AED' }
+  ]);
 
-  rows = d?.rows ? JSON.parse(JSON.stringify(d.rows)) : [];
+  const prevPcs = document.getElementById('kpi-prev-pcs');
+  if (prevPcs) prevPcs.textContent = d?.prevPcs ?? '-';
+  const accumPcs = document.getElementById('kpi-accum-pcs');
+  if (accumPcs) accumPcs.textContent = d?.accumPcs ?? '-';
+
+  curRows = d?.curRows ? JSON.parse(JSON.stringify(d.curRows)) : [];
+  carRows = d?.carRows ? JSON.parse(JSON.stringify(d.carRows)) : [];
+  renderCurTable();
+  renderCarTable();
 }
 
-/* ── 테이블 렌더 ── */
-function renderTable() {
-  const tbody = document.getElementById('plan-tbody');
-  tbody.innerHTML = '';
+/* KPI 남은 목표 자동 계산 */
+function updateKpiRemaining() {
+  const confirmed = parseFloat(document.getElementById('kpi-confirmed').value) || 0;
+  const accum     = parseFloat(document.getElementById('kpi-accum').value) || 0;
+  const remaining = confirmed - accum;
+  const el = document.getElementById('kpi-remaining-display');
+  if (el) {
+    el.textContent = remaining >= 0 ? fmtK(remaining) : '초과';
+    el.className = 'kpi-value ' + (remaining >= 0 ? 'kpi-green' : 'kpi-amber');
+  }
+}
+document.getElementById('kpi-confirmed').addEventListener('input', updateKpiRemaining);
+document.getElementById('kpi-accum').addEventListener('input', updateKpiRemaining);
 
-  rows.forEach((r, idx) => {
-    const priceDisp = (r.price != null && r.price !== '') ? Number(String(r.price).replace(/,/g,'')).toLocaleString('ko-KR') : '';
+/* Goal bar */
+function updateGoalBar() {
+  const rate = parseFloat(document.getElementById('goal-rate').value) || 0;
+  const bar  = document.getElementById('goal-bar');
+  if (bar) bar.style.width = Math.min(rate, 100) + '%';
+}
+document.getElementById('goal-rate').addEventListener('input', updateGoalBar);
+
+/* ── 분기 목표 행 렌더 ── */
+window._qtrStores = [];
+function renderQuarterRows(stores) {
+  window._qtrStores = stores;
+  const container = document.getElementById('quarter-rows');
+  if (!container) return;
+  container.innerHTML = '';
+  stores.forEach((s, idx) => {
+    const rate = s.rate ?? 0;
+    const div = document.createElement('div');
+    div.className = 'qtr-row';
+    div.innerHTML = `
+      <div class="qtr-name">${s.name}</div>
+      <div class="qtr-bar-wrap"><div class="qtr-bar-fill" style="width:${Math.min(rate,100)}%;background:${s.color};"></div></div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;">
+        <input class="qtr-val" type="number" placeholder="달성률%" step="0.1" value="${s.rate??''}"
+          oninput="window._qtrStores[${idx}].rate=this.value?Number(this.value):null;this.closest('.qtr-row').querySelector('.qtr-bar-fill').style.width=Math.min(this.value||0,100)+'%';"
+          style="width:60px;border-bottom:1px dashed #ddd;" />
+        <span style="font-size:10px;color:#9CA3AF;white-space:nowrap;">
+          누적 <input type="number" placeholder="0" value="${s.accum??''}"
+            oninput="window._qtrStores[${idx}].accum=this.value?Number(this.value):null;"
+            style="width:90px;background:transparent;border:none;border-bottom:1px dashed #ddd;outline:none;font-size:10px;color:#9CA3AF;text-align:right;"/>원
+        </span>
+      </div>`;
+    container.appendChild(div);
+  });
+}
+
+/* ── 당월 확정 테이블 ── */
+function renderCurTable() {
+  const tbody = document.getElementById('cur-tbody');
+  tbody.innerHTML = '';
+  curRows.forEach((r, idx) => {
     const tr = document.createElement('tr');
-    tr.className = `row-${r.color || 'default'}`;
     tr.innerHTML = `
-      <td class="col-ref">
-        <div class="cell-edit" contenteditable="true" data-idx="${idx}" data-field="ref" onblur="window._cb(this)">${esc(r.ref||'')}</div>
-      </td>
-      <td class="col-price price-cell">
-        <div class="cell-edit" contenteditable="true" data-idx="${idx}" data-field="price" onblur="window._cb(this)" style="text-align:right">${esc(priceDisp)}</div>
-      </td>
-      <td class="col-cur">
-        <div class="cell-edit" contenteditable="true" data-idx="${idx}" data-field="currentPlan" onblur="window._cb(this)">${esc(r.currentPlan||'')}</div>
-      </td>
-      <td class="col-car">
-        <div class="cell-edit" contenteditable="true" data-idx="${idx}" data-field="carryover" onblur="window._cb(this)">${esc(r.carryover||'')}</div>
-      </td>
-      <td class="col-act">
-        <select class="color-sel" data-idx="${idx}" onchange="window._cc(this)">
-          <option value="default" ${(r.color||'default')==='default'?'selected':''}>기본</option>
-          <option value="blue"    ${r.color==='blue'?'selected':''}>파랑</option>
-          <option value="red"     ${r.color==='red'?'selected':''}>빨강</option>
+      <td class="td-ctr" style="color:#9CA3AF">${idx+1}</td>
+      <td><input class="dt-edit" value="${esc(r.ref||'')}" oninput="curRows[${idx}].ref=this.value" placeholder="Ref."/></td>
+      <td><input class="dt-edit" value="${esc(r.customer||'')}" oninput="curRows[${idx}].customer=this.value" placeholder="고객명"/></td>
+      <td class="td-ctr"><input class="dt-edit" type="number" value="${r.qty??''}" oninput="curRows[${idx}].qty=this.value?Number(this.value):null;renderCurTotals();" style="width:40px;text-align:center;" placeholder="1"/></td>
+      <td class="td-num"><input class="dt-edit" type="number" value="${r.price??''}" oninput="curRows[${idx}].price=this.value?Number(this.value):null;renderCurTotals();" style="text-align:right;" placeholder="0"/></td>
+      <td><input class="dt-edit" type="date" value="${r.saleDate||''}" oninput="curRows[${idx}].saleDate=this.value" style="width:100px;"/></td>
+      <td>
+        <select class="staff-sel" oninput="curRows[${idx}].manager=this.value">
+          <option value="">-</option>
+          ${STAFF.map(s=>`<option value="${s}" ${r.manager===s?'selected':''}>${s}</option>`).join('')}
         </select>
-        <button class="del-btn" onclick="window._dr(${idx})">✕</button>
-      </td>`;
+      </td>
+      <td>
+        <select class="staff-sel" oninput="curRows[${idx}].status=this.value;renderCurTable();">
+          ${Object.values(STATUSES).map(s=>`<option value="${s}" ${r.status===s?'selected':''}>${s}</option>`).join('')}
+          <option value="" ${!r.status?'selected':''}>-</option>
+        </select>
+      </td>
+      <td><input class="dt-edit" value="${esc(r.note||'')}" oninput="curRows[${idx}].note=this.value" placeholder="메모"/></td>
+      <td><button class="dt-del" onclick="curRows.splice(${idx},1);renderCurTable();">✕</button></td>`;
     tbody.appendChild(tr);
   });
-
-  renderTotals();
+  renderCurTotals();
 }
+function renderCurTotals() {
+  const tfoot = document.getElementById('cur-tfoot');
+  const totQty   = curRows.reduce((s,r)=>s+(Number(r.qty)||0),0);
+  const totPrice = curRows.reduce((s,r)=>s+(Number(r.price)||0),0);
+  tfoot.innerHTML = `<tr class="sum-row">
+    <td colspan="3" style="text-align:left;font-weight:700;">합계</td>
+    <td class="td-ctr">${totQty}</td>
+    <td class="td-num">${fmt(totPrice)}</td>
+    <td colspan="5"></td>
+  </tr>`;
+}
+document.getElementById('add-cur-btn').addEventListener('click', () => {
+  curRows.push({ref:'',customer:'',qty:null,price:null,saleDate:'',manager:'',status:'진행중',note:''});
+  renderCurTable();
+  document.getElementById('cur-tbody').lastElementChild?.querySelector('.dt-edit')?.focus();
+});
 
-function renderTotals() {
-  const tfoot = document.getElementById('plan-tfoot');
-  let totPrice = 0, curAmt = 0, carAmt = 0, curQty = 0, carQty = 0;
-
-  rows.forEach(r => {
-    const p = parseFloat(String(r.price||'').replace(/,/g,'')) || 0;
-    totPrice += p;
-    if (r.currentPlan && r.currentPlan.trim()) { curAmt += p; curQty++; }
-    if (r.carryover   && r.carryover.trim())   { carAmt += p; carQty++; }
+/* ── 이월 예정 테이블 ── */
+function renderCarTable() {
+  const tbody = document.getElementById('car-tbody');
+  tbody.innerHTML = '';
+  carRows.forEach((r, idx) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="td-ctr" style="color:#9CA3AF">${idx+1}</td>
+      <td><input class="dt-edit" value="${esc(r.ref||'')}" oninput="carRows[${idx}].ref=this.value" placeholder="Ref."/></td>
+      <td><input class="dt-edit" value="${esc(r.customer||'')}" oninput="carRows[${idx}].customer=this.value" placeholder="고객명"/></td>
+      <td class="td-num"><input class="dt-edit" type="number" value="${r.price??''}" oninput="carRows[${idx}].price=this.value?Number(this.value):null;renderCarTotals();" style="text-align:right;" placeholder="0"/></td>
+      <td>
+        <select class="staff-sel" oninput="carRows[${idx}].manager=this.value">
+          <option value="">-</option>
+          ${STAFF.map(s=>`<option value="${s}" ${r.manager===s?'selected':''}>${s}</option>`).join('')}
+        </select>
+      </td>
+      <td><input class="dt-edit" value="${esc(r.note||'')}" oninput="carRows[${idx}].note=this.value" placeholder="메모"/></td>
+      <td><button class="dt-del" onclick="carRows.splice(${idx},1);renderCarTable();">✕</button></td>`;
+    tbody.appendChild(tr);
   });
-
-  tfoot.innerHTML = `
-    <tr class="total-row">
-      <td class="col-ref"><strong>Amount</strong></td>
-      <td class="col-price" style="text-align:right">${fmt(totPrice)}</td>
-      <td class="col-cur"   style="text-align:right">${fmt(curAmt)}</td>
-      <td class="col-car"   style="text-align:right">${fmt(carAmt)}</td>
-      <td class="col-act"></td>
-    </tr>
-    <tr class="total-row">
-      <td class="col-ref"><strong>Qty</strong></td>
-      <td class="col-price" style="text-align:right">${rows.length}</td>
-      <td class="col-cur"   style="text-align:right">${curQty}</td>
-      <td class="col-car"   style="text-align:right">${carQty}</td>
-      <td class="col-act"></td>
-    </tr>`;
+  renderCarTotals();
 }
-
-function esc(s) {
-  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function renderCarTotals() {
+  const tfoot = document.getElementById('car-tfoot');
+  const totPrice = carRows.reduce((s,r)=>s+(Number(r.price)||0),0);
+  tfoot.innerHTML = `<tr class="sum-row">
+    <td colspan="3" style="text-align:left;font-weight:700;">합계</td>
+    <td class="td-num">${fmt(totPrice)}</td>
+    <td colspan="3"></td>
+  </tr>`;
 }
-
-/* ── 셀 편집 콜백 ── */
-window._cb = function(el) {
-  const idx = parseInt(el.dataset.idx);
-  const fld = el.dataset.field;
-  if (idx < 0 || idx >= rows.length) return;
-  let val = el.innerText.trim();
-  if (fld === 'price') {
-    const n = parseFloat(val.replace(/,/g,''));
-    rows[idx][fld] = isNaN(n) ? '' : n;
-    el.innerText = isNaN(n) ? '' : n.toLocaleString('ko-KR');
-  } else {
-    rows[idx][fld] = val;
-  }
-  renderTotals();
-};
-
-window._cc = function(sel) {
-  rows[parseInt(sel.dataset.idx)].color = sel.value;
-  renderTable();
-};
-
-window._dr = function(idx) {
-  rows.splice(idx, 1);
-  renderTable();
-};
-
-/* ── 행 추가 ── */
-document.getElementById('add-row-btn').addEventListener('click', () => {
-  rows.push({ ref:'', price:'', currentPlan:'', carryover:'', color:'default' });
-  renderTable();
-  const last = document.getElementById('plan-tbody').lastElementChild;
-  if (last) last.querySelector('.cell-edit').focus();
+document.getElementById('add-car-btn').addEventListener('click', () => {
+  carRows.push({ref:'',customer:'',price:null,manager:'',note:''});
+  renderCarTable();
+  document.getElementById('car-tbody').lastElementChild?.querySelector('.dt-edit')?.focus();
 });
 
 /* ── 저장 ── */
 document.getElementById('save-btn').addEventListener('click', saveData);
-
 async function saveData() {
-  const gv = id => { const el = document.getElementById(id); return el ? (el.value ?? el.textContent ?? '').toString().trim() : ''; };
-  const gn = id => { const v = gv(id); return v !== '' ? Number(v) : null; };
-
-  const docId  = `${curYear}-${pad(curMonth)}`;
-  const docRef = doc(db, 'artifacts', 'patek-s', 'public', 'data', 'sales_plans', docId);
+  const gv = id => { const el=document.getElementById(id); return el?el.value.trim():''; };
+  const gn = id => { const v=gv(id); return v!==''?Number(v):null; };
 
   const data = {
-    title:               gv('doc-title-input'),
-    prevMonthText:       gv('prev-month-text'),
-    remainingTargetText: gv('remaining-target-text'),
-    reportDate:          gv('report-date'),
-    monthSalesAmount:    gn('month-sales-amount'),
-    monthSalesQty:       gn('month-sales-qty'),
-    specialNote:         gv('special-note'),
-    specialNoteAmount:   gn('special-note-amount'),
-    prevYearSales:       gn('prev-year-sales'),
-    confirmedAmount:     gn('confirmed-amount'),
-    prevYearConfirmed:   gn('prev-year-confirmed'),
-    expectedQty:         gn('expected-qty'),
-    prevYearQty:         gn('prev-year-qty'),
-    footerNotes:         gv('footer-notes'),
-    rows: rows.map(r => ({
-      ref:         r.ref || '',
-      price:       (r.price !== '' && r.price != null) ? Number(String(r.price).replace(/,/g,'')) : null,
-      currentPlan: r.currentPlan || '',
-      carryover:   r.carryover   || '',
-      color:       r.color       || 'default'
+    confirmedAmount: gn('kpi-confirmed'),
+    accumAmount:     gn('kpi-accum'),
+    prevYearAmount:  gn('kpi-prev-year'),
+    goalRate:        gn('goal-rate'),
+    goalTime:        gv('goal-time'),
+    goalRemainAmt:   gn('goal-remain-amt'),
+    mpdsPossible:    gn('mpds-possible'),
+    mpdsActual:      gn('mpds-actual'),
+    estPcs:          gn('est-pcs'),
+    prevPcs:         gn('prev-pcs'),
+    notes:           gv('notes-input'),
+    quarterNum:      gv('quarter-label-input'),
+    quarterStores:   window._qtrStores || [],
+    curRows: curRows.map(r=>({
+      ref:r.ref||'', customer:r.customer||'',
+      qty: r.qty!=null?Number(r.qty):null,
+      price: r.price!=null?Number(r.price):null,
+      saleDate:r.saleDate||'', manager:r.manager||'',
+      status:r.status||'', note:r.note||''
+    })),
+    carRows: carRows.map(r=>({
+      ref:r.ref||'', customer:r.customer||'',
+      price: r.price!=null?Number(r.price):null,
+      manager:r.manager||'', note:r.note||''
     })),
     updatedAt: new Date().toISOString()
   };
 
-  const btn = document.getElementById('save-btn');
+  const btn  = document.getElementById('save-btn');
   const orig = btn.textContent;
   btn.textContent = '저장 중...';
   try {
-    await setDoc(docRef, data, { merge: true });
+    await setDoc(
+      doc(db,'artifacts','patek-s','public','data','sales_dashboard',`${curYear}-${pad(curMonth)}`),
+      data, {merge:true}
+    );
     btn.textContent = '✔ 저장됨';
-    setTimeout(() => { btn.textContent = orig; }, 2000);
+    setTimeout(()=>{ btn.textContent = orig; }, 2000);
   } catch(e) {
-    alert('저장 실패: ' + e.message);
+    alert('저장 실패: '+e.message);
     btn.textContent = orig;
   }
 }
 
-/* ── 엑셀 내보내기 ── */
-document.getElementById('export-btn').addEventListener('click', () => {
-  if (!window.XLSX) { alert('엑셀 라이브러리 로딩 중입니다.'); return; }
-  const header = ['Ref.','판매가','당월 결제 예정','이월 예정(컨펌전)'];
-  const data = rows.map(r => [
-    r.ref || '',
-    (r.price != null && r.price !== '') ? Number(String(r.price).replace(/,/g,'')) : '',
-    r.currentPlan || '',
-    r.carryover   || ''
-  ]);
-  const totP = rows.reduce((s,r)=>s+(parseFloat(String(r.price||'').replace(/,/g,''))||0),0);
-  data.push(['Amount', totP, '', '']);
-  data.push(['Qty', rows.length, rows.filter(r=>r.currentPlan?.trim()).length, rows.filter(r=>r.carryover?.trim()).length]);
-  const ws = window.XLSX.utils.aoa_to_sheet([header, ...data]);
-  const wb = window.XLSX.utils.book_new();
-  window.XLSX.utils.book_append_sheet(wb, ws, `${curYear}년${curMonth}월`);
-  window.XLSX.writeFile(wb, `매출계획_${curYear}년${curMonth}월.xlsx`);
-});
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 loadMonth();
