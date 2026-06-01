@@ -1053,9 +1053,9 @@
             const dateColor = (isHoliday||dow===0) ? '#D32F2F' : dow===6 ? '#1976D2' : '#2B1A12';
             const isSelected = window.selectedCalDate === dateStr;
 
-            // 판매일정 우선 정렬
-            const dayEvs = filtered.filter(e=>e.date===dateStr)
-                .sort((a,b)=>(a.type==='판매일정'||a.type==='고객')?-1:(b.type==='판매일정'||b.type==='고객')?1:0);
+            // 행사·교육·기타만 표시 (판매일정·고객은 달력 셀에 미표시)
+            const dayEvs = filtered.filter(e=>e.date===dateStr && e.type!=='판매일정' && e.type!=='고객')
+                .sort((a,b)=>a.date.localeCompare(b.date));
             const show = dayEvs.slice(0,2);
             const overflow = dayEvs.length-2;
 
