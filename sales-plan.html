@@ -127,6 +127,7 @@
     .badge-confirm { background:#fff3e5;color:#ff7a00; }
     .badge-carry   { background:#eaf3ff;color:#0067e8; }
     .badge-rest    { background:#f1f3f5;color:#111827; }
+    .badge-as      { background:#fee2e2;color:#ff0000; }
 
     .selected-summary { margin:10px 16px 12px;height:40px;border:1px solid #7aa9ff;border-radius:5px;display:grid;grid-template-columns:1fr 1fr 1fr;align-items:center;padding:0 16px;font-size:14px;font-weight:900; }
     .selected-summary b { color:#0067e8;margin-left:10px; }
@@ -358,16 +359,14 @@
     <!-- ── 재고 매출 관리 ── -->
     <section class="inventory-panel">
       <div class="inventory-left">
-        <div class="inventory-header">
-          재고 매출 관리
-          <button class="btn" id="addRowBtn" style="height:36px;font-size:13px;padding:0 14px;">＋ 행 추가</button>
-        </div>
+        <div class="inventory-header">재고 매출 관리</div>
         <div class="tabs" id="tabsBar">
           <button class="tab active" data-filter="전체">전체</button>
           <button class="tab" data-filter="판매예정">판매예정</button>
           <button class="tab" data-filter="컨펌예정">컨펌예정</button>
           <button class="tab" data-filter="이월예정">이월예정</button>
           <button class="tab" data-filter="잔여재고">잔여재고</button>
+          <button class="tab" data-filter="AS">AS</button>
         </div>
         <div class="table-wrap">
           <table class="inventory-table" id="inventoryTable">

@@ -11,14 +11,14 @@ const pad  = n => String(n).padStart(2,'0');
 const fmtW = n => (n != null && !isNaN(Number(n))) ? Number(n).toLocaleString('ko-KR') + ' 원' : '- 원';
 const fmtN = n => (n != null && !isNaN(Number(n))) ? Number(n).toLocaleString('ko-KR') : '-';
 
-const STATUSES   = ['판매예정','컨펌예정','이월예정','잔여재고'];
-const BADGE_MAP  = { '판매예정':'badge-sale','컨펌예정':'badge-confirm','이월예정':'badge-carry','잔여재고':'badge-rest' };
+const STATUSES   = ['판매예정','컨펌예정','이월예정','잔여재고','AS'];
+const BADGE_MAP  = { '판매예정':'badge-sale','컨펌예정':'badge-confirm','이월예정':'badge-carry','잔여재고':'badge-rest','AS':'badge-as' };
 
 let curYear  = new Date().getFullYear();
 let curMonth = new Date().getMonth() + 1;
 let rows     = [];
 let chartData = [];
-let activeFilter = '전체';
+let activeFilters = new Set(['전체']);
 let unsubPlan = null;
 
 /* ────────── 월 선택기 ────────── */
@@ -224,7 +224,7 @@ window._ca = (i, key, v) => { chartData[i][key] = v!==''?Number(v):null; renderC
 function renderTable() {
   updateTabCounts();
   const tbody   = document.getElementById('inventoryTbody');
-  const filtered = activeFilter === '전체' ? rows : rows.filter(r => r.status === activeFilter);
+  const filtered = activeFilters.has('전체') ? rows : rows.filter(r => activeFilters.has(r.status));
   tbody.innerHTML = '';
 
   filtered.forEach((r) => {
@@ -257,8 +257,9 @@ function renderTable() {
 
 function renderTfoot(filtered) {
   const total = filtered.reduce((s,r)=>s+(Number(r.amount)||0),0);
+  const filterLabel = activeFilters.has('전체') ? '전체' : [...activeFilters].join('+');
   document.getElementById('inventoryTfoot').innerHTML = `<tr>
-    <td colspan="3">${activeFilter === '전체' ? '전체' : activeFilter} 합계</td>
+    <td colspan="3">${filterLabel} 합계</td>
     <td>${fmtW(total)}</td>
     <td colspan="5">${filtered.length} pcs</td>
   </tr>`;
@@ -278,32 +279,40 @@ function renderSummary() {
   ['전체', ...STATUSES].forEach(s => { summary[s] = {qty:0,amount:0}; });
   rows.forEach(r => {
     const s = r.status || '잔여재고';
-    if (summary[s]) { summary[s].qty++; summary[s].amount += Number(r.amount)||0; }
+    if (summary[s] !== undefined) { summary[s].qty++; summary[s].amount += Number(r.amount)||0; }
     summary['전체'].qty++; summary['전체'].amount += Number(r.amount)||0;
   });
-  const colors = { '전체':'black','판매예정':'green','컨펌예정':'orange','이월예정':'blue','잔여재고':'red' };
-  const labels = { '전체':'전체재고','판매예정':'판매예정','컨펌예정':'컨펌예정','이월예정':'이월예정','잔여재고':'잔여재고' };
+  const colors = { '전체':'black','판매예정':'green','컨펌예정':'orange','이월예정':'blue','잔여재고':'black','AS':'red' };
+  const labels = { '전체':'전체재고','판매예정':'판매예정','컨펌예정':'컨펌예정','이월예정':'이월예정','잔여재고':'잔여재고','AS':'AS' };
   document.getElementById('summaryTbody').innerHTML = ['전체',...STATUSES].map(s =>
     `<tr><td class="${colors[s]}">${labels[s]}</td><td>${summary[s].qty} pcs</td><td>${fmtW(summary[s].amount)}</td></tr>`
   ).join('');
 }
 
-/* ── 탭 필터 ── */
+/* ── 탭 필터 (복수 선택) ── */
 document.getElementById('tabsBar').addEventListener('click', e => {
   const tab = e.target.closest('.tab');
   if (!tab) return;
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  tab.classList.add('active');
-  activeFilter = tab.dataset.filter;
+  const f = tab.dataset.filter;
+
+  if (f === '전체') {
+    activeFilters = new Set(['전체']);
+  } else {
+    activeFilters.delete('전체');
+    if (activeFilters.has(f)) {
+      activeFilters.delete(f);
+      if (activeFilters.size === 0) activeFilters.add('전체');
+    } else {
+      activeFilters.add(f);
+    }
+  }
+
+  document.querySelectorAll('.tab').forEach(t =>
+    t.classList.toggle('active', activeFilters.has(t.dataset.filter))
+  );
   renderTable();
 });
 
-/* ── 행 추가 ── */
-document.getElementById('addRowBtn').addEventListener('click', () => {
-  rows.push({ ref:'', amount:null, customer:'', saleDate:'', status:'판매예정', note:'' });
-  renderTable();
-  document.getElementById('inventoryTbody').lastElementChild?.querySelector('.td-edit')?.focus();
-});
 
 /* ── 체크박스 ── */
 function bindCheckboxes() {
