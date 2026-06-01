@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>매출 계획 – Patek-S</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+* { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:'Malgun Gothic','맑은 고딕',Arial,sans-serif; background:#f8f5ef; color:#333; min-height:100vh; }
+
+/* ── 로그인 ── */
+#login-overlay { position:fixed;inset:0;background:rgba(250,249,245,.97);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999; }
+#login-overlay img { height:52px;margin-bottom:16px; }
+#login-overlay h2 { font-size:22px;font-weight:800;color:#333;margin-bottom:6px; }
+#login-overlay p { font-size:14px;color:#888;margin-bottom:26px; }
+.google-btn { display:flex;align-items:center;gap:10px;background:white;border:1.5px solid #E8E4DB;border-radius:50px;padding:12px 24px;font-size:15px;font-weight:700;color:#4A443F;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.08); }
+
+/* ── 헤더 ── */
+header { background:white;border-bottom:2px solid #D8C9A8;padding:8px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:100;flex-wrap:wrap;box-shadow:0 2px 8px rgba(0,0,0,.04); }
+.h-logo img { height:28px;object-fit:contain; }
+.month-nav { display:flex;align-items:center;gap:4px;background:#FFFDF8;border:2px solid #D8B98B;border-radius:10px;padding:4px 10px; }
+.month-nav button { background:none;border:none;cursor:pointer;font-size:20px;color:#B4975A;line-height:1; }
+#month-title { font-size:15px;font-weight:800;color:#2F2924;min-width:90px;text-align:center; }
+.btn { display:inline-flex;align-items:center;gap:4px;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:800;border:none;cursor:pointer;white-space:nowrap;transition:.15s; }
+.btn:active { transform:scale(.97); }
+.btn-save  { background:#E8F5E9;color:#2E7D32;border:1.5px solid #C8E6C9; }
+.btn-excel { background:#F0F4FF;color:#3B5EAA;border:1.5px solid #B3C4F0; }
+.btn-print { background:#F5F5F5;color:#555;border:1.5px solid #DDD; }
+.btn-add   { background:#F8F3E7;color:#8B6B2E;border:1.5px solid #D8B98B; }
+.btn-logout { background:#FFF3E0;color:#E65100;border:1.5px solid #FFCC80; }
+
+/* ── 메인 ── */
+main { padding:14px 18px 40px; }
+#page-title { text-align:center;font-size:20px;font-weight:800;margin-bottom:14px;color:#2B1A0A;letter-spacing:.5px; }
+
+/* ── 상단 정보 그리드 ── */
+.top-grid { display:grid;grid-template-columns:1fr 1.6fr;gap:12px;margin-bottom:12px; }
+.info-card { background:white;border:1px solid #E0D3BB;border-radius:10px;padding:12px 14px; }
+.card-section-title { font-size:10px;font-weight:800;color:#999;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px; }
+.free-text { width:100%;background:transparent;border:none;outline:none;font-family:inherit;font-size:12px;color:#333;resize:none;line-height:1.7; }
+
+/* 오른쪽 카드 */
+.stat-row { display:flex;align-items:center;justify-content:space-between;padding:3px 0; }
+.stat-label { font-size:12px;color:#666; }
+.stat-val { font-size:13px;font-weight:800;color:#333; }
+.stat-val input { background:transparent;border:none;outline:none;font-family:inherit;font-size:13px;font-weight:800;color:#333;text-align:right;width:160px; }
+
+.highlight-box { background:#FFFDE7;border:1px solid #F0DB6A;border-radius:8px;padding:7px 10px;margin:8px 0;display:flex;align-items:center;flex-wrap:wrap;gap:6px; }
+.highlight-box input { background:transparent;border:none;outline:none;font-family:inherit;font-size:12px;color:#555; }
+.hl-note-input { flex:1;min-width:120px; }
+.hl-amount-input { width:150px;text-align:right;font-weight:700;font-size:13px;color:#1565C0; }
+.hl-separator { font-size:11px;color:#999; }
+.hl-prev-input { width:140px;text-align:right;font-size:12px;font-weight:700;color:#333; }
+
+.confirmed-box { background:#FFF9C4;border:1px solid #EDD84A;border-radius:8px;padding:7px 10px;margin-top:6px; }
+.conf-row { display:flex;align-items:center;justify-content:space-between;padding:2px 0; }
+.conf-label { font-size:13px;font-weight:800;color:#2B1A0A; }
+.conf-val { display:flex;gap:8px;align-items:center; }
+.conf-val input { background:transparent;border:none;outline:none;font-family:inherit;font-size:14px;font-weight:800;color:#333;text-align:right;width:150px; }
+.conf-val-prev input { font-size:13px;font-weight:700;color:#666;width:130px; }
+
+/* ── 테이블 ── */
+#table-wrap { overflow-x:auto;border-radius:10px;border:2px solid #D8C9A8;box-shadow:0 4px 16px rgba(139,115,85,.1);margin-bottom:12px; }
+table.plan { border-collapse:collapse;background:white;width:100%;min-width:580px; }
+table.plan th { background:#F5F0E8;border:1px solid #E0D3BB;padding:8px 10px;font-size:12px;font-weight:800;text-align:center;white-space:nowrap; }
+table.plan td { border:1px solid #E0D3BB;padding:5px 8px;font-size:12px;vertical-align:middle; }
+
+.col-ref  { min-width:140px;text-align:left; }
+.col-price { min-width:130px;text-align:right; }
+.col-cur  { min-width:160px; }
+.col-car  { min-width:160px; }
+.col-act  { width:28px;text-align:center; }
+
+.td-edit { outline:none;cursor:text;width:100%; }
+.td-edit:focus { background:#EEF4FF !important; }
+td .td-edit.price-input { text-align:right;display:block; }
+
+tr.row-default td { background:white; }
+tr.row-blue td    { color:#1565C0;background:#F3F7FF; }
+tr.row-red  td    { color:#C62828;background:#FFF5F5; }
+
+tr.total-row td { background:#F5F0E8 !important;font-weight:800;font-size:12px;color:#333 !important; }
+tr.total-row td:nth-child(2) { text-align:right; }
+tr.total-row td:nth-child(3),
+tr.total-row td:nth-child(4) { text-align:center; }
+
+.color-select { background:transparent;border:1px solid #ddd;border-radius:4px;font-size:10px;padding:1px 2px;cursor:pointer;max-width:52px; }
+.del-btn { background:none;border:none;cursor:pointer;color:#bbb;font-size:14px;padding:2px 4px;line-height:1; }
+.del-btn:hover { color:#e53935; }
+
+/* ── 푸터 ── */
+.footer-notes { background:white;border:1px solid #E0D3BB;border-radius:10px;padding:12px 14px; }
+.footer-notes h4 { font-size:10px;font-weight:800;color:#999;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px; }
+.footer-notes textarea { width:100%;background:transparent;border:none;outline:none;font-family:inherit;font-size:12px;color:#333;resize:none;line-height:1.8;min-height:40px; }
+
+/* ── 인쇄 ── */
+@media print {
+  header,#login-overlay { display:none !important; }
+  body { background:white; }
+  main { padding:4px 8px; }
+  #table-wrap { overflow:visible;border:1px solid #ccc;box-shadow:none; }
+  .del-btn,.color-select { display:none !important; }
+  .top-grid { grid-template-columns:1fr 1.6fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- 로그인 -->
+<div id="login-overlay">
+  <img src="log.png" alt="Patek-S" onerror="this.style.display='none'" />
+  <h2>매출 계획</h2>
+  <p>Google 계정으로 로그인하세요</p>
+  <button class="google-btn" id="login-btn">
+    <svg width="20" height="20" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+    Google로 로그인
+  </button>
+</div>
+
+<!-- 헤더 -->
+<header>
+  <div class="h-logo"><img src="log.png" onerror="this.style.display='none'" /></div>
+  <div class="month-nav">
+    <button id="prev-btn">‹</button>
+    <span id="month-title">로딩 중...</span>
+    <button id="next-btn">›</button>
+  </div>
+  <button class="btn btn-add" id="add-row-btn">＋ 행 추가</button>
+  <button class="btn btn-save" id="save-btn">💾 저장</button>
+  <button class="btn btn-excel" id="export-btn">⬇ 엑셀</button>
+  <button class="btn btn-print" onclick="window.print()">🖨 인쇄</button>
+  <button class="btn btn-logout" id="logout-btn">로그아웃</button>
+</header>
+
+<main>
+  <div id="page-title">X월 매출 계획</div>
+
+  <!-- 상단 정보 -->
+  <div class="top-grid">
+    <!-- 왼쪽: 전월매출 + 남은 목표 -->
+    <div class="info-card">
+      <div class="card-section-title">※전월 매출</div>
+      <textarea class="free-text" id="prev-month-text" rows="3" placeholder="AV : 2,161,730,000원 (10PCS)&#10;CT : 2,122,060,000원 (16PCS)"></textarea>
+      <div class="card-section-title" style="margin-top:10px;">※남은 목표 금액</div>
+      <textarea class="free-text" id="remaining-target-text" rows="4" placeholder="전체: 10,716,210,000원&#10;AV: 6,088,270,000원&#10;센텀: 4,627,940,000원"></textarea>
+    </div>
+    <!-- 오른쪽: 현황 -->
+    <div class="info-card">
+      <div style="text-align:right;margin-bottom:8px;"><input id="report-date" type="date" style="border:none;background:transparent;font-size:11px;color:#888;outline:none;" /></div>
+      <div class="stat-row">
+        <span class="stat-label">월 판매 매출</span>
+        <span class="stat-val"><input id="month-sales-amount" type="number" placeholder="0" /></span>
+      </div>
+      <div class="stat-row" style="margin-bottom:8px;">
+        <span class="stat-label">월 판매 QTY</span>
+        <span class="stat-val"><input id="month-sales-qty" type="number" placeholder="0" /></span>
+      </div>
+      <div class="highlight-box">
+        <input class="hl-note-input" id="special-note" type="text" placeholder="특이사항 메모 (예: 임정석님 선수금(2억) 포함)" />
+        <input class="hl-amount-input" id="special-note-amount" type="number" placeholder="금액" />
+        <span class="hl-separator">|</span>
+        <span style="font-size:11px;color:#888;white-space:nowrap;">전년매출</span>
+        <input class="hl-prev-input" id="prev-year-sales" type="number" placeholder="0" />
+      </div>
+      <div class="confirmed-box">
+        <div class="conf-row">
+          <span class="conf-label" id="confirmed-label">X월 확정 매출</span>
+          <div class="conf-val">
+            <input id="confirmed-amount" type="number" placeholder="0" />
+            <div class="conf-val-prev"><input id="prev-year-confirmed" type="number" placeholder="전년 확정" /></div>
+          </div>
+        </div>
+        <div class="conf-row" style="margin-top:4px;">
+          <span class="conf-label" id="qty-label">X월 예상 Qty</span>
+          <div class="conf-val">
+            <input id="expected-qty" type="number" placeholder="0" />
+            <div class="conf-val-prev"><input id="prev-year-qty" type="number" placeholder="전년 Qty" /></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 테이블 -->
+  <div id="table-wrap">
+    <table class="plan" id="plan-table">
+      <thead>
+        <tr>
+          <th class="col-ref">Ref.</th>
+          <th class="col-price">판매가</th>
+          <th class="col-cur">당월 결제 예정</th>
+          <th class="col-car">이월 예정(컨펌전)</th>
+          <th class="col-act"></th>
+        </tr>
+      </thead>
+      <tbody id="plan-tbody"></tbody>
+      <tfoot id="plan-tfoot"></tfoot>
+    </table>
+  </div>
+
+  <!-- 푸터 메모 -->
+  <div class="footer-notes">
+    <h4>기타 메모</h4>
+    <textarea id="footer-notes-text" rows="3" placeholder="★ 5524R,6119G 제외 실재고 : 34PCS&#10;★ MPDS 가능 수량 : 31PCS"></textarea>
+  </div>
+</main>
+
+<script type="module" src="sales-plan.js"></script>
+</body>
+</html>

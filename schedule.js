@@ -153,7 +153,7 @@ function render() {
       let dataReq    = (!isClosed && !isEvent && isReq) ? ' data-req="1"' : '';
       const wSep = isSunday ? ' week-sep' : '';
 
-      const slashCls = (disp === '/' && !isClosed && !isEvent) ? ' td-slash' : '';
+      const slashCls = disp === '/' ? ' td-slash' : '';
       cells += `<td class="td-edit${wSep}${slashCls}" contenteditable="true" data-staff="${name}" data-day="${d}"${dataClosed}${dataEvent}${dataReq} onblur="normalizeCell(this)" onkeydown="handleKey(event,this)" onpaste="handlePaste(event)">${disp}</td>`;
     }
 

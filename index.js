@@ -1086,6 +1086,10 @@
     };
 
     window.openSalesEditModal = function() {
+        window.open('sales-plan.html', '_blank');
+    };
+
+    window._openSalesEditForm = function() {
         const d = window.salesData;
         const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = (val != null && val !== null) ? val : ''; };
         const title = document.getElementById('sales-edit-month-title');
