@@ -150,6 +150,13 @@
     window.timeHistoryYear = null;
     window.timeHistoryMonth = null;
 
+    window.salesYear = new Date().getFullYear();
+    window.salesMonth = new Date().getMonth() + 1;
+    window.salesData = null;
+    window.salesMonthlyResultsEdit = [];
+    let unsubscribeSalesData = null;
+    (function() { const el = document.getElementById('sales-month-text'); if (el) el.innerText = `${window.salesYear}년 ${window.salesMonth}월`; })();
+
     const PUBLIC_HOLIDAYS_2026 = {
         "2026-01-01": "신정", "2026-02-16": "설날 연휴", "2026-02-17": "설날", "2026-02-18": "설날 연휴",
         "2026-03-01": "삼일절", "2026-03-02": "대체공휴일", "2026-05-05": "어린이날", "2026-05-24": "부처님오신날",
@@ -193,6 +200,7 @@
             if(unsubscribeStaffs) unsubscribeStaffs();
             if(unsubscribeCalEvents) unsubscribeCalEvents();
             if(unsubscribeTimeRequests) unsubscribeTimeRequests();
+            if(unsubscribeSalesData) unsubscribeSalesData();
 
             hideAllPages();
             const loginPage = document.getElementById('login-page');
@@ -208,7 +216,8 @@
             'page-cal-event-modal', 'page-schedule-edit-modal',
             'page-leave-calendar-modal', 'page-leave-history-modal',
             'page-my-schedule-modal', 'page-time-request-modal', 'page-time-history-modal',
-            'staff-name-picker-overlay', 'page-schedule-generator', 'page-staff-stats-modal'
+            'staff-name-picker-overlay', 'page-schedule-generator', 'page-staff-stats-modal',
+            'sales-edit-modal'
         ];
         pages.forEach(id => {
             const el = document.getElementById(id);
@@ -233,7 +242,7 @@
                 } else if (data.approved === true) {
                     hideAllPages();
                     document.getElementById('app-container').style.display = 'flex'; 
-                    fetchStaffs(); fetchNotices(); fetchAlbums(user); fetchSchedules(); fetchLeaveRequests(); fetchCalEvents(); fetchTimeRequests();
+                    fetchStaffs(); fetchNotices(); fetchAlbums(user); fetchSchedules(); fetchLeaveRequests(); fetchCalEvents(); fetchTimeRequests(); fetchSalesDataForMonth(window.salesYear, window.salesMonth);
                     lucide.createIcons();
                 } else {
                     hideAllPages();
@@ -540,6 +549,7 @@
         if (mySchedModal && mySchedModal.style.display !== 'none') mySchedModal.style.display = 'none';
         if (tabId === 'notice') { applyNoticeFilterButtonStyles(); window.renderNotices(); }
         if (tabId === 'calendar') { window.renderMainCalendar(); }
+        if (tabId === 'sales') { window.renderSalesPage(); }
     };
 
     window.openNoticeCreate = function() {
@@ -938,6 +948,300 @@
             if (document.getElementById('page-my-schedule-modal')?.style.display === 'flex') window.renderMySchedule();
         });
     }
+
+    // ==========================================
+    // 매출 탭 관련 함수
+    // ==========================================
+
+    function fmtAmt(n) {
+        if (n === null || n === undefined || n === '' || isNaN(Number(n))) return '-';
+        return Number(n).toLocaleString('ko-KR') + '원';
+    }
+
+    function fmtGoalAmt(n) {
+        if (n === null || n === undefined || n === '' || isNaN(Number(n))) return '-';
+        n = Number(n);
+        if (n >= 100000000) {
+            const eok = n / 100000000;
+            return (Number.isInteger(eok) ? eok : parseFloat(eok.toFixed(1))) + '억';
+        }
+        return n.toLocaleString('ko-KR') + '원';
+    }
+
+    function fetchSalesDataForMonth(year, month) {
+        if (!db) return;
+        if (unsubscribeSalesData) unsubscribeSalesData();
+        const docId = `${year}-${String(month).padStart(2,'0')}`;
+        const docRef = doc(db, 'artifacts', 'patek-s', 'public', 'data', 'sales_data', docId);
+        unsubscribeSalesData = onSnapshot(docRef, (docSnap) => {
+            window.salesData = docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } : null;
+            window.renderSalesPage();
+        });
+    }
+
+    window.adjustSalesMonth = function(amount) {
+        window.salesMonth += amount;
+        if (window.salesMonth > 12) { window.salesMonth = 1; window.salesYear += 1; }
+        else if (window.salesMonth < 1) { window.salesMonth = 12; window.salesYear -= 1; }
+        const el = document.getElementById('sales-month-text');
+        if (el) el.innerText = `${window.salesYear}년 ${window.salesMonth}월`;
+        fetchSalesDataForMonth(window.salesYear, window.salesMonth);
+    };
+
+    window.renderSalesPage = function() {
+        const d = window.salesData;
+        const m = window.salesMonth;
+        const setTxt = (id, val) => { const el = document.getElementById(id); if (el) el.innerText = val; };
+
+        setTxt('sales-month-text', `${window.salesYear}년 ${m}월`);
+        setTxt('sales-estimated-label', `${m}월 예상매출`);
+        setTxt('sales-accum-label', `${m}월 누적매출`);
+        setTxt('sales-remaining-label', `${m}월 남은 매출`);
+        setTxt('sales-prev-year-label', `전년도 ${m}월 매출`);
+        setTxt('sales-mpds-label', `${m}월 MPDS 수량`);
+
+        const centumBar = document.getElementById('sales-centum-bar');
+        const avenuelBar = document.getElementById('sales-avenuel-bar');
+
+        if (!d) {
+            ['sales-estimated-pcs','sales-accum-pcs','sales-remaining-pcs','sales-prev-year-pcs'].forEach(id => setTxt(id, '-PCS'));
+            ['sales-estimated-amount','sales-accum-amount','sales-remaining-amount','sales-prev-year-amount','sales-centum-accum','sales-centum-remaining','sales-avenuel-accum','sales-avenuel-remaining'].forEach(id => setTxt(id, '-'));
+            ['sales-mpds-count'].forEach(id => setTxt(id, '-'));
+            setTxt('sales-growth-rate', '-');
+            const grEl = document.getElementById('sales-growth-rate'); if (grEl) grEl.style.color = '#3A3532';
+            setTxt('sales-quarter-label', '목표 현황'); setTxt('sales-quarter-goal', '-');
+            setTxt('sales-centum-share', '-%'); setTxt('sales-centum-achieve', '-%');
+            setTxt('sales-avenuel-share', '-%'); setTxt('sales-avenuel-achieve', '-%');
+            if (centumBar) centumBar.style.width = '0%';
+            if (avenuelBar) avenuelBar.style.width = '0%';
+            const monthlyEl = document.getElementById('sales-monthly-results');
+            if (monthlyEl) monthlyEl.innerHTML = '<div class="text-center text-[#999] text-[11px] py-3">데이터 없음</div>';
+            setTxt('sales-notes-display', '-');
+            return;
+        }
+
+        const remPcs = (d.estimatedPcs || 0) - (d.accumPcs || 0);
+        const remAmt = (d.estimatedAmount || 0) - (d.accumAmount || 0);
+
+        setTxt('sales-estimated-pcs', (d.estimatedPcs != null ? d.estimatedPcs : '-') + 'PCS');
+        setTxt('sales-estimated-amount', fmtAmt(d.estimatedAmount));
+        setTxt('sales-accum-pcs', (d.accumPcs != null ? d.accumPcs : '-') + 'PCS');
+        setTxt('sales-accum-amount', fmtAmt(d.accumAmount));
+        setTxt('sales-remaining-pcs', (d.estimatedPcs != null && d.accumPcs != null ? remPcs : '-') + 'PCS');
+        setTxt('sales-remaining-amount', (d.estimatedAmount != null && d.accumAmount != null) ? fmtAmt(remAmt) : '-');
+        setTxt('sales-prev-year-pcs', (d.prevYearPcs != null ? d.prevYearPcs : '-') + 'PCS');
+        setTxt('sales-prev-year-amount', fmtAmt(d.prevYearAmount));
+        setTxt('sales-mpds-count', d.mpdsCount != null ? d.mpdsCount : '-');
+
+        const grEl = document.getElementById('sales-growth-rate');
+        if (grEl) {
+            const gr = d.growthRate;
+            if (gr != null && gr !== '') {
+                const grNum = parseFloat(String(gr).replace(/[+%]/g,''));
+                const prefix = grNum > 0 ? '+' : '';
+                grEl.innerText = prefix + gr + '%';
+                grEl.style.color = grNum > 0 ? '#16A34A' : (grNum < 0 ? '#DC2626' : '#3A3532');
+            } else { grEl.innerText = '-'; grEl.style.color = '#3A3532'; }
+        }
+
+        const ql = d.quarterLabel ? d.quarterLabel + ' 목표 현황' : '목표 현황';
+        setTxt('sales-quarter-label', ql);
+        setTxt('sales-quarter-goal', fmtGoalAmt(d.quarterGoalAmount));
+
+        setTxt('sales-centum-share', d.centumShareRate != null ? d.centumShareRate + '%' : '-%');
+        setTxt('sales-centum-accum', fmtAmt(d.centumAccum));
+        setTxt('sales-centum-achieve', d.centumAchieveRate != null ? d.centumAchieveRate + '%' : '-%');
+        setTxt('sales-centum-remaining', fmtAmt(d.centumRemaining));
+        if (centumBar) centumBar.style.width = Math.min(d.centumAchieveRate || 0, 100) + '%';
+
+        setTxt('sales-avenuel-share', d.avenuelShareRate != null ? d.avenuelShareRate + '%' : '-%');
+        setTxt('sales-avenuel-accum', fmtAmt(d.avenuelAccum));
+        setTxt('sales-avenuel-achieve', d.avenuelAchieveRate != null ? d.avenuelAchieveRate + '%' : '-%');
+        setTxt('sales-avenuel-remaining', fmtAmt(d.avenuelRemaining));
+        if (avenuelBar) avenuelBar.style.width = Math.min(d.avenuelAchieveRate || 0, 100) + '%';
+
+        const monthlyEl = document.getElementById('sales-monthly-results');
+        if (monthlyEl) {
+            const results = d.monthlyResults || [];
+            if (results.length === 0) {
+                monthlyEl.innerHTML = '<div class="text-center text-[#999] text-[11px] py-3">데이터 없음</div>';
+            } else {
+                monthlyEl.innerHTML = results.map(r => `
+                    <div class="flex items-start gap-2 py-1.5 border-b border-[#F5F0E8] last:border-b-0">
+                        <span class="text-[11px] font-bold text-[#3A3532] w-7 shrink-0 pt-0.5">${r.month || '-'}</span>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-[10px] font-semibold text-[#555]">${r.centumPcs != null ? r.centumPcs + 'pcs' : '-'}</div>
+                            <div class="text-[9px] text-[#999]">${fmtAmt(r.centumAmount)}</div>
+                        </div>
+                        <div class="flex-1 min-w-0 text-right">
+                            <div class="text-[10px] font-semibold text-[#555]">${r.avenuelPcs != null ? r.avenuelPcs + 'pcs' : '-'}</div>
+                            <div class="text-[9px] text-[#999]">${fmtAmt(r.avenuelAmount)}</div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        setTxt('sales-notes-display', d.notes || '-');
+    };
+
+    window.openSalesEditModal = function() {
+        const d = window.salesData;
+        const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = (val != null && val !== null) ? val : ''; };
+        const title = document.getElementById('sales-edit-month-title');
+        if (title) title.innerText = `${window.salesYear}년 ${window.salesMonth}월`;
+        setVal('se-estimated-pcs', d?.estimatedPcs);
+        setVal('se-estimated-amount', d?.estimatedAmount);
+        setVal('se-accum-pcs', d?.accumPcs);
+        setVal('se-accum-amount', d?.accumAmount);
+        setVal('se-prev-year-pcs', d?.prevYearPcs);
+        setVal('se-prev-year-amount', d?.prevYearAmount);
+        setVal('se-mpds-count', d?.mpdsCount);
+        setVal('se-growth-rate', d?.growthRate);
+        setVal('se-quarter-label', d?.quarterLabel);
+        setVal('se-quarter-goal', d?.quarterGoalAmount);
+        setVal('se-centum-share', d?.centumShareRate);
+        setVal('se-centum-accum', d?.centumAccum);
+        setVal('se-centum-achieve', d?.centumAchieveRate);
+        setVal('se-centum-remaining', d?.centumRemaining);
+        setVal('se-avenuel-share', d?.avenuelShareRate);
+        setVal('se-avenuel-accum', d?.avenuelAccum);
+        setVal('se-avenuel-achieve', d?.avenuelAchieveRate);
+        setVal('se-avenuel-remaining', d?.avenuelRemaining);
+        setVal('se-notes', d?.notes);
+        window.salesMonthlyResultsEdit = d?.monthlyResults ? JSON.parse(JSON.stringify(d.monthlyResults)) : [];
+        window.renderSalesMonthlyEditList();
+        document.getElementById('sales-edit-modal').style.display = 'flex';
+        document.getElementById('bottom-nav-bar').style.display = 'none';
+        lucide.createIcons();
+    };
+
+    window.closeSalesEditModal = function() {
+        document.getElementById('sales-edit-modal').style.display = 'none';
+        document.getElementById('bottom-nav-bar').style.display = 'grid';
+    };
+
+    window.addSalesMonthlyRow = function() {
+        window.salesMonthlyResultsEdit.push({ month: '', centumPcs: null, centumAmount: null, avenuelPcs: null, avenuelAmount: null });
+        window.renderSalesMonthlyEditList();
+        lucide.createIcons();
+    };
+
+    window.removeSalesMonthlyRow = function(idx) {
+        window.salesMonthlyResultsEdit.splice(idx, 1);
+        window.renderSalesMonthlyEditList();
+        lucide.createIcons();
+    };
+
+    window.renderSalesMonthlyEditList = function() {
+        const container = document.getElementById('se-monthly-results-list');
+        if (!container) return;
+        container.innerHTML = '';
+        window.salesMonthlyResultsEdit.forEach((r, idx) => {
+            const div = document.createElement('div');
+            div.className = 'bg-white rounded-xl border border-[#E5E5E5] p-3 space-y-2';
+            div.innerHTML = `
+                <div class="flex items-center justify-between">
+                    <input type="text" placeholder="월 (예: 4월)" value="${r.month || ''}"
+                        oninput="window.salesMonthlyResultsEdit[${idx}].month=this.value"
+                        class="text-[12px] font-bold text-[#3A3532] bg-transparent outline-none border-b border-[#E5E5E5] pb-0.5 w-24" />
+                    <button onclick="window.removeSalesMonthlyRow(${idx})" class="text-[#D81B60] p-1 active:scale-95">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    </button>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <div class="text-[9px] font-bold text-[#B4975A] mb-1">센텀</div>
+                        <input type="number" placeholder="PCS" value="${r.centumPcs ?? ''}"
+                            oninput="window.salesMonthlyResultsEdit[${idx}].centumPcs=this.value!==''?Number(this.value):null"
+                            class="w-full text-[11px] bg-[#F8F6F0] rounded-lg px-2 py-1.5 outline-none text-right mb-1" />
+                        <input type="number" placeholder="금액(원)" value="${r.centumAmount ?? ''}"
+                            oninput="window.salesMonthlyResultsEdit[${idx}].centumAmount=this.value!==''?Number(this.value):null"
+                            class="w-full text-[11px] bg-[#F8F6F0] rounded-lg px-2 py-1.5 outline-none text-right" />
+                    </div>
+                    <div>
+                        <div class="text-[9px] font-bold text-[#8B6914] mb-1">에비뉴엘</div>
+                        <input type="number" placeholder="PCS" value="${r.avenuelPcs ?? ''}"
+                            oninput="window.salesMonthlyResultsEdit[${idx}].avenuelPcs=this.value!==''?Number(this.value):null"
+                            class="w-full text-[11px] bg-[#F8F6F0] rounded-lg px-2 py-1.5 outline-none text-right mb-1" />
+                        <input type="number" placeholder="금액(원)" value="${r.avenuelAmount ?? ''}"
+                            oninput="window.salesMonthlyResultsEdit[${idx}].avenuelAmount=this.value!==''?Number(this.value):null"
+                            class="w-full text-[11px] bg-[#F8F6F0] rounded-lg px-2 py-1.5 outline-none text-right" />
+                    </div>
+                </div>
+            `;
+            container.appendChild(div);
+        });
+        lucide.createIcons();
+    };
+
+    window.saveSalesData = async function() {
+        const getVal = (id) => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+        const getNum = (id) => { const v = getVal(id); return v !== '' ? Number(v) : null; };
+        const docId = `${window.salesYear}-${String(window.salesMonth).padStart(2,'0')}`;
+        const docRef = doc(db, 'artifacts', 'patek-s', 'public', 'data', 'sales_data', docId);
+        const data = {
+            estimatedPcs: getNum('se-estimated-pcs'), estimatedAmount: getNum('se-estimated-amount'),
+            accumPcs: getNum('se-accum-pcs'), accumAmount: getNum('se-accum-amount'),
+            prevYearPcs: getNum('se-prev-year-pcs'), prevYearAmount: getNum('se-prev-year-amount'),
+            mpdsCount: getNum('se-mpds-count'), growthRate: getVal('se-growth-rate'),
+            quarterLabel: getVal('se-quarter-label'), quarterGoalAmount: getNum('se-quarter-goal'),
+            centumShareRate: getNum('se-centum-share'), centumAccum: getNum('se-centum-accum'),
+            centumAchieveRate: getNum('se-centum-achieve'), centumRemaining: getNum('se-centum-remaining'),
+            avenuelShareRate: getNum('se-avenuel-share'), avenuelAccum: getNum('se-avenuel-accum'),
+            avenuelAchieveRate: getNum('se-avenuel-achieve'), avenuelRemaining: getNum('se-avenuel-remaining'),
+            monthlyResults: window.salesMonthlyResultsEdit.map(r => ({
+                month: r.month || '', centumPcs: r.centumPcs, centumAmount: r.centumAmount,
+                avenuelPcs: r.avenuelPcs, avenuelAmount: r.avenuelAmount
+            })),
+            notes: getVal('se-notes'),
+            updatedAt: new Date().toISOString(), updatedBy: currentUser?.uid || ''
+        };
+        document.getElementById('loading-overlay').style.display = 'flex';
+        try {
+            await setDoc(docRef, data, { merge: true });
+            window.closeSalesEditModal();
+            window.showCustomAlert('저장되었습니다.');
+        } catch(e) { window.showCustomAlert('저장 실패: ' + e.message); }
+        finally { document.getElementById('loading-overlay').style.display = 'none'; }
+    };
+
+    window.copySalesReport = function() {
+        const d = window.salesData;
+        const monthLabel = `${window.salesYear}년 ${window.salesMonth}월`;
+        if (!d) { window.showCustomAlert('저장된 데이터가 없습니다.'); return; }
+        const remPcs = (d.estimatedPcs || 0) - (d.accumPcs || 0);
+        const remAmt = (d.estimatedAmount || 0) - (d.accumAmount || 0);
+        let text = `[매출 보고 - ${monthLabel}]\n\n`;
+        text += `■ 월 매출 현황\n`;
+        text += `예상 매출: ${d.estimatedPcs ?? '-'}PCS / ${fmtAmt(d.estimatedAmount)}\n`;
+        text += `누적 매출: ${d.accumPcs ?? '-'}PCS / ${fmtAmt(d.accumAmount)}\n`;
+        text += `남은 매출: ${remPcs}PCS / ${fmtAmt(remAmt)}\n\n`;
+        text += `■ 비교 지표\n`;
+        text += `전년도 동월: ${d.prevYearPcs ?? '-'}PCS / ${fmtAmt(d.prevYearAmount)}\n`;
+        text += `MPDS 수량: ${d.mpdsCount ?? '-'}건\n`;
+        text += `전월 대비: ${d.growthRate != null && d.growthRate !== '' ? (parseFloat(d.growthRate) > 0 ? '+' : '') + d.growthRate + '%' : '-'}\n\n`;
+        if (d.quarterLabel || d.quarterGoalAmount) {
+            text += `■ ${d.quarterLabel || ''}목표 현황 (${fmtGoalAmt(d.quarterGoalAmount)})\n`;
+            text += `센텀: 누적 ${fmtAmt(d.centumAccum)} / 달성률 ${d.centumAchieveRate ?? '-'}% / 남은 목표 ${fmtAmt(d.centumRemaining)}\n`;
+            text += `에비뉴엘: 누적 ${fmtAmt(d.avenuelAccum)} / 달성률 ${d.avenuelAchieveRate ?? '-'}% / 남은 목표 ${fmtAmt(d.avenuelRemaining)}\n\n`;
+        }
+        if (d.monthlyResults && d.monthlyResults.length > 0) {
+            text += `■ 월별 실적\n`;
+            d.monthlyResults.forEach(r => {
+                text += `${r.month}: 센텀 ${r.centumPcs ?? '-'}pcs / ${fmtAmt(r.centumAmount)}  |  에비뉴엘 ${r.avenuelPcs ?? '-'}pcs / ${fmtAmt(r.avenuelAmount)}\n`;
+            });
+            text += '\n';
+        }
+        if (d.notes) text += `■ 특이사항\n${d.notes}\n`;
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(text).then(() => window.showCustomAlert('보고가 복사되었습니다.'));
+        } else {
+            const el = document.createElement('textarea'); el.value = text;
+            document.body.appendChild(el); el.select(); document.execCommand('copy'); document.body.removeChild(el);
+            window.showCustomAlert('보고가 복사되었습니다.');
+        }
+    };
 
     window.adjustScheduleMonth = function(amount) {
         window.scheduleMonth += amount;

@@ -200,7 +200,118 @@
         </div>
 
         <!-- [탭] 기타 임시 화면들 -->
-        <div id="page-sales" class="page px-5 pt-3 no-scrollbar"><div class="h-full flex items-center justify-center text-[#999]">매출 준비중입니다.</div></div>
+        <!-- [탭] 매출 -->
+        <div id="page-sales" class="page bg-[#FAF9F5] no-scrollbar px-3 pt-1">
+            <div class="flex items-center justify-center w-full h-8 mb-1.5">
+                <h2 class="text-xl font-serif text-[#3A3532] font-semibold whitespace-nowrap">매출</h2>
+            </div>
+            <div class="w-full grid grid-cols-[1fr_auto_1fr] items-center gap-1 mb-3">
+                <div></div>
+                <div class="relative flex items-center rounded-xl border border-[#D8B98B] bg-[#FFFDF8] shadow-sm overflow-hidden h-9">
+                    <button onclick="window.adjustSalesMonth(-1)" class="w-9 h-full flex items-center justify-center text-[#B17A2A] active:bg-[#F8EFE3]"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+                    <span id="sales-month-text" class="text-[14px] font-bold text-[#2F2924] pointer-events-none whitespace-nowrap px-2 min-w-[90px] text-center">2026년 6월</span>
+                    <button onclick="window.adjustSalesMonth(1)" class="w-9 h-full flex items-center justify-center text-[#B17A2A] active:bg-[#F8EFE3]"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+                </div>
+                <div class="flex items-center justify-end gap-1.5">
+                    <button onclick="window.copySalesReport()" class="h-9 px-2 bg-white border border-[#E8E4DB] rounded-xl flex items-center gap-1 text-[#B4975A] shadow-sm active:scale-95 transition-transform text-[10px] font-bold whitespace-nowrap">
+                        <i data-lucide="clipboard-copy" class="w-3.5 h-3.5 shrink-0"></i>보고 복사
+                    </button>
+                    <button onclick="window.openSalesEditModal()" class="w-9 h-9 bg-white border border-[#E8E4DB] rounded-xl flex items-center justify-center text-[#B4975A] shadow-sm active:scale-95 transition-transform">
+                        <i data-lucide="pencil" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+            <!-- 상단 3개 카드 -->
+            <div class="grid grid-cols-3 gap-2 mb-2.5">
+                <div class="bg-[#3A3532] text-white rounded-2xl p-3 flex flex-col gap-0.5">
+                    <span id="sales-estimated-label" class="text-[9px] font-bold opacity-70">6월 예상매출</span>
+                    <div class="text-[18px] font-bold leading-tight mt-0.5" id="sales-estimated-pcs">-PCS</div>
+                    <div class="text-[9px] font-semibold opacity-80 leading-tight mt-1" id="sales-estimated-amount">-원</div>
+                </div>
+                <div class="bg-[#B4975A] text-white rounded-2xl p-3 flex flex-col gap-0.5">
+                    <span id="sales-accum-label" class="text-[9px] font-bold opacity-70">6월 누적매출</span>
+                    <div class="text-[18px] font-bold leading-tight mt-0.5" id="sales-accum-pcs">-PCS</div>
+                    <div class="text-[9px] font-semibold opacity-80 leading-tight mt-1" id="sales-accum-amount">-원</div>
+                </div>
+                <div class="bg-white border border-[#E8D8BD] rounded-2xl p-3 flex flex-col gap-0.5 shadow-sm">
+                    <span id="sales-remaining-label" class="text-[9px] font-bold text-[#888]">6월 남은 매출</span>
+                    <div class="text-[18px] font-bold text-[#3A3532] leading-tight mt-0.5" id="sales-remaining-pcs">-PCS</div>
+                    <div class="text-[9px] font-semibold text-[#666] leading-tight mt-1" id="sales-remaining-amount">-원</div>
+                </div>
+            </div>
+            <!-- 비교 통계 -->
+            <div class="bg-white rounded-2xl border border-[#E8D8BD] shadow-sm p-3 mb-2.5">
+                <div class="grid grid-cols-3 gap-1">
+                    <div class="flex flex-col gap-0.5 pr-1">
+                        <span class="text-[9px] text-[#888] font-semibold leading-tight" id="sales-prev-year-label">전년도 6월 매출</span>
+                        <span class="text-[15px] font-bold text-[#3A3532] mt-0.5" id="sales-prev-year-pcs">-PCS</span>
+                        <span class="text-[9px] text-[#666] font-semibold" id="sales-prev-year-amount">-원</span>
+                    </div>
+                    <div class="flex flex-col items-center gap-0.5 border-x border-[#F0E8D8] text-center px-1">
+                        <span class="text-[9px] text-[#888] font-semibold whitespace-nowrap" id="sales-mpds-label">6월 MPDS 수량</span>
+                        <span class="text-[24px] font-bold text-[#3A3532] leading-tight mt-0.5" id="sales-mpds-count">-</span>
+                        <span class="text-[9px] text-[#888]">건</span>
+                    </div>
+                    <div class="flex flex-col items-end gap-0.5 text-right pl-1">
+                        <span class="text-[9px] text-[#888] font-semibold leading-tight">전월 대비 증감률</span>
+                        <span class="text-[24px] font-bold leading-tight mt-0.5" id="sales-growth-rate">-</span>
+                    </div>
+                </div>
+            </div>
+            <!-- 분기 목표 현황 -->
+            <div class="bg-white rounded-2xl border border-[#E8D8BD] shadow-sm p-3 mb-2.5">
+                <div class="flex items-baseline gap-2 mb-3">
+                    <span class="text-[12px] font-bold text-[#3A3532]" id="sales-quarter-label">목표 현황</span>
+                    <span class="text-[22px] font-bold text-[#B4975A]" id="sales-quarter-goal">-</span>
+                </div>
+                <div class="grid grid-cols-2 gap-2.5">
+                    <div class="bg-[#F8F6F0] rounded-xl p-2.5">
+                        <div class="flex items-end justify-between mb-2">
+                            <span class="text-[11px] font-bold text-[#3A3532]">센텀</span>
+                            <span class="text-[22px] font-bold text-[#B4975A] leading-none" id="sales-centum-share">-%</span>
+                        </div>
+                        <div class="w-full bg-[#E8D8BD] rounded-full h-2 mb-2.5 overflow-hidden">
+                            <div id="sales-centum-bar" class="bg-[#B4975A] h-full rounded-full transition-all duration-500" style="width:0%"></div>
+                        </div>
+                        <div class="space-y-1.5">
+                            <div class="flex justify-between"><span class="text-[9px] text-[#888]">누적실적</span><span class="text-[9px] font-semibold text-[#333] text-right" id="sales-centum-accum">-</span></div>
+                            <div class="flex justify-between"><span class="text-[9px] text-[#888]">달성률</span><span class="text-[9px] font-semibold text-[#333]" id="sales-centum-achieve">-%</span></div>
+                            <div class="flex justify-between"><span class="text-[9px] text-[#888]">남은 목표</span><span class="text-[9px] font-semibold text-[#333] text-right" id="sales-centum-remaining">-</span></div>
+                        </div>
+                    </div>
+                    <div class="bg-[#F8F6F0] rounded-xl p-2.5">
+                        <div class="flex items-end justify-between mb-2">
+                            <span class="text-[11px] font-bold text-[#3A3532]">에비뉴엘</span>
+                            <span class="text-[22px] font-bold text-[#8B6914] leading-none" id="sales-avenuel-share">-%</span>
+                        </div>
+                        <div class="w-full bg-[#E8D8BD] rounded-full h-2 mb-2.5 overflow-hidden">
+                            <div id="sales-avenuel-bar" class="bg-[#8B6914] h-full rounded-full transition-all duration-500" style="width:0%"></div>
+                        </div>
+                        <div class="space-y-1.5">
+                            <div class="flex justify-between"><span class="text-[9px] text-[#888]">누적실적</span><span class="text-[9px] font-semibold text-[#333] text-right" id="sales-avenuel-accum">-</span></div>
+                            <div class="flex justify-between"><span class="text-[9px] text-[#888]">달성률</span><span class="text-[9px] font-semibold text-[#333]" id="sales-avenuel-achieve">-%</span></div>
+                            <div class="flex justify-between"><span class="text-[9px] text-[#888]">남은 목표</span><span class="text-[9px] font-semibold text-[#333] text-right" id="sales-avenuel-remaining">-</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- 월별 실적 -->
+            <div class="bg-white rounded-2xl border border-[#E8D8BD] shadow-sm p-3 mb-2.5">
+                <div class="flex items-center justify-between mb-2.5">
+                    <span class="text-[12px] font-bold text-[#3A3532]">월별 실적</span>
+                    <div class="flex gap-8 text-[9px] font-bold text-[#888] pr-0.5">
+                        <span>센텀</span>
+                        <span>에비뉴엘</span>
+                    </div>
+                </div>
+                <div id="sales-monthly-results" class="space-y-2"></div>
+            </div>
+            <!-- 특이사항 -->
+            <div class="bg-white rounded-2xl border border-[#E8D8BD] shadow-sm p-3 mb-3">
+                <div class="text-[12px] font-bold text-[#3A3532] mb-2">특이사항</div>
+                <div id="sales-notes-display" class="text-[12px] text-[#555] leading-relaxed whitespace-pre-wrap min-h-[32px]">-</div>
+            </div>
+        </div>
         <div id="page-inventory" class="page px-5 pt-3 no-scrollbar"><div class="h-full flex items-center justify-center text-[#999]">재고 준비중입니다.</div></div>
         <div id="page-as" class="page px-5 pt-3 no-scrollbar"><div class="h-full flex items-center justify-center text-[#999]">A/S 준비중입니다.</div></div>
         <div id="page-sp" class="page px-5 pt-3 no-scrollbar"><div class="h-full flex items-center justify-center text-[#999]">SP 준비중입니다.</div></div>
@@ -727,6 +838,97 @@
         </div>
     </div>
     <div id="schedule-generator-content" class="flex-1 overflow-auto p-2 bg-[#FAF9F5]"></div>
+</div>
+
+<!-- ==========================================
+     매출 수정 모달
+     ========================================== -->
+<div id="sales-edit-modal" style="display: none;" class="fixed inset-0 w-full max-w-md mx-auto bg-[#FAF9F5] z-[200] flex-col font-sans">
+    <div class="bg-[#FAF9F5] flex-shrink-0 border-b border-[#F0EFEA]" style="padding-top: max(4px, env(safe-area-inset-top));">
+        <div class="relative flex items-center justify-between px-5 pt-1 pb-0">
+            <div class="w-8"></div>
+            <img src="log.png" alt="Patek Philippe" class="w-24 h-auto object-contain" />
+            <button onclick="window.closeSalesEditModal()" class="w-8 h-8 flex items-center justify-center text-[#8A847E] active:scale-95"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+        <div class="text-center py-1 pb-3">
+            <h2 class="text-[17px] font-bold text-[#333]">매출 수정</h2>
+            <p id="sales-edit-month-title" class="text-[13px] text-[#888] font-semibold mt-0.5">2026년 6월</p>
+        </div>
+    </div>
+    <div class="flex-1 overflow-y-auto no-scrollbar px-4 pt-4 pb-32 space-y-5">
+        <!-- 월 예상 매출 -->
+        <div>
+            <div class="text-[10px] font-bold text-[#888] mb-2 ml-1 uppercase tracking-wider">월 예상 매출</div>
+            <div class="bg-white rounded-xl border border-[#E5E5E5] divide-y divide-[#F5F5F5]">
+                <div class="flex items-center px-3 py-2.5 gap-3"><span class="text-[11px] text-[#888] w-16 shrink-0">PCS수</span><input type="number" id="se-estimated-pcs" class="flex-1 bg-transparent outline-none text-[12px] font-semibold text-right" placeholder="0" /></div>
+                <div class="flex items-center px-3 py-2.5 gap-3"><span class="text-[11px] text-[#888] w-16 shrink-0">금액(원)</span><input type="number" id="se-estimated-amount" class="flex-1 bg-transparent outline-none text-[12px] font-semibold text-right" placeholder="0" /></div>
+            </div>
+        </div>
+        <!-- 월 누적 매출 -->
+        <div>
+            <div class="text-[10px] font-bold text-[#888] mb-2 ml-1 uppercase tracking-wider">월 누적 매출</div>
+            <div class="bg-white rounded-xl border border-[#E5E5E5] divide-y divide-[#F5F5F5]">
+                <div class="flex items-center px-3 py-2.5 gap-3"><span class="text-[11px] text-[#888] w-16 shrink-0">PCS수</span><input type="number" id="se-accum-pcs" class="flex-1 bg-transparent outline-none text-[12px] font-semibold text-right" placeholder="0" /></div>
+                <div class="flex items-center px-3 py-2.5 gap-3"><span class="text-[11px] text-[#888] w-16 shrink-0">금액(원)</span><input type="number" id="se-accum-amount" class="flex-1 bg-transparent outline-none text-[12px] font-semibold text-right" placeholder="0" /></div>
+            </div>
+        </div>
+        <!-- 비교 통계 -->
+        <div>
+            <div class="text-[10px] font-bold text-[#888] mb-2 ml-1 uppercase tracking-wider">비교 통계</div>
+            <div class="bg-white rounded-xl border border-[#E5E5E5] divide-y divide-[#F5F5F5]">
+                <div class="flex items-center px-3 py-2.5 gap-3"><span class="text-[11px] text-[#888] w-20 shrink-0">전년동월 PCS</span><input type="number" id="se-prev-year-pcs" class="flex-1 bg-transparent outline-none text-[12px] font-semibold text-right" placeholder="0" /></div>
+                <div class="flex items-center px-3 py-2.5 gap-3"><span class="text-[11px] text-[#888] w-20 shrink-0">전년동월 금액</span><input type="number" id="se-prev-year-amount" class="flex-1 bg-transparent outline-none text-[12px] font-semibold text-right" placeholder="0" /></div>
+                <div class="flex items-center px-3 py-2.5 gap-3"><span class="text-[11px] text-[#888] w-20 shrink-0">MPDS 수량</span><input type="number" id="se-mpds-count" class="flex-1 bg-transparent outline-none text-[12px] font-semibold text-right" placeholder="0" /></div>
+                <div class="flex items-center px-3 py-2.5 gap-3"><span class="text-[11px] text-[#888] w-20 shrink-0">증감률</span><input type="text" id="se-growth-rate" class="flex-1 bg-transparent outline-none text-[12px] font-semibold text-right" placeholder="+12.5" /><span class="text-[11px] text-[#888] shrink-0">%</span></div>
+            </div>
+        </div>
+        <!-- 분기 목표 -->
+        <div>
+            <div class="text-[10px] font-bold text-[#888] mb-2 ml-1 uppercase tracking-wider">분기 목표</div>
+            <div class="bg-white rounded-xl border border-[#E5E5E5] divide-y divide-[#F5F5F5]">
+                <div class="flex items-center px-3 py-2.5 gap-3"><span class="text-[11px] text-[#888] w-20 shrink-0">분기</span><input type="text" id="se-quarter-label" class="flex-1 bg-transparent outline-none text-[12px] font-semibold text-right" placeholder="예: 2분기" /></div>
+                <div class="flex items-center px-3 py-2.5 gap-3"><span class="text-[11px] text-[#888] w-20 shrink-0">목표 총액(원)</span><input type="number" id="se-quarter-goal" class="flex-1 bg-transparent outline-none text-[12px] font-semibold text-right" placeholder="15000000000" /></div>
+            </div>
+        </div>
+        <!-- 센텀 -->
+        <div>
+            <div class="text-[10px] font-bold text-[#B4975A] mb-2 ml-1 uppercase tracking-wider">센텀</div>
+            <div class="bg-white rounded-xl border border-[#E5E5E5] divide-y divide-[#F5F5F5]">
+                <div class="flex items-center px-3 py-2.5 gap-3"><span class="text-[11px] text-[#888] w-20 shrink-0">배분율(%)</span><input type="number" id="se-centum-share" class="flex-1 bg-transparent outline-none text-[12px] font-semibold text-right" placeholder="67.5" step="0.1" /></div>
+                <div class="flex items-center px-3 py-2.5 gap-3"><span class="text-[11px] text-[#888] w-20 shrink-0">누적실적(원)</span><input type="number" id="se-centum-accum" class="flex-1 bg-transparent outline-none text-[12px] font-semibold text-right" placeholder="0" /></div>
+                <div class="flex items-center px-3 py-2.5 gap-3"><span class="text-[11px] text-[#888] w-20 shrink-0">달성률(%)</span><input type="number" id="se-centum-achieve" class="flex-1 bg-transparent outline-none text-[12px] font-semibold text-right" placeholder="0" step="0.1" /></div>
+                <div class="flex items-center px-3 py-2.5 gap-3"><span class="text-[11px] text-[#888] w-20 shrink-0">남은 목표(원)</span><input type="number" id="se-centum-remaining" class="flex-1 bg-transparent outline-none text-[12px] font-semibold text-right" placeholder="0" /></div>
+            </div>
+        </div>
+        <!-- 에비뉴엘 -->
+        <div>
+            <div class="text-[10px] font-bold text-[#8B6914] mb-2 ml-1 uppercase tracking-wider">에비뉴엘</div>
+            <div class="bg-white rounded-xl border border-[#E5E5E5] divide-y divide-[#F5F5F5]">
+                <div class="flex items-center px-3 py-2.5 gap-3"><span class="text-[11px] text-[#888] w-20 shrink-0">배분율(%)</span><input type="number" id="se-avenuel-share" class="flex-1 bg-transparent outline-none text-[12px] font-semibold text-right" placeholder="82.5" step="0.1" /></div>
+                <div class="flex items-center px-3 py-2.5 gap-3"><span class="text-[11px] text-[#888] w-20 shrink-0">누적실적(원)</span><input type="number" id="se-avenuel-accum" class="flex-1 bg-transparent outline-none text-[12px] font-semibold text-right" placeholder="0" /></div>
+                <div class="flex items-center px-3 py-2.5 gap-3"><span class="text-[11px] text-[#888] w-20 shrink-0">달성률(%)</span><input type="number" id="se-avenuel-achieve" class="flex-1 bg-transparent outline-none text-[12px] font-semibold text-right" placeholder="0" step="0.1" /></div>
+                <div class="flex items-center px-3 py-2.5 gap-3"><span class="text-[11px] text-[#888] w-20 shrink-0">남은 목표(원)</span><input type="number" id="se-avenuel-remaining" class="flex-1 bg-transparent outline-none text-[12px] font-semibold text-right" placeholder="0" /></div>
+            </div>
+        </div>
+        <!-- 월별 실적 -->
+        <div>
+            <div class="flex items-center justify-between mb-2">
+                <div class="text-[10px] font-bold text-[#888] ml-1 uppercase tracking-wider">월별 실적</div>
+                <button onclick="window.addSalesMonthlyRow()" class="flex items-center gap-1 text-[11px] font-bold text-[#B4975A] px-2 py-1 active:scale-95">
+                    <i data-lucide="plus" class="w-3.5 h-3.5"></i>행 추가
+                </button>
+            </div>
+            <div id="se-monthly-results-list" class="space-y-2"></div>
+        </div>
+        <!-- 특이사항 -->
+        <div>
+            <div class="text-[10px] font-bold text-[#888] mb-2 ml-1 uppercase tracking-wider">특이사항</div>
+            <textarea id="se-notes" rows="4" placeholder="특이사항을 입력하세요" class="w-full bg-white border border-[#E5E5E5] rounded-xl p-3 outline-none text-[12px] font-medium resize-none leading-relaxed"></textarea>
+        </div>
+    </div>
+    <div class="flex-shrink-0 p-4 bg-white border-t border-[#F0EFEA]" style="padding-bottom: max(16px, env(safe-area-inset-bottom));">
+        <button onclick="window.saveSalesData()" class="w-full bg-[#B4975A] text-white py-3.5 rounded-xl text-[16px] font-bold shadow-md active:scale-95 transition-transform">저장하기</button>
+    </div>
 </div>
 
 <!-- ==========================================
