@@ -1503,6 +1503,7 @@
         document.getElementById('edit-schedule-title').innerText = `${window.scheduleYear}년 ${window.scheduleMonth}월`;
         window.scheduleEditSelectedStaff = null;
         window.scheduleEditChangedCells = {};
+        window.scheduleEditDayValues = {};
         window.scheduleEditSelectedDay = null;
         window.renderScheduleEditStaffSelector();
         document.getElementById('page-schedule-edit-modal').style.display = 'flex';
@@ -1580,26 +1581,35 @@
 
         for (let i = 0; i < firstDow; i++) html += `<div class="min-h-[58px] bg-[#FFFDF8]/40 border-r border-b border-[#F0EFEA]"></div>`;
 
+        const editCodeMeta = {
+            'A':   { bg: '#FAD7D5', text: '#6E2626', label: 'A' },
+            'B':   { bg: '#D9E7FA', text: '#234B7A', label: 'B' },
+            'C':   { bg: '#FFE7B8', text: '#7A4F14', label: 'C' },
+            'A반': { bg: '#FAD7D5', text: '#6E2626', label: 'A반' },
+            'B반': { bg: '#D9E7FA', text: '#234B7A', label: 'B반' },
+            '연차': { bg: '#C8E6C9', text: '#2E7D32', label: '연차' },
+        };
+        if (!window.scheduleEditDayValues) window.scheduleEditDayValues = {};
+        const editVals = window.scheduleEditDayValues[staffName] || {};
+
         for (let d = 1; d <= totalDays; d++) {
             const dow = new Date(year, month - 1, d).getDay();
             const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
             const isHoliday = PUBLIC_HOLIDAYS_2026[dateStr] !== undefined;
             const rawVal = userDays[d] || userDays[String(d)] || '';
+            const displayVal = editVals[d] !== undefined ? editVals[d] : rawVal;
             const isChanged = !!changedDays[d];
-            const isSelected = window.scheduleEditSelectedDay === d;
             const noRight = dow === 6 ? '' : 'border-r';
             const dc = (isHoliday || dow===0) ? 'text-[#E53935]' : (dow===6 ? 'text-[#1E88E5]' : 'text-[#2F2924]');
-            const hlBg = (isChanged || isSelected) ? 'bg-[#EEF6FF]' : 'bg-white';
-            const hlBorder = (isChanged || isSelected) ? 'border-[#3F9DF5]' : '';
-            const isOff = !rawVal || rawVal === '/' || rawVal === '휴' || rawVal === '휴무';
-            const opts = [
-                {v:'',l:'휴무'},{v:'A',l:'A'},{v:'B',l:'B'},{v:'C',l:'C'},
-                {v:'A반',l:'A반'},{v:'B반',l:'B반'},{v:'연차',l:'연차'}
-            ].map(o => `<option value="${o.v}" ${(rawVal===o.v||(isOff&&o.v==='')?'selected':'')}>${o.l}</option>`).join('');
+            const hlBg = isChanged ? 'bg-[#EEF6FF]' : 'bg-white';
+            const meta = editCodeMeta[displayVal];
+            const badge = meta
+                ? `<span class="inline-block text-[10.5px] font-bold px-1 py-[1px] rounded-[3px] leading-tight" style="background:${meta.bg};color:${meta.text};">${meta.label}</span>`
+                : `<span class="inline-block text-[10px] font-bold text-[#CCC] leading-tight">휴무</span>`;
 
-            html += `<div id="edit-day-cell-${d}" class="min-h-[52px] p-[3px] flex flex-col ${noRight} border-b border-[#F0EFEA] ${hlBg} ${hlBorder}" style="${(isChanged||isSelected)?'border-color:#3F9DF5;':'' }">
+            html += `<div id="edit-day-cell-${d}" onclick="window.openScheduleEditDayPicker('${staffName}',${d},'${displayVal}')" class="min-h-[52px] p-[3px] flex flex-col cursor-pointer active:opacity-70 ${noRight} border-b border-[#F0EFEA] ${hlBg}" style="${isChanged?'border-left:2px solid #3F9DF5;':''}">
                 <span class="text-[11px] font-bold ${dc} leading-none mt-0.5 self-start">${d}</span>
-                <div class="flex-1 flex items-center justify-center w-full"><select data-staff="${staffName}" data-day="${d}" onfocus="window.onScheduleEditFocus(${d})" onchange="window.onScheduleEditChange(this)" class="schedule-input-select w-full text-[9px] font-bold text-center outline-none bg-transparent border-0 appearance-none cursor-pointer rounded">${opts}</select></div>
+                <div class="flex-1 flex items-center justify-center">${badge}</div>
             </div>`;
         }
 
@@ -1635,6 +1645,50 @@
         if (cell) { cell.style.borderColor = '#3F9DF5'; cell.style.boxShadow = '0 0 0 1.5px #3F9DF5'; }
     };
 
+    window.openScheduleEditDayPicker = function(staffName, day, currentVal) {
+        window.scheduleEditPickerStaff = staffName;
+        window.scheduleEditPickerDay = day;
+        const titleEl = document.getElementById('edit-day-value-title');
+        if (titleEl) titleEl.innerText = `${day}일`;
+        const options = [
+            {v:'',   label:'휴무', bg:'#F2F2F2', text:'#555555'},
+            {v:'A',  label:'A',   bg:'#FAD7D5', text:'#6E2626'},
+            {v:'B',  label:'B',   bg:'#D9E7FA', text:'#234B7A'},
+            {v:'C',  label:'C',   bg:'#FFE7B8', text:'#7A4F14'},
+            {v:'A반',label:'A반', bg:'#FAD7D5', text:'#6E2626'},
+            {v:'B반',label:'B반', bg:'#D9E7FA', text:'#234B7A'},
+            {v:'연차',label:'연차',bg:'#C8E6C9', text:'#2E7D32'},
+        ];
+        const buttonsEl = document.getElementById('edit-day-value-buttons');
+        if (buttonsEl) {
+            buttonsEl.innerHTML = options.map(o => {
+                const active = currentVal === o.v || (!currentVal && o.v === '');
+                return `<button onclick="window.selectEditDayValue('${o.v}')"
+                    style="background:${active?o.bg:'#FFFFFF'};color:${active?o.text:'#666'};border:1.5px solid ${active?o.text:'#E5E5E5'};"
+                    class="py-2.5 rounded-xl text-[12px] font-bold active:scale-95">${o.label}</button>`;
+            }).join('');
+        }
+        const modal = document.getElementById('edit-day-value-modal');
+        if (modal) modal.style.display = 'flex';
+    };
+
+    window.selectEditDayValue = function(value) {
+        const staffName = window.scheduleEditPickerStaff;
+        const day = window.scheduleEditPickerDay;
+        if (!window.scheduleEditDayValues) window.scheduleEditDayValues = {};
+        if (!window.scheduleEditDayValues[staffName]) window.scheduleEditDayValues[staffName] = {};
+        window.scheduleEditDayValues[staffName][day] = value;
+        if (!window.scheduleEditChangedCells[staffName]) window.scheduleEditChangedCells[staffName] = {};
+        window.scheduleEditChangedCells[staffName][day] = true;
+        window.closeEditDayValueModal();
+        window.renderScheduleEditGrid(staffName);
+    };
+
+    window.closeEditDayValueModal = function() {
+        const modal = document.getElementById('edit-day-value-modal');
+        if (modal) modal.style.display = 'none';
+    };
+
     window.closeScheduleEdit = function() {
         document.getElementById('page-schedule-edit-modal').style.display = 'none';
     };
@@ -1649,13 +1703,15 @@
         const month = window.scheduleMonth;
         const currentMonthKey = `${year}-${String(month).padStart(2, '0')}`;
 
-        const selects = document.querySelectorAll('.schedule-input-select');
-        const newDayData = {};
-        selects.forEach(sel => { newDayData[sel.dataset.day] = sel.value; });
-
         const existingDoc = window.schedulesData[currentMonthKey] || {};
         const existingStaffs = existingDoc.staffs || {};
         const oldDays = existingStaffs[staffName] || {};
+        const changedVals = (window.scheduleEditDayValues && window.scheduleEditDayValues[staffName]) || {};
+        const totalDays = getDaysInMonth(year, month);
+        const newDayData = {};
+        for (let d = 1; d <= totalDays; d++) {
+            newDayData[String(d)] = changedVals[d] !== undefined ? changedVals[d] : (oldDays[d] || oldDays[String(d)] || '');
+        }
         const mergedStaffs = { ...existingStaffs, [staffName]: newDayData };
 
         const now = new Date();

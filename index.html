@@ -372,6 +372,15 @@
     <div class="flex-shrink-0 p-5 bg-white border-t border-[#F0EFEA]" style="padding-bottom: max(16px, env(safe-area-inset-bottom));"><button onclick="window.saveScheduleSheet()" class="w-full bg-[#B4975A] text-white py-3.5 rounded-xl text-[16px] font-bold shadow-md active:scale-95 transition-transform">저장하기</button></div>
 </div>
 
+<!-- 근무표 수정 날짜값 선택 모달 -->
+<div id="edit-day-value-modal" style="display:none;" class="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[260] flex items-center justify-center p-6" onclick="window.closeEditDayValueModal()">
+    <div class="bg-[#FCFBF9] rounded-2xl p-4 shadow-2xl border border-[#E8E4DB] w-full max-w-[240px]" onclick="event.stopPropagation()">
+        <div id="edit-day-value-title" class="text-[13px] font-bold text-[#3A3532] text-center mb-3"></div>
+        <div id="edit-day-value-buttons" class="grid grid-cols-3 gap-2"></div>
+        <button onclick="window.closeEditDayValueModal()" class="w-full mt-3 py-2.5 rounded-xl bg-[#F2EFE8] text-[#4A443F] text-[13px] font-bold active:scale-95">취소</button>
+    </div>
+</div>
+
 <!-- 직원 선택 피커 (수정 화면용 이름 클릭 시) -->
 <div id="staff-name-picker-overlay" style="display:none;" class="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[250] flex items-center justify-center p-6" onclick="window.closeStaffNamePicker()">
     <div class="w-full max-w-[320px] bg-[#FCFBF9] rounded-2xl p-5 shadow-2xl border border-[#E8E4DB]" onclick="event.stopPropagation()">
