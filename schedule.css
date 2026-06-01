@@ -99,9 +99,9 @@ thead .s-annual, thead .s-name { z-index:15; background:#EDE0CB; }
 .td-edit[data-evtype="고객"]    { background:#FFF3D8 !important; }
 .td-edit[data-evtype="교육"]    { background:#EAF4FF !important; }
 .td-edit[data-evtype="기타"]    { background:#F5EDFA !important; }
-.td-slash {
+.td-edit.td-slash {
   color: transparent !important;
-  background: linear-gradient(
+  background-image: linear-gradient(
     to bottom right,
     transparent calc(50% - 0.8px),
     #888 calc(50% - 0.8px),
