@@ -36,28 +36,30 @@
     window.selectedCalDate = null;
     window.editingCalEventId = null;
 
-    window.setCalFilter = function(filter) {
-        window.calFilter = filter;
-        const filterColorMap = {
-            '전체': { bg: '#B8860B', text: '#FFFFFF',  border: '#B8860B' },
-            '판매': { bg: '#FFF3D8', text: '#7B4A00',  border: '#E4B95D' },
-            '행사': { bg: '#EEF8E8', text: '#4B7C2F',  border: '#9DCB75' },
-            '교육': { bg: '#EAF4FF', text: '#27659A',  border: '#8DB8E8' },
-            '기타': { bg: '#F5EDFA', text: '#6A4A7C',  border: '#C9AEDB' },
-        };
+    const CAL_FILTER_COLORS = {
+        '전체': { bg: '#B8860B', text: '#FFFFFF', border: '#B8860B' },
+        '판매': { bg: '#FFF3D8', text: '#7B4A00', border: '#E4B95D' },
+        '행사': { bg: '#EEF8E8', text: '#4B7C2F', border: '#9DCB75' },
+        '교육': { bg: '#EAF4FF', text: '#27659A', border: '#8DB8E8' },
+        '기타': { bg: '#F5EDFA', text: '#6A4A7C', border: '#C9AEDB' },
+    };
+    window.applyCalFilterStyles = function() {
         document.querySelectorAll('.cal-filter-btn').forEach(btn => {
-            const active = btn.dataset.filter === filter;
+            btn.className = 'cal-filter-btn h-7 px-1 rounded-full text-[11px] font-bold whitespace-nowrap transition-all duration-150';
+            const active = btn.dataset.filter === window.calFilter;
             if (active) {
-                const c = filterColorMap[filter] || filterColorMap['전체'];
-                btn.style.backgroundColor = c.bg;
-                btn.style.color = c.text;
-                btn.style.borderColor = c.border;
+                const c = CAL_FILTER_COLORS[window.calFilter] || CAL_FILTER_COLORS['전체'];
+                btn.style.backgroundColor = c.bg; btn.style.color = c.text;
+                btn.style.border = `1px solid ${c.border}`; btn.style.boxShadow = '0 1px 2px rgba(0,0,0,0.06)';
             } else {
-                btn.style.backgroundColor = '#FFFFFF';
-                btn.style.color = '#2B1A12';
-                btn.style.borderColor = '#E0C897';
+                btn.style.backgroundColor = 'transparent'; btn.style.color = '#8A847E';
+                btn.style.border = '1px solid transparent'; btn.style.boxShadow = 'none';
             }
         });
+    };
+    window.setCalFilter = function(filter) {
+        window.calFilter = filter;
+        window.applyCalFilterStyles();
         window.renderMainCalendar();
     };
 
@@ -244,6 +246,7 @@
                     document.getElementById('app-container').style.display = 'flex'; 
                     fetchStaffs(); fetchNotices(); fetchAlbums(user); fetchSchedules(); fetchLeaveRequests(); fetchCalEvents(); fetchTimeRequests(); fetchSalesDataForMonth(window.salesYear, window.salesMonth);
                     lucide.createIcons();
+                    window.applyCalFilterStyles(); window.applyAlbumFilterStyles();
                 } else {
                     hideAllPages();
                     document.getElementById('pending-page').style.display = 'flex';
@@ -547,9 +550,10 @@
         btnElement.classList.add('active');
         const mySchedModal = document.getElementById('page-my-schedule-modal');
         if (mySchedModal && mySchedModal.style.display !== 'none') mySchedModal.style.display = 'none';
-        if (tabId === 'notice') { applyNoticeFilterButtonStyles(); window.renderNotices(); }
-        if (tabId === 'calendar') { window.renderMainCalendar(); }
-        if (tabId === 'sales') { window.renderSalesPage(); }
+        if (tabId === 'notice')   { applyNoticeFilterButtonStyles(); window.renderNotices(); }
+        if (tabId === 'calendar') { window.applyCalFilterStyles(); window.renderMainCalendar(); }
+        if (tabId === 'album')    { window.applyAlbumFilterStyles(); }
+        if (tabId === 'sales')    { window.renderSalesPage(); }
     };
 
     window.openNoticeCreate = function() {
@@ -731,10 +735,19 @@
         });
     }
 
-    window.setAlbumFilter = function(category, btnElement) {
+    window.applyAlbumFilterStyles = function() {
+        document.querySelectorAll('.album-filter-btn').forEach(btn => {
+            btn.className = 'album-filter-btn h-7 px-1 rounded-full text-[11px] font-bold whitespace-nowrap transition-all duration-150';
+            const active = btn.dataset.category === window.albumFilter;
+            btn.style.backgroundColor = active ? '#8B7355' : 'transparent';
+            btn.style.color = active ? '#FFFFFF' : '#8A847E';
+            btn.style.border = active ? '1px solid #8B7355' : '1px solid transparent';
+            btn.style.boxShadow = active ? '0 1px 2px rgba(0,0,0,0.06)' : 'none';
+        });
+    };
+    window.setAlbumFilter = function(category) {
         window.albumFilter = category;
-        document.querySelectorAll('.album-filter-btn').forEach(btn => btn.className = "album-filter-btn flex-1 py-1.5 rounded-lg text-[12px] font-sans whitespace-nowrap transition-colors border shadow-sm bg-white text-[#8A847E] border-[#E8E4DB]");
-        btnElement.className = "album-filter-btn flex-1 py-1.5 rounded-lg text-[12px] font-sans whitespace-nowrap transition-colors border shadow-sm bg-[#8B7355] text-white border-[#8B7355] font-medium";
+        window.applyAlbumFilterStyles();
         window.renderAlbums();
     };
 
@@ -809,7 +822,12 @@
     window.setFormCategory = function(cat) {
         window.albumForm.category = cat;
         document.querySelectorAll('.album-form-cat-btn').forEach(btn => {
-            btn.className = (btn.dataset.category === cat) ? "album-form-cat-btn flex-1 py-2.5 rounded-[8px] text-[13px] font-sans whitespace-nowrap transition-colors border shadow-sm bg-[#8B7355] text-white border-[#8B7355] font-medium" : "album-form-cat-btn flex-1 py-2.5 rounded-[8px] text-[13px] font-sans whitespace-nowrap transition-colors border shadow-sm bg-white text-[#8A847E] border-[#E8E4DB]";
+            btn.className = 'album-form-cat-btn h-7 px-1 rounded-full text-[11px] font-bold whitespace-nowrap transition-all duration-150';
+            const active = btn.dataset.category === cat;
+            btn.style.backgroundColor = active ? '#8B7355' : 'transparent';
+            btn.style.color = active ? '#FFFFFF' : '#8A847E';
+            btn.style.border = active ? '1px solid #8B7355' : '1px solid transparent';
+            btn.style.boxShadow = active ? '0 1px 2px rgba(0,0,0,0.06)' : 'none';
         });
     };
 
