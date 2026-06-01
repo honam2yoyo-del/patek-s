@@ -108,6 +108,18 @@
 
     window.scheduleYear = new Date().getFullYear();
     window.scheduleMonth = new Date().getMonth() + 1;
+    (function initMonthDisplay() {
+        const textVal = `${window.scheduleYear}년 ${window.scheduleMonth}월`;
+        const monthVal = `${window.scheduleYear}-${String(window.scheduleMonth).padStart(2,'0')}`;
+        ['schedule-month-text','leave-month-text','main-cal-month-text',
+         'my-schedule-month-title','leave-history-month-text',
+         'time-history-month-text','schedule-generator-month-text'].forEach(id => {
+            const el = document.getElementById(id); if (el) el.innerText = textVal;
+        });
+        ['schedule-month-picker','leave-month-picker','main-cal-month-picker'].forEach(id => {
+            const el = document.getElementById(id); if (el) el.value = monthVal;
+        });
+    })();
     window.schedulesData = {}; 
     window.leaveRequests = []; 
     window.calEvents = []; 
