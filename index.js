@@ -1069,11 +1069,11 @@
                 monthlyEl.innerHTML = results.map(r => `
                     <div class="flex items-start gap-2 py-1.5 border-b border-[#F5F0E8] last:border-b-0">
                         <span class="text-[11px] font-bold text-[#3A3532] w-7 shrink-0 pt-0.5">${r.month || '-'}</span>
-                        <div class="flex-1 min-w-0">
+                        <div class="flex-1 min-w-0 text-center">
                             <div class="text-[10px] font-semibold text-[#555]">${r.centumPcs != null ? r.centumPcs + 'pcs' : '-'}</div>
                             <div class="text-[9px] text-[#999]">${fmtAmt(r.centumAmount)}</div>
                         </div>
-                        <div class="flex-1 min-w-0 text-right">
+                        <div class="flex-1 min-w-0 text-center">
                             <div class="text-[10px] font-semibold text-[#555]">${r.avenuelPcs != null ? r.avenuelPcs + 'pcs' : '-'}</div>
                             <div class="text-[9px] text-[#999]">${fmtAmt(r.avenuelAmount)}</div>
                         </div>
