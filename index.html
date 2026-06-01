@@ -373,10 +373,10 @@
 </div>
 
 <!-- 직원 선택 피커 (수정 화면용 이름 클릭 시) -->
-<div id="staff-name-picker-overlay" style="display:none;" class="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[250] flex items-end justify-center" onclick="window.closeStaffNamePicker()">
-    <div class="w-full max-w-md bg-[#FCFBF9] rounded-t-[26px] p-5 shadow-2xl" onclick="event.stopPropagation()" style="padding-bottom: max(20px, env(safe-area-inset-bottom));">
+<div id="staff-name-picker-overlay" style="display:none;" class="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[250] flex items-center justify-center p-6" onclick="window.closeStaffNamePicker()">
+    <div class="w-full max-w-[320px] bg-[#FCFBF9] rounded-2xl p-5 shadow-2xl border border-[#E8E4DB]" onclick="event.stopPropagation()">
         <div class="text-center text-[14px] font-bold text-[#3A3532] mb-4">직원 선택</div>
-        <div id="staff-name-picker-list" class="space-y-2 max-h-[50vh] overflow-y-auto no-scrollbar"></div>
+        <div id="staff-name-picker-list" class="space-y-2 max-h-[60vh] overflow-y-auto no-scrollbar"></div>
         <button onclick="window.closeStaffNamePicker()" class="w-full mt-4 py-3 rounded-xl bg-[#F2EFE8] text-[#4A443F] text-[14px] font-bold active:scale-95">취소</button>
     </div>
 </div>
