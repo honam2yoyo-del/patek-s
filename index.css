@@ -36,7 +36,7 @@
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
         .schedule-table { table-layout: fixed; width: 100%; }
-        .schedule-table th, .schedule-table td { border: 1px solid #E2E0D9; text-align: center; vertical-align: middle; font-size: 7.5px; padding: 3px 0; line-height: 1; overflow: hidden; word-break: keep-all; }
+        .schedule-table th, .schedule-table td { border: 1px solid #E8E4DB; text-align: center; vertical-align: middle; font-size: 7.5px; padding: 3px 0; line-height: 1; overflow: hidden; word-break: keep-all; }
         .schedule-table th:nth-child(1), .schedule-table td:nth-child(1) { width: 18px; }
         .schedule-table th:nth-child(2), .schedule-table td:nth-child(2) { width: 26px; }
         

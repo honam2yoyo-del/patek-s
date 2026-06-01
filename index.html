@@ -42,7 +42,7 @@
     <div class="flex items-center justify-center pt-[calc(20px+env(safe-area-inset-top))] pb-3 bg-[#FAF9F5] flex-shrink-0 relative w-full px-5"><h2 class="text-xl font-serif font-bold text-[#333]">프로필</h2><button onclick="window.cancelRegistration()" class="absolute right-5 text-[#999] p-1 active:scale-95"><i data-lucide="x" class="w-5 h-5"></i></button></div>
     <div class="flex-1 overflow-y-auto px-6 pt-2 space-y-4 no-scrollbar pb-10">
         <div class="flex justify-center mt-2 mb-4">
-            <div class="relative w-24 h-24 rounded-full bg-[#E8E4DB] flex items-center justify-center overflow-hidden cursor-pointer border-2 border-[#D8B98B]" onclick="document.getElementById('reg-profile-img-input').click()"><img id="reg-profile-img-preview" src="" class="w-full h-full object-cover hidden" /><i id="reg-profile-img-icon" data-lucide="camera" class="w-8 h-8 text-[#8A847E]"></i><input type="file" id="reg-profile-img-input" class="hidden" accept="image/*" onchange="window.previewProfileImage(this, 'reg-profile-img-preview', 'reg-profile-img-icon')" /></div>
+            <div class="relative w-24 h-24 rounded-full bg-[#E8E4DB] flex items-center justify-center overflow-hidden cursor-pointer border-2 border-[#E8E4DB]" onclick="document.getElementById('reg-profile-img-input').click()"><img id="reg-profile-img-preview" src="" class="w-full h-full object-cover hidden" /><i id="reg-profile-img-icon" data-lucide="camera" class="w-8 h-8 text-[#8A847E]"></i><input type="file" id="reg-profile-img-input" class="hidden" accept="image/*" onchange="window.previewProfileImage(this, 'reg-profile-img-preview', 'reg-profile-img-icon')" /></div>
         </div>
         <div><label class="block text-sm font-semibold text-[#4A443F] mb-1.5 ml-1">직급</label><div class="flex gap-2"><button type="button" data-pos="점장" onclick="window.regPosition='점장'; window.renderRegPosition();" class="reg-pos-btn flex-1 py-2.5 rounded-xl border font-bold text-[14px] transition-all shadow-sm">점장</button><button type="button" data-pos="부점장" onclick="window.regPosition='부점장'; window.renderRegPosition();" class="reg-pos-btn flex-1 py-2.5 rounded-xl border font-bold text-[14px] transition-all shadow-sm">부점장</button><button type="button" data-pos="사원" onclick="window.regPosition='사원'; window.renderRegPosition();" class="reg-pos-btn flex-1 py-2.5 rounded-xl border font-bold text-[14px] transition-all shadow-sm">사원</button></div></div>
         <div><label class="block text-sm font-semibold text-[#4A443F] mb-1.5 ml-1">이름</label><input type="text" id="reg-name" class="form-input" placeholder="이름을 입력하세요"></div>
@@ -83,7 +83,7 @@
                 <!-- 월 선택 (근무표와 동일한 3열 그리드) -->
                 <div class="w-full grid grid-cols-[1fr_auto_1fr] items-center gap-1 mb-2.5">
                     <div></div>
-                    <div class="relative flex items-center rounded-xl border border-[#D8B98B] bg-[#FFFDF8] shadow-sm overflow-hidden h-9">
+                    <div class="relative flex items-center rounded-xl border border-[#E8E4DB] bg-white shadow-sm overflow-hidden h-9">
                         <button onclick="window.adjustScheduleMonth(-1)" class="w-9 h-full flex items-center justify-center text-[#B17A2A] active:bg-[#F8EFE3]"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
                         <button type="button" onclick="window.openScheduleMonthPicker()" class="relative h-full flex items-center justify-center px-2 min-w-[90px] cursor-pointer active:bg-[#F8EFE3] bg-transparent border-0">
                             <span id="main-cal-month-text" class="text-[14px] font-bold text-[#2F2924] pointer-events-none whitespace-nowrap">2026년 5월</span>
@@ -111,7 +111,7 @@
             </div>
             <!-- 월간 캘린더 -->
             <div class="rounded-2xl overflow-hidden border border-[#E8E4DB] shadow-[0_8px_28px_rgba(139,115,85,0.12)]">
-                <div style="display:grid;grid-template-columns:repeat(7,1fr);height:44px;background:#FFFDF8;border-bottom:1px solid #E7D8C0;">
+                <div style="display:grid;grid-template-columns:repeat(7,1fr);height:44px;background:#fff;border-bottom:1px solid #E8E4DB;">
                     <div style="display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#D32F2F;font-family:inherit;">일</div>
                     <div style="display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#2B1A12;font-family:inherit;">월</div>
                     <div style="display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#2B1A12;font-family:inherit;">화</div>
@@ -160,7 +160,7 @@
                         <span class="inline-flex items-center gap-0.5 text-[10px] font-bold text-[#234B7A] bg-[#D9E7FA] border border-[#BFD2EF] rounded px-1.5 py-0.5 whitespace-nowrap shrink-0"><span class="w-2 h-2 rounded-sm bg-[#6793D8] shrink-0"></span>B</span>
                         <span class="inline-flex items-center gap-0.5 text-[10px] font-bold text-[#7A4F14] bg-[#FFE7B8] border border-[#F4D08C] rounded px-1.5 py-0.5 whitespace-nowrap shrink-0"><span class="w-2 h-2 rounded-sm bg-[#F0B64D] shrink-0"></span>C</span>
                     </div>
-                    <div class="relative flex items-center rounded-xl border border-[#D8B98B] bg-[#FFFDF8] shadow-sm overflow-hidden h-9">
+                    <div class="relative flex items-center rounded-xl border border-[#E8E4DB] bg-white shadow-sm overflow-hidden h-9">
                         <button onclick="window.adjustScheduleMonth(-1)" class="w-9 h-full flex items-center justify-center text-[#B17A2A] active:bg-[#F8EFE3]"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
                         <button type="button" onclick="window.openScheduleMonthPicker()" class="relative h-full flex items-center justify-center px-2 min-w-[90px] cursor-pointer active:bg-[#F8EFE3] bg-transparent border-0"><span id="schedule-month-text" class="text-[14px] font-bold text-[#2F2924] pointer-events-none whitespace-nowrap">2026년 5월</span></button>
                         <input type="month" id="schedule-month-picker" tabindex="-1" onchange="window.handleMonthPicker(this.value)" class="absolute opacity-0 pointer-events-none w-1 h-1" />
@@ -207,7 +207,7 @@
             </div>
             <div class="w-full grid grid-cols-[1fr_auto_1fr] items-center gap-1 mb-3">
                 <div></div>
-                <div class="relative flex items-center rounded-xl border border-[#D8B98B] bg-[#FFFDF8] shadow-sm overflow-hidden h-9">
+                <div class="relative flex items-center rounded-xl border border-[#E8E4DB] bg-white shadow-sm overflow-hidden h-9">
                     <button onclick="window.adjustSalesMonth(-1)" class="w-9 h-full flex items-center justify-center text-[#B17A2A] active:bg-[#F8EFE3]"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
                     <span id="sales-month-text" class="text-[14px] font-bold text-[#2F2924] pointer-events-none whitespace-nowrap px-2 min-w-[90px] text-center">2026년 6월</span>
                     <button onclick="window.adjustSalesMonth(1)" class="w-9 h-full flex items-center justify-center text-[#B17A2A] active:bg-[#F8EFE3]"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
@@ -233,21 +233,21 @@
                     <div class="text-[18px] font-bold leading-tight mt-0.5" id="sales-accum-pcs">-PCS</div>
                     <div class="text-[9px] font-semibold opacity-80 leading-tight mt-1" id="sales-accum-amount">-원</div>
                 </div>
-                <div class="bg-white border border-[#E8D8BD] rounded-2xl p-3 flex flex-col gap-0.5 shadow-sm">
+                <div class="bg-white border border-[#E8E4DB] rounded-2xl p-3 flex flex-col gap-0.5 shadow-sm">
                     <span id="sales-remaining-label" class="text-[9px] font-bold text-[#888]">6월 남은 매출</span>
                     <div class="text-[18px] font-bold text-[#3A3532] leading-tight mt-0.5" id="sales-remaining-pcs">-PCS</div>
                     <div class="text-[9px] font-semibold text-[#666] leading-tight mt-1" id="sales-remaining-amount">-원</div>
                 </div>
             </div>
             <!-- 비교 통계 -->
-            <div class="bg-white rounded-2xl border border-[#E8D8BD] shadow-sm p-3 mb-2.5">
+            <div class="bg-white rounded-2xl border border-[#E8E4DB] shadow-sm p-3 mb-2.5">
                 <div class="grid grid-cols-3 gap-1">
                     <div class="flex flex-col gap-0.5 pr-1">
                         <span class="text-[9px] text-[#888] font-semibold leading-tight" id="sales-prev-year-label">전년도 6월 매출</span>
                         <span class="text-[15px] font-bold text-[#3A3532] mt-0.5" id="sales-prev-year-pcs">-PCS</span>
                         <span class="text-[9px] text-[#666] font-semibold" id="sales-prev-year-amount">-원</span>
                     </div>
-                    <div class="flex flex-col items-center gap-0.5 border-x border-[#F0E8D8] text-center px-1">
+                    <div class="flex flex-col items-center gap-0.5 border-x border-[#F0EFEA] text-center px-1">
                         <span class="text-[9px] text-[#888] font-semibold whitespace-nowrap" id="sales-mpds-label">6월 MPDS 수량</span>
                         <span class="text-[24px] font-bold text-[#3A3532] leading-tight mt-0.5" id="sales-mpds-count">-</span>
                         <span class="text-[9px] text-[#888]">건</span>
@@ -259,7 +259,7 @@
                 </div>
             </div>
             <!-- 분기 목표 현황 -->
-            <div class="bg-white rounded-2xl border border-[#E8D8BD] shadow-sm p-3 mb-2.5">
+            <div class="bg-white rounded-2xl border border-[#E8E4DB] shadow-sm p-3 mb-2.5">
                 <div class="flex items-baseline gap-2 mb-3">
                     <span class="text-[12px] font-bold text-[#3A3532]" id="sales-quarter-label">목표 현황</span>
                     <span class="text-[22px] font-bold text-[#B4975A]" id="sales-quarter-goal">-</span>
@@ -296,7 +296,7 @@
                 </div>
             </div>
             <!-- 월별 실적 -->
-            <div class="bg-white rounded-2xl border border-[#E8D8BD] shadow-sm p-3 mb-2.5">
+            <div class="bg-white rounded-2xl border border-[#E8E4DB] shadow-sm p-3 mb-2.5">
                 <div class="mb-2">
                     <span class="text-[12px] font-bold text-[#3A3532] block mb-2">월별 실적</span>
                     <div class="flex items-center gap-2">
@@ -308,7 +308,7 @@
                 <div id="sales-monthly-results" class="space-y-2"></div>
             </div>
             <!-- 특이사항 -->
-            <div class="bg-white rounded-2xl border border-[#E8D8BD] shadow-sm p-3 mb-3">
+            <div class="bg-white rounded-2xl border border-[#E8E4DB] shadow-sm p-3 mb-3">
                 <div class="text-[12px] font-bold text-[#3A3532] mb-2">특이사항</div>
                 <div id="sales-notes-display" class="text-[12px] text-[#555] leading-relaxed whitespace-pre-wrap min-h-[32px]">-</div>
             </div>
@@ -346,7 +346,7 @@
     <div class="bg-[#FCFBF9] rounded-2xl w-full max-w-[320px] shadow-2xl border border-[#E8E4DB] flex flex-col overflow-hidden relative pt-6 pb-2">
         <button onclick="window.closeProfile()" class="absolute right-4 top-4 text-[#999] p-1 active:scale-95"><i data-lucide="x" class="w-5 h-5"></i></button>
         <div class="flex flex-col items-center px-6 pt-2 pb-5 border-b border-[#F0EFEA]">
-            <div class="relative w-16 h-16 rounded-full bg-[#E8E4DB] flex items-center justify-center overflow-hidden cursor-pointer border border-[#D8B98B] mb-2" onclick="document.getElementById('edit-profile-img-input').click()"><img id="edit-profile-img-preview" src="" class="w-full h-full object-cover hidden" /><i id="edit-profile-img-icon" data-lucide="camera" class="w-6 h-6 text-[#8A847E]"></i><input type="file" id="edit-profile-img-input" class="hidden" accept="image/*" onchange="window.previewProfileImage(this, 'edit-profile-img-preview', 'edit-profile-img-icon')" /></div>
+            <div class="relative w-16 h-16 rounded-full bg-[#E8E4DB] flex items-center justify-center overflow-hidden cursor-pointer border border-[#E8E4DB] mb-2" onclick="document.getElementById('edit-profile-img-input').click()"><img id="edit-profile-img-preview" src="" class="w-full h-full object-cover hidden" /><i id="edit-profile-img-icon" data-lucide="camera" class="w-6 h-6 text-[#8A847E]"></i><input type="file" id="edit-profile-img-input" class="hidden" accept="image/*" onchange="window.previewProfileImage(this, 'edit-profile-img-preview', 'edit-profile-img-icon')" /></div>
             <div class="text-[16px] font-bold text-[#3A3532] mb-0.5">내 프로필 설정</div><div class="text-[11px] text-[#8A847E]">사진 변경 및 정보 수정이 가능합니다.</div>
         </div>
         <div class="p-5 space-y-3 flex-1 overflow-y-auto max-h-[60vh] no-scrollbar pb-10">
@@ -512,7 +512,7 @@
 
     <div class="flex-1 overflow-y-auto px-5 pb-4 no-scrollbar">
         <div class="w-full flex items-start justify-center gap-2 mb-3">
-            <div class="relative shrink-0 flex items-center rounded-xl border border-[#D8B98B] bg-[#FFFDF8] shadow-sm overflow-hidden h-9">
+            <div class="relative shrink-0 flex items-center rounded-xl border border-[#E8E4DB] bg-white shadow-sm overflow-hidden h-9">
                 <button onclick="window.adjustScheduleMonth(-1)" class="w-9 h-full flex items-center justify-center text-[#B17A2A] active:bg-[#F8EFE3]"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
                 <button type="button" onclick="window.openScheduleMonthPicker()" class="relative h-full flex items-center justify-center px-2 min-w-[90px] cursor-pointer active:bg-[#F8EFE3] bg-transparent border-0"><span id="leave-month-text" class="text-[14px] font-bold text-[#2F2924] pointer-events-none whitespace-nowrap">2026년 5월</span></button>
                 <input type="month" id="leave-month-picker" tabindex="-1" onchange="window.handleMonthPicker(this.value)" class="absolute opacity-0 pointer-events-none w-1 h-1" />
@@ -548,7 +548,7 @@
                     <button type="button" data-type="시간찾기" onclick="window.setLeaveType('시간찾기')" class="leave-type-btn whitespace-nowrap px-4 py-2 rounded-lg text-[12px] font-bold border transition-colors bg-white text-[#666] border-[#E5E5E5] shadow-sm">시간찾기</button>
                 </div>
                 <!-- 시간찾기 시간 선택 -->
-                <div id="leave-time-hours-section" style="display:none;" class="mt-3 p-3 bg-[#F8F3E7] rounded-xl border border-[#E8D8C0]">
+                <div id="leave-time-hours-section" style="display:none;" class="mt-3 p-3 bg-[#F8F3E7] rounded-xl border border-[#E8E4DB]">
                     <div class="flex items-center justify-between mb-2">
                         <span class="text-[11px] font-bold text-[#666]">시간 선택</span>
                         <span id="leave-hours-remain" class="text-[11px] font-bold text-[#B4975A]">잔여: 0시간</span>

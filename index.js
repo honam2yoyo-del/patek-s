@@ -1544,8 +1544,9 @@
             const sat = new Date(sun); sat.setDate(sun.getDate()+6);
             const fmt = dt=>`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
             const [sunStr, satStr] = [fmt(sun), fmt(sat)];
+            const todayStr = fmt(today);
             const weekEvs = (window.calEvents||[])
-                .filter(e=>e.date>=sunStr&&e.date<=satStr)
+                .filter(e=>e.date>=sunStr&&e.date<=satStr&&e.date>=todayStr)
                 .sort((a,b)=>(a.type==='판매일정'||a.type==='고객')?-1:(b.type==='판매일정'||b.type==='고객')?1:a.date.localeCompare(b.date))
                 .slice(0,5);
             weekContent.innerHTML = weekEvs.length===0
@@ -1557,7 +1558,7 @@
                     const isSales = ev.type==='판매일정'||ev.type==='고객';
                     const content = isSales ? [ev.customerName,ev.modelName].filter(Boolean).join(' ') : (ev.reason||ev.type);
                     const timeStr = ev.time || (ev.type==='정기휴무'?'종일':'');
-                    return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #F5EDE0;">
+                    return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #F0EFEA;">
                         <div style="width:8px;height:8px;border-radius:50%;background:${evS.dot||evS.border};flex-shrink:0;"></div>
                         <div style="font-size:11px;font-weight:700;color:${evS.text};background:${evS.bg};border:1px solid ${evS.border};border-radius:5px;padding:1px 6px;white-space:nowrap;flex-shrink:0;${FF}">${calTypeName(ev.type)}</div>
                         <div style="font-size:12px;color:#6E5A47;white-space:nowrap;flex-shrink:0;${FF}">${parseInt(em)}/${parseInt(ed)} (${evDow})</div>
