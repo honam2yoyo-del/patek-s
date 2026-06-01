@@ -152,6 +152,23 @@
     .modal-total   { margin-top:14px;padding:14px;background:#f6f8fb;border-radius:6px;display:flex;justify-content:space-between;font-weight:900; }
     .modal-actions { display:flex;justify-content:flex-end;gap:10px;margin-top:18px; }
 
+    /* 스피너(화살표) 전체 제거 */
+    input[type=number]::-webkit-outer-spin-button,
+    input[type=number]::-webkit-inner-spin-button { -webkit-appearance:none;margin:0; }
+    input[type=number] { -moz-appearance:textfield; }
+
+    /* 에비뉴엘 연간 모달 */
+    .av-modal { width:620px; }
+    .av-qtr-grid { display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px; }
+    .av-qtr { border:1px solid #e5eaf2;border-radius:8px;overflow:hidden; }
+    .av-qtr-hdr { padding:8px 10px;font-size:12px;font-weight:900;background:#f6f8fb;border-bottom:1px solid #e5eaf2;text-align:center;color:#4b5563; }
+    .av-qtr-hdr.cur { background:#eaf3ff;color:#0067e8; }
+    .av-months { padding:8px 10px;display:flex;flex-direction:column;gap:6px; }
+    .av-month-row { display:flex;align-items:center;justify-content:space-between;gap:6px;font-size:13px;font-weight:700; }
+    .av-month-row label { white-space:nowrap;width:26px;color:#4b5563; }
+    .av-month-row input { flex:1;min-width:0;height:30px;border:1px solid #d9e0ea;border-radius:5px;padding:0 6px;font-size:12px;font-weight:700;outline:none;text-align:right; }
+    .av-qtr-sub { text-align:right;padding:4px 10px 8px;font-size:12px;font-weight:900;color:#0067e8; }
+
     @media(max-width:1400px){
       .dashboard-grid { grid-template-columns:repeat(2,1fr); }
       .inventory-panel { grid-template-columns:1fr; }
@@ -216,22 +233,22 @@
       <div class="kpi-card">
         <div class="kpi-title" id="expectedTitle">6월 예상 매출</div>
         <div class="kpi-value">
-          <input class="kpi-num" id="f-expectedSales" type="number" placeholder="0"/>원
-          <span class="kpi-pcs">(<input class="kpi-pcs-num" id="f-expectedPcs" type="number" placeholder="0"/> pcs)</span>
+          <input class="kpi-num" id="f-expectedSales" type="text" inputmode="numeric" placeholder="0" oninput="window.fmtNum(this)"/>원
+          <span class="kpi-pcs">(<input class="kpi-pcs-num" id="f-expectedPcs" type="text" inputmode="numeric" placeholder="0" oninput="window.fmtNum(this)"/> pcs)</span>
         </div>
       </div>
       <div class="kpi-card">
         <div class="kpi-title" id="lastYearTitle">작년 6월 매출</div>
         <div class="kpi-value">
-          <input class="kpi-num" id="f-lastYearSales" type="number" placeholder="0"/>원
-          <span class="kpi-pcs">(<input class="kpi-pcs-num" id="f-lastYearPcs" type="number" placeholder="0"/> pcs)</span>
+          <input class="kpi-num" id="f-lastYearSales" type="text" inputmode="numeric" placeholder="0" oninput="window.fmtNum(this)"/>원
+          <span class="kpi-pcs">(<input class="kpi-pcs-num" id="f-lastYearPcs" type="text" inputmode="numeric" placeholder="0" oninput="window.fmtNum(this)"/> pcs)</span>
         </div>
       </div>
       <div class="kpi-card">
         <div class="kpi-title">현재 매출</div>
         <div class="kpi-value blue">
-          <input class="kpi-num blue" id="f-currentSales" type="number" placeholder="0"/>원
-          <span class="kpi-pcs">(<input class="kpi-pcs-num" id="f-currentPcs" type="number" placeholder="0"/> pcs)</span>
+          <input class="kpi-num blue" id="f-currentSales" type="text" inputmode="numeric" placeholder="0" oninput="window.fmtNum(this)"/>원
+          <span class="kpi-pcs">(<input class="kpi-pcs-num" id="f-currentPcs" type="text" inputmode="numeric" placeholder="0" oninput="window.fmtNum(this)"/> pcs)</span>
         </div>
       </div>
       <div class="kpi-card">
@@ -251,17 +268,17 @@
             <tbody>
               <tr>
                 <td>합계</td>
-                <td><input class="ipt w120" id="f-totalGoalAmount" type="number" placeholder="0"/> 원</td>
+                <td><input class="ipt w120" id="f-totalGoalAmount" type="text" inputmode="numeric" placeholder="0" oninput="window.fmtNum(this)"/> 원</td>
                 <td><input class="ipt w60" id="f-totalGoalRate" type="number" step="0.1" placeholder="0"/>%</td>
               </tr>
               <tr>
                 <td>센텀</td>
-                <td><input class="ipt w120" id="f-centumGoalAmount" type="number" placeholder="0"/> 원</td>
+                <td><input class="ipt w120" id="f-centumGoalAmount" type="text" inputmode="numeric" placeholder="0" oninput="window.fmtNum(this)"/> 원</td>
                 <td><input class="ipt w60" id="f-centumGoalRate" type="number" step="0.1" placeholder="0"/>%</td>
               </tr>
               <tr>
                 <td><span class="branch-link" id="avenueOpen">에비뉴엘</span></td>
-                <td><input class="ipt w120" id="f-avenueGoalAmount" type="number" placeholder="0"/> 원</td>
+                <td><input class="ipt w120" id="f-avenueGoalAmount" type="text" inputmode="numeric" placeholder="0" oninput="window.fmtNum(this)"/> 원</td>
                 <td><input class="ipt w60" id="f-avenueGoalRate" type="number" step="0.1" placeholder="0"/>%</td>
               </tr>
             </tbody>
@@ -288,11 +305,11 @@
           <ul class="quarter-list">
             <li>
               <span>분기 목표</span>
-              <span class="quarter-value"><input class="ipt w120" id="f-quarterGoal" type="number" placeholder="0"/> 원</span>
+              <span class="quarter-value"><input class="ipt w120" id="f-quarterGoal" type="text" inputmode="numeric" placeholder="0" oninput="window.fmtNum(this)"/> 원</span>
             </li>
             <li>
               <span>달성 금액 (전월 누적)</span>
-              <span class="quarter-value"><input class="ipt w120" id="f-quarterPrevTotal" type="number" placeholder="0"/> 원</span>
+              <span class="quarter-value"><input class="ipt w120" id="f-quarterPrevTotal" type="text" inputmode="numeric" placeholder="0" oninput="window.fmtNum(this)"/> 원</span>
             </li>
             <li>
               <span>달성 금액 (누적)</span>
@@ -410,17 +427,56 @@
   </div>
 </div>
 
-<!-- 에비뉴엘 모달 -->
+<!-- 에비뉴엘 연간 모달 -->
 <div class="modal-backdrop" id="avenueModal">
-  <div class="modal">
-    <div class="modal-title">에비뉴엘 월별 매출 입력</div>
-    <div class="modal-row"><label id="avenueLabel1">4월</label><input type="number" id="avenueMonth1" placeholder="0"/></div>
-    <div class="modal-row"><label id="avenueLabel2">5월</label><input type="number" id="avenueMonth2" placeholder="0"/></div>
-    <div class="modal-row"><label id="avenueLabel3">6월</label><input type="number" id="avenueMonth3" placeholder="0"/></div>
-    <div class="modal-total"><span>이합 (합계)</span><span id="avenueTotalText">0 원</span></div>
+  <div class="modal av-modal">
+    <div class="modal-title">에비뉴엘 월별 매출 입력 (<span id="avenueYearLabel">2026</span>년)</div>
+    <div class="av-qtr-grid">
+      <!-- 1분기 -->
+      <div class="av-qtr" id="av-qtr-1">
+        <div class="av-qtr-hdr" id="av-qtr-hdr-1">1분기 (1~3월)</div>
+        <div class="av-months">
+          <div class="av-month-row"><label>1월</label><input type="text" inputmode="numeric" id="av-m1" placeholder="0" oninput="window.fmtNum(this);window.calcAvSubtotals()"/></div>
+          <div class="av-month-row"><label>2월</label><input type="text" inputmode="numeric" id="av-m2" placeholder="0" oninput="window.fmtNum(this);window.calcAvSubtotals()"/></div>
+          <div class="av-month-row"><label>3월</label><input type="text" inputmode="numeric" id="av-m3" placeholder="0" oninput="window.fmtNum(this);window.calcAvSubtotals()"/></div>
+        </div>
+        <div class="av-qtr-sub">합계: <span id="av-sub-1">0 원</span></div>
+      </div>
+      <!-- 2분기 -->
+      <div class="av-qtr" id="av-qtr-2">
+        <div class="av-qtr-hdr" id="av-qtr-hdr-2">2분기 (4~6월)</div>
+        <div class="av-months">
+          <div class="av-month-row"><label>4월</label><input type="text" inputmode="numeric" id="av-m4" placeholder="0" oninput="window.fmtNum(this);window.calcAvSubtotals()"/></div>
+          <div class="av-month-row"><label>5월</label><input type="text" inputmode="numeric" id="av-m5" placeholder="0" oninput="window.fmtNum(this);window.calcAvSubtotals()"/></div>
+          <div class="av-month-row"><label>6월</label><input type="text" inputmode="numeric" id="av-m6" placeholder="0" oninput="window.fmtNum(this);window.calcAvSubtotals()"/></div>
+        </div>
+        <div class="av-qtr-sub">합계: <span id="av-sub-2">0 원</span></div>
+      </div>
+      <!-- 3분기 -->
+      <div class="av-qtr" id="av-qtr-3">
+        <div class="av-qtr-hdr" id="av-qtr-hdr-3">3분기 (7~9월)</div>
+        <div class="av-months">
+          <div class="av-month-row"><label>7월</label><input type="text" inputmode="numeric" id="av-m7" placeholder="0" oninput="window.fmtNum(this);window.calcAvSubtotals()"/></div>
+          <div class="av-month-row"><label>8월</label><input type="text" inputmode="numeric" id="av-m8" placeholder="0" oninput="window.fmtNum(this);window.calcAvSubtotals()"/></div>
+          <div class="av-month-row"><label>9월</label><input type="text" inputmode="numeric" id="av-m9" placeholder="0" oninput="window.fmtNum(this);window.calcAvSubtotals()"/></div>
+        </div>
+        <div class="av-qtr-sub">합계: <span id="av-sub-3">0 원</span></div>
+      </div>
+      <!-- 4분기 -->
+      <div class="av-qtr" id="av-qtr-4">
+        <div class="av-qtr-hdr" id="av-qtr-hdr-4">4분기 (10~12월)</div>
+        <div class="av-months">
+          <div class="av-month-row"><label>10월</label><input type="text" inputmode="numeric" id="av-m10" placeholder="0" oninput="window.fmtNum(this);window.calcAvSubtotals()"/></div>
+          <div class="av-month-row"><label>11월</label><input type="text" inputmode="numeric" id="av-m11" placeholder="0" oninput="window.fmtNum(this);window.calcAvSubtotals()"/></div>
+          <div class="av-month-row"><label>12월</label><input type="text" inputmode="numeric" id="av-m12" placeholder="0" oninput="window.fmtNum(this);window.calcAvSubtotals()"/></div>
+        </div>
+        <div class="av-qtr-sub">합계: <span id="av-sub-4">0 원</span></div>
+      </div>
+    </div>
+    <div class="modal-total"><span>연간 합계</span><span id="avenueTotalText">0 원</span></div>
     <div class="modal-actions">
       <button class="btn" id="avenueClose">닫기</button>
-      <button class="btn btn-primary" id="avenueApply">적용</button>
+      <button class="btn btn-primary" id="avenueApply">현재 분기 적용</button>
     </div>
   </div>
 </div>

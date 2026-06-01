@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, onSnapshot, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const FC = { apiKey:"AIzaSyCt7aQXA5eFdnDTMHlRhjPAkyH4b8UB6HY", authDomain:"patek-s.firebaseapp.com", projectId:"patek-s", storageBucket:"patek-s.firebasestorage.app", messagingSenderId:"786016749285", appId:"1:786016749285:web:58538eec1cf7e72068b60c" };
 const app  = initializeApp(FC);
@@ -10,6 +10,29 @@ const db   = getFirestore(app);
 const pad  = n => String(n).padStart(2,'0');
 const fmtW = n => (n != null && !isNaN(Number(n))) ? Number(n).toLocaleString('ko-KR') + ' 원' : '- 원';
 const fmtN = n => (n != null && !isNaN(Number(n))) ? Number(n).toLocaleString('ko-KR') : '-';
+
+// 숫자 → 쉼표 문자열 (display용)
+function fmtInput(n) {
+  if (n == null || n === '') return '';
+  const num = Number(String(n).replace(/,/g,''));
+  return isNaN(num) ? '' : num.toLocaleString('ko-KR');
+}
+
+// 쉼표 문자열 → 숫자 (계산/저장용), null 허용
+function parseNum(s) {
+  if (s == null || s === '') return null;
+  const n = Number(String(s).replace(/,/g,''));
+  return isNaN(n) ? null : n;
+}
+
+// 전역 노출 (인라인 oninput에서 사용)
+window.parseNum = parseNum;
+
+// 입력 중 실시간 쉼표 포맷 (전역 노출)
+window.fmtNum = function(el) {
+  const raw = String(el.value).replace(/[^0-9]/g,'');
+  el.value = raw !== '' ? Number(raw).toLocaleString('ko-KR') : '';
+};
 
 const STATUSES   = ['판매예정','컨펌예정','이월예정','잔여재고','AS'];
 const BADGE_MAP  = { '판매예정':'badge-sale','컨펌예정':'badge-confirm','이월예정':'badge-carry','잔여재고':'badge-rest','AS':'badge-as' };
@@ -78,7 +101,11 @@ function loadMonth() {
 }
 
 function applyData(d) {
-  const sv = (id, val) => { const el=document.getElementById(id); if(el) el.value = val??''; };
+  // text 타입(금액)은 쉼표 포맷, number 타입(률/소수)은 그대로
+  const sv = (id, val) => {
+    const el=document.getElementById(id); if(!el) return;
+    el.value = (el.type==='text' && val!=null) ? fmtInput(val) : (val??'');
+  };
   sv('f-expectedSales',   d?.expectedSales);
   sv('f-expectedPcs',     d?.expectedPcs);
   sv('f-lastYearSales',   d?.lastYearSales);
@@ -120,7 +147,7 @@ function recalcAll() {
   recalcMpds();
 }
 
-function gn(id) { const el=document.getElementById(id); return el && el.value!=='' ? Number(el.value) : 0; }
+function gn(id) { const el=document.getElementById(id); if(!el||el.value==='') return 0; const n=Number(String(el.value).replace(/,/g,'')); return isNaN(n)?0:n; }
 
 function recalcRemain() {
   const expected = gn('f-expectedSales');
@@ -236,7 +263,7 @@ function renderTable() {
       <td><input type="checkbox" class="row-check" data-amount="${r.amount||0}" data-qty="1"/></td>
       <td style="color:#9CA3AF">${ri+1}</td>
       <td><input class="td-edit" value="${esc(r.ref||'')}" oninput="rows[${ri}].ref=this.value" placeholder="REF."/></td>
-      <td><input class="td-edit" type="number" value="${r.amount??''}" oninput="rows[${ri}].amount=this.value?Number(this.value):null;this.closest('td').previousElementSibling.previousElementSibling.querySelector('.row-check').dataset.amount=this.value||0;updateSelectedTotal();renderSummary();" placeholder="0"/> 원</td>
+      <td><input class="td-edit" type="text" inputmode="numeric" value="${fmtInput(r.amount)}" oninput="window.fmtNum(this);rows[${ri}].amount=parseNum(this.value);this.closest('tr').querySelector('.row-check').dataset.amount=parseNum(this.value)||0;updateSelectedTotal();renderSummary();" placeholder="0"/> 원</td>
       <td><input class="td-edit" value="${esc(r.customer||'')}" oninput="rows[${ri}].customer=this.value" placeholder="고객명"/></td>
       <td><input class="td-edit" value="${esc(r.saleDate||'')}" oninput="rows[${ri}].saleDate=this.value" placeholder="예: 6/28(목)"/></td>
       <td>
@@ -332,29 +359,80 @@ function updateSelectedTotal() {
   document.getElementById('selectedAmount').textContent = fmtW(amount);
 }
 
-/* ── 에비뉴엘 모달 ── */
-function updateAvenueTotal() {
-  const total = [1,2,3].reduce((s,i)=>s+(Number(document.getElementById(`avenueMonth${i}`).value)||0),0);
-  document.getElementById('avenueTotalText').textContent = fmtW(total);
-}
-[1,2,3].forEach(i => document.getElementById(`avenueMonth${i}`).addEventListener('input', updateAvenueTotal));
-document.getElementById('avenueOpen').addEventListener('click', () => {
+/* ── 에비뉴엘 연간 모달 ── */
+function curQuarter() { return Math.ceil(curMonth / 3); }
+function quarterMonths(q) { const s=(q-1)*3+1; return [s,s+1,s+2]; }
+
+// 분기 소계 + 연간 합계 갱신
+window.calcAvSubtotals = function() {
+  let yearTotal = 0;
+  for (let q=1; q<=4; q++) {
+    let sub = 0;
+    quarterMonths(q).forEach(m => { sub += parseNum(document.getElementById(`av-m${m}`)?.value) || 0; });
+    document.getElementById(`av-sub-${q}`).textContent = fmtW(sub);
+    yearTotal += sub;
+  }
+  document.getElementById('avenueTotalText').textContent = fmtW(yearTotal);
+};
+
+// 모달 열기 — Firestore에서 연간 데이터 로드
+document.getElementById('avenueOpen').addEventListener('click', async () => {
+  const yr = curYear;
+  document.getElementById('avenueYearLabel').textContent = yr;
+
+  // 현재 분기 헤더 강조
+  const cq = curQuarter();
+  for (let q=1; q<=4; q++) {
+    document.getElementById(`av-qtr-hdr-${q}`).className = `av-qtr-hdr${q===cq?' cur':''}`;
+  }
+
+  // Firestore 연간 데이터 로드
+  try {
+    const snap = await getDoc(doc(db,'artifacts','patek-s','public','data','avenue_annual',String(yr)));
+    const d = snap.exists() ? snap.data() : {};
+    for (let m=1; m<=12; m++) {
+      const el = document.getElementById(`av-m${m}`);
+      if (el) el.value = fmtInput(d[`m${m}`]);
+    }
+  } catch(e) {
+    for (let m=1; m<=12; m++) { const el=document.getElementById(`av-m${m}`); if(el) el.value=''; }
+  }
+
+  window.calcAvSubtotals();
   document.getElementById('avenueModal').classList.add('show');
-  updateAvenueTotal();
 });
+
 document.getElementById('avenueClose').addEventListener('click', () => document.getElementById('avenueModal').classList.remove('show'));
 document.getElementById('avenueModal').addEventListener('click', e => { if(e.target===document.getElementById('avenueModal')) document.getElementById('avenueModal').classList.remove('show'); });
-document.getElementById('avenueApply').addEventListener('click', () => {
-  const total = [1,2,3].reduce((s,i)=>s+(Number(document.getElementById(`avenueMonth${i}`).value)||0),0);
-  document.getElementById('f-avenueGoalAmount').value = total;
+
+// 적용 — 연간 데이터 저장 + 현재 분기 합계를 avenueGoalAmount에 반영
+document.getElementById('avenueApply').addEventListener('click', async () => {
+  const yr = curYear;
+  const saveObj = { updatedAt: new Date().toISOString() };
+  for (let m=1; m<=12; m++) {
+    const v = parseNum(document.getElementById(`av-m${m}`)?.value);
+    saveObj[`m${m}`] = v;
+  }
+
+  // 현재 분기 합계
+  const cqTotal = quarterMonths(curQuarter()).reduce((s,m)=>{
+    return s + (parseNum(document.getElementById(`av-m${m}`)?.value)||0);
+  }, 0);
+
+  try {
+    await setDoc(doc(db,'artifacts','patek-s','public','data','avenue_annual',String(yr)), saveObj, {merge:true});
+  } catch(e) { /* 저장 실패해도 적용은 진행 */ }
+
+  const el = document.getElementById('f-avenueGoalAmount');
+  if (el) { el.value = fmtInput(cqTotal); }
   recalcTotalRemain();
   document.getElementById('avenueModal').classList.remove('show');
 });
 
 /* ────────── 저장 ────────── */
 async function saveData() {
-  const gv = id => { const el=document.getElementById(id); return el?el.value.trim():''; };
-  const gnv = id => { const v=gv(id); return v!==''?Number(v):null; };
+  const gv  = id => { const el=document.getElementById(id); return el?el.value.trim():''; };
+  const gnv = id => { const v=gv(id).replace(/,/g,''); return v!==''?Number(v):null; };
 
   const data = {
     expectedSales:   gnv('f-expectedSales'),
