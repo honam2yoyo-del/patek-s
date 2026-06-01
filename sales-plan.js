@@ -11,43 +11,51 @@ const pad  = n => String(n).padStart(2,'0');
 const fmtW = n => (n != null && !isNaN(Number(n))) ? Number(n).toLocaleString('ko-KR') + ' 원' : '- 원';
 const fmtN = n => (n != null && !isNaN(Number(n))) ? Number(n).toLocaleString('ko-KR') : '-';
 
-// 숫자 → 쉼표 문자열 (display용)
 function fmtInput(n) {
   if (n == null || n === '') return '';
   const num = Number(String(n).replace(/,/g,''));
   return isNaN(num) ? '' : num.toLocaleString('ko-KR');
 }
 
-// 쉼표 문자열 → 숫자 (계산/저장용), null 허용
 function parseNum(s) {
   if (s == null || s === '') return null;
   const n = Number(String(s).replace(/,/g,''));
   return isNaN(n) ? null : n;
 }
 
-// 전역 노출 (인라인 oninput에서 사용)
 window.parseNum = parseNum;
 
-// 입력 중 실시간 쉼표 포맷 (전역 노출)
 window.fmtNum = function(el) {
   const raw = String(el.value).replace(/[^0-9]/g,'');
   el.value = raw !== '' ? Number(raw).toLocaleString('ko-KR') : '';
+  if (el.classList.contains('kpi-pcs-num')) {
+    el.style.width = Math.max(2, el.value.length || 1) + 'ch';
+  }
 };
 
-const STATUSES   = ['판매예정','컨펌예정','이월예정','잔여재고','AS'];
-const BADGE_MAP  = { '판매예정':'badge-sale','컨펌예정':'badge-confirm','이월예정':'badge-carry','잔여재고':'badge-rest','AS':'badge-as' };
+// 재고 상태 순서: 전체 재고, 판매 예정, 컨펌 예정, 이월 예정, AS, 잔여 재고
+const STATUSES  = ['판매예정','컨펌예정','이월예정','AS','잔여재고'];
+const BADGE_MAP = { '판매예정':'badge-sale','컨펌예정':'badge-confirm','이월예정':'badge-carry','잔여재고':'badge-rest','AS':'badge-as' };
 
 let curYear  = new Date().getFullYear();
 let curMonth = new Date().getMonth() + 1;
 let rows     = [];
-let chartData = [];
 let activeFilters = new Set(['전체']);
 let unsubPlan = null;
+
+// 지점 연간 데이터 (인메모리)
+let avenueData = {}; // m1..m12: 금액, m1_pcs..m12_pcs: pcs
+let centumData = {};
+
+// 목표 달성률 데이터
+let goalRateData = { total: 0, centum: 0, avenue: 0, rate: 0 };
 
 /* ────────── 달력 월 피커 ────────── */
 let pickerYear = curYear;
 
 function getQuarterNum(month) { return Math.ceil(month / 3); }
+function curQuarter() { return getQuarterNum(curMonth); }
+function quarterMonths(q) { const s=(q-1)*3+1; return [s,s+1,s+2]; }
 
 function updateQuarterBadge() {
   const el = document.getElementById('quarterBadge');
@@ -80,7 +88,6 @@ function initMonthPicker() {
   pickerYear = curYear;
   document.getElementById('monthPickerLabel').textContent = `${curYear}년 ${curMonth}월`;
   updateQuarterBadge();
-
   document.getElementById('monthPickerBtn').addEventListener('click', e => {
     e.stopPropagation();
     pickerYear = curYear;
@@ -115,6 +122,44 @@ onAuthStateChanged(auth, user => {
   if (user) { initMonthPicker(); updateMonthLabels(); loadMonth(); }
 });
 
+/* ────────── 지점 모달 초기화 ────────── */
+function initBranchModals() {
+  ['av','ct'].forEach(prefix => {
+    for (let q = 1; q <= 4; q++) {
+      const containerId = prefix === 'av' ? `av-months-${q}` : `ct-months-${q}`;
+      const container = document.getElementById(containerId);
+      if (!container) continue;
+      const months = quarterMonths(q);
+      container.innerHTML = months.map(m => `
+        <div class="av-month-row">
+          <label>${m}월</label>
+          <input id="${prefix}-m${m}" type="text" inputmode="numeric" placeholder="금액"
+            oninput="window.fmtNum(this);window.calcBranchSub('${prefix}')"/>
+          <input id="${prefix}-p${m}" type="text" inputmode="numeric" placeholder="pcs"
+            class="pcs-input" oninput="window.fmtNum(this);window.calcBranchSub('${prefix}')"/>
+        </div>
+      `).join('');
+    }
+  });
+}
+
+window.calcBranchSub = function(prefix) {
+  let yearAmt = 0, yearPcs = 0;
+  for (let q = 1; q <= 4; q++) {
+    let sub = 0, pcs = 0;
+    quarterMonths(q).forEach(m => {
+      sub += parseNum(document.getElementById(`${prefix}-m${m}`)?.value) || 0;
+      pcs += parseNum(document.getElementById(`${prefix}-p${m}`)?.value) || 0;
+    });
+    const subEl = document.getElementById(`${prefix}-sub-${q}`);
+    if (subEl) subEl.innerHTML = `합계: ${fmtN(sub)} 원<br>PCS: ${pcs}`;
+    yearAmt += sub; yearPcs += pcs;
+  }
+  const totKey = prefix === 'av' ? 'avenueTotalText' : 'centumTotalText';
+  const totEl = document.getElementById(totKey);
+  if (totEl) totEl.textContent = `${fmtN(yearAmt)} 원 / ${yearPcs} PCS`;
+};
+
 /* ────────── 데이터 로드 ────────── */
 function loadMonth() {
   if (unsubPlan) unsubPlan();
@@ -122,40 +167,53 @@ function loadMonth() {
   unsubPlan = onSnapshot(doc(db,'artifacts','patek-s','public','data','sales_dashboard',docId), snap => {
     applyData(snap.exists() ? snap.data() : null);
   });
+  loadBranchDataForYear(curYear);
+}
+
+async function loadBranchDataForYear(year) {
+  try {
+    const [avSnap, ctSnap] = await Promise.all([
+      getDoc(doc(db,'artifacts','patek-s','public','data','avenue_annual',String(year))),
+      getDoc(doc(db,'artifacts','patek-s','public','data','centum_annual',String(year)))
+    ]);
+    avenueData = avSnap.exists() ? avSnap.data() : {};
+    centumData = ctSnap.exists() ? ctSnap.data() : {};
+  } catch(e) {
+    avenueData = {}; centumData = {};
+  }
+  renderChart();
+  recalcQuarter();
 }
 
 function applyData(d) {
-  // text 타입(금액)은 쉼표 포맷, number 타입(률/소수)은 그대로
   const sv = (id, val) => {
-    const el=document.getElementById(id); if(!el) return;
-    el.value = (el.type==='text' && val!=null) ? fmtInput(val) : (val??'');
+    const el = document.getElementById(id); if (!el) return;
+    el.value = (el.type === 'text' && val != null) ? fmtInput(val) : (val ?? '');
   };
-  sv('f-expectedSales',   d?.expectedSales);
-  sv('f-expectedPcs',     d?.expectedPcs);
-  sv('f-lastYearSales',   d?.lastYearSales);
-  sv('f-lastYearPcs',     d?.lastYearPcs);
-  sv('f-currentSales',    d?.currentSales);
-  sv('f-currentPcs',      d?.currentPcs);
-  sv('f-totalGoalAmount', d?.totalGoalAmount);
-  sv('f-totalGoalRate',   d?.totalGoalRate);
-  sv('f-centumGoalAmount',d?.centumGoalAmount);
-  sv('f-centumGoalRate',  d?.centumGoalRate);
-  sv('f-avenueGoalAmount',d?.avenueGoalAmount);
-  sv('f-avenueGoalRate',  d?.avenueGoalRate);
-  sv('f-quarterGoal',     d?.quarterGoal);
-  sv('f-quarterPrevTotal',d?.quarterPrevTotal);
-  sv('f-mpdsMin',         d?.mpdsMin ?? 30);
-  sv('f-mpdsCurrent',     d?.mpdsCurrent);
-  sv('f-mpdsIncoming',    d?.mpdsIncoming);
-  // 분기는 curMonth에서 자동 계산
+  sv('f-expectedSales', d?.expectedSales);
+  sv('f-expectedPcs',   d?.expectedPcs);
+  sv('f-lastYearSales', d?.lastYearSales);
+  sv('f-lastYearPcs',   d?.lastYearPcs);
+  sv('f-currentSales',  d?.currentSales);
+  sv('f-currentPcs',    d?.currentPcs);
+  sv('f-quarterGoal',   d?.quarterGoal);
+  sv('f-mpdsMin',       d?.mpdsMin ?? 30);
+  sv('f-mpdsCurrent',   d?.mpdsCurrent);
+  sv('f-mpdsIncoming',  d?.mpdsIncoming);
 
-  chartData = d?.chartData ?? [
-    { label:`${curMonth-2<1?curMonth+10:curMonth-2}월`, pcs:null, amount:null },
-    { label:`${curMonth-1<1?curMonth+11:curMonth-1}월`, pcs:null, amount:null },
-    { label:`${curMonth}월 (현재)`,                     pcs:null, amount:null }
-  ];
-  renderChart();
-  renderChartInputs();
+  // pcs 입력 너비 초기화
+  ['f-expectedPcs','f-lastYearPcs','f-currentPcs'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.width = Math.max(2, el.value.length || 1) + 'ch';
+  });
+
+  goalRateData = {
+    total:  d?.totalGoalAmount ?? 0,
+    centum: d?.centumGoalAmount ?? 0,
+    avenue: d?.avenueGoalAmount ?? 0,
+    rate:   d?.totalGoalRate ?? 0
+  };
+  updateGoalDisplay();
 
   rows = d?.rows ? JSON.parse(JSON.stringify(d.rows)) : [];
   renderTable();
@@ -165,54 +223,67 @@ function applyData(d) {
 /* ────────── 재계산 ────────── */
 function recalcAll() {
   recalcRemain();
-  recalcGoalProgress();
-  recalcTotalRemain();
+  updateGoalDisplay();
   recalcQuarter();
   recalcMpds();
 }
 
-function gn(id) { const el=document.getElementById(id); if(!el||el.value==='') return 0; const n=Number(String(el.value).replace(/,/g,'')); return isNaN(n)?0:n; }
+function gn(id) {
+  const el = document.getElementById(id);
+  if (!el || el.value === '') return 0;
+  const n = Number(String(el.value).replace(/,/g,''));
+  return isNaN(n) ? 0 : n;
+}
 
 function recalcRemain() {
-  const expected = gn('f-expectedSales');
-  const current  = gn('f-currentSales');
+  const expected    = gn('f-expectedSales');
+  const current     = gn('f-currentSales');
   const expectedPcs = gn('f-expectedPcs');
   const currentPcs  = gn('f-currentPcs');
-  const remSales = expected - current;
-  const remPcs   = expectedPcs - currentPcs;
+  const remSales    = expected - current;
+  const remPcs      = expectedPcs - currentPcs;
   const el = document.getElementById('remainDisplay');
-  el.innerHTML = `<span>${fmtN(remSales)}</span>원&nbsp;<span class="kpi-pcs">(${remPcs} pcs)</span>`;
-  el.className = 'kpi-value ' + (remSales > 0 ? 'red' : 'green');
+  el.innerHTML = `<span>${fmtN(remSales)}</span>&nbsp;원&nbsp;<span style="font-size:14px;font-weight:700;">(${remPcs} pcs)</span>`;
+  el.style.color = remSales > 0 ? '#ff0000' : '#009844';
 }
 
-function recalcGoalProgress() {
-  const rate = gn('f-totalGoalRate');
-  const bar  = document.getElementById('mainProgressBar');
-  const txt  = document.getElementById('mainGoalRateText');
-  bar.style.width = Math.min(rate, 100) + '%';
-  bar.textContent = rate + '%';
-  txt.textContent = rate + '%';
-}
+function updateGoalDisplay() {
+  const { total, centum, avenue, rate } = goalRateData;
 
-function recalcTotalRemain() {
-  const total    = gn('f-totalGoalAmount');
-  const centum   = gn('f-centumGoalAmount');
-  const avenue   = gn('f-avenueGoalAmount');
-  const achieved = centum + avenue;
-  const remain   = total - achieved;
-  document.getElementById('totalRemainDisplay').textContent = fmtW(remain > 0 ? remain : 0);
+  const setDisp = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  setDisp('totalGoalAmountDisp',  total  ? fmtW(total)  : '-');
+  setDisp('totalGoalRateDisp',    rate   ? rate.toFixed(1)+'%' : '-');
+  setDisp('centumGoalAmountDisp', centum ? fmtW(centum) : '-');
+  setDisp('avenueGoalAmountDisp', avenue ? fmtW(avenue) : '-');
+  const centumRate = total > 0 ? (centum / total * 100).toFixed(1)+'%' : '-';
+  const avenueRate = total > 0 ? (avenue / total * 100).toFixed(1)+'%' : '-';
+  setDisp('centumGoalRateDisp', centumRate);
+  setDisp('avenueGoalRateDisp', avenueRate);
+
+  const r = Math.min(rate, 100);
+  const bar = document.getElementById('mainProgressBar');
+  const txt = document.getElementById('mainGoalRateText');
+  if (bar) { bar.style.width = r + '%'; bar.textContent = rate.toFixed(1) + '%'; }
+  if (txt) txt.textContent = rate.toFixed(1) + '%';
+
+  const remain = total - (centum + avenue);
+  const remEl = document.getElementById('totalRemainDisplay');
+  if (remEl) remEl.textContent = fmtW(Math.max(remain, 0));
 }
 
 function recalcQuarter() {
-  const goal     = gn('f-quarterGoal');
-  const prevTotal = gn('f-quarterPrevTotal');
-  const current  = gn('f-currentSales');
-  const achieved = prevTotal + current;
-  const remain   = goal - achieved;
-  const rate     = goal > 0 ? (achieved / goal * 100).toFixed(1) : '0.0';
-  document.getElementById('quarterAchievedDisplay').textContent = fmtW(achieved);
-  document.getElementById('quarterRemainDisplay').textContent   = fmtW(remain > 0 ? remain : 0);
-  document.getElementById('quarterRateDisplay').textContent     = rate + '%';
+  const goal    = gn('f-quarterGoal');
+  const q       = curQuarter();
+  const months  = quarterMonths(q);
+  const achieved = months.reduce((s, m) => {
+    return s + (Number(avenueData[`m${m}`]) || 0) + (Number(centumData[`m${m}`]) || 0);
+  }, 0);
+  const remain = goal - achieved;
+  const rateStr = goal > 0 ? (achieved / goal * 100).toFixed(1) : '0.0';
+  const setDisp = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  setDisp('quarterAchievedDisplay', fmtW(achieved));
+  setDisp('quarterRemainDisplay',   fmtW(Math.max(remain, 0)));
+  setDisp('quarterRateDisplay',     rateStr + '%');
 }
 
 function recalcMpds() {
@@ -223,31 +294,31 @@ function recalcMpds() {
   const expected = current + incoming;
   const shortEl  = document.getElementById('mpdsShortText');
   shortEl.textContent = shortage;
-  shortEl.className = shortage > 0 ? 'red' : 'green';
+  shortEl.className   = shortage > 0 ? 'red' : 'green';
   document.getElementById('mpdsExpectedText').textContent = expected;
 }
 
-/* 입력 이벤트 연결 */
-['f-expectedSales','f-currentSales','f-expectedPcs','f-currentPcs'].forEach(id =>
-  document.getElementById(id).addEventListener('input', recalcAll));
-['f-totalGoalRate'].forEach(id =>
-  document.getElementById(id).addEventListener('input', recalcGoalProgress));
-['f-totalGoalAmount','f-centumGoalAmount','f-avenueGoalAmount'].forEach(id =>
-  document.getElementById(id).addEventListener('input', recalcTotalRemain));
-['f-quarterGoal','f-quarterPrevTotal'].forEach(id =>
-  document.getElementById(id).addEventListener('input', recalcQuarter));
-['f-mpdsMin','f-mpdsCurrent','f-mpdsIncoming'].forEach(id =>
-  document.getElementById(id).addEventListener('input', recalcMpds));
+/* ────────── 차트 (자동 계산) ────────── */
+function getChartData() {
+  const q      = curQuarter();
+  const months = quarterMonths(q);
+  return months.map(m => ({
+    label:  m === curMonth ? `${m}월 (현재)` : `${m}월`,
+    amount: (Number(avenueData[`m${m}`]) || 0) + (Number(centumData[`m${m}`]) || 0),
+    pcs:    (Number(avenueData[`m${m}_pcs`]) || 0) + (Number(centumData[`m${m}_pcs`]) || 0)
+  }));
+}
 
-/* ────────── 차트 ────────── */
 const MAX_BAR_H = 200;
 function renderChart() {
-  const wrap   = document.getElementById('chartWrap');
-  const amounts = chartData.map(d => Number(d.amount) || 0);
+  const data    = getChartData();
+  const wrap    = document.getElementById('chartWrap');
+  if (!wrap) return;
+  const amounts = data.map(d => Number(d.amount) || 0);
   const maxAmt  = Math.max(...amounts, 1);
 
-  wrap.innerHTML = '<div class="chart-unit">(억 원)</div>' + chartData.map((d, i) => {
-    const h = Math.round((amounts[i] / maxAmt) * MAX_BAR_H);
+  wrap.innerHTML = '<div class="chart-unit">(억 원)</div>' + data.map((d, i) => {
+    const h    = Math.round((amounts[i] / maxAmt) * MAX_BAR_H);
     const aStr = amounts[i] > 0 ? Number(amounts[i]).toLocaleString('ko-KR') : '-';
     const pStr = d.pcs ? `(${d.pcs} pcs)` : '';
     return `<div class="bar-item">
@@ -258,30 +329,151 @@ function renderChart() {
   }).join('');
 }
 
-function renderChartInputs() {
-  const row = document.getElementById('chartEditRow');
-  row.innerHTML = chartData.map((d, i) => `
-    <div class="chart-edit-item">
-      <span>${d.label||''}</span>
-      <input type="number" placeholder="금액(원)" value="${d.amount||''}"
-        oninput="window._ca(${i},'amount',this.value)" />
-      <input type="number" placeholder="PCS" value="${d.pcs||''}" style="width:60px;"
-        oninput="window._ca(${i},'pcs',this.value)" />
-    </div>`).join('');
-}
-window._ca = (i, key, v) => { chartData[i][key] = v!==''?Number(v):null; renderChart(); };
+/* ────────── 에비뉴엘 모달 ────────── */
+document.getElementById('avenueOpen').addEventListener('click', () => {
+  const yr = curYear;
+  document.getElementById('avenueYearLabel').textContent = yr;
+  const cq = curQuarter();
+  for (let q = 1; q <= 4; q++) {
+    document.getElementById(`av-qtr-hdr-${q}`).className = `av-qtr-hdr${q === cq ? ' cur' : ''}`;
+  }
+  for (let m = 1; m <= 12; m++) {
+    const amtEl = document.getElementById(`av-m${m}`);
+    const pcsEl = document.getElementById(`av-p${m}`);
+    if (amtEl) amtEl.value = fmtInput(avenueData[`m${m}`]);
+    if (pcsEl) pcsEl.value = fmtInput(avenueData[`m${m}_pcs`]);
+  }
+  window.calcBranchSub('av');
+  document.getElementById('avenueModal').classList.add('show');
+});
+
+document.getElementById('avenueClose').addEventListener('click', () =>
+  document.getElementById('avenueModal').classList.remove('show'));
+document.getElementById('avenueModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('avenueModal'))
+    document.getElementById('avenueModal').classList.remove('show');
+});
+
+document.getElementById('avenueApply').addEventListener('click', async () => {
+  const yr = curYear;
+  const saveObj = { updatedAt: new Date().toISOString() };
+  const newData = {};
+  for (let m = 1; m <= 12; m++) {
+    const amt = parseNum(document.getElementById(`av-m${m}`)?.value);
+    const pcs = parseNum(document.getElementById(`av-p${m}`)?.value);
+    saveObj[`m${m}`]     = amt;
+    saveObj[`m${m}_pcs`] = pcs;
+    newData[`m${m}`]     = amt || 0;
+    newData[`m${m}_pcs`] = pcs || 0;
+  }
+  avenueData = newData;
+  try {
+    await setDoc(doc(db,'artifacts','patek-s','public','data','avenue_annual',String(yr)), saveObj, {merge:true});
+  } catch(e) { /* 저장 실패해도 반영 */ }
+  renderChart();
+  recalcQuarter();
+  document.getElementById('avenueModal').classList.remove('show');
+});
+
+/* ────────── 센텀 모달 ────────── */
+document.getElementById('centumOpen').addEventListener('click', () => {
+  const yr = curYear;
+  document.getElementById('centumYearLabel').textContent = yr;
+  const cq = curQuarter();
+  for (let q = 1; q <= 4; q++) {
+    document.getElementById(`ct-qtr-hdr-${q}`).className = `av-qtr-hdr${q === cq ? ' cur' : ''}`;
+  }
+  for (let m = 1; m <= 12; m++) {
+    const amtEl = document.getElementById(`ct-m${m}`);
+    const pcsEl = document.getElementById(`ct-p${m}`);
+    if (amtEl) amtEl.value = fmtInput(centumData[`m${m}`]);
+    if (pcsEl) pcsEl.value = fmtInput(centumData[`m${m}_pcs`]);
+  }
+  window.calcBranchSub('ct');
+  document.getElementById('centumModal').classList.add('show');
+});
+
+document.getElementById('centumClose').addEventListener('click', () =>
+  document.getElementById('centumModal').classList.remove('show'));
+document.getElementById('centumModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('centumModal'))
+    document.getElementById('centumModal').classList.remove('show');
+});
+
+document.getElementById('centumApply').addEventListener('click', async () => {
+  const yr = curYear;
+  const saveObj = { updatedAt: new Date().toISOString() };
+  const newData = {};
+  for (let m = 1; m <= 12; m++) {
+    const amt = parseNum(document.getElementById(`ct-m${m}`)?.value);
+    const pcs = parseNum(document.getElementById(`ct-p${m}`)?.value);
+    saveObj[`m${m}`]     = amt;
+    saveObj[`m${m}_pcs`] = pcs;
+    newData[`m${m}`]     = amt || 0;
+    newData[`m${m}_pcs`] = pcs || 0;
+  }
+  centumData = newData;
+  try {
+    await setDoc(doc(db,'artifacts','patek-s','public','data','centum_annual',String(yr)), saveObj, {merge:true});
+  } catch(e) { /* 저장 실패해도 반영 */ }
+  renderChart();
+  recalcQuarter();
+  document.getElementById('centumModal').classList.remove('show');
+});
+
+/* ────────── 목표 달성률 모달 ────────── */
+window.calcGoalRate = function() {
+  const total  = parseNum(document.getElementById('gm-total')?.value)  || 0;
+  const centum = parseNum(document.getElementById('gm-centum')?.value) || 0;
+  const avenue = parseNum(document.getElementById('gm-avenue')?.value) || 0;
+  const rate   = total > 0 ? (centum + avenue) / total * 100 : 0;
+  const el     = document.getElementById('gm-rate-text');
+  if (el) el.textContent = rate.toFixed(1) + '%';
+};
+
+document.getElementById('goalRateOpen').addEventListener('click', () => {
+  document.getElementById('gm-total').value  = fmtInput(goalRateData.total  || null);
+  document.getElementById('gm-centum').value = fmtInput(goalRateData.centum || null);
+  document.getElementById('gm-avenue').value = fmtInput(goalRateData.avenue || null);
+  window.calcGoalRate();
+  document.getElementById('goalRateModal').classList.add('show');
+});
+
+document.getElementById('goalRateClose').addEventListener('click', () =>
+  document.getElementById('goalRateModal').classList.remove('show'));
+document.getElementById('goalRateModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('goalRateModal'))
+    document.getElementById('goalRateModal').classList.remove('show');
+});
+
+document.getElementById('goalRateApply').addEventListener('click', () => {
+  const total  = parseNum(document.getElementById('gm-total')?.value)  || 0;
+  const centum = parseNum(document.getElementById('gm-centum')?.value) || 0;
+  const avenue = parseNum(document.getElementById('gm-avenue')?.value) || 0;
+  const rate   = total > 0 ? (centum + avenue) / total * 100 : 0;
+
+  goalRateData = { total, centum, avenue, rate };
+
+  // 분기 목표에도 동기화
+  const qGoalEl = document.getElementById('f-quarterGoal');
+  if (qGoalEl && total > 0) { qGoalEl.value = fmtInput(total); }
+
+  updateGoalDisplay();
+  recalcQuarter();
+  document.getElementById('goalRateModal').classList.remove('show');
+});
 
 /* ────────── 재고 테이블 ────────── */
 function renderTable() {
   updateTabCounts();
-  const tbody   = document.getElementById('inventoryTbody');
+  const tbody    = document.getElementById('inventoryTbody');
   const filtered = activeFilters.has('전체') ? rows : rows.filter(r => activeFilters.has(r.status));
   tbody.innerHTML = '';
 
   filtered.forEach((r) => {
-    const ri  = rows.indexOf(r);
+    const ri    = rows.indexOf(r);
     const badge = BADGE_MAP[r.status] || 'badge-rest';
-    const tr = document.createElement('tr');
+    const tr    = document.createElement('tr');
     tr.dataset.status = r.status || '';
     tr.innerHTML = `
       <td><input type="checkbox" class="row-check" data-amount="${r.amount||0}" data-qty="1"/></td>
@@ -307,7 +499,7 @@ function renderTable() {
 }
 
 function renderTfoot(filtered) {
-  const total = filtered.reduce((s,r)=>s+(Number(r.amount)||0),0);
+  const total = filtered.reduce((s,r) => s + (Number(r.amount)||0), 0);
   const filterLabel = activeFilters.has('전체') ? '전체' : [...activeFilters].join('+');
   document.getElementById('inventoryTfoot').innerHTML = `<tr>
     <td colspan="3">${filterLabel} 합계</td>
@@ -326,17 +518,19 @@ function updateTabCounts() {
 }
 
 function renderSummary() {
+  const ORDER  = ['전체','판매예정','컨펌예정','이월예정','AS','잔여재고'];
+  const LABELS = { '전체':'전체 재고','판매예정':'판매 예정','컨펌예정':'컨펌 예정','이월예정':'이월 예정','잔여재고':'잔여 재고','AS':'AS' };
+  const COLORS = { '전체':'black','판매예정':'green','컨펌예정':'orange','이월예정':'blue','잔여재고':'black','AS':'red' };
+
   const summary = {};
-  ['전체', ...STATUSES].forEach(s => { summary[s] = {qty:0,amount:0}; });
+  ORDER.forEach(s => { summary[s] = { qty:0, amount:0 }; });
   rows.forEach(r => {
     const s = r.status || '잔여재고';
     if (summary[s] !== undefined) { summary[s].qty++; summary[s].amount += Number(r.amount)||0; }
     summary['전체'].qty++; summary['전체'].amount += Number(r.amount)||0;
   });
-  const colors = { '전체':'black','판매예정':'green','컨펌예정':'orange','이월예정':'blue','잔여재고':'black','AS':'red' };
-  const labels = { '전체':'전체재고','판매예정':'판매예정','컨펌예정':'컨펌예정','이월예정':'이월예정','잔여재고':'잔여재고','AS':'AS' };
-  document.getElementById('summaryTbody').innerHTML = ['전체',...STATUSES].map(s =>
-    `<tr><td class="${colors[s]}">${labels[s]}</td><td>${summary[s].qty} pcs</td><td>${fmtW(summary[s].amount)}</td></tr>`
+  document.getElementById('summaryTbody').innerHTML = ORDER.map(s =>
+    `<tr><td class="${COLORS[s]}">${LABELS[s]}</td><td>${summary[s].qty} pcs</td><td>${fmtW(summary[s].amount)}</td></tr>`
   ).join('');
 }
 
@@ -357,13 +551,11 @@ document.getElementById('tabsBar').addEventListener('click', e => {
       activeFilters.add(f);
     }
   }
-
   document.querySelectorAll('.tab').forEach(t =>
     t.classList.toggle('active', activeFilters.has(t.dataset.filter))
   );
   renderTable();
 });
-
 
 /* ── 체크박스 ── */
 function bindCheckboxes() {
@@ -373,85 +565,24 @@ function bindCheckboxes() {
     updateSelectedTotal();
   });
 }
+
 function updateSelectedTotal() {
-  let qty=0, amount=0;
+  let qty = 0, amount = 0;
   document.querySelectorAll('.row-check:checked').forEach(cb => {
-    qty++;
-    amount += Number(cb.dataset.amount)||0;
+    qty++; amount += Number(cb.dataset.amount)||0;
   });
   document.getElementById('selectedQty').textContent    = qty + ' pcs';
   document.getElementById('selectedAmount').textContent = fmtW(amount);
 }
 
-/* ── 에비뉴엘 연간 모달 ── */
-function curQuarter() { return Math.ceil(curMonth / 3); }
-function quarterMonths(q) { const s=(q-1)*3+1; return [s,s+1,s+2]; }
-
-// 분기 소계 + 연간 합계 갱신
-window.calcAvSubtotals = function() {
-  let yearTotal = 0;
-  for (let q=1; q<=4; q++) {
-    let sub = 0;
-    quarterMonths(q).forEach(m => { sub += parseNum(document.getElementById(`av-m${m}`)?.value) || 0; });
-    document.getElementById(`av-sub-${q}`).textContent = fmtW(sub);
-    yearTotal += sub;
-  }
-  document.getElementById('avenueTotalText').textContent = fmtW(yearTotal);
-};
-
-// 모달 열기 — Firestore에서 연간 데이터 로드
-document.getElementById('avenueOpen').addEventListener('click', async () => {
-  const yr = curYear;
-  document.getElementById('avenueYearLabel').textContent = yr;
-
-  // 현재 분기 헤더 강조
-  const cq = curQuarter();
-  for (let q=1; q<=4; q++) {
-    document.getElementById(`av-qtr-hdr-${q}`).className = `av-qtr-hdr${q===cq?' cur':''}`;
-  }
-
-  // Firestore 연간 데이터 로드
-  try {
-    const snap = await getDoc(doc(db,'artifacts','patek-s','public','data','avenue_annual',String(yr)));
-    const d = snap.exists() ? snap.data() : {};
-    for (let m=1; m<=12; m++) {
-      const el = document.getElementById(`av-m${m}`);
-      if (el) el.value = fmtInput(d[`m${m}`]);
-    }
-  } catch(e) {
-    for (let m=1; m<=12; m++) { const el=document.getElementById(`av-m${m}`); if(el) el.value=''; }
-  }
-
-  window.calcAvSubtotals();
-  document.getElementById('avenueModal').classList.add('show');
-});
-
-document.getElementById('avenueClose').addEventListener('click', () => document.getElementById('avenueModal').classList.remove('show'));
-document.getElementById('avenueModal').addEventListener('click', e => { if(e.target===document.getElementById('avenueModal')) document.getElementById('avenueModal').classList.remove('show'); });
-
-// 적용 — 연간 데이터 저장 + 현재 분기 합계를 avenueGoalAmount에 반영
-document.getElementById('avenueApply').addEventListener('click', async () => {
-  const yr = curYear;
-  const saveObj = { updatedAt: new Date().toISOString() };
-  for (let m=1; m<=12; m++) {
-    const v = parseNum(document.getElementById(`av-m${m}`)?.value);
-    saveObj[`m${m}`] = v;
-  }
-
-  // 현재 분기 합계
-  const cqTotal = quarterMonths(curQuarter()).reduce((s,m)=>{
-    return s + (parseNum(document.getElementById(`av-m${m}`)?.value)||0);
-  }, 0);
-
-  try {
-    await setDoc(doc(db,'artifacts','patek-s','public','data','avenue_annual',String(yr)), saveObj, {merge:true});
-  } catch(e) { /* 저장 실패해도 적용은 진행 */ }
-
-  const el = document.getElementById('f-avenueGoalAmount');
-  if (el) { el.value = fmtInput(cqTotal); }
-  recalcTotalRemain();
-  document.getElementById('avenueModal').classList.remove('show');
-});
+/* ── 새 행 추가 버튼 (하단 바에 있을 경우 대비) ── */
+const addRowBtn = document.getElementById('addRowBtn');
+if (addRowBtn) {
+  addRowBtn.addEventListener('click', () => {
+    rows.push({ ref:'', amount:null, customer:'', saleDate:'', status:'판매예정', note:'' });
+    renderTable();
+  });
+}
 
 /* ────────── 저장 ────────── */
 async function saveData() {
@@ -465,22 +596,18 @@ async function saveData() {
     lastYearPcs:     gnv('f-lastYearPcs'),
     currentSales:    gnv('f-currentSales'),
     currentPcs:      gnv('f-currentPcs'),
-    totalGoalAmount: gnv('f-totalGoalAmount'),
-    totalGoalRate:   gnv('f-totalGoalRate'),
-    centumGoalAmount:gnv('f-centumGoalAmount'),
-    centumGoalRate:  gnv('f-centumGoalRate'),
-    avenueGoalAmount:gnv('f-avenueGoalAmount'),
-    avenueGoalRate:  gnv('f-avenueGoalRate'),
     quarterNum:      getQuarterNum(curMonth),
     quarterGoal:     gnv('f-quarterGoal'),
-    quarterPrevTotal:gnv('f-quarterPrevTotal'),
     mpdsMin:         gnv('f-mpdsMin'),
     mpdsCurrent:     gnv('f-mpdsCurrent'),
     mpdsIncoming:    gnv('f-mpdsIncoming'),
-    chartData: chartData.map(d => ({ label:d.label||'', pcs:d.pcs, amount:d.amount })),
+    totalGoalAmount: goalRateData.total  || null,
+    totalGoalRate:   goalRateData.rate   || null,
+    centumGoalAmount:goalRateData.centum || null,
+    avenueGoalAmount:goalRateData.avenue || null,
     rows: rows.map(r => ({
       ref:      r.ref||'',
-      amount:   r.amount!=null?Number(r.amount):null,
+      amount:   r.amount != null ? Number(r.amount) : null,
       customer: r.customer||'',
       saleDate: r.saleDate||'',
       status:   r.status||'판매예정',
@@ -489,15 +616,15 @@ async function saveData() {
     updatedAt: new Date().toISOString()
   };
 
-  const btns = ['save-btn','save-btn2'].map(id=>document.getElementById(id));
-  btns.forEach(b=>{if(b) b.textContent='저장 중...';});
+  const btns = ['save-btn','save-btn2'].map(id => document.getElementById(id));
+  btns.forEach(b => { if (b) b.textContent = '저장 중...'; });
   try {
     await setDoc(doc(db,'artifacts','patek-s','public','data','sales_dashboard',`${curYear}-${pad(curMonth)}`), data, {merge:true});
-    btns.forEach(b=>{if(b) b.textContent='✔ 저장됨';});
-    setTimeout(()=>btns.forEach(b=>{if(b) b.textContent='💾 저장하기';}), 2000);
+    btns.forEach(b => { if (b) b.textContent = '✔ 저장됨'; });
+    setTimeout(() => btns.forEach(b => { if (b) b.textContent = '💾 저장하기'; }), 2000);
   } catch(e) {
     alert('저장 실패: '+e.message);
-    btns.forEach(b=>{if(b) b.textContent='💾 저장하기';});
+    btns.forEach(b => { if (b) b.textContent = '💾 저장하기'; });
   }
 }
 document.getElementById('save-btn').addEventListener('click', saveData);
@@ -507,13 +634,15 @@ document.getElementById('save-btn2').addEventListener('click', saveData);
 document.getElementById('excelBtn').addEventListener('click', () => {
   if (!window.XLSX) { alert('라이브러리 로딩 중입니다.'); return; }
   const header = ['No.','REF.','금액','고객명','예상 매출일','상태','비고'];
-  const data = rows.map((r,i)=>[i+1,r.ref,r.amount,r.customer,r.saleDate,r.status,r.note]);
+  const data   = rows.map((r,i) => [i+1, r.ref, r.amount, r.customer, r.saleDate, r.status, r.note]);
   const ws = window.XLSX.utils.aoa_to_sheet([header,...data]);
   const wb = window.XLSX.utils.book_new();
   window.XLSX.utils.book_append_sheet(wb, ws, `${curYear}년${curMonth}월`);
   window.XLSX.writeFile(wb, `매출현황_${curYear}년${curMonth}월.xlsx`);
 });
 
-function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
+/* ────────── 초기화 ────────── */
+initBranchModals();
 loadMonth();

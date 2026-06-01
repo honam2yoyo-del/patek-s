@@ -9,6 +9,11 @@
     body { background:#f7f9fc; color:#111827; }
     .app { display:flex; min-height:100vh; }
 
+    /* 스피너 전체 제거 */
+    input[type=number]::-webkit-outer-spin-button,
+    input[type=number]::-webkit-inner-spin-button { -webkit-appearance:none;margin:0; }
+    input[type=number] { -moz-appearance:textfield; }
+
     /* ── 로그인 ── */
     #login-overlay { position:fixed;inset:0;background:rgba(6,27,52,.97);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999; }
     #login-overlay img { height:52px;margin-bottom:18px;filter:brightness(0) invert(1); }
@@ -34,18 +39,33 @@
     .title  { font-size:30px;font-weight:900;letter-spacing:-1px; }
     .toolbar { display:flex;gap:12px;align-items:center; }
     .control,.btn { height:44px;border:1px solid #d9e0ea;border-radius:7px;background:#fff;padding:0 16px;font-size:14px;font-weight:700;color:#111827; }
-    .control { min-width:132px; }
-    .btn     { cursor:pointer; }
+    .btn { cursor:pointer; }
     .btn-primary { background:#075bd8;color:#fff;border-color:#075bd8; }
+
+    /* ── 달력 월 피커 ── */
+    .month-picker-wrap { position:relative; }
+    .mpp-btn { height:44px;border:1px solid #d9e0ea;border-radius:7px;background:#fff;padding:0 14px;font-size:14px;font-weight:700;color:#111827;cursor:pointer;display:flex;align-items:center;gap:8px;white-space:nowrap; }
+    .mpp-btn:hover { border-color:#075bd8; }
+    .mpp-popup { position:absolute;top:calc(100%+6px);left:0;z-index:999;background:#fff;border:1px solid #d9e0ea;border-radius:10px;padding:14px;box-shadow:0 6px 24px rgba(15,23,42,.14);width:230px; }
+    .mpp-header { display:flex;justify-content:space-between;align-items:center;margin-bottom:12px; }
+    .mpp-year { font-size:16px;font-weight:900;color:#111827; }
+    .mpp-nav { background:none;border:none;cursor:pointer;font-size:20px;color:#0067e8;padding:2px 8px;border-radius:5px;line-height:1; }
+    .mpp-nav:hover { background:#eaf3ff; }
+    .mpp-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:6px; }
+    .mpp-month { padding:9px 0;border:none;background:#f6f8fb;border-radius:7px;cursor:pointer;font-size:13px;font-weight:700;color:#374151;transition:.12s; }
+    .mpp-month:hover { background:#eaf3ff;color:#0067e8; }
+    .mpp-month.sel { background:#075bd8;color:#fff; }
+    .quarter-badge { height:44px;border:1px solid #d9e0ea;border-radius:7px;background:#f6f8fb;padding:0 18px;font-size:14px;font-weight:900;color:#374151;display:flex;align-items:center;cursor:default;user-select:none;white-space:nowrap; }
 
     /* ── KPI 카드 ── */
     .kpi-grid { display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:16px; }
-    .kpi-card { background:#fff;border:1px solid #e2e7ef;border-radius:8px;padding:18px 24px;min-height:96px;box-shadow:0 2px 8px rgba(15,23,42,.035); }
-    .kpi-title { font-size:14px;font-weight:900;margin-bottom:12px; }
-    .kpi-value { font-size:27px;font-weight:900;letter-spacing:-.8px;white-space:nowrap;display:flex;align-items:baseline;gap:4px; }
-    .kpi-pcs   { font-size:16px;font-weight:700;color:#4b5563; }
-    .kpi-num   { background:transparent;border:none;outline:none;font-family:inherit;font-size:27px;font-weight:900;letter-spacing:-.8px;color:inherit;width:160px; }
-    .kpi-pcs-num { background:transparent;border:none;outline:none;font-family:inherit;font-size:16px;font-weight:700;color:#4b5563;width:50px; }
+    .kpi-card { background:#fff;border:1px solid #e2e7ef;border-radius:8px;padding:18px 24px;box-shadow:0 2px 8px rgba(15,23,42,.035); }
+    .kpi-title { font-size:14px;font-weight:900;margin-bottom:10px; }
+    .kpi-amount-row { display:flex;align-items:baseline;gap:3px;flex-wrap:nowrap;margin-bottom:4px; }
+    .kpi-num { background:transparent;border:none;outline:none;font-family:inherit;font-size:clamp(14px,1.8vw,24px);font-weight:900;letter-spacing:-.5px;color:inherit;min-width:0;flex:1; }
+    .kpi-unit { font-size:16px;font-weight:700;white-space:nowrap;flex-shrink:0; }
+    .kpi-pcs-row { font-size:14px;font-weight:700;color:#4b5563;display:flex;align-items:center;gap:2px;flex-wrap:nowrap; }
+    .kpi-pcs-num { background:transparent;border:none;outline:none;font-family:inherit;font-size:14px;font-weight:700;color:#4b5563;min-width:20px;width:3ch; }
     .kpi-num::placeholder,.kpi-pcs-num::placeholder { color:#ccc; }
 
     .blue{color:#0067e8;} .red{color:#ff0000;} .green{color:#009844;} .orange{color:#ff7a00;} .black{color:#111827;}
@@ -56,7 +76,6 @@
     .panel-header { padding:20px 24px 14px;font-size:18px;font-weight:900;border-bottom:1px solid #e5eaf2; }
     .panel-body   { padding:18px 24px; }
 
-    /* 목표 달성 */
     .goal-table { width:100%;border-collapse:collapse;margin-bottom:14px; }
     .goal-table td { padding:11px 0;border-bottom:1px solid #e5eaf2;font-size:15px;font-weight:700; }
     .goal-table td:nth-child(1) { width:24%;font-weight:900; }
@@ -71,125 +90,100 @@
     .progress-scale { display:flex;justify-content:space-between;color:#4b5563;font-size:13px;margin-top:9px; }
     .remain-box { margin-top:18px;padding-top:16px;border-top:1px solid #e5eaf2;display:flex;justify-content:space-between;align-items:center;font-weight:900;font-size:16px; }
 
-    /* 인라인 입력 (목표/분기) */
     .ipt { background:transparent;border:none;outline:none;font-family:inherit;font-size:inherit;font-weight:inherit;color:inherit;text-align:right; }
-    .ipt.lft { text-align:left; }
     .ipt.w120 { width:120px; } .ipt.w80 { width:80px; } .ipt.w60 { width:60px; }
 
-    /* 분기 목표 */
     .quarter-list { list-style:none; }
     .quarter-list li { display:flex;justify-content:space-between;align-items:center;padding:13px 0;border-bottom:1px solid #e5eaf2;font-size:15px;font-weight:700; }
     .quarter-list li:last-child { border-bottom:0; }
     .quarter-value { font-weight:900; }
 
-    /* 차트 */
     .chart-wrap { height:256px;padding-top:6px;display:flex;align-items:flex-end;justify-content:center;gap:42px;border-left:1px solid #dbe3ee;border-bottom:1px solid #dbe3ee;position:relative; }
     .chart-unit  { position:absolute;left:-4px;top:-4px;font-size:12px;color:#111827;font-weight:700; }
     .bar-item    { height:220px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:5px;font-size:12px;font-weight:700;min-width:80px; }
     .bar-meta    { text-align:center;line-height:1.35;margin-bottom:2px;font-size:12px;font-weight:800; }
     .bar         { width:38px;border-radius:5px 5px 0 0;background:linear-gradient(180deg,#2d86ff 0%,#0058d6 100%); }
     .bar-month   { font-size:14px;font-weight:900;margin-top:3px; }
-    .chart-edit-row { margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center; }
-    .chart-edit-item { display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;color:#888; }
-    .chart-edit-item input { width:100px;height:28px;border:1px solid #d9e0ea;border-radius:5px;text-align:right;padding:0 8px;font-size:12px;outline:none; }
 
-    /* MPDS */
     .mpds-list { list-style:none; }
     .mpds-list li { display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:8px;padding:12px 0;font-size:15px;font-weight:700; }
     .mpds-list li.divider { border-top:1px solid #d9e0ea;margin-top:4px;padding-top:18px; }
     .mpds-list strong { font-weight:900;min-width:55px;text-align:right; }
     .mpds-input { width:74px;height:36px;border:1px solid #d9e0ea;border-radius:6px;text-align:center;font-size:16px;font-weight:800;outline:none; }
 
-    /* 재고 관리 */
+    /* ── 재고 관리 ── */
     .inventory-panel { background:#fff;border:1px solid #e2e7ef;border-radius:8px;box-shadow:0 2px 8px rgba(15,23,42,.035);display:grid;grid-template-columns:2.25fr 1fr;overflow:hidden;margin-bottom:0; }
     .inventory-left  { border-right:1px solid #e5eaf2; }
-    .inventory-header { padding:18px 24px 10px;font-size:19px;font-weight:900;display:flex;align-items:center;justify-content:space-between; }
+    .inventory-header { padding:18px 24px 10px;font-size:19px;font-weight:900; }
     .tabs { display:flex;padding:0 16px;border-bottom:1px solid #e5eaf2;gap:10px; }
     .tab  { appearance:none;border:0;background:transparent;padding:14px 20px;font-size:14px;font-weight:900;color:#111827;border-bottom:3px solid transparent;cursor:pointer; }
     .tab.active { color:#0067e8;border-bottom-color:#0067e8; }
     .table-wrap { padding:14px 16px 12px;overflow-x:auto; }
     table { width:100%;border-collapse:collapse; }
-    .inventory-table { min-width:860px; }
+    .inventory-table { min-width:780px; }
     th,td { border:1px solid #e2e7ef;padding:10px 12px;font-size:14px;text-align:center;white-space:nowrap; }
     th { background:#f6f8fb;font-weight:900; }
     td { background:#fff;font-weight:700; }
     .inventory-table tfoot td { background:#fbfcfe;font-weight:900; }
     input[type="checkbox"] { width:16px;height:16px;accent-color:#0067e8;cursor:pointer; }
-
-    /* 인라인 셀 편집 */
     .td-edit { background:transparent;border:none;outline:none;font-family:inherit;font-size:14px;font-weight:700;color:#111827;width:100%;text-align:center; }
     .td-del  { background:none;border:none;cursor:pointer;color:#ccc;font-size:14px;padding:2px; }
     .td-del:hover { color:#f00; }
     .status-sel { background:transparent;border:none;outline:none;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer; }
-
     .badge { display:inline-flex;justify-content:center;align-items:center;min-width:66px;height:26px;padding:0 8px;border-radius:6px;font-size:12px;font-weight:900; }
     .badge-sale    { background:#e6f8ee;color:#009844; }
     .badge-confirm { background:#fff3e5;color:#ff7a00; }
     .badge-carry   { background:#eaf3ff;color:#0067e8; }
     .badge-rest    { background:#f1f3f5;color:#111827; }
     .badge-as      { background:#fee2e2;color:#ff0000; }
-
     .selected-summary { margin:10px 16px 12px;height:40px;border:1px solid #7aa9ff;border-radius:5px;display:grid;grid-template-columns:1fr 1fr 1fr;align-items:center;padding:0 16px;font-size:14px;font-weight:900; }
     .selected-summary b { color:#0067e8;margin-left:10px; }
-
     .summary-panel { padding:18px 16px; }
     .summary-title { font-size:19px;font-weight:900;margin-bottom:14px; }
     .summary-table th,.summary-table td { padding:14px 12px;font-size:15px; }
     .summary-table td:first-child { text-align:left;padding-left:18px;font-weight:900; }
 
-    /* 하단 바 */
+    /* ── 하단 바 ── */
     .bottom-actions { position:fixed;left:220px;right:0;bottom:0;height:72px;display:flex;justify-content:flex-end;align-items:center;gap:14px;padding:0 24px;background:rgba(255,255,255,.97);border-top:1px solid #e2e7ef;box-shadow:0 -4px 16px rgba(15,23,42,.06); }
     .bottom-btn { height:42px;min-width:132px;border-radius:6px;border:1px solid #d9e0ea;background:#fff;font-size:14px;font-weight:900;cursor:pointer; }
     .bottom-btn.primary { background:#075bd8;color:#fff;border-color:#075bd8; }
 
-    /* ── 월 달력 피커 ── */
-    .month-picker-wrap { position:relative; }
-    .mpp-btn { height:44px;border:1px solid #d9e0ea;border-radius:7px;background:#fff;padding:0 14px;font-size:14px;font-weight:700;color:#111827;cursor:pointer;display:flex;align-items:center;gap:8px;white-space:nowrap; }
-    .mpp-btn:hover { border-color:#075bd8; }
-    .mpp-popup { position:absolute;top:calc(100% + 6px);left:0;z-index:999;background:#fff;border:1px solid #d9e0ea;border-radius:10px;padding:14px;box-shadow:0 6px 24px rgba(15,23,42,.14);width:230px; }
-    .mpp-header { display:flex;justify-content:space-between;align-items:center;margin-bottom:12px; }
-    .mpp-year { font-size:16px;font-weight:900;color:#111827; }
-    .mpp-nav { background:none;border:none;cursor:pointer;font-size:20px;color:#0067e8;padding:2px 8px;border-radius:5px;line-height:1; }
-    .mpp-nav:hover { background:#eaf3ff; }
-    .mpp-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:6px; }
-    .mpp-month { padding:9px 0;border:none;background:#f6f8fb;border-radius:7px;cursor:pointer;font-size:13px;font-weight:700;color:#374151;transition:.12s; }
-    .mpp-month:hover { background:#eaf3ff;color:#0067e8; }
-    .mpp-month.sel { background:#075bd8;color:#fff; }
-
-    /* 분기 표시 (선택 불가) */
-    .quarter-badge { height:44px;border:1px solid #d9e0ea;border-radius:7px;background:#f6f8fb;padding:0 18px;font-size:14px;font-weight:900;color:#374151;display:flex;align-items:center;cursor:default;user-select:none;white-space:nowrap; }
-
-    /* 모달 */
-    .modal-backdrop { display:none;position:fixed;inset:0;background:rgba(15,23,42,.35);z-index:100;justify-content:center;align-items:center; }
+    /* ── 공통 모달 ── */
+    .modal-backdrop { display:none;position:fixed;inset:0;background:rgba(15,23,42,.35);z-index:100;justify-content:center;align-items:center;overflow-y:auto; }
     .modal-backdrop.show { display:flex; }
-    .modal { width:420px;background:#fff;border-radius:10px;box-shadow:0 20px 60px rgba(15,23,42,.25);padding:22px; }
+    .modal { background:#fff;border-radius:10px;box-shadow:0 20px 60px rgba(15,23,42,.25);padding:22px;max-height:90vh;overflow-y:auto; }
     .modal-title { font-size:20px;font-weight:900;margin-bottom:16px; }
     .modal-row   { display:grid;grid-template-columns:90px 1fr;align-items:center;gap:12px;margin-bottom:12px;font-size:15px;font-weight:800; }
     .modal-row input { height:40px;border:1px solid #d9e0ea;border-radius:6px;padding:0 12px;font-size:15px;text-align:right;font-weight:800;outline:none; }
     .modal-total   { margin-top:14px;padding:14px;background:#f6f8fb;border-radius:6px;display:flex;justify-content:space-between;font-weight:900; }
     .modal-actions { display:flex;justify-content:flex-end;gap:10px;margin-top:18px; }
 
-    /* 스피너(화살표) 전체 제거 */
-    input[type=number]::-webkit-outer-spin-button,
-    input[type=number]::-webkit-inner-spin-button { -webkit-appearance:none;margin:0; }
-    input[type=number] { -moz-appearance:textfield; }
-
-    /* 에비뉴엘 연간 모달 */
-    .av-modal { width:620px; }
+    /* ── 에비뉴엘 / 센텀 연간 모달 ── */
+    .av-modal { width:1100px;max-width:96vw; }
     .av-qtr-grid { display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px; }
     .av-qtr { border:1px solid #e5eaf2;border-radius:8px;overflow:hidden; }
     .av-qtr-hdr { padding:8px 10px;font-size:12px;font-weight:900;background:#f6f8fb;border-bottom:1px solid #e5eaf2;text-align:center;color:#4b5563; }
     .av-qtr-hdr.cur { background:#eaf3ff;color:#0067e8; }
-    .av-months { padding:8px 10px;display:flex;flex-direction:column;gap:6px; }
-    .av-month-row { display:flex;align-items:center;justify-content:space-between;gap:6px;font-size:13px;font-weight:700; }
-    .av-month-row label { white-space:nowrap;width:26px;color:#4b5563; }
-    .av-month-row input { flex:1;min-width:0;height:30px;border:1px solid #d9e0ea;border-radius:5px;padding:0 6px;font-size:12px;font-weight:700;outline:none;text-align:right; }
-    .av-qtr-sub { text-align:right;padding:4px 10px 8px;font-size:12px;font-weight:900;color:#0067e8; }
+    .av-months { padding:8px 10px;display:flex;flex-direction:column;gap:5px; }
+    .av-month-row { display:grid;grid-template-columns:26px 1fr 52px;align-items:center;gap:4px;font-size:12px;font-weight:700; }
+    .av-month-row label { color:#4b5563;font-size:11px;white-space:nowrap; }
+    .av-month-row input { height:28px;border:1px solid #d9e0ea;border-radius:5px;padding:0 5px;font-size:12px;font-weight:700;outline:none;text-align:right;width:100%;min-width:0; }
+    .av-month-row input.pcs-input { font-size:11px;color:#4b5563; }
+    .av-qtr-sub { padding:3px 10px 8px;font-size:11px;font-weight:900;color:#0067e8;text-align:right;line-height:1.6; }
+
+    /* ── 목표 달성률 모달 ── */
+    .gm-modal { width:380px; }
+    .gm-row { display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 0;border-bottom:1px solid #f0f2f6;font-size:14px;font-weight:700; }
+    .gm-row:last-of-type { border-bottom:0; }
+    .gm-label { color:#4b5563;white-space:nowrap;width:130px;flex-shrink:0; }
+    .gm-input { flex:1;height:36px;border:1px solid #d9e0ea;border-radius:6px;padding:0 10px;font-size:14px;font-weight:700;outline:none;text-align:right;min-width:0; }
+    .gm-rate-box { margin-top:12px;padding:14px;background:#eaf3ff;border-radius:8px;display:flex;justify-content:space-between;align-items:center;font-weight:900;font-size:16px; }
 
     @media(max-width:1400px){
       .dashboard-grid { grid-template-columns:repeat(2,1fr); }
       .inventory-panel { grid-template-columns:1fr; }
       .inventory-left { border-right:0;border-bottom:1px solid #e5eaf2; }
+      .av-qtr-grid { grid-template-columns:repeat(2,1fr); }
     }
     @media(max-width:980px){
       .app { flex-direction:column; }
@@ -201,7 +195,7 @@
 </head>
 <body>
 
-<!-- ── 로그인 ── -->
+<!-- 로그인 -->
 <div id="login-overlay">
   <img src="log.png" onerror="this.style.display='none'"/>
   <h2>Sales Dashboard</h2>
@@ -213,7 +207,6 @@
 </div>
 
 <div class="app">
-  <!-- ── 사이드바 ── -->
   <aside class="sidebar">
     <div>
       <div class="brand"><img src="log.png" onerror="this.style.display='none'"/>Sales</div>
@@ -229,12 +222,10 @@
     <div class="logout" id="logout-btn">⏎ 로그아웃</div>
   </aside>
 
-  <!-- ── 메인 ── -->
   <main class="main">
     <div class="topbar">
       <h1 class="title">월 매출 현황</h1>
       <div class="toolbar">
-        <!-- 달력 월 피커 -->
         <div class="month-picker-wrap" id="monthPickerWrap">
           <button class="mpp-btn" id="monthPickerBtn">
             <span>📅</span><span id="monthPickerLabel">2026년 6월</span>
@@ -248,42 +239,44 @@
             <div class="mpp-grid" id="pickerMonthGrid"></div>
           </div>
         </div>
-        <!-- 분기 자동 표시 (선택 불가) -->
         <div class="quarter-badge" id="quarterBadge">2분기</div>
         <button class="btn btn-primary" id="save-btn">💾 저장하기</button>
       </div>
     </div>
 
-    <!-- ── KPI 카드 4개 ── -->
+    <!-- KPI 카드 4개 -->
     <section class="kpi-grid">
       <div class="kpi-card">
         <div class="kpi-title" id="expectedTitle">6월 예상 매출</div>
-        <div class="kpi-value">
-          <input class="kpi-num" id="f-expectedSales" type="text" inputmode="numeric" placeholder="0" oninput="window.fmtNum(this)"/>원
-          <span class="kpi-pcs">(<input class="kpi-pcs-num" id="f-expectedPcs" type="text" inputmode="numeric" placeholder="0" oninput="window.fmtNum(this)"/> pcs)</span>
+        <div class="kpi-amount-row">
+          <input class="kpi-num" id="f-expectedSales" type="text" inputmode="numeric" placeholder="0" oninput="window.fmtNum(this);recalcRemain()"/>
+          <span class="kpi-unit">원</span>
         </div>
+        <div class="kpi-pcs-row">(<input class="kpi-pcs-num" id="f-expectedPcs" type="text" inputmode="numeric" placeholder="0" oninput="window.fmtNum(this);recalcRemain()"/> pcs)</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-title" id="lastYearTitle">작년 6월 매출</div>
-        <div class="kpi-value">
-          <input class="kpi-num" id="f-lastYearSales" type="text" inputmode="numeric" placeholder="0" oninput="window.fmtNum(this)"/>원
-          <span class="kpi-pcs">(<input class="kpi-pcs-num" id="f-lastYearPcs" type="text" inputmode="numeric" placeholder="0" oninput="window.fmtNum(this)"/> pcs)</span>
+        <div class="kpi-amount-row">
+          <input class="kpi-num" id="f-lastYearSales" type="text" inputmode="numeric" placeholder="0" oninput="window.fmtNum(this)"/>
+          <span class="kpi-unit">원</span>
         </div>
+        <div class="kpi-pcs-row">(<input class="kpi-pcs-num" id="f-lastYearPcs" type="text" inputmode="numeric" placeholder="0" oninput="window.fmtNum(this)"/> pcs)</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-title">현재 매출</div>
-        <div class="kpi-value blue">
-          <input class="kpi-num blue" id="f-currentSales" type="text" inputmode="numeric" placeholder="0" oninput="window.fmtNum(this)"/>원
-          <span class="kpi-pcs">(<input class="kpi-pcs-num" id="f-currentPcs" type="text" inputmode="numeric" placeholder="0" oninput="window.fmtNum(this)"/> pcs)</span>
+        <div class="kpi-amount-row blue">
+          <input class="kpi-num blue" id="f-currentSales" type="text" inputmode="numeric" placeholder="0" oninput="window.fmtNum(this);recalcRemain()"/>
+          <span class="kpi-unit blue">원</span>
         </div>
+        <div class="kpi-pcs-row">(<input class="kpi-pcs-num" id="f-currentPcs" type="text" inputmode="numeric" placeholder="0" oninput="window.fmtNum(this);recalcRemain()"/> pcs)</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-title">남은 매출</div>
-        <div class="kpi-value red" id="remainDisplay">계산 중...</div>
+        <div id="remainDisplay" style="margin-top:6px;font-size:24px;font-weight:900;letter-spacing:-.5px;">계산 중...</div>
       </div>
     </section>
 
-    <!-- ── 대시보드 4패널 ── -->
+    <!-- 대시보드 4패널 -->
     <section class="dashboard-grid">
 
       <!-- 목표 달성 현황 -->
@@ -294,24 +287,24 @@
             <tbody>
               <tr>
                 <td>합계</td>
-                <td><input class="ipt w120" id="f-totalGoalAmount" type="text" inputmode="numeric" placeholder="0" oninput="window.fmtNum(this)"/> 원</td>
-                <td><input class="ipt w60" id="f-totalGoalRate" type="number" step="0.1" placeholder="0"/>%</td>
+                <td id="totalGoalAmountDisp">-</td>
+                <td id="totalGoalRateDisp">-</td>
               </tr>
               <tr>
-                <td>센텀</td>
-                <td><input class="ipt w120" id="f-centumGoalAmount" type="text" inputmode="numeric" placeholder="0" oninput="window.fmtNum(this)"/> 원</td>
-                <td><input class="ipt w60" id="f-centumGoalRate" type="number" step="0.1" placeholder="0"/>%</td>
+                <td><span class="branch-link" id="centumOpen">센텀</span></td>
+                <td id="centumGoalAmountDisp">-</td>
+                <td id="centumGoalRateDisp">-</td>
               </tr>
               <tr>
                 <td><span class="branch-link" id="avenueOpen">에비뉴엘</span></td>
-                <td><input class="ipt w120" id="f-avenueGoalAmount" type="text" inputmode="numeric" placeholder="0" oninput="window.fmtNum(this)"/> 원</td>
-                <td><input class="ipt w60" id="f-avenueGoalRate" type="number" step="0.1" placeholder="0"/>%</td>
+                <td id="avenueGoalAmountDisp">-</td>
+                <td id="avenueGoalRateDisp">-</td>
               </tr>
             </tbody>
           </table>
           <div class="goal-progress-area">
             <div class="progress-title">
-              <span>목표 달성률</span>
+              <span class="branch-link" id="goalRateOpen" style="cursor:pointer;">목표 달성률</span>
               <span id="mainGoalRateText">0%</span>
             </div>
             <div class="progress-bg"><div class="progress-bar" id="mainProgressBar">0%</div></div>
@@ -319,7 +312,7 @@
           </div>
           <div class="remain-box">
             <span>총 남은 금액</span>
-            <span class="red" id="totalRemainDisplay">계산 중...</span>
+            <span class="red" id="totalRemainDisplay">-</span>
           </div>
         </div>
       </div>
@@ -331,36 +324,23 @@
           <ul class="quarter-list">
             <li>
               <span>분기 목표</span>
-              <span class="quarter-value"><input class="ipt w120" id="f-quarterGoal" type="text" inputmode="numeric" placeholder="0" oninput="window.fmtNum(this)"/> 원</span>
+              <span class="quarter-value"><input class="ipt w120" id="f-quarterGoal" type="text" inputmode="numeric" placeholder="0" oninput="window.fmtNum(this);recalcQuarter()"/> 원</span>
             </li>
-            <li>
-              <span>달성 금액 (전월 누적)</span>
-              <span class="quarter-value"><input class="ipt w120" id="f-quarterPrevTotal" type="text" inputmode="numeric" placeholder="0" oninput="window.fmtNum(this)"/> 원</span>
-            </li>
-            <li>
-              <span>달성 금액 (누적)</span>
-              <span class="quarter-value" id="quarterAchievedDisplay">계산 중...</span>
-            </li>
-            <li>
-              <span>남은 금액</span>
-              <span class="quarter-value red" id="quarterRemainDisplay">계산 중...</span>
-            </li>
-            <li>
-              <span>분기 달성률</span>
-              <span class="quarter-value" id="quarterRateDisplay">계산 중...</span>
-            </li>
+            <li><span>달성 금액 (누적)</span><span class="quarter-value" id="quarterAchievedDisplay">-</span></li>
+            <li><span>남은 금액</span><span class="quarter-value red" id="quarterRemainDisplay">-</span></li>
+            <li><span>분기 달성률</span><span class="quarter-value" id="quarterRateDisplay">-</span></li>
           </ul>
         </div>
       </div>
 
-      <!-- 월별 매출 누적 현황 (차트) -->
+      <!-- 월별 매출 누적 현황 (자동 계산) -->
       <div class="panel">
         <div class="panel-header">월별 매출 누적 현황</div>
         <div class="panel-body">
           <div class="chart-wrap" id="chartWrap">
             <div class="chart-unit">(억 원)</div>
           </div>
-          <div class="chart-edit-row" id="chartEditRow"></div>
+          <p style="margin-top:8px;font-size:11px;color:#9CA3AF;text-align:center;">센텀 + 에비뉴엘 월별 입력값 자동 반영</p>
         </div>
       </div>
 
@@ -369,37 +349,17 @@
         <div class="panel-header">MPDS 등록 가능 현황</div>
         <div class="panel-body">
           <ul class="mpds-list">
-            <li>
-              <span>최소등록기준</span>
-              <input class="mpds-input" id="f-mpdsMin" type="number" value="30"/>
-              <span>pcs</span>
-            </li>
-            <li>
-              <span>현재 등록가능 재고</span>
-              <input class="mpds-input" id="f-mpdsCurrent" type="number" placeholder="0"/>
-              <span>pcs</span>
-            </li>
-            <li>
-              <span>부족 수량</span>
-              <strong class="red" id="mpdsShortText">-</strong>
-              <span>pcs</span>
-            </li>
-            <li class="divider">
-              <span>입고예정 수량</span>
-              <input class="mpds-input" id="f-mpdsIncoming" type="number" placeholder="0"/>
-              <span>pcs</span>
-            </li>
-            <li>
-              <span>예상 등록 가능 수량</span>
-              <strong id="mpdsExpectedText">-</strong>
-              <span>pcs</span>
-            </li>
+            <li><span>최소등록기준</span><input class="mpds-input" id="f-mpdsMin" type="number" value="30" oninput="recalcMpds()"/><span>pcs</span></li>
+            <li><span>현재 등록가능 재고</span><input class="mpds-input" id="f-mpdsCurrent" type="number" placeholder="0" oninput="recalcMpds()"/><span>pcs</span></li>
+            <li><span>부족 수량</span><strong class="red" id="mpdsShortText">-</strong><span>pcs</span></li>
+            <li class="divider"><span>입고예정 수량</span><input class="mpds-input" id="f-mpdsIncoming" type="number" placeholder="0" oninput="recalcMpds()"/><span>pcs</span></li>
+            <li><span>예상 등록 가능 수량</span><strong id="mpdsExpectedText">-</strong><span>pcs</span></li>
           </ul>
         </div>
       </div>
     </section>
 
-    <!-- ── 재고 매출 관리 ── -->
+    <!-- 재고 매출 관리 -->
     <section class="inventory-panel">
       <div class="inventory-left">
         <div class="inventory-header">재고 매출 관리</div>
@@ -408,8 +368,8 @@
           <button class="tab" data-filter="판매예정">판매예정</button>
           <button class="tab" data-filter="컨펌예정">컨펌예정</button>
           <button class="tab" data-filter="이월예정">이월예정</button>
-          <button class="tab" data-filter="잔여재고">잔여재고</button>
           <button class="tab" data-filter="AS">AS</button>
+          <button class="tab" data-filter="잔여재고">잔여재고</button>
         </div>
         <div class="table-wrap">
           <table class="inventory-table" id="inventoryTable">
@@ -453,56 +413,88 @@
   </div>
 </div>
 
-<!-- 에비뉴엘 연간 모달 -->
+<!-- ══ 에비뉴엘 연간 모달 ══ -->
 <div class="modal-backdrop" id="avenueModal">
   <div class="modal av-modal">
     <div class="modal-title">에비뉴엘 월별 매출 입력 (<span id="avenueYearLabel">2026</span>년)</div>
     <div class="av-qtr-grid">
-      <!-- 1분기 -->
       <div class="av-qtr" id="av-qtr-1">
         <div class="av-qtr-hdr" id="av-qtr-hdr-1">1분기 (1~3월)</div>
-        <div class="av-months">
-          <div class="av-month-row"><label>1월</label><input type="text" inputmode="numeric" id="av-m1" placeholder="0" oninput="window.fmtNum(this);window.calcAvSubtotals()"/></div>
-          <div class="av-month-row"><label>2월</label><input type="text" inputmode="numeric" id="av-m2" placeholder="0" oninput="window.fmtNum(this);window.calcAvSubtotals()"/></div>
-          <div class="av-month-row"><label>3월</label><input type="text" inputmode="numeric" id="av-m3" placeholder="0" oninput="window.fmtNum(this);window.calcAvSubtotals()"/></div>
-        </div>
-        <div class="av-qtr-sub">합계: <span id="av-sub-1">0 원</span></div>
+        <div class="av-months" id="av-months-1"></div>
+        <div class="av-qtr-sub" id="av-sub-1">합계: -<br>PCS: -</div>
       </div>
-      <!-- 2분기 -->
       <div class="av-qtr" id="av-qtr-2">
         <div class="av-qtr-hdr" id="av-qtr-hdr-2">2분기 (4~6월)</div>
-        <div class="av-months">
-          <div class="av-month-row"><label>4월</label><input type="text" inputmode="numeric" id="av-m4" placeholder="0" oninput="window.fmtNum(this);window.calcAvSubtotals()"/></div>
-          <div class="av-month-row"><label>5월</label><input type="text" inputmode="numeric" id="av-m5" placeholder="0" oninput="window.fmtNum(this);window.calcAvSubtotals()"/></div>
-          <div class="av-month-row"><label>6월</label><input type="text" inputmode="numeric" id="av-m6" placeholder="0" oninput="window.fmtNum(this);window.calcAvSubtotals()"/></div>
-        </div>
-        <div class="av-qtr-sub">합계: <span id="av-sub-2">0 원</span></div>
+        <div class="av-months" id="av-months-2"></div>
+        <div class="av-qtr-sub" id="av-sub-2">합계: -<br>PCS: -</div>
       </div>
-      <!-- 3분기 -->
       <div class="av-qtr" id="av-qtr-3">
         <div class="av-qtr-hdr" id="av-qtr-hdr-3">3분기 (7~9월)</div>
-        <div class="av-months">
-          <div class="av-month-row"><label>7월</label><input type="text" inputmode="numeric" id="av-m7" placeholder="0" oninput="window.fmtNum(this);window.calcAvSubtotals()"/></div>
-          <div class="av-month-row"><label>8월</label><input type="text" inputmode="numeric" id="av-m8" placeholder="0" oninput="window.fmtNum(this);window.calcAvSubtotals()"/></div>
-          <div class="av-month-row"><label>9월</label><input type="text" inputmode="numeric" id="av-m9" placeholder="0" oninput="window.fmtNum(this);window.calcAvSubtotals()"/></div>
-        </div>
-        <div class="av-qtr-sub">합계: <span id="av-sub-3">0 원</span></div>
+        <div class="av-months" id="av-months-3"></div>
+        <div class="av-qtr-sub" id="av-sub-3">합계: -<br>PCS: -</div>
       </div>
-      <!-- 4분기 -->
       <div class="av-qtr" id="av-qtr-4">
         <div class="av-qtr-hdr" id="av-qtr-hdr-4">4분기 (10~12월)</div>
-        <div class="av-months">
-          <div class="av-month-row"><label>10월</label><input type="text" inputmode="numeric" id="av-m10" placeholder="0" oninput="window.fmtNum(this);window.calcAvSubtotals()"/></div>
-          <div class="av-month-row"><label>11월</label><input type="text" inputmode="numeric" id="av-m11" placeholder="0" oninput="window.fmtNum(this);window.calcAvSubtotals()"/></div>
-          <div class="av-month-row"><label>12월</label><input type="text" inputmode="numeric" id="av-m12" placeholder="0" oninput="window.fmtNum(this);window.calcAvSubtotals()"/></div>
-        </div>
-        <div class="av-qtr-sub">합계: <span id="av-sub-4">0 원</span></div>
+        <div class="av-months" id="av-months-4"></div>
+        <div class="av-qtr-sub" id="av-sub-4">합계: -<br>PCS: -</div>
       </div>
     </div>
-    <div class="modal-total"><span>연간 합계</span><span id="avenueTotalText">0 원</span></div>
+    <div class="modal-total"><span>연간 합계</span><span id="avenueTotalText">- 원 / - PCS</span></div>
     <div class="modal-actions">
       <button class="btn" id="avenueClose">닫기</button>
-      <button class="btn btn-primary" id="avenueApply">현재 분기 적용</button>
+      <button class="btn btn-primary" id="avenueApply">저장 및 반영</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 센텀 연간 모달 ══ -->
+<div class="modal-backdrop" id="centumModal">
+  <div class="modal av-modal">
+    <div class="modal-title">센텀 월별 매출 입력 (<span id="centumYearLabel">2026</span>년)</div>
+    <div class="av-qtr-grid">
+      <div class="av-qtr" id="ct-qtr-1">
+        <div class="av-qtr-hdr" id="ct-qtr-hdr-1">1분기 (1~3월)</div>
+        <div class="av-months" id="ct-months-1"></div>
+        <div class="av-qtr-sub" id="ct-sub-1">합계: -<br>PCS: -</div>
+      </div>
+      <div class="av-qtr" id="ct-qtr-2">
+        <div class="av-qtr-hdr" id="ct-qtr-hdr-2">2분기 (4~6월)</div>
+        <div class="av-months" id="ct-months-2"></div>
+        <div class="av-qtr-sub" id="ct-sub-2">합계: -<br>PCS: -</div>
+      </div>
+      <div class="av-qtr" id="ct-qtr-3">
+        <div class="av-qtr-hdr" id="ct-qtr-hdr-3">3분기 (7~9월)</div>
+        <div class="av-months" id="ct-months-3"></div>
+        <div class="av-qtr-sub" id="ct-sub-3">합계: -<br>PCS: -</div>
+      </div>
+      <div class="av-qtr" id="ct-qtr-4">
+        <div class="av-qtr-hdr" id="ct-qtr-hdr-4">4분기 (10~12월)</div>
+        <div class="av-months" id="ct-months-4"></div>
+        <div class="av-qtr-sub" id="ct-sub-4">합계: -<br>PCS: -</div>
+      </div>
+    </div>
+    <div class="modal-total"><span>연간 합계</span><span id="centumTotalText">- 원 / - PCS</span></div>
+    <div class="modal-actions">
+      <button class="btn" id="centumClose">닫기</button>
+      <button class="btn btn-primary" id="centumApply">저장 및 반영</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 목표 달성률 모달 ══ -->
+<div class="modal-backdrop" id="goalRateModal">
+  <div class="modal gm-modal">
+    <div class="modal-title">목표 달성률 계산</div>
+    <div class="gm-row"><span class="gm-label">분기 총 목표 금액</span><input class="gm-input" id="gm-total" type="text" inputmode="numeric" placeholder="0" oninput="window.fmtNum(this);window.calcGoalRate()"/> 원</div>
+    <div class="gm-row"><span class="gm-label">센텀</span><input class="gm-input" id="gm-centum" type="text" inputmode="numeric" placeholder="0" oninput="window.fmtNum(this);window.calcGoalRate()"/> 원</div>
+    <div class="gm-row"><span class="gm-label">에비뉴엘</span><input class="gm-input" id="gm-avenue" type="text" inputmode="numeric" placeholder="0" oninput="window.fmtNum(this);window.calcGoalRate()"/> 원</div>
+    <div class="gm-rate-box">
+      <span>달성률</span>
+      <span id="gm-rate-text" style="color:#075bd8;font-size:24px;">0.0%</span>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" id="goalRateClose">닫기</button>
+      <button class="btn btn-primary" id="goalRateApply">적용</button>
     </div>
   </div>
 </div>
