@@ -1651,17 +1651,19 @@
         const titleEl = document.getElementById('edit-day-value-title');
         if (titleEl) titleEl.innerText = `${day}일`;
         const options = [
-            {v:'',   label:'휴무', bg:'#F2F2F2', text:'#555555'},
-            {v:'A',  label:'A',   bg:'#FAD7D5', text:'#6E2626'},
-            {v:'B',  label:'B',   bg:'#D9E7FA', text:'#234B7A'},
-            {v:'C',  label:'C',   bg:'#FFE7B8', text:'#7A4F14'},
-            {v:'A반',label:'A반', bg:'#FAD7D5', text:'#6E2626'},
-            {v:'B반',label:'B반', bg:'#D9E7FA', text:'#234B7A'},
-            {v:'연차',label:'연차',bg:'#C8E6C9', text:'#2E7D32'},
+            {v:'A',   label:'A',   bg:'#FAD7D5', text:'#6E2626'},
+            {v:'B',   label:'B',   bg:'#D9E7FA', text:'#234B7A'},
+            {v:'C',   label:'C',   bg:'#FFE7B8', text:'#7A4F14'},
+            {v:'A반', label:'A반', bg:'#FAD7D5', text:'#6E2626'},
+            {v:'B반', label:'B반', bg:'#D9E7FA', text:'#234B7A'},
+            null,
+            {v:'',    label:'휴무', bg:'#F2F2F2', text:'#555555'},
+            {v:'연차', label:'연차', bg:'#C8E6C9', text:'#2E7D32'},
         ];
         const buttonsEl = document.getElementById('edit-day-value-buttons');
         if (buttonsEl) {
             buttonsEl.innerHTML = options.map(o => {
+                if (!o) return `<div></div>`;
                 const active = currentVal === o.v || (!currentVal && o.v === '');
                 return `<button onclick="window.selectEditDayValue('${o.v}')"
                     style="background:${active?o.bg:'#FFFFFF'};color:${active?o.text:'#666'};border:1.5px solid ${active?o.text:'#E5E5E5'};"
