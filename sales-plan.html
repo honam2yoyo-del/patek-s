@@ -286,11 +286,6 @@
           <table class="goal-table">
             <tbody>
               <tr>
-                <td>합계</td>
-                <td id="totalGoalAmountDisp">-</td>
-                <td id="totalGoalRateDisp">-</td>
-              </tr>
-              <tr>
                 <td><span class="branch-link" id="centumOpen">센텀</span></td>
                 <td id="centumGoalAmountDisp">-</td>
                 <td id="centumGoalRateDisp">-</td>
@@ -299,6 +294,11 @@
                 <td><span class="branch-link" id="avenueOpen">에비뉴엘</span></td>
                 <td id="avenueGoalAmountDisp">-</td>
                 <td id="avenueGoalRateDisp">-</td>
+              </tr>
+              <tr>
+                <td>합계</td>
+                <td id="totalGoalAmountDisp">-</td>
+                <td id="totalGoalRateDisp">-</td>
               </tr>
             </tbody>
           </table>
@@ -340,7 +340,6 @@
           <div class="chart-wrap" id="chartWrap">
             <div class="chart-unit">(억 원)</div>
           </div>
-          <p style="margin-top:8px;font-size:11px;color:#9CA3AF;text-align:center;">센텀 + 에비뉴엘 월별 입력값 자동 반영</p>
         </div>
       </div>
 
@@ -488,10 +487,6 @@
     <div class="gm-row"><span class="gm-label">분기 총 목표 금액</span><input class="gm-input" id="gm-total" type="text" inputmode="numeric" placeholder="0" oninput="window.fmtNum(this);window.calcGoalRate()"/> 원</div>
     <div class="gm-row"><span class="gm-label">센텀</span><input class="gm-input" id="gm-centum" type="text" inputmode="numeric" placeholder="0" oninput="window.fmtNum(this);window.calcGoalRate()"/> 원</div>
     <div class="gm-row"><span class="gm-label">에비뉴엘</span><input class="gm-input" id="gm-avenue" type="text" inputmode="numeric" placeholder="0" oninput="window.fmtNum(this);window.calcGoalRate()"/> 원</div>
-    <div class="gm-rate-box">
-      <span>달성률</span>
-      <span id="gm-rate-text" style="color:#075bd8;font-size:24px;">0.0%</span>
-    </div>
     <div class="modal-actions">
       <button class="btn" id="goalRateClose">닫기</button>
       <button class="btn btn-primary" id="goalRateApply">적용</button>

@@ -248,26 +248,35 @@ function recalcRemain() {
 }
 
 function updateGoalDisplay() {
-  const { total, centum, avenue, rate } = goalRateData;
+  const { total, centum, avenue } = goalRateData;
+  const achieved = centum + avenue;
+  const rate     = total > 0 ? achieved / total * 100 : 0;
 
   const setDisp = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-  setDisp('totalGoalAmountDisp',  total  ? fmtW(total)  : '-');
-  setDisp('totalGoalRateDisp',    rate   ? rate.toFixed(1)+'%' : '-');
-  setDisp('centumGoalAmountDisp', centum ? fmtW(centum) : '-');
-  setDisp('avenueGoalAmountDisp', avenue ? fmtW(avenue) : '-');
-  const centumRate = total > 0 ? (centum / total * 100).toFixed(1)+'%' : '-';
-  const avenueRate = total > 0 ? (avenue / total * 100).toFixed(1)+'%' : '-';
+
+  // 2열: 각 달성액, 합계는 센텀+에비뉴엘 합산
+  setDisp('centumGoalAmountDisp', centum   ? fmtW(centum)   : '-');
+  setDisp('avenueGoalAmountDisp', avenue   ? fmtW(avenue)   : '-');
+  setDisp('totalGoalAmountDisp',  achieved ? fmtW(achieved) : '-');
+
+  // 3열: 분기 총 목표 기준 달성률
+  const centumRate  = total > 0 ? (centum   / total * 100).toFixed(1)+'%' : '-';
+  const avenueRate  = total > 0 ? (avenue   / total * 100).toFixed(1)+'%' : '-';
+  const totalRate   = total > 0 ? rate.toFixed(1)+'%' : '-';
   setDisp('centumGoalRateDisp', centumRate);
   setDisp('avenueGoalRateDisp', avenueRate);
+  setDisp('totalGoalRateDisp',  totalRate);
 
+  // 목표 달성률 프로그레스 바
   const r = Math.min(rate, 100);
   const bar = document.getElementById('mainProgressBar');
   const txt = document.getElementById('mainGoalRateText');
   if (bar) { bar.style.width = r + '%'; bar.textContent = rate.toFixed(1) + '%'; }
   if (txt) txt.textContent = rate.toFixed(1) + '%';
 
-  const remain = total - (centum + avenue);
-  const remEl = document.getElementById('totalRemainDisplay');
+  // 총 남은 금액 = 분기 총 목표 - 달성액
+  const remain = total - achieved;
+  const remEl  = document.getElementById('totalRemainDisplay');
   if (remEl) remEl.textContent = fmtW(Math.max(remain, 0));
 }
 
@@ -275,8 +284,9 @@ function recalcQuarter() {
   const goal    = gn('f-quarterGoal');
   const q       = curQuarter();
   const months  = quarterMonths(q);
+  // 센텀 데이터만 사용
   const achieved = months.reduce((s, m) => {
-    return s + (Number(avenueData[`m${m}`]) || 0) + (Number(centumData[`m${m}`]) || 0);
+    return s + (Number(centumData[`m${m}`]) || 0);
   }, 0);
   const remain = goal - achieved;
   const rateStr = goal > 0 ? (achieved / goal * 100).toFixed(1) : '0.0';
@@ -302,10 +312,11 @@ function recalcMpds() {
 function getChartData() {
   const q      = curQuarter();
   const months = quarterMonths(q);
+  // 센텀 데이터만 사용
   return months.map(m => ({
     label:  m === curMonth ? `${m}월 (현재)` : `${m}월`,
-    amount: (Number(avenueData[`m${m}`]) || 0) + (Number(centumData[`m${m}`]) || 0),
-    pcs:    (Number(avenueData[`m${m}_pcs`]) || 0) + (Number(centumData[`m${m}_pcs`]) || 0)
+    amount: Number(centumData[`m${m}`]) || 0,
+    pcs:    Number(centumData[`m${m}_pcs`]) || 0
   }));
 }
 
@@ -317,13 +328,18 @@ function renderChart() {
   const amounts = data.map(d => Number(d.amount) || 0);
   const maxAmt  = Math.max(...amounts, 1);
 
-  wrap.innerHTML = '<div class="chart-unit">(억 원)</div>' + data.map((d, i) => {
-    const h    = Math.round((amounts[i] / maxAmt) * MAX_BAR_H);
-    const aStr = amounts[i] > 0 ? Number(amounts[i]).toLocaleString('ko-KR') : '-';
-    const pStr = d.pcs ? `(${d.pcs} pcs)` : '';
+  // 막대 높이: 가장 큰 값과 작은 값의 차이를 시각적으로 뚜렷하게 표현
+  const minAmt  = Math.min(...amounts.filter(a => a > 0), 0);
+  const range   = maxAmt - minAmt || 1;
+
+  wrap.innerHTML = '<div class="chart-unit">(천 원)</div>' + data.map((d, i) => {
+    const ratio  = amounts[i] > 0 ? (amounts[i] - minAmt) / range : 0;
+    const h      = Math.round(ratio * (MAX_BAR_H - 30)) + (amounts[i] > 0 ? 30 : 4);
+    const dispAmt = amounts[i] > 0 ? Math.round(amounts[i] / 1000).toLocaleString('ko-KR') : '-';
+    const pStr   = d.pcs ? `(${d.pcs} pcs)` : '';
     return `<div class="bar-item">
-      <div class="bar-meta"><div>${pStr}</div><div>${aStr}</div></div>
-      <div class="bar" style="height:${Math.max(h,4)}px;"></div>
+      <div class="bar-meta"><div>${pStr}</div><div>${dispAmt}</div></div>
+      <div class="bar" style="height:${h}px;"></div>
       <div class="bar-month">${d.label||''}</div>
     </div>`;
   }).join('');
@@ -354,7 +370,7 @@ document.getElementById('avenueModal').addEventListener('click', e => {
     document.getElementById('avenueModal').classList.remove('show');
 });
 
-document.getElementById('avenueApply').addEventListener('click', async () => {
+document.getElementById('avenueApply').addEventListener('click', () => {
   const yr = curYear;
   const saveObj = { updatedAt: new Date().toISOString() };
   const newData = {};
@@ -366,13 +382,14 @@ document.getElementById('avenueApply').addEventListener('click', async () => {
     newData[`m${m}`]     = amt || 0;
     newData[`m${m}_pcs`] = pcs || 0;
   }
+  // 즉시 UI 반영 (Firestore 응답 대기 없이)
   avenueData = newData;
-  try {
-    await setDoc(doc(db,'artifacts','patek-s','public','data','avenue_annual',String(yr)), saveObj, {merge:true});
-  } catch(e) { /* 저장 실패해도 반영 */ }
   renderChart();
   recalcQuarter();
   document.getElementById('avenueModal').classList.remove('show');
+  // 백그라운드 저장
+  setDoc(doc(db,'artifacts','patek-s','public','data','avenue_annual',String(yr)), saveObj, {merge:true})
+    .catch(e => console.error('avenue save:', e));
 });
 
 /* ────────── 센텀 모달 ────────── */
@@ -400,7 +417,7 @@ document.getElementById('centumModal').addEventListener('click', e => {
     document.getElementById('centumModal').classList.remove('show');
 });
 
-document.getElementById('centumApply').addEventListener('click', async () => {
+document.getElementById('centumApply').addEventListener('click', () => {
   const yr = curYear;
   const saveObj = { updatedAt: new Date().toISOString() };
   const newData = {};
@@ -412,23 +429,19 @@ document.getElementById('centumApply').addEventListener('click', async () => {
     newData[`m${m}`]     = amt || 0;
     newData[`m${m}_pcs`] = pcs || 0;
   }
+  // 즉시 UI 반영
   centumData = newData;
-  try {
-    await setDoc(doc(db,'artifacts','patek-s','public','data','centum_annual',String(yr)), saveObj, {merge:true});
-  } catch(e) { /* 저장 실패해도 반영 */ }
   renderChart();
   recalcQuarter();
   document.getElementById('centumModal').classList.remove('show');
+  // 백그라운드 저장
+  setDoc(doc(db,'artifacts','patek-s','public','data','centum_annual',String(yr)), saveObj, {merge:true})
+    .catch(e => console.error('centum save:', e));
 });
 
 /* ────────── 목표 달성률 모달 ────────── */
 window.calcGoalRate = function() {
-  const total  = parseNum(document.getElementById('gm-total')?.value)  || 0;
-  const centum = parseNum(document.getElementById('gm-centum')?.value) || 0;
-  const avenue = parseNum(document.getElementById('gm-avenue')?.value) || 0;
-  const rate   = total > 0 ? (centum + avenue) / total * 100 : 0;
-  const el     = document.getElementById('gm-rate-text');
-  if (el) el.textContent = rate.toFixed(1) + '%';
+  // 달성률 표시 제거됨 — 메인 화면에서 표시
 };
 
 document.getElementById('goalRateOpen').addEventListener('click', () => {
