@@ -106,8 +106,8 @@
     window.albumSearchQuery = '';
     window.albumForm = { id: '', files: [], category: '기타', title: '', ref: '', memo: '', imageUrl: '' };
 
-    window.scheduleYear = 2026;
-    window.scheduleMonth = 5;
+    window.scheduleYear = new Date().getFullYear();
+    window.scheduleMonth = new Date().getMonth() + 1;
     window.schedulesData = {}; 
     window.leaveRequests = []; 
     window.calEvents = []; 
