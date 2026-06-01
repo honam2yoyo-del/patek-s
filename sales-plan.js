@@ -162,14 +162,54 @@ window.calcBranchSub = function(prefix) {
   if (totEl) totEl.textContent = `${fmtN(yearAmt)} 원 / ${yearPcs} PCS`;
 };
 
+/* ────────── 분기 목표 데이터 (분기당 1회 입력, 같은 분기 3개월 공유) ────────── */
+function quarterGoalDocId(year, month) {
+  return `${year}-Q${getQuarterNum(month)}`;
+}
+
+async function loadQuarterGoalData() {
+  const qid = quarterGoalDocId(curYear, curMonth);
+  try {
+    const snap = await getDoc(doc(db,'artifacts','patek-s','public','data','quarter_goals',qid));
+    if (snap.exists()) {
+      const d = snap.data();
+      goalRateData = {
+        total:  d.totalGoalAmount  ?? 0,
+        centum: d.centumGoalAmount ?? 0,
+        avenue: d.avenueGoalAmount ?? 0
+      };
+    } else {
+      goalRateData = { total: 0, centum: 0, avenue: 0 };
+    }
+  } catch(e) {
+    goalRateData = { total: 0, centum: 0, avenue: 0 };
+  }
+  updateGoalDisplay();
+  recalcQuarter();
+}
+
+function saveQuarterGoalData() {
+  const qid = quarterGoalDocId(curYear, curMonth);
+  const data = {
+    totalGoalAmount:  goalRateData.total  || null,
+    centumGoalAmount: goalRateData.centum || null,
+    avenueGoalAmount: goalRateData.avenue || null,
+    updatedAt: new Date().toISOString()
+  };
+  setDoc(doc(db,'artifacts','patek-s','public','data','quarter_goals',qid), data, {merge:true})
+    .catch(e => console.error('quarter goal save:', e));
+}
+
 /* ────────── 데이터 로드 ────────── */
 function loadMonth() {
   if (unsubPlan) unsubPlan();
+  goalRateData = { total: 0, centum: 0, avenue: 0 }; // 월 전환 시 초기화 후 분기 데이터로 채움
   const docId = `${curYear}-${pad(curMonth)}`;
   unsubPlan = onSnapshot(doc(db,'artifacts','patek-s','public','data','sales_dashboard',docId), snap => {
     applyData(snap.exists() ? snap.data() : null);
   });
   loadBranchDataForYear(curYear);
+  loadQuarterGoalData(); // 분기 목표 별도 로드
 }
 
 async function loadBranchDataForYear(year) {
@@ -210,13 +250,7 @@ function applyData(d) {
     if (el) el.style.width = Math.max(2, el.value.length || 1) + 'ch';
   });
 
-  // centum/avenue는 목표(target) 금액, 달성액은 월별 데이터에서 계산
-  goalRateData = {
-    total:  d?.totalGoalAmount  ?? 0,
-    centum: d?.centumGoalAmount ?? 0,
-    avenue: d?.avenueGoalAmount ?? 0
-  };
-  updateGoalDisplay();
+  // goalRateData는 loadQuarterGoalData()에서 별도 로드 (분기 공유)
 
   rows = d?.rows ? JSON.parse(JSON.stringify(d.rows)) : [];
   renderTable();
@@ -524,11 +558,11 @@ document.getElementById('goalRateApply').addEventListener('click', () => {
   const avenue = parseNum(document.getElementById('gm-avenue')?.value) || 0;
   const rate   = total > 0 ? (centum + avenue) / total * 100 : 0;
 
-  // centum/avenue는 목표(target) 금액으로 저장
   goalRateData = { total, centum, avenue };
 
   updateGoalDisplay();
   recalcQuarter();
+  saveQuarterGoalData(); // 분기 문서에 저장 → 같은 분기 다른 달에서도 자동 반영
   document.getElementById('goalRateModal').classList.remove('show');
 });
 
@@ -669,9 +703,7 @@ async function saveData() {
     mpdsMin:         gnv('f-mpdsMin'),
     mpdsCurrent:     gnv('f-mpdsCurrent'),
     mpdsIncoming:    gnv('f-mpdsIncoming'),
-    totalGoalAmount: goalRateData.total  || null,
-    centumGoalAmount:goalRateData.centum || null,
-    avenueGoalAmount:goalRateData.avenue || null,
+    // goalRateData는 quarter_goals 컬렉션에 별도 저장 (saveQuarterGoalData)
     rows: rows.map(r => ({
       ref:      r.ref||'',
       amount:   r.amount != null ? Number(r.amount) : null,
