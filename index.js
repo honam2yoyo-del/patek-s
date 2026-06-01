@@ -1597,8 +1597,8 @@
                 {v:'A반',l:'A반'},{v:'B반',l:'B반'},{v:'연차',l:'연차'}
             ].map(o => `<option value="${o.v}" ${(rawVal===o.v||(isOff&&o.v==='')?'selected':'')}>${o.l}</option>`).join('');
 
-            html += `<div id="edit-day-cell-${d}" class="min-h-[58px] p-1 flex flex-col ${noRight} border-b border-[#F0EFEA] ${hlBg} ${hlBorder}" style="${(isChanged||isSelected)?'border-color:#3F9DF5;':'' }">
-                <span class="text-[10px] font-bold ${dc} mb-0.5 self-start">${d}</span>
+            html += `<div id="edit-day-cell-${d}" class="min-h-[52px] p-[3px] flex flex-col ${noRight} border-b border-[#F0EFEA] ${hlBg} ${hlBorder}" style="${(isChanged||isSelected)?'border-color:#3F9DF5;':'' }">
+                <span class="text-[11px] font-bold ${dc} leading-none mt-0.5 self-start">${d}</span>
                 <div class="flex-1 flex items-center justify-center w-full"><select data-staff="${staffName}" data-day="${d}" onfocus="window.onScheduleEditFocus(${d})" onchange="window.onScheduleEditChange(this)" class="schedule-input-select w-full text-[9px] font-bold text-center outline-none bg-transparent border-0 appearance-none cursor-pointer rounded">${opts}</select></div>
             </div>`;
         }
@@ -1729,7 +1729,7 @@
                 const evS = CAL_EVENT_STYLES[calEv.type] || { bg: '#C3E19E', text: '#333333' };
                 evBadge = `<div class="text-[8px] font-bold rounded px-0.5 leading-tight mt-0.5 truncate w-full text-left" style="background-color:${evS.bg};color:${evS.text};">${calEv.reason || calEv.type}</div>`;
             }
-            html += `<div class="min-h-[52px] p-[3px] flex flex-col ${noRightBorder} border-b border-[#F0EFEA] bg-white"><span class="text-[11px] font-bold ${dc} leading-none mt-0.5 self-start">${d}</span><div class="flex-1 flex items-center justify-center">${badge}</div>${timeBadge}${evBadge}</div>`;
+            html += `<div class="min-h-[52px] p-[3px] flex flex-col ${noRightBorder} border-b border-[#F0EFEA] bg-white"><span class="text-[11px] font-bold ${dc} leading-none mt-0.5 self-start">${d}</span><div class="flex-1 flex items-center justify-center">${badge}</div></div>`;
         });
         const lastDow = dayData.length > 0 ? dayData[dayData.length - 1].dayOfWeek : 0;
         const trail = lastDow === 6 ? 0 : 6 - lastDow;
