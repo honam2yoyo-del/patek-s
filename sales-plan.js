@@ -46,9 +46,11 @@ let unsubPlan = null;
 // 지점 연간 데이터 (인메모리)
 let avenueData = {}; // m1..m12: 금액, m1_pcs..m12_pcs: pcs
 let centumData = {};
+let prevYearCentumData = {}; // 전년도 센텀 데이터 (비교용)
+let showPrevYear = false;    // 전년 비교 토글 상태
 
 // 목표 달성률 데이터
-let goalRateData = { total: 0, centum: 0, avenue: 0, rate: 0 };
+let goalRateData = { total: 0, centum: 0, avenue: 0 };
 
 /* ────────── 달력 월 피커 ────────── */
 let pickerYear = curYear;
@@ -172,14 +174,16 @@ function loadMonth() {
 
 async function loadBranchDataForYear(year) {
   try {
-    const [avSnap, ctSnap] = await Promise.all([
+    const [avSnap, ctSnap, prevCtSnap] = await Promise.all([
       getDoc(doc(db,'artifacts','patek-s','public','data','avenue_annual',String(year))),
-      getDoc(doc(db,'artifacts','patek-s','public','data','centum_annual',String(year)))
+      getDoc(doc(db,'artifacts','patek-s','public','data','centum_annual',String(year))),
+      getDoc(doc(db,'artifacts','patek-s','public','data','centum_annual',String(year - 1)))
     ]);
-    avenueData = avSnap.exists() ? avSnap.data() : {};
-    centumData = ctSnap.exists() ? ctSnap.data() : {};
+    avenueData          = avSnap.exists()     ? avSnap.data()     : {};
+    centumData          = ctSnap.exists()     ? ctSnap.data()     : {};
+    prevYearCentumData  = prevCtSnap.exists() ? prevCtSnap.data() : {};
   } catch(e) {
-    avenueData = {}; centumData = {};
+    avenueData = {}; centumData = {}; prevYearCentumData = {};
   }
   renderChart();
   recalcQuarter();
@@ -289,17 +293,16 @@ function updateGoalDisplay() {
 function recalcQuarter() {
   const q       = curQuarter();
   const months  = quarterMonths(q);
-  // 센텀 월별 데이터 합산
-  const achieved = months.reduce((s, m) => s + (Number(centumData[`m${m}`]) || 0), 0);
-  // 센텀 목표: goalRateData.centum (목표 달성률 모달에서 입력)
+  const achieved    = months.reduce((s, m) => s + (Number(centumData[`m${m}`])      || 0), 0);
+  const achievedPcs = months.reduce((s, m) => s + (Number(centumData[`m${m}_pcs`])  || 0), 0);
   const centumTarget = goalRateData.centum || 0;
   const remain  = centumTarget - achieved;
   const rateStr = centumTarget > 0 ? (achieved / centumTarget * 100).toFixed(1) : '0.0';
   const setDisp = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-  setDisp('quarterGoalRateDisplay', rateStr + '%');
-  setDisp('quarterAchievedDisplay', fmtW(achieved));
-  setDisp('quarterRemainDisplay',   fmtW(Math.max(remain, 0)));
-  setDisp('quarterRateDisplay',     rateStr + '%');
+  setDisp('quarterGoalRateDisplay',  rateStr + '%');
+  setDisp('quarterAchievedDisplay',  fmtW(achieved));
+  setDisp('quarterRemainDisplay',    fmtW(Math.max(remain, 0)));
+  setDisp('quarterAccumPcsDisplay',  achievedPcs + ' pcs');
 }
 
 function recalcMpds() {
@@ -327,28 +330,78 @@ function getChartData() {
 }
 
 const MAX_BAR_H = 200;
+
+// 전년 비교 토글
+window.togglePrevYear = function() {
+  showPrevYear = !showPrevYear;
+  const btn = document.getElementById('prevYearToggle');
+  if (btn) {
+    if (showPrevYear) {
+      btn.textContent = '올해만 보기';
+      btn.style.background = '#075bd8'; btn.style.color = '#fff'; btn.style.borderColor = '#075bd8';
+    } else {
+      btn.textContent = '전년 비교';
+      btn.style.background = '#fff'; btn.style.color = '#111827'; btn.style.borderColor = '#d9e0ea';
+    }
+  }
+  renderChart();
+};
+
+function calcBarH(amt, maxAmt) {
+  if (!amt) return 4;
+  return Math.max(Math.round((amt / maxAmt) * MAX_BAR_H), 6);
+}
+
 function renderChart() {
   const data    = getChartData();
   const wrap    = document.getElementById('chartWrap');
   if (!wrap) return;
-  const amounts = data.map(d => Number(d.amount) || 0);
-  const maxAmt  = Math.max(...amounts, 1);
+  const amounts = data.map(d => d.amount);
+  const q = curQuarter();
+  const months = quarterMonths(q);
 
-  // 막대 높이: 가장 큰 값과 작은 값의 차이를 시각적으로 뚜렷하게 표현
-  const minAmt  = Math.min(...amounts.filter(a => a > 0), 0);
-  const range   = maxAmt - minAmt || 1;
+  if (showPrevYear) {
+    // 전년도 같은 분기 데이터
+    const prevAmounts = months.map(m => Number(prevYearCentumData[`m${m}`]) || 0);
+    const maxAmt = Math.max(...amounts, ...prevAmounts, 1);
 
-  wrap.innerHTML = '<div class="chart-unit">(천 원)</div>' + data.map((d, i) => {
-    const ratio  = amounts[i] > 0 ? (amounts[i] - minAmt) / range : 0;
-    const h      = Math.round(ratio * (MAX_BAR_H - 30)) + (amounts[i] > 0 ? 30 : 4);
-    const dispAmt = amounts[i] > 0 ? Math.round(amounts[i] / 1000).toLocaleString('ko-KR') : '-';
-    const pStr   = d.pcs ? `(${d.pcs} pcs)` : '';
-    return `<div class="bar-item">
-      <div class="bar-meta"><div>${pStr}</div><div>${dispAmt}</div></div>
-      <div class="bar" style="height:${h}px;"></div>
-      <div class="bar-month">${d.label||''}</div>
+    const legend = `<div style="position:absolute;top:0;right:4px;display:flex;gap:8px;font-size:10px;font-weight:700;color:#374151;">
+      <span style="display:flex;align-items:center;gap:3px;"><span style="width:10px;height:10px;background:#2d86ff;display:inline-block;border-radius:2px;flex-shrink:0;"></span>${curYear}년</span>
+      <span style="display:flex;align-items:center;gap:3px;"><span style="width:10px;height:10px;background:#9ca3af;display:inline-block;border-radius:2px;flex-shrink:0;"></span>${curYear-1}년</span>
     </div>`;
-  }).join('');
+
+    wrap.innerHTML = '<div class="chart-unit">(천 원)</div>' + legend + data.map((d, i) => {
+      const h  = calcBarH(amounts[i], maxAmt);
+      const ph = calcBarH(prevAmounts[i], maxAmt);
+      const disp     = amounts[i]     > 0 ? Math.round(amounts[i]     / 1000).toLocaleString('ko-KR') : '-';
+      const prevDisp = prevAmounts[i] > 0 ? Math.round(prevAmounts[i] / 1000).toLocaleString('ko-KR') : '-';
+      return `<div class="bar-item" style="min-width:70px;">
+        <div class="bar-meta" style="line-height:1.3;">
+          <div style="color:#0058d6;font-size:11px;font-weight:800;">${disp}</div>
+          <div style="color:#9ca3af;font-size:10px;font-weight:700;">${prevDisp}</div>
+        </div>
+        <div style="display:flex;align-items:flex-end;gap:3px;justify-content:center;">
+          <div style="width:26px;height:${h}px;border-radius:5px 5px 0 0;background:linear-gradient(180deg,#2d86ff 0%,#0058d6 100%);"></div>
+          <div style="width:26px;height:${ph}px;border-radius:5px 5px 0 0;background:linear-gradient(180deg,#c4c9d4 0%,#9ca3af 100%);"></div>
+        </div>
+        <div class="bar-month">${d.label||''}</div>
+      </div>`;
+    }).join('');
+
+  } else {
+    // 단독 모드
+    const maxAmt = Math.max(...amounts, 1);
+    wrap.innerHTML = '<div class="chart-unit">(천 원)</div>' + data.map((d, i) => {
+      const h       = calcBarH(amounts[i], maxAmt);
+      const dispAmt = amounts[i] > 0 ? Math.round(amounts[i] / 1000).toLocaleString('ko-KR') : '-';
+      const pStr    = d.pcs ? `(${d.pcs} pcs)` : '';
+      return `<div class="bar-item">
+        <div class="bar-meta"><div>${pStr}</div><div>${dispAmt}</div></div>
+        <div class="bar" style="height:${h}px;"></div>
+        <div class="bar-month">${d.label||''}</div>
+      </div>`;
+    }).join('');
+  }
 }
 
 /* ────────── 에비뉴엘 모달 ────────── */
