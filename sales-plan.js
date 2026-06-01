@@ -196,7 +196,6 @@ function applyData(d) {
   sv('f-lastYearPcs',   d?.lastYearPcs);
   sv('f-currentSales',  d?.currentSales);
   sv('f-currentPcs',    d?.currentPcs);
-  sv('f-quarterGoal',   d?.quarterGoal);
   sv('f-mpdsMin',       d?.mpdsMin ?? 30);
   sv('f-mpdsCurrent',   d?.mpdsCurrent);
   sv('f-mpdsIncoming',  d?.mpdsIncoming);
@@ -207,11 +206,11 @@ function applyData(d) {
     if (el) el.style.width = Math.max(2, el.value.length || 1) + 'ch';
   });
 
+  // centum/avenue는 목표(target) 금액, 달성액은 월별 데이터에서 계산
   goalRateData = {
-    total:  d?.totalGoalAmount ?? 0,
+    total:  d?.totalGoalAmount  ?? 0,
     centum: d?.centumGoalAmount ?? 0,
-    avenue: d?.avenueGoalAmount ?? 0,
-    rate:   d?.totalGoalRate ?? 0
+    avenue: d?.avenueGoalAmount ?? 0
   };
   updateGoalDisplay();
 
@@ -248,49 +247,56 @@ function recalcRemain() {
 }
 
 function updateGoalDisplay() {
-  const { total, centum, avenue } = goalRateData;
-  const achieved = centum + avenue;
-  const rate     = total > 0 ? achieved / total * 100 : 0;
+  // goalRateData: 목표(target) 값
+  const { total, centum: centumTarget, avenue: avenueTarget } = goalRateData;
+
+  // 현재 분기 월별 달성 합계 (센텀·에비뉴엘 모달 데이터 기준)
+  const q = curQuarter();
+  const months = quarterMonths(q);
+  const centumAchieved = months.reduce((s, m) => s + (Number(centumData[`m${m}`]) || 0), 0);
+  const avenueAchieved = months.reduce((s, m) => s + (Number(avenueData[`m${m}`]) || 0), 0);
+  const totalAchieved  = centumAchieved + avenueAchieved;
 
   const setDisp = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
 
-  // 2열: 각 달성액, 합계는 센텀+에비뉴엘 합산
-  setDisp('centumGoalAmountDisp', centum   ? fmtW(centum)   : '-');
-  setDisp('avenueGoalAmountDisp', avenue   ? fmtW(avenue)   : '-');
-  setDisp('totalGoalAmountDisp',  achieved ? fmtW(achieved) : '-');
+  // 2열: 월별 입력 합산 달성액
+  setDisp('centumGoalAmountDisp', centumAchieved ? fmtW(centumAchieved) : '-');
+  setDisp('avenueGoalAmountDisp', avenueAchieved ? fmtW(avenueAchieved) : '-');
+  setDisp('totalGoalAmountDisp',  totalAchieved  ? fmtW(totalAchieved)  : '-');
 
-  // 3열: 분기 총 목표 기준 달성률
-  const centumRate  = total > 0 ? (centum   / total * 100).toFixed(1)+'%' : '-';
-  const avenueRate  = total > 0 ? (avenue   / total * 100).toFixed(1)+'%' : '-';
-  const totalRate   = total > 0 ? rate.toFixed(1)+'%' : '-';
+  // 3열: 각 목표 대비 달성률
+  const centumRate = centumTarget > 0 ? (centumAchieved / centumTarget * 100).toFixed(1) + '%' : '-';
+  const avenueRate = avenueTarget > 0 ? (avenueAchieved / avenueTarget * 100).toFixed(1) + '%' : '-';
+  const totalRate  = total > 0        ? (totalAchieved  / total         * 100).toFixed(1) + '%' : '-';
   setDisp('centumGoalRateDisp', centumRate);
   setDisp('avenueGoalRateDisp', avenueRate);
   setDisp('totalGoalRateDisp',  totalRate);
 
-  // 목표 달성률 프로그레스 바
-  const r = Math.min(rate, 100);
+  // 목표 달성률 프로그레스 바 (전체 기준)
+  const overallRate = total > 0 ? totalAchieved / total * 100 : 0;
+  const r   = Math.min(overallRate, 100);
   const bar = document.getElementById('mainProgressBar');
   const txt = document.getElementById('mainGoalRateText');
-  if (bar) { bar.style.width = r + '%'; bar.textContent = rate.toFixed(1) + '%'; }
-  if (txt) txt.textContent = rate.toFixed(1) + '%';
+  if (bar) { bar.style.width = r + '%'; bar.textContent = overallRate.toFixed(1) + '%'; }
+  if (txt) txt.textContent = overallRate.toFixed(1) + '%';
 
-  // 총 남은 금액 = 분기 총 목표 - 달성액
-  const remain = total - achieved;
+  // 총 남은 금액 = 전체 목표 - 달성액
+  const remain = total - totalAchieved;
   const remEl  = document.getElementById('totalRemainDisplay');
   if (remEl) remEl.textContent = fmtW(Math.max(remain, 0));
 }
 
 function recalcQuarter() {
-  const goal    = gn('f-quarterGoal');
   const q       = curQuarter();
   const months  = quarterMonths(q);
-  // 센텀 데이터만 사용
-  const achieved = months.reduce((s, m) => {
-    return s + (Number(centumData[`m${m}`]) || 0);
-  }, 0);
-  const remain = goal - achieved;
-  const rateStr = goal > 0 ? (achieved / goal * 100).toFixed(1) : '0.0';
+  // 센텀 월별 데이터 합산
+  const achieved = months.reduce((s, m) => s + (Number(centumData[`m${m}`]) || 0), 0);
+  // 센텀 목표: goalRateData.centum (목표 달성률 모달에서 입력)
+  const centumTarget = goalRateData.centum || 0;
+  const remain  = centumTarget - achieved;
+  const rateStr = centumTarget > 0 ? (achieved / centumTarget * 100).toFixed(1) : '0.0';
   const setDisp = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  setDisp('quarterGoalRateDisplay', rateStr + '%');
   setDisp('quarterAchievedDisplay', fmtW(achieved));
   setDisp('quarterRemainDisplay',   fmtW(Math.max(remain, 0)));
   setDisp('quarterRateDisplay',     rateStr + '%');
@@ -465,11 +471,8 @@ document.getElementById('goalRateApply').addEventListener('click', () => {
   const avenue = parseNum(document.getElementById('gm-avenue')?.value) || 0;
   const rate   = total > 0 ? (centum + avenue) / total * 100 : 0;
 
-  goalRateData = { total, centum, avenue, rate };
-
-  // 분기 목표에도 동기화
-  const qGoalEl = document.getElementById('f-quarterGoal');
-  if (qGoalEl && total > 0) { qGoalEl.value = fmtInput(total); }
+  // centum/avenue는 목표(target) 금액으로 저장
+  goalRateData = { total, centum, avenue };
 
   updateGoalDisplay();
   recalcQuarter();
@@ -610,12 +613,10 @@ async function saveData() {
     currentSales:    gnv('f-currentSales'),
     currentPcs:      gnv('f-currentPcs'),
     quarterNum:      getQuarterNum(curMonth),
-    quarterGoal:     gnv('f-quarterGoal'),
     mpdsMin:         gnv('f-mpdsMin'),
     mpdsCurrent:     gnv('f-mpdsCurrent'),
     mpdsIncoming:    gnv('f-mpdsIncoming'),
     totalGoalAmount: goalRateData.total  || null,
-    totalGoalRate:   goalRateData.rate   || null,
     centumGoalAmount:goalRateData.centum || null,
     avenueGoalAmount:goalRateData.avenue || null,
     rows: rows.map(r => ({
