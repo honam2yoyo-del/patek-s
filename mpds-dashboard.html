@@ -163,6 +163,15 @@
 
     @media(max-width:1500px) { .top-layout,.middle-layout { grid-template-columns:1fr; } .summary-grid { grid-template-columns:repeat(3,1fr); } }
     @media(max-width:900px)  { .app { flex-direction:column; } .sidebar { width:100%; } .recommend-grid { grid-template-columns:1fr 1fr; } .bottom-actions { position:static;left:0;flex-wrap:wrap;height:auto;padding:16px; } }
+
+    .action-btn { height:42px;min-width:116px;border:1px solid #d9e0ea;border-radius:7px;background:#fff;padding:0 14px;display:inline-flex;align-items:center;justify-content:center;gap:9px;font-size:14px;font-weight:900;color:#111827;cursor:pointer;box-shadow:0 1px 2px rgba(15,23,42,.03);transition:all .15s ease; }
+    .action-btn:hover { background:#f8fafc;border-color:#cbd5e1;transform:translateY(-1px); }
+    .btn-icon { width:22px;height:22px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0; }
+    .btn-icon svg { width:17px;height:17px;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round; }
+    .copy-icon { background:#f0f9ff; }
+    .copy-icon svg { stroke:#0284c7; }
+    .final-icon { background:#eff6ff; }
+    .final-icon svg { stroke:#2563eb; }
   </style>
 </head>
 <body>
@@ -393,9 +402,19 @@
 <div class="bottom-actions">
   <button class="bottom-btn" onclick="applyRecommend()">등록 추천 적용</button>
   <button class="bottom-btn" onclick="clearSelection()">선택 해제</button>
-  <button class="bottom-btn" onclick="copyList()">등록 리스트 복사</button>
+  <button class="action-btn copy-btn" onclick="copyList()">
+    <span class="btn-icon copy-icon">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 9h10v12H9V9z"/><path d="M5 15H4a1 1 0 0 1-1-1V4h12a1 1 0 0 1 1 1v1"/><path d="M12 13h4"/><path d="M12 17h4"/></svg>
+    </span>
+    <span>등록 리스트 복사</span>
+  </button>
   <button class="bottom-btn" id="save-btn">💾 저장하기</button>
-  <button class="bottom-btn primary" onclick="window.print()">최종확인 및 등록 리스트 출력</button>
+  <button class="action-btn final-btn" onclick="printFinalList()">
+    <span class="btn-icon final-icon">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 8V3h10v5"/><path d="M6 17H4v-6h16v6h-2"/><path d="M7 14h10v7H7v-7z"/><path d="M9 18l2 2 4-4"/></svg>
+    </span>
+    <span>최종 확인 및 등록 리스트 출력</span>
+  </button>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -736,6 +755,8 @@ window.copyList = function() {
   const text = ['REF.\tSERIAL\t라인\t금액', ...items.map(r => `${r.ref}\t${r.serial}\t${r.line}\t${Number(r.amount||0).toLocaleString('ko-KR')}`)].join('\n');
   navigator.clipboard.writeText(text).then(() => alert('등록 리스트가 클립보드에 복사되었습니다.')).catch(() => alert('복사 실패'));
 };
+
+window.printFinalList = function() { window.print(); };
 
 /* ── 저장 ── */
 document.getElementById('save-btn').addEventListener('click', async () => {

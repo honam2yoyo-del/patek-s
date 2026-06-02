@@ -134,6 +134,15 @@
       .kpi-grid { grid-template-columns:repeat(2,1fr); }
       .bottom-actions { position:static;left:0;flex-wrap:wrap;height:auto;padding:16px; }
     }
+
+    .action-btn { height:42px;min-width:116px;border:1px solid #d9e0ea;border-radius:7px;background:#fff;padding:0 14px;display:inline-flex;align-items:center;justify-content:center;gap:9px;font-size:14px;font-weight:900;color:#111827;cursor:pointer;box-shadow:0 1px 2px rgba(15,23,42,.03);transition:all .15s ease; }
+    .action-btn:hover { background:#f8fafc;border-color:#cbd5e1;transform:translateY(-1px); }
+    .btn-icon { width:22px;height:22px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0; }
+    .btn-icon svg { width:17px;height:17px;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round; }
+    .upload-icon { background:#fff7e6; }
+    .upload-icon svg { stroke:#d97706; }
+    .add-row-icon { background:#f0fdf4; }
+    .add-row-icon svg { stroke:#059669; }
   </style>
 </head>
 <body>
@@ -187,8 +196,18 @@
         </div>
         <!-- 엑셀 업로드 -->
         <input type="file" id="excelUploadInput" accept=".xlsx,.xls,.csv" style="display:none;"/>
-        <button class="btn btn-upload" id="excelUploadBtn">📥 엑셀 업로드</button>
-        <button class="btn btn-green" id="addRowBtn">+ 행 추가</button>
+        <button class="action-btn upload-btn" id="excelUploadBtn">
+          <span class="btn-icon upload-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h9l5 5v13H5V3z"/><path d="M14 3v5h5"/><path d="M12 17V10"/><path d="M9 13l3-3 3 3"/></svg>
+          </span>
+          <span>엑셀 업로드</span>
+        </button>
+        <button class="action-btn add-row-btn" id="addRowBtn">
+          <span class="btn-icon add-row-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16"/><path d="M4 12h16"/><path d="M4 19h16"/><path d="M12 8v8"/><path d="M8 12h8"/></svg>
+          </span>
+          <span>행 추가</span>
+        </button>
         <button class="btn btn-primary" id="save-btn">💾 저장하기</button>
       </div>
     </div>
