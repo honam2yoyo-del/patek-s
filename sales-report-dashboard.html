@@ -38,9 +38,9 @@
     .control,.btn { height:42px;border:1px solid #d9e0ea;border-radius:7px;background:#fff;padding:0 14px;font-size:14px;font-weight:800;color:#111827; }
     .control { min-width:130px; }
     .btn { cursor:pointer;min-width:100px; }
-    .btn.excel { color:#059669; }
-    .btn.pdf   { color:#ef4444; }
-    .btn.blue  { color:#075bd8; }
+    .btn.excel { color:#059669;background:#f0fdf4;border-color:#86efac; }
+    .btn.pdf   { color:#ef4444;background:#fff1f2;border-color:#fca5a5; }
+    .btn.blue  { color:#075bd8;background:#eef6ff;border-color:#7bbfff; }
     .btn-primary { background:#075bd8;color:#fff;border-color:#075bd8; }
 
     /* ── 월 피커 ── */
@@ -93,8 +93,8 @@
     .highlight-month { color:#0067e8;font-weight:900;background:#eef6ff; }
 
     /* ── 도넛 차트 ── */
-    .chart-side { position:relative;display:flex;align-items:center;justify-content:center;min-height:280px; }
-    .mini-card { border:1px solid #dfe6f0;border-radius:8px;padding:10px 12px;background:#fbfdff;min-width:116px;position:absolute;right:0;top:0; }
+    .chart-side { display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px 8px 8px; }
+    .mini-card { border:1px solid #dfe6f0;border-radius:8px;padding:10px 12px;background:#fbfdff;min-width:140px;width:100%;max-width:200px; }
     .mini-title { font-size:11px;color:#64748b;font-weight:900;text-align:center;margin-bottom:3px; }
     .mini-main { text-align:center;color:#003b8e;font-size:16px;font-weight:900;margin-bottom:8px; }
     .mini-row { display:flex;justify-content:space-between;gap:8px;font-size:12px;font-weight:800;border-top:1px solid #e5eaf2;padding-top:6px;margin-top:4px; }
@@ -118,11 +118,14 @@
     /* ── 특이사항 ── */
     .special-box { padding:0 14px 14px; }
     .special-list { border:1px solid #dfe6f0;background:#fbfdff;border-radius:10px;padding:16px 20px;min-height:230px; }
-    .special-list li { margin-bottom:13px;font-size:13px;font-weight:700;line-height:1.6;color:#111827;list-style:none;display:flex;gap:10px; }
+    .special-list li { margin-bottom:13px;font-size:13px;font-weight:700;line-height:1.6;color:#111827;list-style:none;display:flex;align-items:flex-start;gap:10px;justify-content:space-between; }
     .special-list li::before { content:"▸";width:18px;height:18px;border-radius:50%;background:#eaf3ff;color:#0067e8;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;flex-shrink:0;margin-top:3px; }
-    .special-actions { display:flex;justify-content:flex-end;gap:8px;padding:0 14px 14px; }
+    .note-text { flex:1; }
+    .note-btns { display:flex;gap:4px;flex-shrink:0;margin-left:4px; }
+    .note-edit-btn { height:24px;padding:0 8px;border:1px solid #93c5fd;border-radius:4px;background:#eef6ff;color:#075bd8;font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap; }
+    .note-del-btn { height:24px;padding:0 8px;border:1px solid #fca5a5;border-radius:4px;background:#fff1f2;color:#ef4444;font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap; }
+    .note-add-btn { border-color:#7bbfff !important;color:#075bd8 !important;background:#eef6ff !important; }
     .small-btn { height:34px;border:1px solid #d9e0ea;border-radius:7px;background:#fff;padding:0 14px;font-size:13px;font-weight:800;cursor:pointer; }
-    .textarea-edit { display:none;width:100%;min-height:170px;border:1px solid #d9e0ea;border-radius:8px;padding:14px;font-size:13px;line-height:1.65;resize:vertical;font-family:inherit; }
 
     /* ── 저장 버튼 ── */
     .save-bar { position:fixed;left:220px;right:0;bottom:0;height:64px;display:flex;justify-content:flex-end;align-items:center;gap:12px;padding:0 24px;background:rgba(255,255,255,.97);border-top:1px solid #e2e7ef;box-shadow:0 -4px 16px rgba(15,23,42,.06); }
@@ -199,7 +202,7 @@
       <!-- 요약 카드 -->
       <section class="summary-grid">
         <div class="summary-card">
-          <div class="summary-icon icon-blue">💰</div>
+          <img src="./total_sales_coin.svg" width="52" height="52" style="flex-shrink:0;" />
           <div>
             <div class="summary-label">총 매출</div>
             <div class="summary-value" id="sum-total">-</div>
@@ -207,7 +210,7 @@
           </div>
         </div>
         <div class="summary-card">
-          <div class="summary-icon icon-green">📦</div>
+          <img src="./total_qty_cart.svg" width="52" height="52" style="flex-shrink:0;" />
           <div>
             <div class="summary-label">총 판매 수량</div>
             <div class="summary-value" id="sum-qty">-</div>
@@ -215,7 +218,7 @@
           </div>
         </div>
         <div class="summary-card">
-          <div class="summary-icon icon-orange">📈</div>
+          <img src="./monthly_growth_arrow.svg" width="52" height="52" style="flex-shrink:0;" />
           <div>
             <div class="summary-label">전년 대비</div>
             <div class="summary-value" id="sum-yoy2">-</div>
@@ -223,7 +226,7 @@
           </div>
         </div>
         <div class="summary-card">
-          <div class="summary-icon icon-purple">🏆</div>
+          <img src="./top_line_crown.svg" width="52" height="52" style="flex-shrink:0;" />
           <div>
             <div class="summary-label">최다 판매 라인</div>
             <div class="summary-value" id="sum-top-line">-</div>
@@ -231,7 +234,7 @@
           </div>
         </div>
         <div class="summary-card">
-          <div class="summary-icon icon-sky">📍</div>
+          <img src="./top_region_pin.svg" width="52" height="52" style="flex-shrink:0;" />
           <div>
             <div class="summary-label">최다 판매 지역</div>
             <div class="summary-value" id="sum-top-region">-</div>
@@ -339,14 +342,13 @@
         <div class="wide-panel">
           <div class="panel-header">
             <div class="section-title">특이사항</div>
-            <button class="small-btn" onclick="recommendNotes()">자동 문장 추천</button>
+            <div style="display:flex;gap:8px;">
+              <button class="small-btn" onclick="recommendNotes()">자동 문장 추천</button>
+              <button class="small-btn note-add-btn" onclick="addNote()">+ 추가</button>
+            </div>
           </div>
           <div class="special-box">
             <ul class="special-list" id="specialList"></ul>
-            <textarea class="textarea-edit" id="specialEdit"></textarea>
-          </div>
-          <div class="special-actions">
-            <button class="small-btn" onclick="toggleEditNotes()">직접 입력</button>
           </div>
         </div>
       </section>
@@ -593,7 +595,7 @@ function renderMonthlyTable() {
     const mCells = MONTHS.map(m => {
       const val = monthlyData[ri] ? (monthlyData[ri][m-1] || 0) : 0;
       const cls = m === curM ? ' class="highlight-month"' : '';
-      return `<td${cls}><input class="td-inp" type="text" value="${val||''}" oninput="if(!monthlyData[${ri}])monthlyData[${ri}]=new Array(12).fill(0);monthlyData[${ri}][${m-1}]=Number(this.value.replace(/,/g,''))||0;renderMonthlyTfoot();" style="${m===curM?'color:#0067e8;font-weight:900;':''}" placeholder="0"/></td>`;
+      return `<td${cls}><input class="td-inp" type="text" value="${val > 0 ? fmtN(val) : ''}" oninput="if(!monthlyData[${ri}])monthlyData[${ri}]=new Array(12).fill(0);monthlyData[${ri}][${m-1}]=Number(this.value.replace(/,/g,''))||0;renderMonthlyTfoot();" style="${m===curM?'color:#0067e8;font-weight:900;':''}" placeholder="0"/></td>`;
     }).join('');
     const rowSum = (monthlyData[ri]||[]).reduce((s,v)=>s+(Number(v)||0),0);
     return `<tr><td>${esc(r.region)}</td>${mCells}<td style="font-weight:900;">${fmtN(rowSum)||'-'}</td></tr>`;
@@ -650,8 +652,29 @@ window.monthlyData = monthlyData;
 /* ── 특이사항 ── */
 function renderNotes() {
   const list = document.getElementById('specialList');
-  list.innerHTML = notes.map(n => `<li>${esc(n)}</li>`).join('');
+  list.innerHTML = notes.map((n, i) => `
+    <li>
+      <span class="note-text">${esc(n)}</span>
+      <div class="note-btns">
+        <button class="note-edit-btn" onclick="editNote(${i})">수정</button>
+        <button class="note-del-btn" onclick="deleteNote(${i})">삭제</button>
+      </div>
+    </li>`).join('');
 }
+
+window.addNote = function() {
+  const text = window.prompt('특이사항을 입력하세요:');
+  if (text && text.trim()) { notes.push(text.trim()); renderNotes(); }
+};
+
+window.editNote = function(i) {
+  const text = window.prompt('특이사항을 수정하세요:', notes[i]);
+  if (text !== null && text.trim()) { notes[i] = text.trim(); renderNotes(); }
+};
+
+window.deleteNote = function(i) {
+  if (confirm('이 항목을 삭제하시겠습니까?')) { notes.splice(i, 1); renderNotes(); }
+};
 
 window.recommendNotes = function() {
   const totAmt = lineData.reduce((s,r)=>s+(Number(r.amount)||0),0);
@@ -672,28 +695,9 @@ window.recommendNotes = function() {
   renderNotes();
 };
 
-window.toggleEditNotes = function() {
-  const list = document.getElementById('specialList');
-  const area = document.getElementById('specialEdit');
-  if (area.style.display === 'block') {
-    notes = area.value.split('\n').map(s=>s.trim()).filter(Boolean).map(s=>s.replace(/^[•▸-]\s*/,''));
-    renderNotes();
-    area.style.display = 'none';
-    list.style.display = '';
-  } else {
-    area.value = notes.join('\n');
-    list.style.display = 'none';
-    area.style.display = 'block';
-  }
-};
 
 /* ── 저장 ── */
 window.saveData = async function() {
-  // textarea 편집 중이면 저장 후 처리
-  const area = document.getElementById('specialEdit');
-  if (area.style.display === 'block') {
-    notes = area.value.split('\n').map(s=>s.trim()).filter(Boolean).map(s=>s.replace(/^[•▸-]\s*/,''));
-  }
   const btn = document.getElementById('save-btn');
   if (btn) btn.textContent = '저장 중...';
   try {

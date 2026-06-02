@@ -471,7 +471,7 @@ function renderTable() {
         </select>
       </td>
       <td><input class="td-edit" value="${esc(r.note||'')}" oninput="rows[${ri}].note=this.value" placeholder="비고"/></td>
-      <td><button class="td-del" onclick="rows.splice(${ri},1);renderTable();renderKpi();">✕</button></td>`;
+      <td><button class="td-del" onclick="confirmDelete(${ri})">✕</button></td>`;
     tbody.appendChild(tr);
   });
 
@@ -489,6 +489,14 @@ function renderTfoot(filtered) {
     <td style="font-weight:900;">${fmtW(total)}</td>
     <td colspan="5" style="font-weight:900;">${filtered.length} pcs</td>
   </tr>`;
+}
+
+function confirmDelete(ri) {
+  if (confirm('삭제하시겠습니까?')) {
+    rows.splice(ri, 1);
+    renderTable();
+    renderKpi();
+  }
 }
 
 tblSearch.addEventListener('input', renderTable);
