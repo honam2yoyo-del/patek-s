@@ -41,6 +41,7 @@
     .btn.excel { color:#059669; }
     .btn.pdf   { color:#ef4444; }
     .btn.blue  { color:#075bd8; }
+    .btn-primary { background:#075bd8;color:#fff;border-color:#075bd8; }
 
     /* ── 월 피커 ── */
     .month-picker-wrap { position:relative; }
@@ -191,6 +192,7 @@
           <button class="btn excel" onclick="downloadExcel()">엑셀 다운로드</button>
           <button class="btn pdf"   onclick="window.print()">PDF / 인쇄</button>
           <button class="btn blue"  onclick="toggleA4()">A4 미리보기</button>
+          <button class="btn btn-primary" id="save-btn" onclick="saveData()">💾 저장하기</button>
         </div>
       </div>
 
@@ -351,9 +353,6 @@
     </div><!-- /report-page -->
   </main>
 
-  <div class="save-bar">
-    <button class="save-btn-fix" onclick="saveData()">💾 저장하기</button>
-  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -695,7 +694,7 @@ window.saveData = async function() {
   if (area.style.display === 'block') {
     notes = area.value.split('\n').map(s=>s.trim()).filter(Boolean).map(s=>s.replace(/^[•▸-]\s*/,''));
   }
-  const btn = document.querySelector('.save-btn-fix.primary');
+  const btn = document.getElementById('save-btn');
   if (btn) btn.textContent = '저장 중...';
   try {
     await setDoc(doc(db,'artifacts','patek-s','public','data','sales_reports',`${curYear}-${pad(curMonth)}`), {

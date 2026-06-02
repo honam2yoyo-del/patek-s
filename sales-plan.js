@@ -715,19 +715,18 @@ async function saveData() {
     updatedAt: new Date().toISOString()
   };
 
-  const btns = ['save-btn','save-btn2'].map(id => document.getElementById(id));
-  btns.forEach(b => { if (b) b.textContent = '저장 중...'; });
+  const btn = document.getElementById('save-btn');
+  if (btn) btn.textContent = '저장 중...';
   try {
     await setDoc(doc(db,'artifacts','patek-s','public','data','sales_dashboard',`${curYear}-${pad(curMonth)}`), data, {merge:true});
-    btns.forEach(b => { if (b) b.textContent = '✔ 저장됨'; });
-    setTimeout(() => btns.forEach(b => { if (b) b.textContent = '💾 저장하기'; }), 2000);
+    if (btn) btn.textContent = '✔ 저장됨';
+    setTimeout(() => { if (btn) btn.textContent = '💾 저장하기'; }, 2000);
   } catch(e) {
     alert('저장 실패: '+e.message);
-    btns.forEach(b => { if (b) b.textContent = '💾 저장하기'; });
+    if (btn) btn.textContent = '💾 저장하기';
   }
 }
 document.getElementById('save-btn').addEventListener('click', saveData);
-document.getElementById('save-btn2').addEventListener('click', saveData);
 
 /* ────────── 엑셀 ────────── */
 document.getElementById('excelBtn').addEventListener('click', () => {
