@@ -144,6 +144,55 @@
       .app { display:block; } .main { padding:0; }
       .panel,.wide-panel,.summary-card { break-inside:avoid; }
     }
+
+    .action-btn {
+      height: 42px;
+      min-width: 116px;
+      border: 1px solid #d9e0ea;
+      border-radius: 7px;
+      background: #ffffff;
+      padding: 0 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      font-size: 14px;
+      font-weight: 900;
+      color: #111827;
+      cursor: pointer;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+      transition: all 0.15s ease;
+    }
+    .action-btn:hover {
+      background: #f8fafc;
+      border-color: #cbd5e1;
+      transform: translateY(-1px);
+    }
+    .btn-icon {
+      width: 22px;
+      height: 22px;
+      border-radius: 5px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .btn-icon svg {
+      width: 17px;
+      height: 17px;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .excel-icon { background: #e8f7ee; }
+    .excel-icon svg { stroke: #059669; }
+    .pdf-icon { background: #fff1f2; }
+    .pdf-icon svg { stroke: #ef4444; }
+    .print-icon { background: #f1f5f9; }
+    .print-icon svg { stroke: #334155; }
+    .a4-icon { background: #eff6ff; }
+    .a4-icon svg { stroke: #2563eb; }
   </style>
 </head>
 <body>
@@ -192,9 +241,30 @@
               <div class="mpp-grid" id="pickerMonthGrid"></div>
             </div>
           </div>
-          <button class="btn excel" onclick="downloadExcel()">엑셀 다운로드</button>
-          <button class="btn pdf"   onclick="window.print()">PDF / 인쇄</button>
-          <button class="btn blue"  onclick="toggleA4()">A4 미리보기</button>
+          <button class="action-btn excel-btn" onclick="downloadExcel()">
+            <span class="btn-icon excel-icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h9l5 5v13H5V3z"/><path d="M14 3v5h5"/><path d="M8 10l3 4-3 4"/><path d="M14 10l-3 4 3 4"/></svg>
+            </span>
+            <span>엑셀 다운로드</span>
+          </button>
+          <button class="action-btn pdf-btn" onclick="downloadPdf()">
+            <span class="btn-icon pdf-icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l3 3v15H6V3z"/><path d="M15 3v4h4"/><path d="M8 16h8"/><path d="M8 12h8"/><path d="M8 8h4"/></svg>
+            </span>
+            <span>PDF 다운로드</span>
+          </button>
+          <button class="action-btn print-btn" onclick="window.print()">
+            <span class="btn-icon print-icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 8V3h10v5"/><path d="M6 17H4v-6h16v6h-2"/><path d="M7 14h10v7H7v-7z"/><path d="M8 17h8"/></svg>
+            </span>
+            <span>인쇄</span>
+          </button>
+          <button class="action-btn a4-btn" onclick="toggleA4()">
+            <span class="btn-icon a4-icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18H6V3z"/><path d="M9 15l1.5-6h3l1.5 6"/><path d="M10 13h4"/></svg>
+            </span>
+            <span>A4 미리보기</span>
+          </button>
           <button class="btn btn-primary" id="save-btn" onclick="saveData()">💾 저장하기</button>
         </div>
       </div>
@@ -718,6 +788,9 @@ window.saveData = async function() {
 
 /* ── A4 토글 ── */
 window.toggleA4 = function() { document.body.classList.toggle('a4-mode'); };
+
+/* ── PDF 다운로드 ── */
+window.downloadPdf = function() { window.print(); };
 
 /* ── 엑셀 다운로드 ── */
 window.downloadExcel = function() {
