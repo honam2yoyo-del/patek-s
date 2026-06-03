@@ -141,24 +141,21 @@
     .right-summary { display:grid;gap:14px; }
     .summary-panel { background:#fff;border:1px solid #e1e7f0;border-radius:10px;padding:18px;box-shadow:0 2px 8px rgba(15,23,42,.035); }
     .summary-panel-title { font-size:19px;font-weight:900;margin-bottom:16px; }
-    .donut-area { display:grid;grid-template-columns:140px 1fr;gap:16px;align-items:center; }
-    .donut-chart { width:140px;height:140px;border-radius:50%;position:relative;flex-shrink:0; }
-    .donut-hole { position:absolute;width:70px;height:70px;background:#fff;border-radius:50%;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;text-align:center;font-size:11px;font-weight:900;line-height:1.4;color:#111827; }
-    .legend { list-style:none;display:grid;gap:7px; }
+    .donut-wrap { display:flex;flex-direction:column;align-items:center;margin-top:20px;gap:16px; }
+    .donut-chart { width:160px;height:160px;border-radius:50%;position:relative;flex-shrink:0; }
+    .donut-hole { position:absolute;width:80px;height:80px;background:#fff;border-radius:50%;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;text-align:center;font-size:12px;font-weight:900;line-height:1.4;color:#111827; }
+    .legend { list-style:none;display:grid;gap:7px;width:100%; }
     .legend li { display:grid;grid-template-columns:10px 1fr auto auto;align-items:center;gap:7px;font-size:11px;font-weight:800; }
     .dot { width:9px;height:9px;border-radius:50%;display:inline-block; }
     .d1{background:#3b82f6;} .d2{background:#22c55e;} .d3{background:#f97316;}
     .d4{background:#8b5cf6;} .d5{background:#d28c45;} .d6{background:#0ea5a4;}
     .d7{background:#2d9cdb;} .d8{background:#9ca3af;} .d9{background:#9bc4a6;}
-    .shortage-list { list-style:none; }
-    .shortage-list li { display:flex;justify-content:space-between;align-items:center;padding:8px 0;font-size:14px;font-weight:800; }
-    .shortage-list strong { font-size:19px;font-weight:900; }
-    .status-box { margin-top:12px;padding:12px 14px;border-radius:8px;font-size:13px;font-weight:900;line-height:1.5;display:flex;gap:8px;align-items:center; }
-    .status-box.ok  { background:#eafaf1;border:1px solid #c8f0d6;color:#059669; }
-    .status-box.err { background:#fff1f2;border:1px solid #fecdd3;color:#ef4444; }
-    .status-icon { width:22px;height:22px;border-radius:50%;color:#fff;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;font-size:12px;font-weight:900; }
-    .status-icon.ok  { background:#059669; }
-    .status-icon.err { background:#ef4444; }
+    .line-sum-tbl { width:100%;border-collapse:collapse;font-size:13px; }
+    .line-sum-tbl th { background:#f5f8fc;color:#003b8e;font-weight:900;padding:8px 10px;border:1px solid #e2e7ef;text-align:center; }
+    .line-sum-tbl td { padding:7px 10px;border:1px solid #e2e7ef;font-weight:700; }
+    .line-sum-tbl td:nth-child(2),.line-sum-tbl td:nth-child(3) { text-align:center; }
+    .line-sum-tbl tfoot td { background:#f5f8fc;font-weight:900;text-align:center; }
+    .line-sum-tbl tfoot td:first-child { text-align:left; }
 
     .green { color:#059669; } .blue { color:#075bd8; } .red { color:#ef4444; } .orange { color:#f97316; }
 
@@ -360,26 +357,24 @@
 
         <div class="summary-panel">
           <div class="summary-panel-title">MPDS 등록 요약</div>
-          <div class="donut-area">
-            <div>
-              <div class="donut-chart" id="mpdsDonut">
-                <div class="donut-hole" id="mpdsDonutLabel">0<br>pcs</div>
-              </div>
+          <table class="line-sum-tbl">
+            <thead>
+              <tr><th>라인</th><th>수량</th><th>비율</th></tr>
+            </thead>
+            <tbody id="lineSummaryBody"></tbody>
+            <tfoot>
+              <tr>
+                <td>합계</td>
+                <td id="lineSummaryTotal">0 pcs</td>
+                <td>100%</td>
+              </tr>
+            </tfoot>
+          </table>
+          <div class="donut-wrap">
+            <div class="donut-chart" id="mpdsDonut">
+              <div class="donut-hole" id="mpdsDonutLabel">0<br>pcs</div>
             </div>
             <ul class="legend" id="mpdsLegend"></ul>
-          </div>
-        </div>
-
-        <div class="summary-panel">
-          <div class="section-title" style="margin-bottom:10px;">부족/여유 현황</div>
-          <ul class="shortage-list">
-            <li><span>최소 등록 기준 수량</span><strong id="minQtyView">30 pcs</strong></li>
-            <li><span>현재 등록 가능 수량</span><strong id="possibleQtyView">0 pcs</strong></li>
-            <li><span id="extraQtyViewLabel">여유 수량</span><strong class="green" id="extraQtyView">0 pcs</strong></li>
-          </ul>
-          <div class="status-box ok" id="statusBox">
-            <span class="status-icon ok">✓</span>
-            <span id="statusBoxText">최소 등록 기준 수량을 충족합니다.<br/>MPDS 등록이 가능합니다.</span>
           </div>
         </div>
       </aside>
@@ -553,24 +548,6 @@ window.recalcStatus = function() {
   badge.textContent = isOk ? '등록 가능' : '등록 불가';
   badge.style.background = isOk ? '#dcfce7' : '#fee2e2';
   badge.style.color       = isOk ? '#059669' : '#ef4444';
-
-  // 오른쪽 요약 업데이트
-  document.getElementById('minQtyView').textContent        = minQty + ' pcs';
-  document.getElementById('possibleQtyView').textContent   = possible + ' pcs';
-  document.getElementById('extraQtyViewLabel').textContent = isOk ? '여유 수량' : '부족한 수량';
-  document.getElementById('extraQtyView').textContent      = Math.abs(extra) + ' pcs';
-  document.getElementById('extraQtyView').className        = isOk ? 'green' : 'red';
-
-  const box  = document.getElementById('statusBox');
-  const icon = box.querySelector('.status-icon');
-  const text = document.getElementById('statusBoxText');
-  if (isOk) {
-    box.className = 'status-box ok'; icon.className = 'status-icon ok'; icon.textContent = '✓';
-    text.innerHTML = '최소 등록 기준 수량을 충족합니다.<br/>MPDS 등록이 가능합니다.';
-  } else {
-    box.className = 'status-box err'; icon.className = 'status-icon err'; icon.textContent = '!';
-    text.innerHTML = '최소 등록 기준 수량이 부족합니다.<br/>추가 등록 가능 재고를 확인하세요.';
-  }
 };
 
 /* ── 도넛 차트 ── */
@@ -599,6 +576,21 @@ function renderDonut() {
     const dc  = DOT_CLASSES[i] || 'd9';
     return `<li><span class="dot ${dc}"></span><span>${line}</span><b>${cnt} pcs</b><span>${pct}%</span></li>`;
   }).join('');
+
+  const tbody = document.getElementById('lineSummaryBody');
+  if (tbody) {
+    tbody.innerHTML = entries.map(([line, cnt], i) => {
+      const pct = total > 0 ? (cnt/total*100).toFixed(1) : '0.0';
+      const dc  = DOT_CLASSES[i] || 'd9';
+      return `<tr>
+        <td><span class="dot ${dc}" style="margin-right:6px;vertical-align:middle;"></span>${esc(line)}</td>
+        <td>${cnt} pcs</td>
+        <td>${pct}%</td>
+      </tr>`;
+    }).join('');
+    const totEl = document.getElementById('lineSummaryTotal');
+    if (totEl) totEl.textContent = total + ' pcs';
+  }
 }
 
 /* ── 필터/탭 ── */
