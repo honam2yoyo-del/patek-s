@@ -153,9 +153,10 @@
     .line-sum-tbl { width:100%;border-collapse:collapse;font-size:13px; }
     .line-sum-tbl th { background:#f5f8fc;color:#003b8e;font-weight:900;padding:8px 10px;border:1px solid #e2e7ef;text-align:center; }
     .line-sum-tbl td { padding:7px 10px;border:1px solid #e2e7ef;font-weight:700; }
-    .line-sum-tbl td:nth-child(2),.line-sum-tbl td:nth-child(3) { text-align:center; }
+    .line-sum-tbl td { text-align:center; }
     .line-sum-tbl tfoot td { background:#f5f8fc;font-weight:900;text-align:center; }
-    .line-sum-tbl tfoot td:first-child { text-align:left; }
+    #dateSortTh { cursor:pointer;user-select:none; }
+    #dateSortTh:hover { background:#e8f0fd; }
 
     .green { color:#059669; } .blue { color:#075bd8; } .red { color:#ef4444; } .orange { color:#f97316; }
 
@@ -290,7 +291,7 @@
                   <th style="width:130px;">REF.</th>
                   <th style="width:160px;">SERIAL</th>
                   <th id="lineFilterTh" style="width:130px;" onclick="window.toggleLineFilter(this)">라인 <span id="lineFilterIndicator" style="font-size:10px;color:#075bd8;"></span></th>
-                  <th style="width:110px;">입고일</th>
+                  <th id="dateSortTh" style="width:110px;" onclick="window.toggleDateSort()">입고일 <span id="dateSortIndicator"></span></th>
                   <th style="width:130px;">금액(KRW)</th>
                   <th style="width:104px;">상태</th>
                   <th>비고</th>
@@ -355,7 +356,7 @@
           </div>
           <table class="line-sum-tbl">
             <thead>
-              <tr><th style="text-align:left;">라인</th><th>수량</th><th>비율</th></tr>
+              <tr><th>라인</th><th>수량</th><th>비율</th></tr>
             </thead>
             <tbody id="lineSummaryBody"></tbody>
             <tfoot>
@@ -437,6 +438,7 @@ let unsubMpds  = null;
 let inventory  = JSON.parse(JSON.stringify(DEFAULT_INV));
 let activeFilter = '전체';
 let lineFilter   = '';
+let dateSortDir  = null;
 let selectedIds  = new Set();
 
 /* ── 월 피커 ── */
@@ -521,6 +523,8 @@ function loadMonth() {
       inventory = JSON.parse(JSON.stringify(DEFAULT_INV));
     }
     selectedIds = new Set();
+    dateSortDir = null;
+    const ind = document.getElementById('dateSortIndicator'); if (ind) ind.textContent = '';
     renderAll();
   });
 }
@@ -618,13 +622,23 @@ const tblSearch = document.getElementById('tableSearch');
 
 function getFiltered() {
   const kw = tblSearch.value.trim().toLowerCase();
-  return inventory.map((r,i) => ({...r, _i:i})).filter(r => {
+  let list = inventory.map((r,i) => ({...r, _i:i})).filter(r => {
     const fmatch = activeFilter === '전체' || r.status === activeFilter;
     const lmatch = !lineFilter || (r.line||'') === lineFilter;
     const kmatch = !kw || (r.ref||'').toLowerCase().includes(kw) || (r.serial||'').toLowerCase().includes(kw) || (r.line||'').toLowerCase().includes(kw);
     return fmatch && lmatch && kmatch;
   });
+  if (dateSortDir === 'asc')  list.sort((a,b) => (a.date||'').localeCompare(b.date||''));
+  if (dateSortDir === 'desc') list.sort((a,b) => (b.date||'').localeCompare(a.date||''));
+  return list;
 }
+
+window.toggleDateSort = function() {
+  dateSortDir = dateSortDir === null ? 'asc' : dateSortDir === 'asc' ? 'desc' : null;
+  const ind = document.getElementById('dateSortIndicator');
+  if (ind) ind.textContent = dateSortDir === 'asc' ? '↑' : dateSortDir === 'desc' ? '↓' : '';
+  renderTable();
+};
 
 // window 노출 핸들러 (module scope → inline handler 안전 접근)
 window.mpdsSet = function(ri, key, val) { if (inventory[ri]) inventory[ri][key] = val; };
