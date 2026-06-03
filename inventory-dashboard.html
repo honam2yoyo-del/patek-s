@@ -646,19 +646,23 @@ document.getElementById('excelUploadInput').addEventListener('change', function(
       // 헤더 매핑 (자동 감지된 헤더 행 기준)
       const headers = raw[headerRowIdx].map(h => String(h).trim().toLowerCase());
       const colIdx = {
-        ref:      findCol(headers, ['상품코드','ref','ref.','레퍼런스','레퍼']),
-        serial:   findCol(headers, ['시리얼(링)','시리얼','serial','sn']),
-        amount:   findCol(headers, ['판매가','금액','amount','price','가격']),
-        customer: findCol(headers, ['고객명','고객','customer','이름','name']),
-        saleDate: findCol(headers, ['예상 판매일','예상판매일','판매일','saledate','date','날짜']),
-        status:   findCol(headers, ['상태','status']),
-        note:     findCol(headers, ['비고','메모','note','memo','remark'])
+        ref:       findCol(headers, ['상품코드','ref','ref.','레퍼런스','레퍼']),
+        serial:    findCol(headers, ['시리얼(링)','시리얼','serial','sn']),
+        amount:    findCol(headers, ['판매가','금액','amount','price','가격']),
+        customer:  findCol(headers, ['고객명','고객','customer','이름','name']),
+        saleDate:  findCol(headers, ['예상 판매일','예상판매일','판매일','saledate','date','날짜']),
+        status:    findCol(headers, ['상태','status']),
+        note:      findCol(headers, ['비고','메모','note','memo','remark']),
+        realStock: findCol(headers, ['실재고','real stock','실 재고'])
       };
 
       const imported = [];
       for (let i = dataStartIdx; i < raw.length; i++) {
         const row = raw[i];
         if (row.every(c => c === '' || c == null)) continue; // 빈 행 스킵
+
+        // 실재고 컬럼이 있으면 값이 1인 행만 가져옴
+        if (colIdx.realStock >= 0 && Number(row[colIdx.realStock]) !== 1) continue;
 
         const getV = key => colIdx[key] >= 0 ? String(row[colIdx[key]] ?? '').trim() : '';
         const ref      = getV('ref');
