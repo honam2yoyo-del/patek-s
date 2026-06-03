@@ -642,6 +642,66 @@ document.getElementById('delAllBtn').addEventListener('click', () => {
 tblSearch.addEventListener('input', renderTable);
 sortSelect.addEventListener('change', renderTable);
 
+/* ────────── 키보드 셀 탐색 (엑셀 스타일) ────────── */
+(function() {
+  // 탐색 가능한 td 인덱스 (0=체크박스, 8=삭제버튼 제외)
+  const NAV = [1, 2, 3, 4, 5, 6, 7];
+
+  function focusCell(tbody, rIdx, cIdx) {
+    const rows = tbody.rows;
+    if (rIdx < 0 || rIdx >= rows.length) return;
+    if (!NAV.includes(cIdx)) return;
+    const td = rows[rIdx].cells[cIdx];
+    if (!td) return;
+    const el = td.querySelector('input:not([type="checkbox"]), select');
+    if (!el) return;
+    el.focus();
+    if (el.tagName === 'INPUT') el.select();
+  }
+
+  document.getElementById('invTbody').addEventListener('keydown', function(e) {
+    const el = e.target;
+    if (!el || el.type === 'checkbox') return;
+    const td = el.closest('td');
+    const tr = el.closest('tr');
+    if (!td || !tr) return;
+
+    const tbody  = tr.parentElement;
+    const rIdx   = [...tbody.rows].indexOf(tr);
+    const cIdx   = [...tr.cells].indexOf(td);
+    const cPos   = NAV.indexOf(cIdx);
+    if (cPos < 0) return;
+
+    const isSel  = el.tagName === 'SELECT';
+    const atStart = isSel || el.selectionStart === 0;
+    const atEnd   = isSel || el.selectionStart === el.value.length;
+
+    switch (e.key) {
+      case 'Enter':
+      case 'ArrowDown':
+        e.preventDefault();
+        focusCell(tbody, rIdx + 1, cIdx);
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        focusCell(tbody, rIdx - 1, cIdx);
+        break;
+      case 'ArrowLeft':
+        if (atStart && cPos > 0) {
+          e.preventDefault();
+          focusCell(tbody, rIdx, NAV[cPos - 1]);
+        }
+        break;
+      case 'ArrowRight':
+        if (atEnd && cPos < NAV.length - 1) {
+          e.preventDefault();
+          focusCell(tbody, rIdx, NAV[cPos + 1]);
+        }
+        break;
+    }
+  });
+})();
+
 /* ────────── 일괄 상태 변경 ────────── */
 document.getElementById('bulkStatusSel').addEventListener('change', function() {
   const val = this.value;
