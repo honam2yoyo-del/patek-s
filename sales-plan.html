@@ -38,8 +38,9 @@
 
     /* ── KPI 카드 5개 ── */
     .kpi-grid { display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-bottom:20px; }
-    .kpi-card { background:#fff;border:1px solid #e2e7ef;border-radius:8px;padding:18px 20px;box-shadow:0 2px 8px rgba(15,23,42,.035); }
+    .kpi-card { background:#fff;border:1px solid #e2e7ef;border-radius:10px;padding:18px 20px 16px;box-shadow:0 2px 8px rgba(15,23,42,.035);display:flex;flex-direction:column; }
     .kpi-label { font-size:13px;font-weight:700;color:#6b7280;margin-bottom:10px; }
+    .kpi-icon { display:flex;align-items:center;justify-content:center;margin:4px 0 10px;color:#374151; }
     .kpi-value { font-size:28px;font-weight:900;letter-spacing:-.5px;line-height:1.1; }
     .kpi-sub { font-size:13px;font-weight:700;color:#6b7280;margin-top:4px; }
     .kpi-value.blue { color:#0067e8; }
@@ -123,9 +124,9 @@
         <li onclick="safeNav('sales-report-dashboard.html')"><span class="menu-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg></span>매출</li>
         <li onclick="safeNav('inventory-dashboard.html')"><span class="menu-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></span>재고</li>
         <li onclick="safeNav('mpds-dashboard.html')"><span class="menu-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg></span>MPDS</li>
-        <li onclick="safeNav('report-dashboard.html')"><span class="menu-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg></span>매출보고</li>
+        <li onclick="safeNav('report-dashboard.html')"><span class="menu-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg></span>동향 보고</li>
         <li><span class="menu-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></span>AS</li>
-        <li><span class="menu-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></span>SP오더</li>
+        <li><span class="menu-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></span>SP 오더</li>
         <li onclick="safeNav('schedule.html')"><span class="menu-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="2" x2="12" y2="4.5"/><line x1="12" y1="19.5" x2="12" y2="22"/><line x1="2" y1="12" x2="4.5" y2="12"/><line x1="19.5" y1="12" x2="22" y2="12"/><polyline points="8 12 11 15 16 9"/></svg></span>스케줄</li>
       </ul>
     </div>
@@ -149,26 +150,63 @@
     <section class="kpi-grid">
       <div class="kpi-card">
         <div class="kpi-label">당월 예상 매출</div>
+        <div class="kpi-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/>
+            <polyline points="16 7 22 7 22 13"/>
+          </svg>
+        </div>
         <div class="kpi-value" id="kpi-expected">-</div>
         <div class="kpi-sub" id="kpi-expected-pcs">- pcs</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">현재 매출</div>
+        <div class="kpi-icon" style="color:#0067e8;">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+            <line x1="3" y1="6" x2="21" y2="6"/>
+            <path d="M16 10a4 4 0 0 1-8 0"/>
+          </svg>
+        </div>
         <div class="kpi-value blue" id="kpi-current">-</div>
         <div class="kpi-sub" id="kpi-current-pcs">- pcs</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">남은 매출</div>
+        <div class="kpi-icon" style="color:#374151;">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <circle cx="12" cy="12" r="6"/>
+            <circle cx="12" cy="12" r="2"/>
+          </svg>
+        </div>
         <div class="kpi-value red" id="kpi-remain">-</div>
         <div class="kpi-sub" id="kpi-remain-pcs">- pcs</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">MPDS 등록 가능</div>
+        <div class="kpi-icon" style="color:#374151;">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+            <polyline points="10 9 9 9 8 9"/>
+          </svg>
+        </div>
         <div class="kpi-value" id="kpi-mpds">-</div>
         <div class="kpi-sub">pcs</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">매장 재고 AS</div>
+        <div class="kpi-icon" style="color:#374151;">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+            <circle cx="19.5" cy="4.5" r="1.5" fill="currentColor"/>
+            <circle cx="21.5" cy="7.5" r="1" fill="currentColor"/>
+            <circle cx="16.5" cy="2.5" r="1" fill="currentColor"/>
+          </svg>
+        </div>
         <div class="kpi-value" id="kpi-as">-</div>
         <div class="kpi-sub">건</div>
       </div>
