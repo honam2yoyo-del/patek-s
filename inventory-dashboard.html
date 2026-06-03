@@ -122,6 +122,9 @@
     .btn-del-sel:hover { background:#fee2e2; }
     .btn-del-all { height:36px;padding:0 12px;border:1px solid #dc2626;border-radius:6px;background:#dc2626;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit; }
     .btn-del-all:hover { background:#b91c1c;border-color:#b91c1c; }
+    /* ── 일괄변경 셀렉트 ── */
+    .bulk-status-sel { font-size:11px;padding:2px 3px;border-radius:4px;border:1px solid #d9e0ea;background:#f6f8fb;cursor:pointer;width:88px;font-weight:700;font-family:inherit;color:#374151;margin-top:3px; }
+    .bulk-status-sel:hover { border-color:#075bd8; }
 
     /* ── 엑셀 업로드 알림 ── */
     .upload-toast { display:none;position:fixed;top:20px;right:24px;z-index:9000;background:#111827;color:#fff;padding:12px 20px;border-radius:8px;font-size:14px;font-weight:700;box-shadow:0 4px 16px rgba(0,0,0,.25); }
@@ -228,9 +231,9 @@
       <div class="kpi-card"><div class="kpi-label">전체 재고</div><div class="kpi-pcs black" id="kpi-all-pcs">0 <small>pcs</small></div><div class="kpi-amt" id="kpi-all-amt">0 원</div></div>
       <div class="kpi-card"><div class="kpi-label">판매 예정</div><div class="kpi-pcs green" id="kpi-sale-pcs">0 <small>pcs</small></div><div class="kpi-amt" id="kpi-sale-amt">0 원</div></div>
       <div class="kpi-card"><div class="kpi-label">컨펌 예정</div><div class="kpi-pcs orange" id="kpi-confirm-pcs">0 <small>pcs</small></div><div class="kpi-amt" id="kpi-confirm-amt">0 원</div></div>
+      <div class="kpi-card"><div class="kpi-label">AS / 기타</div><div class="kpi-pcs red" id="kpi-as-pcs">0 <small>pcs</small></div><div class="kpi-amt" id="kpi-as-amt">0 원</div></div>
       <div class="kpi-card"><div class="kpi-label">이월 예정</div><div class="kpi-pcs blue" id="kpi-carry-pcs">0 <small>pcs</small></div><div class="kpi-amt" id="kpi-carry-amt">0 원</div></div>
-      <div class="kpi-card"><div class="kpi-label">AS</div><div class="kpi-pcs red" id="kpi-as-pcs">0 <small>pcs</small></div><div class="kpi-amt" id="kpi-as-amt">0 원</div></div>
-      <div class="kpi-card"><div class="kpi-label">잔여 재고 / 기타</div><div class="kpi-pcs purple" id="kpi-etc-pcs">0 <small>pcs</small></div><div class="kpi-amt" id="kpi-etc-amt">0 원</div></div>
+      <div class="kpi-card"><div class="kpi-label">잔여재고</div><div class="kpi-pcs black" id="kpi-etc-pcs">0 <small>pcs</small></div><div class="kpi-amt" id="kpi-etc-amt">0 원</div></div>
     </section>
 
     <!-- 재고 목록 -->
@@ -275,10 +278,21 @@
               <th style="width:130px;">REF.</th>
               <th style="width:165px;">Serial</th>
               <th style="width:160px;">금액</th>
-              <th style="width:82px;">고객명</th>
-              <th style="width:130px;">예상 판매일</th>
-              <th style="width:100px;">상태</th>
-              <th>비고</th>
+              <th style="width:110px;">고객명</th>
+              <th style="width:150px;">예상 판매일</th>
+              <th style="width:108px;padding:6px 4px;">
+                <div>상태</div>
+                <select class="bulk-status-sel" id="bulkStatusSel">
+                  <option value="">일괄변경 ▾</option>
+                  <option value="판매예정">판매예정</option>
+                  <option value="컨펌예정">컨펌예정</option>
+                  <option value="이월예정">이월예정</option>
+                  <option value="잔여재고">잔여재고</option>
+                  <option value="AS">AS</option>
+                  <option value="기타">기타</option>
+                </select>
+              </th>
+              <th style="width:160px;">비고</th>
               <th style="width:28px;"></th>
             </tr>
           </thead>
@@ -363,7 +377,38 @@ window.chStatus = function(ri, val, el) {
   rows[ri].status = val;
   el.className = 'status-sel ' + statusSelClass(val);
   renderKpi();
-  renderTable(); // 필터 즉시 재적용
+  renderTable();
+};
+
+// 필드 단순 업데이트 — module 스코프 rows에 안전 접근
+window.setField = function(ri, key, val) {
+  if (rows[ri]) rows[ri][key] = val;
+};
+
+// 금액 업데이트 (포맷 + size + 체크박스 데이터 동기화)
+window.setAmt = function(ri, el) {
+  window.fmtNum(el);
+  el.size = Math.max(3, el.value.length) + 1;
+  if (rows[ri]) rows[ri].amount = window.parseNum(el.value);
+  const cb = el.closest('tr') && el.closest('tr').querySelector('.row-check');
+  if (cb) cb.dataset.amount = window.parseNum(el.value) || 0;
+  window.updateSel();
+};
+
+// 예상 판매일 blur — 포맷 변환 후 rows 저장
+window.applyDateFmt = function(ri, el) {
+  const v = window.parseSaleDate(el.value);
+  if (v !== el.value) el.value = v;
+  if (rows[ri]) rows[ri].saleDate = el.value;
+};
+
+// 행 삭제 — window 노출
+window.confirmDelete = function(ri) {
+  if (confirm('삭제하시겠습니까?')) {
+    rows.splice(ri, 1);
+    renderTable();
+    renderKpi();
+  }
 };
 
 // 예상 판매일 자동 포맷: "628", "6/28", "6-28" → "2026.6.28(목)"
@@ -469,12 +514,15 @@ function renderKpi() {
     const ea = document.getElementById(id+'-amt'); if(ea) ea.textContent=fmtW(stat[s].amt);
   };
   set('kpi-all','전체'); set('kpi-sale','판매예정'); set('kpi-confirm','컨펌예정');
-  set('kpi-carry','이월예정'); set('kpi-as','AS');
-  // 잔여재고 + 기타 합산
-  const etcQty = stat['잔여재고'].qty + stat['기타'].qty;
-  const etcAmt = stat['잔여재고'].amt + stat['기타'].amt;
-  const ep = document.getElementById('kpi-etc-pcs'); if(ep) ep.innerHTML=`${etcQty} <small>pcs</small>`;
-  const ea = document.getElementById('kpi-etc-amt'); if(ea) ea.textContent=fmtW(etcAmt);
+  set('kpi-carry','이월예정');
+  // AS / 기타 합산 → kpi-as
+  const asEtcQty = stat['AS'].qty + stat['기타'].qty;
+  const asEtcAmt = stat['AS'].amt + stat['기타'].amt;
+  const epAs = document.getElementById('kpi-as-pcs'); if(epAs) epAs.innerHTML=`${asEtcQty} <small>pcs</small>`;
+  const eaAs = document.getElementById('kpi-as-amt'); if(eaAs) eaAs.textContent=fmtW(asEtcAmt);
+  // 잔여재고만 → kpi-etc
+  const ep = document.getElementById('kpi-etc-pcs'); if(ep) ep.innerHTML=`${stat['잔여재고'].qty} <small>pcs</small>`;
+  const ea = document.getElementById('kpi-etc-amt'); if(ea) ea.textContent=fmtW(stat['잔여재고'].amt);
 }
 
 /* ────────── 필터 (복수 선택) ────────── */
@@ -539,20 +587,20 @@ function renderTable() {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td><input type="checkbox" class="row-check" data-amount="${r.amount||0}"/></td>
-      <td><input class="td-edit" value="${esc(r.ref||'')}" oninput="rows[${ri}].ref=this.value" placeholder="REF."/></td>
-      <td><input class="td-edit" value="${esc(r.serial||'')}" oninput="rows[${ri}].serial=this.value" placeholder="Serial"/></td>
+      <td><input class="td-edit" value="${esc(r.ref||'')}" oninput="window.setField(${ri},'ref',this.value)" placeholder="REF."/></td>
+      <td><input class="td-edit" value="${esc(r.serial||'')}" oninput="window.setField(${ri},'serial',this.value)" placeholder="Serial"/></td>
       <td style="padding:0;"><div style="display:flex;align-items:center;justify-content:center;padding:10px 12px;gap:0;"><input class="td-edit" type="text" inputmode="numeric" value="${fmtInput(r.amount)}" size="${Math.max(3,(fmtInput(r.amount)||'').length)+1}"
-          oninput="window.fmtNum(this);this.size=Math.max(3,this.value.length)+1;rows[${ri}].amount=parseNum(this.value);this.closest('tr').querySelector('.row-check').dataset.amount=parseNum(this.value)||0;updateSel();"
+          oninput="window.setAmt(${ri},this)"
           placeholder="0" style="width:auto;text-align:center;"/><span style="font-weight:700;font-size:14px;">원</span></div></td>
-      <td><input class="td-edit" value="${esc(r.customer||'')}" oninput="rows[${ri}].customer=this.value" placeholder="고객명"/></td>
-      <td><input class="td-edit" value="${esc(r.saleDate||'')}" oninput="rows[${ri}].saleDate=this.value" onblur="const v=window.parseSaleDate(this.value);if(v!==this.value){this.value=v;rows[${ri}].saleDate=v;}" placeholder="예: 6/28"/></td>
+      <td><input class="td-edit" value="${esc(r.customer||'')}" oninput="window.setField(${ri},'customer',this.value)" placeholder="고객명"/></td>
+      <td><input class="td-edit" value="${esc(r.saleDate||'')}" oninput="window.setField(${ri},'saleDate',this.value)" onblur="window.applyDateFmt(${ri},this)" placeholder="예: 6/28"/></td>
       <td>
         <select class="status-sel ${statusSelClass(r.status)}" onchange="window.chStatus(${ri},this.value,this);">
           ${STATUSES.map(s=>`<option value="${s}" ${r.status===s?'selected':''}>${s}</option>`).join('')}
         </select>
       </td>
-      <td><input class="td-edit" value="${esc(r.note||'')}" oninput="rows[${ri}].note=this.value" placeholder="비고"/></td>
-      <td><button class="td-del" onclick="confirmDelete(${ri})">✕</button></td>`;
+      <td><input class="td-edit" value="${esc(r.note||'')}" oninput="window.setField(${ri},'note',this.value)" placeholder="비고"/></td>
+      <td><button class="td-del" onclick="window.confirmDelete(${ri})">✕</button></td>`;
     tbody.appendChild(tr);
   });
 
@@ -570,14 +618,6 @@ function renderTfoot(filtered) {
     <td style="font-weight:900;">${fmtW(total)}</td>
     <td colspan="5" style="font-weight:900;">${filtered.length} pcs</td>
   </tr>`;
-}
-
-function confirmDelete(ri) {
-  if (confirm('삭제하시겠습니까?')) {
-    rows.splice(ri, 1);
-    renderTable();
-    renderKpi();
-  }
 }
 
 document.getElementById('delSelBtn').addEventListener('click', () => {
@@ -604,6 +644,23 @@ document.getElementById('delAllBtn').addEventListener('click', () => {
 
 tblSearch.addEventListener('input', renderTable);
 sortSelect.addEventListener('change', renderTable);
+
+/* ────────── 일괄 상태 변경 ────────── */
+document.getElementById('bulkStatusSel').addEventListener('change', function() {
+  const val = this.value;
+  if (!val) return;
+  const checked = document.querySelectorAll('.row-check:checked');
+  if (checked.length === 0) { alert('변경할 행을 선택해주세요.'); this.value = ''; return; }
+  const filtered = getFiltered();
+  checked.forEach(cb => {
+    const tr = cb.closest('tr');
+    const idx = [...tr.parentElement.children].indexOf(tr);
+    if (filtered[idx]) filtered[idx].status = val;
+  });
+  this.value = '';
+  renderTable();
+  renderKpi();
+});
 
 /* ────────── 행 추가 ────────── */
 document.getElementById('addRowBtn').addEventListener('click', () => {
