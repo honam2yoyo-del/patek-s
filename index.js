@@ -1379,8 +1379,7 @@
             const dateColor = (isHoliday||dow===0) ? '#D32F2F' : dow===6 ? '#1976D2' : '#2B1A12';
             const isSelected = window.selectedCalDate === dateStr;
 
-            // 행사·교육·기타만 표시 (판매일정·고객은 달력 셀에 미표시)
-            const dayEvs = filtered.filter(e=>e.date===dateStr && e.type!=='판매일정' && e.type!=='고객')
+            const dayEvs = filtered.filter(e=>e.date===dateStr)
                 .sort((a,b)=>a.date.localeCompare(b.date));
             const show = dayEvs.slice(0,2);
             const overflow = dayEvs.length-2;
@@ -1540,13 +1539,13 @@
         const weekContent = document.getElementById('cal-week-content');
         if (weekContent) {
             const today = new Date();
-            const sun = new Date(today); sun.setDate(today.getDate()-today.getDay());
-            const sat = new Date(sun); sat.setDate(sun.getDate()+6);
+            const dayOfWeek = today.getDay();
+            const mon = new Date(today); mon.setDate(today.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+            const weekEnd = new Date(mon); weekEnd.setDate(mon.getDate() + 6);
             const fmt = dt=>`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
-            const [sunStr, satStr] = [fmt(sun), fmt(sat)];
-            const todayStr = fmt(today);
+            const [monStr, weekEndStr] = [fmt(mon), fmt(weekEnd)];
             const weekEvs = (window.calEvents||[])
-                .filter(e=>e.date>=sunStr&&e.date<=satStr&&e.date>=todayStr)
+                .filter(e=>e.date>=monStr&&e.date<=weekEndStr)
                 .sort((a,b)=>(a.type==='판매일정'||a.type==='고객')?-1:(b.type==='판매일정'||b.type==='고객')?1:a.date.localeCompare(b.date))
                 .slice(0,5);
             weekContent.innerHTML = weekEvs.length===0
