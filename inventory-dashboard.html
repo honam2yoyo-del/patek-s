@@ -910,11 +910,6 @@ function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;')
 /* ────────── 자동 저장 ────────── */
 const AUTO_SAVE_KEY = `inv_backup_${curYear}_${pad(curMonth)}`;
 
-// 60초마다 변경사항 있으면 Firestore 자동 저장
-setInterval(() => {
-  if (window.isDirty && window.isDirty()) saveData().catch(()=>{});
-}, 60000);
-
 // 강제 종료 직전 localStorage 긴급 백업
 window.addEventListener('beforeunload', () => {
   if (rows.length > 0) {
