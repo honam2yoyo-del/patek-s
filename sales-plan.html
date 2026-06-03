@@ -1,18 +1,13 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=1920, initial-scale=1" />
-  <title>월 매출 현황</title>
+  <title>메인</title>
   <style>
     * { box-sizing:border-box; margin:0; padding:0; font-family:"Malgun Gothic","맑은 고딕",Arial,sans-serif; }
     body { background:#f7f9fc; color:#111827; }
     .app { display:flex; min-height:100vh; }
-
-    /* 스피너 전체 제거 */
-    input[type=number]::-webkit-outer-spin-button,
-    input[type=number]::-webkit-inner-spin-button { -webkit-appearance:none;margin:0; }
-    input[type=number] { -moz-appearance:textfield; }
 
     /* ── 로그인 ── */
     #login-overlay { position:fixed;inset:0;background:rgba(6,27,52,.97);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999; }
@@ -33,166 +28,73 @@
     .logout { height:60px;display:flex;align-items:center;gap:12px;padding:0 16px;border-top:1px solid rgba(255,255,255,.08);font-size:13.5px;font-weight:700;cursor:pointer;color:rgba(255,255,255,.7); }
     .logout:hover { color:#fff; }
 
-    /* ── 메인 ── */
-    .main { flex:1;padding:22px 24px 88px;overflow-x:auto;margin-left:185px; }
-    .topbar { display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;gap:16px; }
-    .title  { font-size:30px;font-weight:900;letter-spacing:-1px; }
-    .toolbar { display:flex;gap:12px;align-items:center; }
-    .control,.btn { height:44px;border:1px solid #d9e0ea;border-radius:7px;background:#fff;padding:0 16px;font-size:14px;font-weight:700;color:#111827; }
-    .btn { cursor:pointer; }
-    .btn-primary { background:#075bd8;color:#fff;border-color:#075bd8; }
+    /* ── 메인 영역 ── */
+    .main { flex:1;padding:22px 24px 32px;overflow-x:auto;margin-left:185px; }
 
-    /* ── 달력 월 피커 ── */
-    .month-picker-wrap { position:relative; }
-    .mpp-btn { height:44px;border:1px solid #d9e0ea;border-radius:7px;background:#fff;padding:0 14px;font-size:14px;font-weight:700;color:#111827;cursor:pointer;display:flex;align-items:center;gap:8px;white-space:nowrap; }
-    .mpp-btn:hover { border-color:#075bd8; }
-    .mpp-popup { position:absolute;top:calc(100%+6px);left:0;z-index:999;background:#fff;border:1px solid #d9e0ea;border-radius:10px;padding:14px;box-shadow:0 6px 24px rgba(15,23,42,.14);width:230px; }
-    .mpp-header { display:flex;justify-content:space-between;align-items:center;margin-bottom:12px; }
-    .mpp-year { font-size:16px;font-weight:900;color:#111827; }
-    .mpp-nav { background:none;border:none;cursor:pointer;font-size:20px;color:#0067e8;padding:2px 8px;border-radius:5px;line-height:1; }
-    .mpp-nav:hover { background:#eaf3ff; }
-    .mpp-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:6px; }
-    .mpp-month { padding:9px 0;border:none;background:#f6f8fb;border-radius:7px;cursor:pointer;font-size:13px;font-weight:700;color:#374151;transition:.12s; }
-    .mpp-month:hover { background:#eaf3ff;color:#0067e8; }
-    .mpp-month.sel { background:#075bd8;color:#fff; }
-    .quarter-badge { height:44px;border:1px solid #d9e0ea;border-radius:7px;background:#f6f8fb;padding:0 18px;font-size:14px;font-weight:900;color:#374151;display:flex;align-items:center;cursor:default;user-select:none;white-space:nowrap; }
+    /* ── 탑바 ── */
+    .topbar { display:flex;justify-content:space-between;align-items:center;margin-bottom:20px; }
+    .page-title { font-size:30px;font-weight:900;letter-spacing:-1px; }
+    .clock { font-size:14px;font-weight:700;color:#6b7280; }
 
-    /* ── KPI 카드 ── */
-    .kpi-grid { display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-bottom:16px; }
-    .kpi-card { background:#fff;border:1px solid #e2e7ef;border-radius:8px;padding:18px 24px;box-shadow:0 2px 8px rgba(15,23,42,.035); }
-    .kpi-title { font-size:14px;font-weight:900;margin-bottom:10px; }
-    .kpi-amount-row { display:flex;align-items:baseline;gap:3px;flex-wrap:nowrap;margin-bottom:4px; }
-    .kpi-num { background:transparent;border:none;outline:none;font-family:inherit;font-size:clamp(14px,1.8vw,24px);font-weight:900;letter-spacing:-.5px;color:inherit;min-width:0;flex:1; }
-    .kpi-unit { font-size:16px;font-weight:700;white-space:nowrap;flex-shrink:0; }
-    .kpi-pcs-row { font-size:14px;font-weight:700;color:#4b5563;display:flex;align-items:center;gap:2px;flex-wrap:nowrap; }
-    .kpi-pcs-num { background:transparent;border:none;outline:none;font-family:inherit;font-size:14px;font-weight:700;color:#4b5563;min-width:20px;width:3ch; }
-    .kpi-num::placeholder,.kpi-pcs-num::placeholder { color:#ccc; }
+    /* ── KPI 카드 5개 ── */
+    .kpi-grid { display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-bottom:20px; }
+    .kpi-card { background:#fff;border:1px solid #e2e7ef;border-radius:8px;padding:18px 20px;box-shadow:0 2px 8px rgba(15,23,42,.035); }
+    .kpi-label { font-size:13px;font-weight:700;color:#6b7280;margin-bottom:10px; }
+    .kpi-value { font-size:28px;font-weight:900;letter-spacing:-.5px;line-height:1.1; }
+    .kpi-sub { font-size:13px;font-weight:700;color:#6b7280;margin-top:4px; }
+    .kpi-value.blue { color:#0067e8; }
+    .kpi-value.red  { color:#ff0000; }
 
-    .blue{color:#0067e8;} .red{color:#ff0000;} .green{color:#009844;} .orange{color:#ff7a00;} .black{color:#111827;}
+    /* ── 미들 / 바텀 그리드 ── */
+    .mid-grid { display:grid;grid-template-columns:1.6fr 1fr;gap:16px;margin-bottom:16px; }
+    .bot-grid { display:grid;grid-template-columns:1fr 1fr;gap:16px; }
 
-    /* ── 대시보드 패널 ── */
-    .dashboard-grid { display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-bottom:16px; }
-    .panel { background:#fff;border:1px solid #e2e7ef;border-radius:8px;box-shadow:0 2px 8px rgba(15,23,42,.035); }
-    .panel-header { padding:20px 24px 14px;font-size:18px;font-weight:900;border-bottom:1px solid #e5eaf2; }
-    .panel-body   { padding:18px 24px; }
+    /* ── 패널 공통 ── */
+    .panel { background:#fff;border:1px solid #e2e7ef;border-radius:10px;box-shadow:0 2px 8px rgba(15,23,42,.035); }
+    .panel-header { padding:18px 22px 14px;font-size:18px;font-weight:900;border-bottom:1px solid #e5eaf2; }
+    .panel-body { padding:18px 22px; }
 
-    .goal-table { width:100%;border-collapse:collapse;margin-bottom:14px; }
-    .goal-table td { padding:11px 0;border-bottom:1px solid #e5eaf2;font-size:15px;font-weight:700; }
-    .goal-table td:nth-child(1) { width:24%;font-weight:900; }
-    .goal-table td:nth-child(2) { text-align:right;width:46%; }
-    .goal-table td:nth-child(3) { text-align:right;width:30%; }
-    .branch-link { color:#0067e8;cursor:pointer;font-weight:900; }
-    .branch-link:hover { text-decoration:underline; }
-    .goal-progress-area { margin-top:14px;padding-top:8px; }
-    .progress-title { display:flex;justify-content:space-between;align-items:center;font-size:16px;font-weight:900;margin-bottom:10px; }
-    .progress-bg  { height:31px;background:#e9edf4;border-radius:6px;overflow:hidden; }
-    .progress-bar { height:100%;min-width:40px;background:#0766e8;color:#fff;display:flex;justify-content:flex-end;align-items:center;padding-right:12px;font-size:13px;font-weight:900;transition:.4s; }
-    .progress-scale { display:flex;justify-content:space-between;color:#4b5563;font-size:13px;margin-top:9px; }
-    .remain-box { margin-top:18px;padding-top:16px;border-top:1px solid #e5eaf2;display:flex;justify-content:space-between;align-items:center;font-weight:900;font-size:16px; }
+    /* ── 매출 요약 ── */
+    .summary-section { margin-bottom:18px; }
+    .summary-section:last-child { margin-bottom:0; }
+    .summary-section-title { font-size:13px;font-weight:900;color:#6b7280;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px; }
+    .big-pct { font-size:36px;font-weight:900;letter-spacing:-1px;margin-bottom:8px; }
+    .big-pct.green { color:#16a34a; }
+    .big-pct.red   { color:#dc2626; }
+    .progress-bg { height:28px;background:#e9edf4;border-radius:6px;overflow:hidden;margin-bottom:6px; }
+    .progress-fill { height:100%;min-width:0;border-radius:6px;display:flex;align-items:center;justify-content:flex-end;padding-right:10px;font-size:12px;font-weight:900;color:#fff;transition:width .5s; }
+    .progress-fill.blue  { background:#0766e8; }
+    .progress-fill.green { background:#22c55e; }
+    .progress-sub { font-size:13px;font-weight:700;color:#6b7280; }
+    .yoy-value { font-size:22px;font-weight:900;margin-bottom:4px; }
+    .yoy-value.pos { color:#16a34a; }
+    .yoy-value.neg { color:#dc2626; }
 
-    .ipt { background:transparent;border:none;outline:none;font-family:inherit;font-size:inherit;font-weight:inherit;color:inherit;text-align:right; }
-    .ipt.w120 { width:120px; } .ipt.w80 { width:80px; } .ipt.w60 { width:60px; }
+    /* ── 체크리스트 ── */
+    .checklist { list-style:none; }
+    .checklist li { display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid #f0f4fa;font-size:14px;font-weight:700; }
+    .checklist li:last-child { border-bottom:0; }
+    .dot { width:10px;height:10px;border-radius:50%;flex-shrink:0; }
+    .dot-orange { background:#f97316; }
+    .dot-red    { background:#ef4444; }
+    .dot-blue   { background:#3b82f6; }
+    .dot-purple { background:#a855f7; }
+    .dot-gray   { background:#9ca3af; }
 
-    .quarter-list { list-style:none; }
-    .quarter-list li { display:flex;justify-content:space-between;align-items:center;padding:13px 0;border-bottom:1px solid #e5eaf2;font-size:15px;font-weight:700; }
-    .quarter-list li:last-child { border-bottom:0; }
-    .quarter-value { font-weight:900; }
-
-    .chart-wrap { height:256px;padding-top:6px;display:flex;align-items:flex-end;justify-content:center;gap:42px;border-left:1px solid #dbe3ee;border-bottom:1px solid #dbe3ee;position:relative; }
-    .chart-unit  { position:absolute;left:-4px;top:-4px;font-size:12px;color:#111827;font-weight:700; }
-    .bar-item    { height:220px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:5px;font-size:12px;font-weight:700;min-width:80px; }
-    .bar-meta    { text-align:center;line-height:1.35;margin-bottom:2px;font-size:12px;font-weight:800; }
-    .bar         { width:38px;border-radius:5px 5px 0 0;background:linear-gradient(180deg,#2d86ff 0%,#0058d6 100%); }
-    .bar-month   { font-size:14px;font-weight:900;margin-top:3px; }
-
-    .mpds-list { list-style:none; }
-    .mpds-list li { display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:8px;padding:12px 0;font-size:15px;font-weight:700; }
-    .mpds-list li.divider { border-top:1px solid #d9e0ea;margin-top:4px;padding-top:18px; }
-    .mpds-list strong { font-weight:900;min-width:55px;text-align:right; }
-    .mpds-input { width:74px;height:36px;border:1px solid #d9e0ea;border-radius:6px;text-align:center;font-size:16px;font-weight:800;outline:none; }
-
-    /* ── 재고 관리 ── */
-    .inventory-panel { background:#fff;border:1px solid #e2e7ef;border-radius:8px;box-shadow:0 2px 8px rgba(15,23,42,.035);display:grid;grid-template-columns:2.25fr 1fr;overflow:hidden;margin-bottom:0; }
-    .inventory-left  { border-right:1px solid #e5eaf2; }
-    .inventory-header { padding:18px 24px 10px;font-size:19px;font-weight:900; }
-    .tabs { display:flex;padding:0 16px;border-bottom:1px solid #e5eaf2;gap:10px; }
-    .tab  { appearance:none;border:0;background:transparent;padding:14px 20px;font-size:14px;font-weight:900;color:#111827;border-bottom:3px solid transparent;cursor:pointer; }
-    .tab.active { color:#0067e8;border-bottom-color:#0067e8; }
-    .table-wrap { padding:14px 16px 12px;overflow-x:auto; }
-    table { width:100%;border-collapse:collapse; }
-    .inventory-table { min-width:780px; }
-    th,td { border:1px solid #e2e7ef;padding:10px 12px;font-size:14px;text-align:center;white-space:nowrap; }
-    th { background:#f6f8fb;font-weight:900; }
-    td { background:#fff;font-weight:700; }
-    .inventory-table tfoot td { background:#fbfcfe;font-weight:900; }
-    input[type="checkbox"] { width:16px;height:16px;accent-color:#0067e8;cursor:pointer; }
-    .td-edit { background:transparent;border:none;outline:none;font-family:inherit;font-size:14px;font-weight:700;color:#111827;width:100%;text-align:center; }
-    .td-del  { background:none;border:none;cursor:pointer;color:#ccc;font-size:14px;padding:2px; }
-    .td-del:hover { color:#f00; }
-    .status-sel { background:transparent;border:none;outline:none;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer; }
-    .badge { display:inline-flex;justify-content:center;align-items:center;min-width:66px;height:26px;padding:0 8px;border-radius:6px;font-size:12px;font-weight:900; }
-    .badge-sale    { background:#e6f8ee;color:#009844; }
-    .badge-confirm { background:#fff3e5;color:#ff7a00; }
-    .badge-carry   { background:#eaf3ff;color:#0067e8; }
-    .badge-rest    { background:#f1f3f5;color:#111827; }
-    .badge-as      { background:#fee2e2;color:#ff0000; }
-    .selected-summary { margin:10px 16px 12px;height:40px;border:1px solid #7aa9ff;border-radius:5px;display:grid;grid-template-columns:1fr 1fr 1fr;align-items:center;padding:0 16px;font-size:14px;font-weight:900; }
-    .selected-summary b { color:#0067e8;margin-left:10px; }
-    .summary-panel { padding:18px 16px; }
-    .summary-title { font-size:19px;font-weight:900;margin-bottom:14px; }
-    .summary-table th,.summary-table td { padding:14px 12px;font-size:15px; }
-    .summary-table td:first-child { text-align:left;padding-left:18px;font-weight:900; }
-
-    /* ── 하단 바 ── */
-    .bottom-actions { position:fixed;left:185px;right:0;bottom:0;height:72px;display:flex;justify-content:flex-end;align-items:center;gap:14px;padding:0 24px;background:rgba(255,255,255,.97);border-top:1px solid #e2e7ef;box-shadow:0 -4px 16px rgba(15,23,42,.06); }
-    .bottom-btn { height:42px;min-width:132px;border-radius:6px;border:1px solid #d9e0ea;background:#fff;font-size:14px;font-weight:900;cursor:pointer; }
-    .bottom-btn.primary { background:#075bd8;color:#fff;border-color:#075bd8; }
-
-    /* ── 공통 모달 ── */
-    .modal-backdrop { display:none;position:fixed;inset:0;background:rgba(15,23,42,.35);z-index:100;justify-content:center;align-items:center;overflow-y:auto; }
-    .modal-backdrop.show { display:flex; }
-    .modal { background:#fff;border-radius:10px;box-shadow:0 20px 60px rgba(15,23,42,.25);padding:22px;max-height:90vh;overflow-y:auto; }
-    .modal-title { font-size:20px;font-weight:900;margin-bottom:16px; }
-    .modal-row   { display:grid;grid-template-columns:90px 1fr;align-items:center;gap:12px;margin-bottom:12px;font-size:15px;font-weight:800; }
-    .modal-row input { height:40px;border:1px solid #d9e0ea;border-radius:6px;padding:0 12px;font-size:15px;text-align:right;font-weight:800;outline:none; }
-    .modal-total   { margin-top:14px;padding:14px;background:#f6f8fb;border-radius:6px;display:flex;justify-content:space-between;font-weight:900; }
-    .modal-actions { display:flex;justify-content:flex-end;gap:10px;margin-top:18px; }
-
-    /* ── 에비뉴엘 / 센텀 연간 모달 ── */
-    .av-modal { width:1100px;max-width:96vw; }
-    .av-qtr-grid { display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px; }
-    .av-qtr { border:1px solid #e5eaf2;border-radius:8px;overflow:hidden; }
-    .av-qtr-hdr { padding:8px 10px;font-size:12px;font-weight:900;background:#f6f8fb;border-bottom:1px solid #e5eaf2;text-align:center;color:#4b5563; }
-    .av-qtr-hdr.cur { background:#eaf3ff;color:#0067e8; }
-    .av-months { padding:8px 10px;display:flex;flex-direction:column;gap:5px; }
-    .av-month-row { display:grid;grid-template-columns:26px 1fr 52px;align-items:center;gap:4px;font-size:12px;font-weight:700; }
-    .av-month-row label { color:#4b5563;font-size:11px;white-space:nowrap; }
-    .av-month-row input { height:28px;border:1px solid #d9e0ea;border-radius:5px;padding:0 5px;font-size:12px;font-weight:700;outline:none;text-align:right;width:100%;min-width:0; }
-    .av-month-row input.pcs-input { font-size:11px;color:#4b5563; }
-    .av-qtr-sub { padding:3px 10px 8px;font-size:11px;font-weight:900;color:#0067e8;text-align:right;line-height:1.6; }
-
-    /* ── 목표 달성률 모달 ── */
-    .gm-modal { width:380px; }
-    .gm-row { display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 0;border-bottom:1px solid #f0f2f6;font-size:14px;font-weight:700; }
-    .gm-row:last-of-type { border-bottom:0; }
-    .gm-label { color:#4b5563;white-space:nowrap;width:130px;flex-shrink:0; }
-    .gm-input { flex:1;height:36px;border:1px solid #d9e0ea;border-radius:6px;padding:0 10px;font-size:14px;font-weight:700;outline:none;text-align:right;min-width:0; }
-    .gm-rate-box { margin-top:12px;padding:14px;background:#eaf3ff;border-radius:8px;display:flex;justify-content:space-between;align-items:center;font-weight:900;font-size:16px; }
+    /* ── 고객 / SP오더 패널 ── */
+    .stat-row { display:grid;grid-template-columns:1fr 1fr;gap:14px; }
+    .stat-box { background:#f7f9fc;border:1px solid #e2e7ef;border-radius:8px;padding:16px 18px;text-align:center; }
+    .stat-box-label { font-size:12px;font-weight:700;color:#6b7280;margin-bottom:8px; }
+    .stat-box-value { font-size:26px;font-weight:900; }
+    .stat-box-unit  { font-size:13px;font-weight:700;color:#6b7280;margin-top:2px; }
 
     @media(max-width:1400px){
-      .dashboard-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
-      .inventory-panel { grid-template-columns:1fr; }
-      .inventory-left { border-right:0;border-bottom:1px solid #e5eaf2; }
-      .av-qtr-grid { grid-template-columns:repeat(2,1fr); }
+      .kpi-grid { grid-template-columns:repeat(3,1fr); }
+      .mid-grid { grid-template-columns:1fr; }
+      .bot-grid { grid-template-columns:1fr; }
     }
-    @media(max-width:1100px){
-      .kpi-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
-    }
-    @media(max-width:980px){
-      .app { flex-direction:column; }
-      .sidebar { width:100%; }
-      .bottom-actions { position:static;left:0;flex-wrap:wrap;height:auto;padding:16px; }
-      .kpi-grid,.dashboard-grid { grid-template-columns:1fr; }
+    @media(max-width:900px){
+      .kpi-grid { grid-template-columns:repeat(2,1fr); }
     }
   </style>
 </head>
@@ -210,6 +112,7 @@
 </div>
 
 <div class="app">
+  <!-- 사이드바 -->
   <aside class="sidebar">
     <div style="flex:1;min-height:0;overflow-y:auto;">
       <div class="brand"><img src="log.png" onerror="this.style.display='none'"/>Sales</div>
@@ -234,310 +137,280 @@
     </div>
   </aside>
 
+  <!-- 메인 콘텐츠 -->
   <main class="main">
+    <!-- 탑바 -->
     <div class="topbar">
-      <h1 class="title">월 매출 현황</h1>
-      <div class="toolbar">
-        <div class="month-picker-wrap" id="monthPickerWrap">
-          <button class="mpp-btn" id="monthPickerBtn">
-            <span>📅</span><span id="monthPickerLabel">2026년 6월</span>
-          </button>
-          <div class="mpp-popup" id="monthPickerPopup" style="display:none;">
-            <div class="mpp-header">
-              <button class="mpp-nav" id="prevYearBtn">‹</button>
-              <span class="mpp-year" id="pickerYearLabel">2026년</span>
-              <button class="mpp-nav" id="nextYearBtn">›</button>
-            </div>
-            <div class="mpp-grid" id="pickerMonthGrid"></div>
-          </div>
-        </div>
-        <div class="quarter-badge" id="quarterBadge">2분기</div>
-        <button class="btn btn-primary" id="save-btn">💾 저장하기</button>
-      </div>
+      <h1 class="page-title">메인</h1>
+      <div class="clock" id="clockDisplay"></div>
     </div>
 
-    <!-- KPI 카드 4개 -->
+    <!-- KPI 카드 5개 -->
     <section class="kpi-grid">
       <div class="kpi-card">
-        <div class="kpi-title" id="expectedTitle">6월 예상 매출</div>
-        <div class="kpi-amount-row">
-          <input class="kpi-num" id="f-expectedSales" type="text" inputmode="numeric" placeholder="0" oninput="window.fmtNum(this);recalcRemain()"/>
-          <span class="kpi-unit">원</span>
-        </div>
-        <div class="kpi-pcs-row">(<input class="kpi-pcs-num" id="f-expectedPcs" type="text" inputmode="numeric" placeholder="0" oninput="window.fmtNum(this);recalcRemain()"/> pcs)</div>
+        <div class="kpi-label">당월 예상 매출</div>
+        <div class="kpi-value" id="kpi-expected">-</div>
+        <div class="kpi-sub" id="kpi-expected-pcs">- pcs</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-title" id="lastYearTitle">작년 6월 매출</div>
-        <div class="kpi-amount-row">
-          <input class="kpi-num" id="f-lastYearSales" type="text" inputmode="numeric" placeholder="0" oninput="window.fmtNum(this)"/>
-          <span class="kpi-unit">원</span>
-        </div>
-        <div class="kpi-pcs-row">(<input class="kpi-pcs-num" id="f-lastYearPcs" type="text" inputmode="numeric" placeholder="0" oninput="window.fmtNum(this)"/> pcs)</div>
+        <div class="kpi-label">현재 매출</div>
+        <div class="kpi-value blue" id="kpi-current">-</div>
+        <div class="kpi-sub" id="kpi-current-pcs">- pcs</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-title">현재 매출</div>
-        <div class="kpi-amount-row blue">
-          <input class="kpi-num blue" id="f-currentSales" type="text" inputmode="numeric" placeholder="0" oninput="window.fmtNum(this);recalcRemain()"/>
-          <span class="kpi-unit blue">원</span>
-        </div>
-        <div class="kpi-pcs-row">(<input class="kpi-pcs-num" id="f-currentPcs" type="text" inputmode="numeric" placeholder="0" oninput="window.fmtNum(this);recalcRemain()"/> pcs)</div>
+        <div class="kpi-label">남은 매출</div>
+        <div class="kpi-value red" id="kpi-remain">-</div>
+        <div class="kpi-sub" id="kpi-remain-pcs">- pcs</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-title">남은 매출</div>
-        <div id="remainDisplay" style="margin-top:6px;font-size:24px;font-weight:900;letter-spacing:-.5px;">계산 중...</div>
+        <div class="kpi-label">MPDS 등록 가능</div>
+        <div class="kpi-value" id="kpi-mpds">-</div>
+        <div class="kpi-sub">pcs</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">매장 재고 AS</div>
+        <div class="kpi-value" id="kpi-as">-</div>
+        <div class="kpi-sub">건</div>
       </div>
     </section>
 
-    <!-- 대시보드 4패널 -->
-    <section class="dashboard-grid">
+    <!-- 미들 섹션 -->
+    <div class="mid-grid">
 
-      <!-- 목표 달성 현황 -->
+      <!-- 매출 요약 패널 -->
       <div class="panel">
-        <div class="panel-header">목표 달성 현황</div>
+        <div class="panel-header">매출 요약</div>
         <div class="panel-body">
-          <table class="goal-table">
-            <tbody>
-              <tr>
-                <td><span class="branch-link" id="centumOpen">센텀</span></td>
-                <td id="centumGoalAmountDisp">-</td>
-                <td id="centumGoalRateDisp">-</td>
-              </tr>
-              <tr>
-                <td><span class="branch-link" id="avenueOpen">에비뉴엘</span></td>
-                <td id="avenueGoalAmountDisp">-</td>
-                <td id="avenueGoalRateDisp">-</td>
-              </tr>
-              <tr>
-                <td>합계</td>
-                <td id="totalGoalAmountDisp">-</td>
-                <td id="totalGoalRateDisp">-</td>
-              </tr>
-            </tbody>
-          </table>
-          <div class="goal-progress-area">
-            <div class="progress-title">
-              <span class="branch-link" id="goalRateOpen" style="cursor:pointer;">목표 달성률</span>
-              <span id="mainGoalRateText">0%</span>
+
+          <!-- 목표 달성률 -->
+          <div class="summary-section">
+            <div class="summary-section-title">목표 달성률</div>
+            <div class="big-pct" id="achieve-pct">0%</div>
+            <div class="progress-bg">
+              <div class="progress-fill blue" id="achieve-bar" style="width:0%"></div>
             </div>
-            <div class="progress-bg"><div class="progress-bar" id="mainProgressBar">0%</div></div>
-            <div class="progress-scale"><span>0%</span><span>100%</span></div>
+            <div class="progress-sub" id="achieve-sub">현재 -억 / 목표 -억</div>
           </div>
-          <div class="remain-box">
-            <span>총 남은 금액</span>
-            <span class="red" id="totalRemainDisplay">-</span>
+
+          <!-- 센터 목표 달성률 -->
+          <div class="summary-section">
+            <div class="summary-section-title">센터 목표 달성률</div>
+            <div class="big-pct" id="centum-pct" style="font-size:26px;">0%</div>
+            <div class="progress-bg">
+              <div class="progress-fill green" id="centum-bar" style="width:0%"></div>
+            </div>
+            <div class="progress-sub" id="centum-sub">현재 -억 / 목표 -억</div>
           </div>
+
+          <!-- 작년 동일 대비 -->
+          <div class="summary-section">
+            <div class="summary-section-title">작년 동일 대비</div>
+            <div class="yoy-value" id="yoy-pct">-</div>
+            <div class="progress-sub" id="yoy-sub">작년 동일 -억</div>
+          </div>
+
         </div>
       </div>
 
-      <!-- 분기 목표 현황 -->
+      <!-- 체크리스트 패널 -->
       <div class="panel">
-        <div class="panel-header">분기 목표 현황 (<span id="quarterLabelText">2</span>분기)</div>
+        <div class="panel-header">체크리스트</div>
         <div class="panel-body">
-          <ul class="quarter-list">
-            <li>
-              <span>센텀 달성률</span>
-              <span class="quarter-value blue" id="quarterGoalRateDisplay">-</span>
-            </li>
-            <li><span>달성 금액 (누적)</span><span class="quarter-value" id="quarterAchievedDisplay">-</span></li>
-            <li><span>남은 금액</span><span class="quarter-value red" id="quarterRemainDisplay">-</span></li>
-            <li><span>누적 수량</span><span class="quarter-value" id="quarterAccumPcsDisplay">-</span></li>
+          <ul class="checklist">
+            <li><span class="dot dot-orange"></span>MPDS 목적 재고 확인 필요</li>
+            <li><span class="dot dot-red"></span>AS 건 확인 필요</li>
+            <li><span class="dot dot-blue"></span>이월 대상 확인 필요</li>
+            <li><span class="dot dot-purple"></span>SP오더 확인 필요</li>
+            <li><span class="dot dot-gray"></span>공지 / 매출 보고 확인</li>
           </ul>
         </div>
       </div>
 
-      <!-- 월별 매출 누적 현황 (자동 계산) -->
+    </div>
+
+    <!-- 바텀 섹션 -->
+    <div class="bot-grid">
+
+      <!-- 고객 패널 -->
       <div class="panel">
-        <div class="panel-header" style="display:flex;justify-content:space-between;align-items:center;">
-          <span>월별 매출 누적 현황</span>
-          <button id="prevYearToggle" onclick="window.togglePrevYear()" class="btn" style="height:28px;font-size:11px;font-weight:700;padding:0 10px;border-radius:6px;">전년 비교</button>
-        </div>
+        <div class="panel-header">고객</div>
         <div class="panel-body">
-          <div class="chart-wrap" id="chartWrap">
-            <div class="chart-unit">(천 원)</div>
+          <div class="stat-row">
+            <div class="stat-box">
+              <div class="stat-box-label">AS 진행중</div>
+              <div class="stat-box-value" id="bot-as-active">-</div>
+              <div class="stat-box-unit">건</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-box-label">AS 입고</div>
+              <div class="stat-box-value">0</div>
+              <div class="stat-box-unit">건</div>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- MPDS -->
+      <!-- SP오더 현황 패널 -->
       <div class="panel">
-        <div class="panel-header">MPDS 등록 가능 현황</div>
+        <div class="panel-header">SP오더 현황</div>
         <div class="panel-body">
-          <ul class="mpds-list">
-            <li><span>최소등록기준</span><input class="mpds-input" id="f-mpdsMin" type="number" value="30" oninput="recalcMpds()"/><span>pcs</span></li>
-            <li><span>현재 등록가능 재고</span><input class="mpds-input" id="f-mpdsCurrent" type="number" placeholder="0" oninput="recalcMpds()"/><span>pcs</span></li>
-            <li><span>부족 수량</span><strong class="red" id="mpdsShortText">-</strong><span>pcs</span></li>
-            <li class="divider"><span>입고예정 수량</span><input class="mpds-input" id="f-mpdsIncoming" type="number" placeholder="0" oninput="recalcMpds()"/><span>pcs</span></li>
-            <li><span>예상 등록 가능 수량</span><strong id="mpdsExpectedText">-</strong><span>pcs</span></li>
-          </ul>
+          <div class="stat-row">
+            <div class="stat-box">
+              <div class="stat-box-label">SP오더 진행중</div>
+              <div class="stat-box-value">0</div>
+              <div class="stat-box-unit">건</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-box-label">SP오더 입고</div>
+              <div class="stat-box-value">0</div>
+              <div class="stat-box-unit">건</div>
+            </div>
+          </div>
         </div>
       </div>
-    </section>
 
-    <!-- 재고 매출 관리 -->
-    <section class="inventory-panel">
-      <div class="inventory-left">
-        <div class="inventory-header">재고 매출 관리</div>
-        <div class="tabs" id="tabsBar">
-          <button class="tab active" data-filter="전체">전체</button>
-          <button class="tab" data-filter="판매예정">판매예정</button>
-          <button class="tab" data-filter="컨펌예정">컨펌예정</button>
-          <button class="tab" data-filter="이월예정">이월예정</button>
-          <button class="tab" data-filter="AS">AS</button>
-          <button class="tab" data-filter="잔여재고">잔여재고</button>
-        </div>
-        <div class="table-wrap">
-          <table class="inventory-table" id="inventoryTable">
-            <thead>
-              <tr>
-                <th style="width:44px;"><input type="checkbox" id="checkAll"/></th>
-                <th style="width:50px;">No.</th>
-                <th>REF.</th>
-                <th>금액</th>
-                <th>고객명</th>
-                <th>예상 매출일</th>
-                <th>상태</th>
-                <th>비고</th>
-                <th style="width:28px;"></th>
-              </tr>
-            </thead>
-            <tbody id="inventoryTbody"></tbody>
-            <tfoot id="inventoryTfoot"></tfoot>
-          </table>
-        </div>
-        <div class="selected-summary">
-          <span>선택 합계</span>
-          <span>선택 수량 <b id="selectedQty">0 pcs</b></span>
-          <span>선택 금액 <b id="selectedAmount">0 원</b></span>
-        </div>
-      </div>
-      <aside class="summary-panel">
-        <div class="summary-title">재고 상태별 합계</div>
-        <table class="summary-table">
-          <thead><tr><th>상태</th><th>수량(PCS)</th><th>총 금액</th></tr></thead>
-          <tbody id="summaryTbody"></tbody>
-        </table>
-      </aside>
-    </section>
+    </div>
   </main>
-
-  <div class="bottom-actions">
-    <button class="bottom-btn" id="excelBtn">엑셀 다운로드</button>
-    <button class="bottom-btn" onclick="window.print()">프린트</button>
-  </div>
 </div>
 
-<!-- ══ 에비뉴엘 연간 모달 ══ -->
-<div class="modal-backdrop" id="avenueModal">
-  <div class="modal av-modal">
-    <div class="modal-title">에비뉴엘 월별 매출 입력 (<span id="avenueYearLabel">2026</span>년)</div>
-    <div class="av-qtr-grid">
-      <div class="av-qtr" id="av-qtr-1">
-        <div class="av-qtr-hdr" id="av-qtr-hdr-1">1분기 (1~3월)</div>
-        <div class="av-months" id="av-months-1"></div>
-        <div class="av-qtr-sub" id="av-sub-1">합계: -<br>PCS: -</div>
-      </div>
-      <div class="av-qtr" id="av-qtr-2">
-        <div class="av-qtr-hdr" id="av-qtr-hdr-2">2분기 (4~6월)</div>
-        <div class="av-months" id="av-months-2"></div>
-        <div class="av-qtr-sub" id="av-sub-2">합계: -<br>PCS: -</div>
-      </div>
-      <div class="av-qtr" id="av-qtr-3">
-        <div class="av-qtr-hdr" id="av-qtr-hdr-3">3분기 (7~9월)</div>
-        <div class="av-months" id="av-months-3"></div>
-        <div class="av-qtr-sub" id="av-sub-3">합계: -<br>PCS: -</div>
-      </div>
-      <div class="av-qtr" id="av-qtr-4">
-        <div class="av-qtr-hdr" id="av-qtr-hdr-4">4분기 (10~12월)</div>
-        <div class="av-months" id="av-months-4"></div>
-        <div class="av-qtr-sub" id="av-sub-4">합계: -<br>PCS: -</div>
-      </div>
-    </div>
-    <div class="modal-total"><span>연간 합계</span><span id="avenueTotalText">- 원 / - PCS</span></div>
-    <div class="modal-actions">
-      <button class="btn" id="avenueClose">닫기</button>
-      <button class="btn btn-primary" id="avenueApply">저장 및 반영</button>
-    </div>
-  </div>
-</div>
+<script type="module">
+import { initializeApp }     from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, doc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-<!-- ══ 센텀 연간 모달 ══ -->
-<div class="modal-backdrop" id="centumModal">
-  <div class="modal av-modal">
-    <div class="modal-title">센텀 월별 매출 입력 (<span id="centumYearLabel">2026</span>년)</div>
-    <div class="av-qtr-grid">
-      <div class="av-qtr" id="ct-qtr-1">
-        <div class="av-qtr-hdr" id="ct-qtr-hdr-1">1분기 (1~3월)</div>
-        <div class="av-months" id="ct-months-1"></div>
-        <div class="av-qtr-sub" id="ct-sub-1">합계: -<br>PCS: -</div>
-      </div>
-      <div class="av-qtr" id="ct-qtr-2">
-        <div class="av-qtr-hdr" id="ct-qtr-hdr-2">2분기 (4~6월)</div>
-        <div class="av-months" id="ct-months-2"></div>
-        <div class="av-qtr-sub" id="ct-sub-2">합계: -<br>PCS: -</div>
-      </div>
-      <div class="av-qtr" id="ct-qtr-3">
-        <div class="av-qtr-hdr" id="ct-qtr-hdr-3">3분기 (7~9월)</div>
-        <div class="av-months" id="ct-months-3"></div>
-        <div class="av-qtr-sub" id="ct-sub-3">합계: -<br>PCS: -</div>
-      </div>
-      <div class="av-qtr" id="ct-qtr-4">
-        <div class="av-qtr-hdr" id="ct-qtr-hdr-4">4분기 (10~12월)</div>
-        <div class="av-months" id="ct-months-4"></div>
-        <div class="av-qtr-sub" id="ct-sub-4">합계: -<br>PCS: -</div>
-      </div>
-    </div>
-    <div class="modal-total"><span>연간 합계</span><span id="centumTotalText">- 원 / - PCS</span></div>
-    <div class="modal-actions">
-      <button class="btn" id="centumClose">닫기</button>
-      <button class="btn btn-primary" id="centumApply">저장 및 반영</button>
-    </div>
-  </div>
-</div>
+const FC = { apiKey:"AIzaSyCt7aQXA5eFdnDTMHlRhjPAkyH4b8UB6HY", authDomain:"patek-s.firebaseapp.com", projectId:"patek-s", storageBucket:"patek-s.firebasestorage.app", messagingSenderId:"786016749285", appId:"1:786016749285:web:58538eec1cf7e72068b60c" };
+const app  = initializeApp(FC);
+const auth = getAuth(app);
+const db   = getFirestore(app);
 
-<!-- ══ 목표 달성률 모달 ══ -->
-<div class="modal-backdrop" id="goalRateModal">
-  <div class="modal gm-modal">
-    <div class="modal-title">목표 달성률 계산</div>
-    <div class="gm-row"><span class="gm-label">분기 총 목표 금액</span><input class="gm-input" id="gm-total" type="text" inputmode="numeric" placeholder="0" oninput="window.fmtNum(this);window.calcGoalRate()"/> 원</div>
-    <div class="gm-row"><span class="gm-label">센텀</span><input class="gm-input" id="gm-centum" type="text" inputmode="numeric" placeholder="0" oninput="window.fmtNum(this);window.calcGoalRate()"/> 원</div>
-    <div class="gm-row"><span class="gm-label">에비뉴엘</span><input class="gm-input" id="gm-avenue" type="text" inputmode="numeric" placeholder="0" oninput="window.fmtNum(this);window.calcGoalRate()"/> 원</div>
-    <div class="modal-actions">
-      <button class="btn" id="goalRateClose">닫기</button>
-      <button class="btn btn-primary" id="goalRateApply">적용</button>
-    </div>
-  </div>
-</div>
+// ── safeNav (read-only page — simple redirect) ──
+window.safeNav = function(url){ location.href = url; };
 
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script type="module" src="sales-plan.js"></script>
+// ── 시계 ──
+function updateClock(){
+  const now = new Date();
+  const days = ['일','월','화','수','목','금','토'];
+  const y = now.getFullYear();
+  const mo = String(now.getMonth()+1).padStart(2,'0');
+  const d  = String(now.getDate()).padStart(2,'0');
+  const dw = days[now.getDay()];
+  const h  = String(now.getHours()).padStart(2,'0');
+  const mi = String(now.getMinutes()).padStart(2,'0');
+  document.getElementById('clockDisplay').textContent = `${y}.${mo}.${d} (${dw}) ${h}:${mi}`;
+}
+updateClock();
+setInterval(updateClock, 1000);
 
-<!-- ── 이탈 방지 다이얼로그 ── -->
-<div id="navGuard" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.52);z-index:9500;align-items:center;justify-content:center;">
-  <div style="background:#fff;border-radius:12px;padding:28px 32px;width:380px;box-shadow:0 16px 48px rgba(15,23,42,.28);font-family:'Malgun Gothic','맑은 고딕',Arial,sans-serif;">
-    <div style="font-size:18px;font-weight:900;color:#111827;margin-bottom:10px;">저장하시겠습니까?</div>
-    <div style="font-size:14px;font-weight:700;color:#6b7280;line-height:1.6;margin-bottom:24px;">변경된 내용이 있습니다.<br>저장하지 않으면 변경사항이 사라집니다.</div>
-    <div style="display:flex;gap:10px;justify-content:flex-end;">
-      <button id="ngSave"    style="height:40px;padding:0 22px;border:none;border-radius:7px;background:#075bd8;font-size:14px;font-weight:700;cursor:pointer;color:#fff;font-family:inherit;">저장</button>
-      <button id="ngDiscard" style="height:40px;padding:0 18px;border:1px solid #e2e7ef;border-radius:7px;background:#fff;font-size:14px;font-weight:700;cursor:pointer;color:#6b7280;font-family:inherit;">저장 안 함</button>
-      <button id="ngCancel"  style="height:40px;padding:0 18px;border:1px solid #e2e7ef;border-radius:7px;background:#fff;font-size:14px;font-weight:700;cursor:pointer;color:#111827;font-family:inherit;">취소</button>
-    </div>
-  </div>
-</div>
-<script>
-(function(){
-  var _dirty=false,_url=null;
-  function markDirty(){ _dirty=true; }
-  function markClean(){ _dirty=false; }
-  window.markDirty=markDirty; window.markClean=markClean; window.isDirty=function(){ return _dirty; };
-  window.safeNav=function(url){ if(!_dirty){location.href=url;return;} _url=url; document.getElementById('navGuard').style.display='flex'; };
-  document.addEventListener('DOMContentLoaded',function(){
-    document.getElementById('ngSave').addEventListener('click',function(){ document.getElementById('navGuard').style.display='none'; var b=document.getElementById('save-btn'); if(b)b.click(); setTimeout(function(){ markClean(); if(_url)location.href=_url; },1500); });
-    document.getElementById('ngDiscard').addEventListener('click',function(){ markClean(); document.getElementById('navGuard').style.display='none'; if(_url)location.href=_url; });
-    document.getElementById('ngCancel').addEventListener('click',function(){ _url=null; document.getElementById('navGuard').style.display='none'; });
-    document.addEventListener('input',markDirty); document.addEventListener('change',markDirty);
-    window.addEventListener('beforeunload',function(e){ if(_dirty){e.preventDefault();e.returnValue='';} });
+// ── 숫자 포맷 헬퍼 ──
+function toOk(v){ return (v/100000000).toFixed(2)+'억'; }
+function clamp(v,mn,mx){ return Math.min(Math.max(v,mn),mx); }
+
+// ── 현재 연/월 ──
+const now  = new Date();
+const YEAR = now.getFullYear();
+const MON  = now.getMonth()+1;
+const YM   = `${YEAR}-${String(MON).padStart(2,'0')}`;
+
+// ── 데이터 저장소 ──
+let salesData = null, mpdsData = null, invData = null, centumData = null;
+
+function render(){
+  const sd = salesData || {};
+  const expected  = sd.expectedSales  || 0;
+  const expPcs    = sd.expectedPcs    || 0;
+  const current   = sd.currentSales   || 0;
+  const curPcs    = sd.currentPcs     || 0;
+  const lastYear  = sd.lastYearSales  || 0;
+  const remain    = Math.max(expected - current, 0);
+  const remainPcs = Math.max(expPcs - curPcs, 0);
+
+  // KPI
+  document.getElementById('kpi-expected').textContent = expected ? toOk(expected) : '-';
+  document.getElementById('kpi-expected-pcs').textContent = expected ? `${expPcs} pcs` : '- pcs';
+  document.getElementById('kpi-current').textContent  = current ? toOk(current) : '-';
+  document.getElementById('kpi-current-pcs').textContent = current ? `${curPcs} pcs` : '- pcs';
+  document.getElementById('kpi-remain').textContent   = expected ? toOk(remain) : '-';
+  document.getElementById('kpi-remain-pcs').textContent  = expected ? `${remainPcs} pcs` : '- pcs';
+
+  // MPDS 등록 가능 (잔여 재고 또는 등록 상태)
+  const mpdsArr = (mpdsData && mpdsData.inventory) ? mpdsData.inventory : [];
+  const mpdsCount = mpdsArr.filter(i => i.status === '잔여 재고' || i.status === '등록').length;
+  document.getElementById('kpi-mpds').textContent = mpdsCount;
+
+  // 매장 재고 AS
+  const invRows = (invData && invData.rows) ? invData.rows : [];
+  const asCount = invRows.filter(r => r.status === 'AS').length;
+  document.getElementById('kpi-as').textContent = asCount;
+  document.getElementById('bot-as-active').textContent = asCount;
+
+  // 목표 달성률
+  const achPct = expected > 0 ? Math.round(current / expected * 100) : 0;
+  document.getElementById('achieve-pct').textContent = achPct + '%';
+  document.getElementById('achieve-bar').style.width  = clamp(achPct,0,100) + '%';
+  document.getElementById('achieve-sub').textContent  = `현재 ${current ? toOk(current) : '-'} / 목표 ${expected ? toOk(expected) : '-'}`;
+
+  // 센터 목표 달성률
+  const cd = centumData || {};
+  const centumMonthGoal = cd[`m${MON}`] || 0;
+  const centumPct = centumMonthGoal > 0 ? Math.round(current / centumMonthGoal * 100) : 0;
+  document.getElementById('centum-pct').textContent = centumPct + '%';
+  document.getElementById('centum-bar').style.width  = clamp(centumPct,0,100) + '%';
+  document.getElementById('centum-sub').textContent  = `현재 ${current ? toOk(current) : '-'} / 목표 ${centumMonthGoal ? toOk(centumMonthGoal) : '-'}`;
+
+  // 작년 동일 대비
+  const yoyEl = document.getElementById('yoy-pct');
+  const yoySubEl = document.getElementById('yoy-sub');
+  if(lastYear > 0 && current > 0){
+    const yoyPct = ((current - lastYear) / lastYear * 100).toFixed(1);
+    const isPos = parseFloat(yoyPct) >= 0;
+    yoyEl.textContent = (isPos ? '+' : '') + yoyPct + '%';
+    yoyEl.className = 'yoy-value ' + (isPos ? 'pos' : 'neg');
+  } else {
+    yoyEl.textContent = '-';
+    yoyEl.className = 'yoy-value';
+  }
+  yoySubEl.textContent = `작년 동일 ${lastYear ? toOk(lastYear) : '-'}`;
+}
+
+// ── Firebase 리스너 ──
+function startListeners(){
+  // 매출 데이터
+  onSnapshot(doc(db, `artifacts/patek-s/public/data/sales_dashboard/${YM}`), snap => {
+    salesData = snap.exists() ? snap.data() : null;
+    render();
   });
-})();
+
+  // MPDS 데이터
+  onSnapshot(doc(db, `artifacts/patek-s/public/data/mpds/${YM}`), snap => {
+    mpdsData = snap.exists() ? snap.data() : null;
+    render();
+  });
+
+  // 재고 데이터
+  onSnapshot(doc(db, `artifacts/patek-s/public/data/inventory/${YM}`), snap => {
+    invData = snap.exists() ? snap.data() : null;
+    render();
+  });
+
+  // 센텀 연간 목표
+  getDoc(doc(db, `artifacts/patek-s/public/data/centum_annual/${YEAR}`)).then(snap => {
+    centumData = snap.exists() ? snap.data() : null;
+    render();
+  });
+}
+
+// ── 인증 ──
+document.getElementById('login-btn').addEventListener('click', async () => {
+  try { await signInWithPopup(auth, new GoogleAuthProvider()); }
+  catch(e){ alert('로그인 실패: ' + e.message); }
+});
+document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
+
+onAuthStateChanged(auth, user => {
+  const overlay = document.getElementById('login-overlay');
+  overlay.style.display = user ? 'none' : 'flex';
+  if(user) startListeners();
+});
 </script>
 </body>
 </html>
