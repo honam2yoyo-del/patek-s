@@ -186,6 +186,7 @@
         <li class="active"><span class="menu-icon">◤</span>재고 관리</li>
         <li onclick="safeNav('mpds-dashboard.html')"><span class="menu-icon">◣</span>MPDS 관리</li>
         <li onclick="safeNav('report-dashboard.html')"><span class="menu-icon">◧</span>보고서</li>
+        <li onclick="safeNav('settings-dashboard.html')"><span class="menu-icon">◎</span>설정</li>
       </ul>
     </div>
     <div class="logout" id="logout-btn">⏎ 로그아웃</div>
@@ -321,7 +322,7 @@
 <script type="module">
 import { initializeApp }   from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, onSnapshot, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const FC = { apiKey:"AIzaSyCt7aQXA5eFdnDTMHlRhjPAkyH4b8UB6HY", authDomain:"patek-s.firebaseapp.com", projectId:"patek-s", storageBucket:"patek-s.firebasestorage.app", messagingSenderId:"786016749285", appId:"1:786016749285:web:58538eec1cf7e72068b60c" };
 const app  = initializeApp(FC);
@@ -379,6 +380,7 @@ window.chStatus = function(ri, val, el) {
   el.className = 'status-sel ' + statusSelClass(val);
   renderKpi();
   renderTable();
+  syncStatusToMpds(rows[ri]?.ref, rows[ri]?.serial, val);
 };
 
 // 필드 단순 업데이트 — module 스코프 rows에 안전 접근
@@ -438,6 +440,76 @@ function parseSaleDate(raw) {
 }
 window.parseSaleDate = parseSaleDate;
 
+/* ────────── 라인 설정 캐시 ────────── */
+let lineConfig = { lines: [] };
+async function loadLineConfig() {
+  try {
+    const snap = await getDoc(doc(db,'artifacts','patek-s','public','data','lineConfig'));
+    if (snap.exists()) lineConfig = snap.data();
+  } catch(e) {}
+}
+function getLineForRef(ref) {
+  for (const line of (lineConfig.lines||[])) {
+    if ((line.refs||[]).some(r => r.toLowerCase() === (ref||'').toLowerCase())) return line.name;
+  }
+  return '';
+}
+
+/* ────────── Excel 날짜 파싱 ────────── */
+function parseExcelDate(val) {
+  if (!val && val !== 0) return '';
+  const n = Number(val);
+  if (!isNaN(n) && n > 0) {
+    const d = new Date(Math.round((n - 25569) * 86400 * 1000));
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+  return String(val).trim();
+}
+
+/* ────────── MPDS 동기화: Excel 업로드 시 ────────── */
+async function syncExcelToMpds(imported) {
+  try {
+    const docId = `${curYear}-${pad(curMonth)}`;
+    const snap = await getDoc(doc(db,'artifacts','patek-s','public','data','mpds',docId));
+    let mpdsInv = snap.exists() ? (snap.data().inventory||[]).map(r=>({...r})) : [];
+    let changed = false;
+    for (const r of imported) {
+      if (!r.ref) continue;
+      const exists = mpdsInv.some(m =>
+        (m.ref||'').toLowerCase()===(r.ref||'').toLowerCase() &&
+        (m.serial||'').toLowerCase()===(r.serial||'').toLowerCase()
+      );
+      if (!exists) {
+        mpdsInv.push({ ref:r.ref, serial:r.serial||'', line:getLineForRef(r.ref),
+          date:r.arrivalDate||'', amount:r.amount, status:'보류', note:'' });
+        changed = true;
+      }
+    }
+    if (changed) await setDoc(doc(db,'artifacts','patek-s','public','data','mpds',docId),
+      { inventory:mpdsInv, updatedAt:new Date().toISOString() }, {merge:true});
+  } catch(e) { console.error('MPDS sync error:', e); }
+}
+
+/* ────────── MPDS 동기화: 상태 변경 시 ────────── */
+async function syncStatusToMpds(ref, serial, status) {
+  const mpdsMap = { '판매예정':'판매예정', 'AS':'AS', '기타':'기타' };
+  if (!mpdsMap[status] || !ref) return;
+  try {
+    const docId = `${curYear}-${pad(curMonth)}`;
+    const snap = await getDoc(doc(db,'artifacts','patek-s','public','data','mpds',docId));
+    if (!snap.exists()) return;
+    const mpdsInv = (snap.data().inventory||[]).map(r=>({...r}));
+    const idx = mpdsInv.findIndex(m =>
+      (m.ref||'').toLowerCase()===(ref||'').toLowerCase() &&
+      (m.serial||'').toLowerCase()===(serial||'').toLowerCase()
+    );
+    if (idx < 0) return;
+    mpdsInv[idx].status = mpdsMap[status];
+    await setDoc(doc(db,'artifacts','patek-s','public','data','mpds',docId),
+      { inventory:mpdsInv, updatedAt:new Date().toISOString() }, {merge:true});
+  } catch(e) {}
+}
+
 let curYear  = new Date().getFullYear();
 let curMonth = new Date().getMonth() + 1;
 let rows     = [];
@@ -485,6 +557,7 @@ onAuthStateChanged(auth, user => {
   document.getElementById('login-overlay').style.display = user ? 'none' : 'flex';
   if (user) {
     document.getElementById('monthPickerLabel').textContent = `${curYear}년 ${curMonth}월`;
+    loadLineConfig();
     loadMonth();
   }
 });
@@ -769,7 +842,8 @@ document.getElementById('excelUploadInput').addEventListener('change', function(
         saleDate:  findCol(headers, ['예상 판매일','예상판매일','판매일','saledate','date','날짜']),
         status:    findCol(headers, ['상태','status']),
         note:      findCol(headers, ['비고','메모','note','memo','remark']),
-        realStock: findCol(headers, ['실재고','real stock','실 재고'])
+        realStock:   findCol(headers, ['실재고','real stock','실 재고']),
+        arrivalDate: findCol(headers, ['매입일','입고일','purchase date','arrival date'])
       };
 
       const imported = [];
@@ -781,20 +855,18 @@ document.getElementById('excelUploadInput').addEventListener('change', function(
         if (colIdx.realStock >= 0 && Number(row[colIdx.realStock]) !== 1) continue;
 
         const getV = key => colIdx[key] >= 0 ? String(row[colIdx[key]] ?? '').trim() : '';
+        const getRaw = key => colIdx[key] >= 0 ? row[colIdx[key]] : '';
         const ref      = getV('ref');
         const amtRaw   = getV('amount').replace(/[^0-9.]/g,'');
         const amount   = amtRaw ? Number(amtRaw) : null;
         const statusRaw = getV('status');
         const status   = normalizeStatus(statusRaw) || '잔여재고';
+        const arrivalDate = parseExcelDate(getRaw('arrivalDate'));
 
         imported.push({
-          ref:      ref,
-          serial:   getV('serial'),
-          amount:   amount,
-          customer: getV('customer'),
-          saleDate: getV('saleDate'),
-          status:   status,
-          note:     getV('note')
+          ref, serial:getV('serial'), amount,
+          customer:getV('customer'), saleDate:getV('saleDate'),
+          status, note:getV('note'), arrivalDate
         });
       }
 
@@ -805,6 +877,7 @@ document.getElementById('excelUploadInput').addEventListener('change', function(
       window.markDirty && window.markDirty();
       renderTable(); renderKpi();
       showToast(`✔ ${imported.length}건 업로드 완료`);
+      syncExcelToMpds(imported);
     } catch(err) {
       showToast('파일 읽기 오류: ' + err.message);
     }

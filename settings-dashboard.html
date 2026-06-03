@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=1920, initial-scale=1" />
+  <title>설정</title>
+  <style>
+    * { box-sizing:border-box; margin:0; padding:0; font-family:"Malgun Gothic","맑은 고딕",Arial,sans-serif; }
+    body { background:#f7f9fc; color:#111827; }
+    .app { display:flex; min-height:100vh; }
+    #login-overlay { position:fixed;inset:0;background:rgba(6,27,52,.97);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999; }
+    #login-overlay img { height:52px;margin-bottom:18px;filter:brightness(0) invert(1); }
+    #login-overlay h2 { color:#fff;font-size:22px;font-weight:800;margin-bottom:6px; }
+    #login-overlay p  { color:rgba(255,255,255,.5);font-size:13px;margin-bottom:26px; }
+    .google-btn { display:flex;align-items:center;gap:10px;background:#fff;border:none;border-radius:8px;padding:12px 26px;font-size:14px;font-weight:700;cursor:pointer; }
+    .sidebar { width:185px;background:linear-gradient(180deg,#061b34 0%,#031020 100%);color:#fff;display:flex;flex-direction:column;justify-content:space-between;flex-shrink:0; }
+    .brand { height:78px;display:flex;align-items:center;gap:12px;padding:0 20px;font-size:20px;font-weight:800;border-bottom:1px solid rgba(255,255,255,.08); }
+    .brand img { height:24px;object-fit:contain;filter:brightness(0) invert(1);opacity:.85; }
+    .menu { list-style:none;padding-top:10px; }
+    .menu li { height:58px;display:flex;align-items:center;gap:14px;padding:0 20px;color:rgba(255,255,255,.92);font-size:16px;font-weight:700;cursor:pointer; }
+    .menu li.active { background:#075bc9; }
+    .menu li:hover:not(.active) { background:rgba(255,255,255,.06); }
+    .menu-icon { width:18px;text-align:center; }
+    .logout { height:70px;display:flex;align-items:center;gap:12px;padding:0 20px;border-top:1px solid rgba(255,255,255,.08);font-size:16px;font-weight:700;cursor:pointer;color:rgba(255,255,255,.7); }
+    .logout:hover { color:#fff; }
+    .main { flex:1;padding:22px 24px 80px;overflow-x:auto; }
+    .topbar { display:flex;justify-content:space-between;align-items:center;margin-bottom:20px; }
+    .title { font-size:30px;font-weight:900;letter-spacing:-1px; }
+    .panel { background:#fff;border:1px solid #e2e7ef;border-radius:10px;box-shadow:0 2px 8px rgba(15,23,42,.035);padding:22px 24px; }
+    .panel-header { font-size:19px;font-weight:900;margin-bottom:4px;display:flex;align-items:center;justify-content:space-between; }
+    .panel-sub { font-size:13px;font-weight:700;color:#6b7280;margin-bottom:18px; }
+    .line-list { display:grid;gap:12px; }
+    .line-card { border:1px solid #e2e7ef;border-radius:8px;padding:16px 18px;background:#fafbfc; }
+    .line-card-header { display:flex;align-items:center;gap:10px;margin-bottom:12px; }
+    .line-name-input { flex:1;height:38px;border:1px solid #d9e0ea;border-radius:7px;padding:0 14px;font-size:15px;font-weight:800;outline:none;color:#111827;font-family:inherit; }
+    .line-name-input:focus { border-color:#075bd8; }
+    .btn-line-del { height:34px;width:34px;border:1px solid #fca5a5;border-radius:7px;background:#fff5f5;color:#dc2626;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0; }
+    .refs-wrap { display:flex;flex-wrap:wrap;gap:8px;align-items:center;min-height:32px; }
+    .ref-tag { display:inline-flex;align-items:center;gap:5px;height:28px;padding:0 10px 0 12px;border:1px solid #e2e7ef;border-radius:14px;font-size:12px;font-weight:700;background:#fff;color:#374151; }
+    .ref-tag-del { background:none;border:none;cursor:pointer;color:#9ca3af;font-size:15px;line-height:1;padding:0 0 0 2px; }
+    .ref-tag-del:hover { color:#ef4444; }
+    .ref-add-wrap { display:inline-flex;align-items:center;gap:4px; }
+    .ref-add-input { height:28px;border:1px dashed #d9e0ea;border-radius:14px;padding:0 12px;font-size:12px;font-weight:700;outline:none;width:150px;color:#374151;font-family:inherit; }
+    .ref-add-input:focus { border-color:#075bd8;background:#fff; }
+    .ref-add-btn { height:28px;padding:0 12px;border:none;border-radius:14px;background:#075bd8;color:#fff;font-size:12px;font-weight:700;cursor:pointer; }
+    .add-line-btn { height:44px;padding:0 20px;border:2px dashed #d9e0ea;border-radius:8px;background:#fff;font-size:14px;font-weight:700;color:#6b7280;cursor:pointer;width:100%;margin-top:12px; }
+    .add-line-btn:hover { border-color:#075bd8;color:#075bd8;background:#f0f7ff; }
+    .btn-primary { height:42px;padding:0 22px;border:none;border-radius:7px;background:#075bd8;color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit; }
+    .save-ok { color:#059669;font-size:14px;font-weight:700; }
+  </style>
+</head>
+<body>
+
+<div id="login-overlay">
+  <img src="log.png" onerror="this.style.display='none'"/>
+  <h2>설정</h2>
+  <p>Patek Philippe Korea — 설정</p>
+  <button class="google-btn" id="login-btn">
+    <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+    Google로 로그인
+  </button>
+</div>
+
+<div class="app">
+  <aside class="sidebar">
+    <div>
+      <div class="brand"><img src="log.png" onerror="this.style.display='none'"/>Sales</div>
+      <ul class="menu">
+        <li onclick="safeNav('sales-plan.html')"><span class="menu-icon">◈</span>전체</li>
+        <li onclick="safeNav('sales-report-dashboard.html')"><span class="menu-icon">◥</span>매출 관리</li>
+        <li onclick="safeNav('inventory-dashboard.html')"><span class="menu-icon">◤</span>재고 관리</li>
+        <li onclick="safeNav('mpds-dashboard.html')"><span class="menu-icon">◣</span>MPDS 관리</li>
+        <li onclick="safeNav('report-dashboard.html')"><span class="menu-icon">◧</span>보고서</li>
+        <li class="active"><span class="menu-icon">◎</span>설정</li>
+      </ul>
+    </div>
+    <div class="logout" id="logout-btn">⏎ 로그아웃</div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <h1 class="title">설정</h1>
+      <div style="display:flex;gap:12px;align-items:center;">
+        <span class="save-ok" id="saveOk" style="display:none;">✔ 저장됨</span>
+        <button class="btn-primary" id="save-btn">💾 저장하기</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">라인 관리</div>
+      <div class="panel-sub">각 라인에 속한 REF.를 등록합니다. 재고 관리 엑셀 업로드 시 자동으로 라인이 매핑됩니다.</div>
+      <div class="line-list" id="lineList"></div>
+      <button class="add-line-btn" id="addLineBtn">+ 새 라인 추가</button>
+    </div>
+  </main>
+</div>
+
+<!-- 이탈 방지 다이얼로그 -->
+<div id="navGuard" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.52);z-index:9500;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:12px;padding:28px 32px;width:380px;box-shadow:0 16px 48px rgba(15,23,42,.28);font-family:'Malgun Gothic','맑은 고딕',Arial,sans-serif;">
+    <div style="font-size:18px;font-weight:900;color:#111827;margin-bottom:10px;">저장하시겠습니까?</div>
+    <div style="font-size:14px;font-weight:700;color:#6b7280;line-height:1.6;margin-bottom:24px;">변경된 내용이 있습니다.<br>저장하지 않으면 변경사항이 사라집니다.</div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button id="ngSave"    style="height:40px;padding:0 22px;border:none;border-radius:7px;background:#075bd8;font-size:14px;font-weight:700;cursor:pointer;color:#fff;font-family:inherit;">저장</button>
+      <button id="ngDiscard" style="height:40px;padding:0 18px;border:1px solid #e2e7ef;border-radius:7px;background:#fff;font-size:14px;font-weight:700;cursor:pointer;color:#6b7280;font-family:inherit;">저장 안 함</button>
+      <button id="ngCancel"  style="height:40px;padding:0 18px;border:1px solid #e2e7ef;border-radius:7px;background:#fff;font-size:14px;font-weight:700;cursor:pointer;color:#111827;font-family:inherit;">취소</button>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  var _dirty=false,_url=null;
+  function markDirty(){ _dirty=true; }
+  function markClean(){ _dirty=false; }
+  window.markDirty=markDirty; window.markClean=markClean; window.isDirty=function(){ return _dirty; };
+  window.safeNav=function(url){ if(!_dirty){location.href=url;return;} _url=url; document.getElementById('navGuard').style.display='flex'; };
+  document.addEventListener('DOMContentLoaded',function(){
+    document.getElementById('ngSave').addEventListener('click',function(){ document.getElementById('navGuard').style.display='none'; var b=document.getElementById('save-btn'); if(b)b.click(); setTimeout(function(){ markClean(); if(_url)location.href=_url; },1500); });
+    document.getElementById('ngDiscard').addEventListener('click',function(){ markClean(); document.getElementById('navGuard').style.display='none'; if(_url)location.href=_url; });
+    document.getElementById('ngCancel').addEventListener('click',function(){ _url=null; document.getElementById('navGuard').style.display='none'; });
+    document.addEventListener('input',markDirty); document.addEventListener('change',markDirty);
+    window.addEventListener('beforeunload',function(e){ if(_dirty){e.preventDefault();e.returnValue='';} });
+  });
+})();
+</script>
+
+<script type="module">
+import { initializeApp }   from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+const FC = { apiKey:"AIzaSyCt7aQXA5eFdnDTMHlRhjPAkyH4b8UB6HY", authDomain:"patek-s.firebaseapp.com", projectId:"patek-s", storageBucket:"patek-s.firebasestorage.app", messagingSenderId:"786016749285", appId:"1:786016749285:web:58538eec1cf7e72068b60c" };
+const app  = initializeApp(FC);
+const auth = getAuth(app);
+const db   = getFirestore(app);
+
+let lines = [];
+
+document.getElementById('login-btn').addEventListener('click', async () => {
+  try { await signInWithPopup(auth, new GoogleAuthProvider()); } catch(e) { alert('로그인 실패: '+e.message); }
+});
+document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
+onAuthStateChanged(auth, user => {
+  document.getElementById('login-overlay').style.display = user ? 'none' : 'flex';
+  if (user) loadConfig();
+});
+
+async function loadConfig() {
+  try {
+    const snap = await getDoc(doc(db,'artifacts','patek-s','public','data','lineConfig'));
+    lines = snap.exists() ? (snap.data().lines || []) : [];
+  } catch(e) { lines = []; }
+  renderLines();
+}
+
+function renderLines() {
+  const container = document.getElementById('lineList');
+  container.innerHTML = '';
+  lines.forEach((line, li) => {
+    const card = document.createElement('div');
+    card.className = 'line-card';
+    card.innerHTML = `
+      <div class="line-card-header">
+        <input class="line-name-input" value="${esc(line.name||'')}" placeholder="라인 이름 (예: Grand Complications)"
+          oninput="window.setLineName(${li},this.value)"/>
+        <button class="btn-line-del" onclick="window.deleteLine(${li})" title="라인 삭제">✕</button>
+      </div>
+      <div class="refs-wrap" id="refs-${li}">
+        ${(line.refs||[]).map((ref,ri) => `<span class="ref-tag">${esc(ref)}<button class="ref-tag-del" onclick="window.deleteRef(${li},${ri})">×</button></span>`).join('')}
+        <div class="ref-add-wrap">
+          <input class="ref-add-input" id="ri-${li}" placeholder="REF. 추가"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();window.addRef(${li});}"/>
+          <button class="ref-add-btn" onclick="window.addRef(${li})">추가</button>
+        </div>
+      </div>`;
+    container.appendChild(card);
+  });
+}
+
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+window.setLineName = (li, val) => { if (lines[li]) lines[li].name = val; };
+window.deleteLine  = (li) => { if (confirm('이 라인을 삭제하시겠습니까?')) { lines.splice(li,1); renderLines(); window.markDirty&&window.markDirty(); } };
+window.addRef = (li) => {
+  const inp = document.getElementById(`ri-${li}`);
+  const val = (inp.value||'').trim().toUpperCase();
+  if (!val) return;
+  if (!lines[li].refs) lines[li].refs = [];
+  if (!lines[li].refs.includes(val)) lines[li].refs.push(val);
+  inp.value = '';
+  renderLines();
+  document.getElementById(`ri-${li}`)?.focus();
+  window.markDirty&&window.markDirty();
+};
+window.deleteRef = (li, ri) => {
+  if (lines[li]?.refs) { lines[li].refs.splice(ri,1); renderLines(); window.markDirty&&window.markDirty(); }
+};
+
+document.getElementById('addLineBtn').addEventListener('click', () => {
+  lines.push({ name:'', refs:[] });
+  renderLines();
+  window.markDirty&&window.markDirty();
+  setTimeout(() => { const inputs = document.querySelectorAll('.line-name-input'); if(inputs.length) inputs[inputs.length-1].focus(); }, 50);
+});
+
+document.getElementById('save-btn').addEventListener('click', async () => {
+  const btn = document.getElementById('save-btn');
+  btn.textContent = '저장 중...';
+  try {
+    await setDoc(doc(db,'artifacts','patek-s','public','data','lineConfig'),
+      { lines, updatedAt: new Date().toISOString() }, { merge: true });
+    btn.textContent = '💾 저장하기';
+    const ok = document.getElementById('saveOk');
+    ok.style.display = 'inline'; setTimeout(() => { ok.style.display = 'none'; }, 2000);
+    window.markClean&&window.markClean();
+  } catch(e) {
+    alert('저장 실패: ' + e.message);
+    btn.textContent = '💾 저장하기';
+  }
+});
+</script>
+</body>
+</html>

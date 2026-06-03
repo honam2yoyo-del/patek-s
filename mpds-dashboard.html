@@ -120,13 +120,19 @@
     .td-del:hover { color:#f00; }
     .selected-row td { background:#fbfdff;font-weight:900;color:#075bd8; }
 
-    .badge { display:inline-flex;justify-content:center;align-items:center;min-width:68px;height:25px;border-radius:5px;font-size:11px;font-weight:900; }
-    .badge-recommend { background:#e6f8ee;color:#059669; }
-    .badge-exclude   { background:#fff3e5;color:#f97316; }
-    .badge-sale      { background:#eaf3ff;color:#075bd8; }
-    .badge-as        { background:#fdecec;color:#ef4444; }
-    .badge-etc       { background:#f1f3f5;color:#6b7280; }
-    .status-sel      { height:28px;border:1px solid #d9e0ea;border-radius:5px;background:#fff;padding:0 6px;font-size:11px;font-weight:900;cursor:pointer;min-width:76px; }
+    .status-sel { -webkit-appearance:none;appearance:none;height:27px;border:none;border-radius:12px;padding:0 10px;font-size:11px;font-weight:900;cursor:pointer;min-width:80px;text-align:center;font-family:inherit; }
+    .status-sel.s-reg  { background:#eaf3ff;color:#0067e8; }
+    .status-sel.s-sale { background:#e6f8ee;color:#009844; }
+    .status-sel.s-as   { background:#fee2e2;color:#ff1f1f; }
+    .status-sel.s-etc  { background:#f3e8ff;color:#7c3aed; }
+    .status-sel.s-hold { background:#fff3e5;color:#ff7a00; }
+    #invTbody td { cursor:text; }
+    #invTbody td:first-child, #invTbody td:last-child { cursor:default; }
+    .bulk-status-sel { font-size:10px;padding:2px 3px;border-radius:4px;border:1px solid #d9e0ea;background:#f6f8fb;cursor:pointer;width:84px;font-weight:700;font-family:inherit;color:#374151;margin-top:3px; }
+    .btn-del-sel { height:34px;padding:0 11px;border:1px solid #fca5a5;border-radius:6px;background:#fff5f5;color:#dc2626;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit; }
+    .btn-del-sel:hover { background:#fee2e2; }
+    .btn-del-all { height:34px;padding:0 11px;border:1px solid #dc2626;border-radius:6px;background:#dc2626;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit; }
+    .btn-del-all:hover { background:#b91c1c; }
 
     .sel-summary { margin:10px 8px;height:42px;border:1px solid #7aa9ff;border-radius:5px;display:grid;grid-template-columns:1fr 1fr 1fr;align-items:center;padding:0 14px;font-size:13px;font-weight:900; }
     .sel-summary b { color:#075bd8;margin-left:6px; }
@@ -197,6 +203,7 @@
         <li onclick="safeNav('inventory-dashboard.html')"><span class="menu-icon">◤</span>재고 관리</li>
         <li class="active"><span class="menu-icon">◣</span>MPDS 관리</li>
         <li onclick="safeNav('report-dashboard.html')"><span class="menu-icon">◧</span>보고서</li>
+        <li onclick="safeNav('settings-dashboard.html')"><span class="menu-icon">◎</span>설정</li>
       </ul>
     </div>
     <div class="logout" id="logout-btn">⏎ 로그아웃</div>
@@ -321,16 +328,20 @@
             <input id="tableSearch" class="search-input" type="text" placeholder="REF., SERIAL, 라인 검색"/>
             <span class="search-icon">🔍</span>
           </div>
-          <button class="add-row-btn" id="addRowBtn">+ 행 추가</button>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <button class="add-row-btn" id="addRowBtn">+ 행 추가</button>
+            <button class="btn-del-sel" id="delSelBtn">선택 삭제</button>
+            <button class="btn-del-all" id="delAllBtn">전체 삭제</button>
+          </div>
         </div>
 
         <div class="tabs" id="tabsBar">
           <button class="tab active" data-filter="전체">전체</button>
-          <button class="tab" data-filter="등록추천">등록추천</button>
-          <button class="tab" data-filter="등록제외">등록제외</button>
+          <button class="tab" data-filter="등록">등록</button>
           <button class="tab" data-filter="판매예정">판매예정</button>
           <button class="tab" data-filter="AS">AS</button>
           <button class="tab" data-filter="기타">기타</button>
+          <button class="tab" data-filter="보류">보류</button>
         </div>
 
         <div class="table-wrap">
@@ -338,13 +349,22 @@
             <thead>
               <tr>
                 <th style="width:40px;"><input type="checkbox" id="checkAll"/></th>
-                <th>REF.</th>
-                <th>SERIAL</th>
-                <th>라인</th>
-                <th>입고일</th>
-                <th>금액(KRW)</th>
-                <th>상태</th>
-                <th>등록 여부</th>
+                <th style="width:130px;">REF.</th>
+                <th style="width:160px;">SERIAL</th>
+                <th style="width:130px;">라인</th>
+                <th style="width:110px;">입고일</th>
+                <th style="width:130px;">금액(KRW)</th>
+                <th style="width:104px;padding:5px 4px;">
+                  <div>상태</div>
+                  <select class="bulk-status-sel" id="bulkMpdsStatusSel">
+                    <option value="">일괄변경 ▾</option>
+                    <option value="등록">등록</option>
+                    <option value="판매예정">판매예정</option>
+                    <option value="AS">AS</option>
+                    <option value="기타">기타</option>
+                    <option value="보류">보류</option>
+                  </select>
+                </th>
                 <th>비고</th>
                 <th style="width:26px;"></th>
               </tr>
@@ -446,24 +466,15 @@ window.fmtNum = function(el) {
   el.value = raw !== '' ? Number(raw).toLocaleString('ko-KR') : '';
 };
 
-const STATUS_OPTIONS = ['등록추천','등록제외','판매예정','AS','기타'];
-const BADGE_CLASS = { '등록추천':'badge-recommend','등록제외':'badge-exclude','판매예정':'badge-sale','AS':'badge-as','기타':'badge-etc' };
-const REG_OPTIONS = ['미등록','등록','보류','제외'];
+const STATUS_OPTIONS = ['등록','판매예정','AS','기타','보류'];
+function statusSelClass(s) {
+  return {'등록':'s-reg','판매예정':'s-sale','AS':'s-as','기타':'s-etc','보류':'s-hold'}[s]||'s-hold';
+}
+window.statusSelClass = statusSelClass;
 const LINE_COLORS = ['#3b82f6','#22c55e','#f97316','#8b5cf6','#d28c45','#0ea5a4','#2d9cdb','#9ca3af','#9bc4a6','#e11d48'];
 const DOT_CLASSES  = ['d1','d2','d3','d4','d5','d6','d7','d8','d9'];
 
-const DEFAULT_INV = [
-  { ref:'5711/1A',  serial:'AA221900', line:'Nautilus',          date:'2024-06-10', amount:53000000, status:'등록추천', registered:'미등록', note:'' },
-  { ref:'5167A',    serial:'AQ909122', line:'Aquanaut',          date:'2024-09-01', amount:32000000, status:'등록추천', registered:'미등록', note:'' },
-  { ref:'5396G',    serial:'GC550012', line:'Grand Complication',date:'2024-08-29', amount:89000000, status:'AS',      registered:'제외',   note:'AS 진행' },
-  { ref:'4910/1200A',serial:'TW442211',line:'Twenty~4',          date:'2024-11-01', amount:17500000, status:'기타',    registered:'보류',   note:'확인 필요' },
-  { ref:'5726A',    serial:'NN882010', line:'Nautilus',          date:'2024-07-14', amount:48000000, status:'등록추천', registered:'미등록', note:'' },
-  { ref:'5524G',    serial:'CC991231', line:'Calatrava',         date:'2024-05-20', amount:56000000, status:'등록추천', registered:'미등록', note:'' },
-  { ref:'5168G',    serial:'AQ330441', line:'Aquanaut',          date:'2024-10-08', amount:38000000, status:'판매예정', registered:'제외',   note:'판매예정' },
-  { ref:'5740P',    serial:'GC112001', line:'Grand Complication',date:'2024-03-15', amount:120000000,status:'등록추천', registered:'미등록', note:'' },
-  { ref:'5172G',    serial:'CM441002', line:'Complication',      date:'2024-08-22', amount:41000000, status:'등록추천', registered:'미등록', note:'' },
-  { ref:'5235G',    serial:'AN558231', line:'Annual Calendar',   date:'2024-06-30', amount:62000000, status:'등록추천', registered:'미등록', note:'' }
-];
+const DEFAULT_INV = [];
 
 let curYear  = new Date().getFullYear();
 let curMonth = new Date().getMonth() + 1;
@@ -528,7 +539,7 @@ function loadMonth() {
     } else {
       inventory = JSON.parse(JSON.stringify(DEFAULT_INV));
     }
-    selectedIds = new Set(inventory.map((_,i) => i).filter(i => inventory[i].status === '등록추천'));
+    selectedIds = new Set();
     renderAll();
   });
 }
@@ -543,16 +554,16 @@ function renderAll() {
 /* ── KPI ── */
 function renderKpi() {
   const total = inventory.length;
+  const reg   = inventory.filter(r => r.status === '등록').length;
   const sale  = inventory.filter(r => r.status === '판매예정').length;
   const as    = inventory.filter(r => r.status === 'AS').length;
-  const avail = total - sale - as;
-  const poss  = avail;
+  const avail = reg;
   const setKpi = (id, v) => { const el = document.getElementById(id); if(el) el.innerHTML = `${v} <small>pcs</small>`; };
-  setKpi('kpi-total',  total);
-  setKpi('kpi-sale',   sale);
-  setKpi('kpi-as',     as);
-  setKpi('kpi-avail',  avail);
-  setKpi('kpi-possible', poss);
+  setKpi('kpi-total',   total);
+  setKpi('kpi-sale',    sale);
+  setKpi('kpi-as',      as);
+  setKpi('kpi-avail',   avail);
+  setKpi('kpi-possible',avail);
 }
 
 /* ── 상태 패널 ── */
@@ -596,7 +607,7 @@ window.recalcStatus = function() {
 /* ── 도넛 차트 ── */
 function renderDonut() {
   const lineCounts = {};
-  inventory.filter(r => r.status === '등록추천' || r.status === '등록제외' || !['판매예정','AS'].includes(r.status)).forEach(r => {
+  inventory.filter(r => !['판매예정','AS','기타'].includes(r.status)).forEach(r => {
     const k = r.line || '기타';
     lineCounts[k] = (lineCounts[k] || 0) + 1;
   });
@@ -642,37 +653,55 @@ function getFiltered() {
   });
 }
 
+// window 노출 핸들러 (module scope → inline handler 안전 접근)
+window.mpdsSet = function(ri, key, val) { if (inventory[ri]) inventory[ri][key] = val; };
+window.mpdsSetAmt = function(ri, el) {
+  window.fmtNum(el);
+  if (inventory[ri]) inventory[ri].amount = window.parseNum(el.value);
+  window.updateSel();
+};
+window.mpdsChStatus = function(ri, val, el) {
+  if (inventory[ri]) inventory[ri].status = val;
+  el.className = 'status-sel ' + statusSelClass(val);
+  renderAll();
+};
+window.mpdsDelete = function(ri) {
+  if (confirm('삭제하시겠습니까?')) { inventory.splice(ri,1); renderAll(); }
+};
+
 function renderTable() {
   const filtered = getFiltered();
   const tbody = document.getElementById('invTbody');
   tbody.innerHTML = '';
   filtered.forEach(r => {
     const ri = r._i;
-    const bc = BADGE_CLASS[r.status] || 'badge-etc';
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td><input type="checkbox" class="row-check" data-idx="${ri}" ${selectedIds.has(ri)?'checked':''}/></td>
-      <td><input class="td-edit" value="${esc(r.ref||'')}" oninput="inventory[${ri}].ref=this.value"/></td>
-      <td><input class="td-edit" value="${esc(r.serial||'')}" oninput="inventory[${ri}].serial=this.value"/></td>
-      <td><input class="td-edit" value="${esc(r.line||'')}" oninput="inventory[${ri}].line=this.value;renderDonut();"/></td>
-      <td><input class="td-edit" value="${esc(r.date||'')}" oninput="inventory[${ri}].date=this.value" placeholder="YYYY-MM-DD"/></td>
+      <td><input class="td-edit" value="${esc(r.ref||'')}"    oninput="window.mpdsSet(${ri},'ref',this.value)"/></td>
+      <td><input class="td-edit" value="${esc(r.serial||'')}" oninput="window.mpdsSet(${ri},'serial',this.value)"/></td>
+      <td><input class="td-edit" value="${esc(r.line||'')}"   oninput="window.mpdsSet(${ri},'line',this.value);renderDonut();"/></td>
+      <td><input class="td-edit" value="${esc(r.date||'')}"   oninput="window.mpdsSet(${ri},'date',this.value)" placeholder="YYYY-MM-DD"/></td>
       <td><input class="td-edit" type="text" inputmode="numeric" value="${fmtInput(r.amount)}"
-          oninput="window.fmtNum(this);inventory[${ri}].amount=parseNum(this.value);updateSel();"
-          placeholder="0"/></td>
+          oninput="window.mpdsSetAmt(${ri},this)" placeholder="0"/></td>
       <td>
-        <select class="status-sel" oninput="inventory[${ri}].status=this.value;renderAll();">
+        <select class="status-sel ${statusSelClass(r.status)}" onchange="window.mpdsChStatus(${ri},this.value,this);">
           ${STATUS_OPTIONS.map(s=>`<option value="${s}" ${r.status===s?'selected':''}>${s}</option>`).join('')}
         </select>
       </td>
-      <td>
-        <select class="status-sel" oninput="inventory[${ri}].registered=this.value;">
-          ${REG_OPTIONS.map(s=>`<option value="${s}" ${r.registered===s?'selected':''}>${s}</option>`).join('')}
-        </select>
-      </td>
-      <td><input class="td-edit" value="${esc(r.note||'')}" oninput="inventory[${ri}].note=this.value" placeholder="비고"/></td>
-      <td><button class="td-del" onclick="inventory.splice(${ri},1);renderAll();">✕</button></td>`;
+      <td><input class="td-edit" value="${esc(r.note||'')}" oninput="window.mpdsSet(${ri},'note',this.value)" placeholder="비고"/></td>
+      <td><button class="td-del" onclick="window.mpdsDelete(${ri})">✕</button></td>`;
     tbody.appendChild(tr);
   });
+  // tbody 클릭 → 셀 포커스
+  tbody.addEventListener('click', function(e) {
+    const tgt = e.target;
+    if (tgt.tagName==='INPUT'||tgt.tagName==='SELECT'||tgt.tagName==='BUTTON') return;
+    const td = tgt.closest('td');
+    if (!td) return;
+    const el = td.querySelector('input:not([type="checkbox"]),select');
+    if (el) { el.focus(); if(el.tagName==='INPUT') el.select(); }
+  }, { once: false });
   bindChecks();
   updateSel();
   renderKpi();
@@ -681,8 +710,45 @@ function renderTable() {
 
 tblSearch.addEventListener('input', renderTable);
 
+/* ── 일괄 상태 변경 ── */
+document.getElementById('bulkMpdsStatusSel').addEventListener('change', function() {
+  const val = this.value;
+  if (!val) return;
+  const checked = document.querySelectorAll('.row-check:checked');
+  if (checked.length === 0) { alert('변경할 행을 선택해주세요.'); this.value = ''; return; }
+  const filtered = getFiltered();
+  checked.forEach(cb => {
+    const ri = Number(cb.dataset.idx);
+    if (inventory[ri]) inventory[ri].status = val;
+  });
+  this.value = '';
+  renderAll();
+  window.markDirty && window.markDirty();
+});
+
+/* ── 선택/전체 삭제 ── */
+document.getElementById('delSelBtn').addEventListener('click', () => {
+  const checked = document.querySelectorAll('.row-check:checked');
+  if (checked.length === 0) { alert('삭제할 행을 선택해주세요.'); return; }
+  if (!confirm(`선택한 ${checked.length}건을 삭제하시겠습니까?`)) return;
+  const toDelete = new Set([...checked].map(cb => Number(cb.dataset.idx)));
+  inventory = inventory.filter((_,i) => !toDelete.has(i));
+  selectedIds = new Set();
+  renderAll();
+  window.markDirty && window.markDirty();
+});
+document.getElementById('delAllBtn').addEventListener('click', () => {
+  if (inventory.length === 0) { alert('삭제할 데이터가 없습니다.'); return; }
+  if (!confirm(`전체 ${inventory.length}건을 삭제하시겠습니까?`)) return;
+  inventory = [];
+  selectedIds = new Set();
+  renderAll();
+  window.markDirty && window.markDirty();
+});
+
 document.getElementById('addRowBtn').addEventListener('click', () => {
-  inventory.push({ ref:'', serial:'', line:'', date:'', amount:null, status:'등록추천', registered:'미등록', note:'' });
+  inventory.push({ ref:'', serial:'', line:'', date:'', amount:null, status:'보류', note:'' });
+  window.markDirty && window.markDirty();
   renderAll();
   const last = document.getElementById('invTbody').lastElementChild;
   if (last) last.scrollIntoView({ behavior:'smooth', block:'nearest' });
@@ -768,6 +834,7 @@ document.getElementById('save-btn').addEventListener('click', async () => {
       updatedAt: new Date().toISOString()
     }, {merge:true});
     btn.textContent = '✔ 저장됨';
+    window.markClean && window.markClean();
     setTimeout(() => { btn.textContent = '💾 저장하기'; }, 2000);
   } catch(e) {
     alert('저장 실패: '+e.message);
