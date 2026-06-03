@@ -63,6 +63,7 @@
     .icon-green    { background:linear-gradient(135deg,#22c55e,#079247); }
     .icon-red      { background:linear-gradient(135deg,#ff5d5d,#ef4444); }
     .icon-orange   { background:linear-gradient(135deg,#fb923c,#f97316); }
+    .icon-black    { background:linear-gradient(135deg,#374151,#111827); }
     .icon-deepblue { background:linear-gradient(135deg,#0b75ff,#0052cc); }
     .summary-title { font-size:14px;font-weight:900;margin-bottom:8px; }
     .summary-value { font-size:27px;font-weight:900;letter-spacing:-.6px;line-height:1; }
@@ -125,7 +126,7 @@
     .status-sel.s-sale { background:#e6f8ee;color:#009844; }
     .status-sel.s-as   { background:#fee2e2;color:#ff1f1f; }
     .status-sel.s-etc  { background:#f3e8ff;color:#7c3aed; }
-    .status-sel.s-hold { background:#fff3e5;color:#ff7a00; }
+    .status-sel.s-hold { background:#e5e7eb;color:#111827; }
     #invTbody td { cursor:text; }
     #invTbody td:first-child, #invTbody td:last-child { cursor:default; }
     .bulk-status-sel { font-size:10px;padding:2px 3px;border-radius:4px;border:1px solid #d9e0ea;background:#f6f8fb;cursor:pointer;width:84px;font-weight:700;font-family:inherit;color:#374151;margin-top:3px; }
@@ -159,7 +160,7 @@
     #dateSortTh { cursor:pointer;user-select:none; }
     #dateSortTh:hover { background:#e8f0fd; }
 
-    .green { color:#059669; } .blue { color:#075bd8; } .red { color:#ef4444; } .orange { color:#f97316; }
+    .green { color:#059669; } .blue { color:#075bd8; } .red { color:#ef4444; } .orange { color:#f97316; } .black { color:#111827; }
 
     /* ── 하단 바 ── */
     .bottom-actions { position:fixed;left:185px;right:0;bottom:0;height:68px;display:flex;justify-content:flex-end;align-items:center;gap:12px;background:rgba(255,255,255,.98);border-top:1px solid #e2e7ef;padding:0 24px;box-shadow:0 -4px 16px rgba(15,23,42,.06); }
@@ -255,8 +256,8 @@
             <div><div class="summary-title blue">MPDS 등록</div><div class="summary-value blue" id="kpi-possible">0 <small>pcs</small></div></div>
           </div>
           <div class="summary-card">
-            <div class="summary-icon icon-orange">📦</div>
-            <div><div class="summary-title">잔여 재고</div><div class="summary-value orange" id="kpi-avail">0 <small>pcs</small></div></div>
+            <div class="summary-icon icon-black">📦</div>
+            <div><div class="summary-title">잔여 재고</div><div class="summary-value black" id="kpi-avail">0 <small>pcs</small></div></div>
           </div>
         </div>
         <div class="formula-note">* 현재 등록 가능 수량 = 잔여 재고 + MPDS 등록</div>
