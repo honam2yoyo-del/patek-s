@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
@@ -885,6 +885,7 @@ async function saveData() {
     await setDoc(doc(db,'artifacts','patek-s','public','data','inventory',`${curYear}-${pad(curMonth)}`), data, {merge:true});
     if (btn) btn.textContent='✔ 저장됨';
     window.markClean && window.markClean();
+    try { localStorage.removeItem(AUTO_SAVE_KEY); } catch(e) {}
     setTimeout(()=>{ if (btn) btn.textContent='💾 저장하기'; }, 2000);
   } catch(e) {
     alert('저장 실패: '+e.message);
@@ -905,16 +906,56 @@ document.getElementById('excelDownBtn').addEventListener('click', ()=>{
 });
 
 function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+/* ────────── 자동 저장 ────────── */
+const AUTO_SAVE_KEY = `inv_backup_${curYear}_${pad(curMonth)}`;
+
+// 60초마다 변경사항 있으면 Firestore 자동 저장
+setInterval(() => {
+  if (window.isDirty && window.isDirty()) saveData().catch(()=>{});
+}, 60000);
+
+// 강제 종료 직전 localStorage 긴급 백업
+window.addEventListener('beforeunload', () => {
+  if (rows.length > 0) {
+    try {
+      localStorage.setItem(AUTO_SAVE_KEY, JSON.stringify({ rows, ts: Date.now() }));
+    } catch(e) {}
+  }
+});
+
+// 페이지 로드 시 백업 복구 제안
+(function checkBackup() {
+  const raw = localStorage.getItem(AUTO_SAVE_KEY);
+  if (!raw) return;
+  try {
+    const { rows: bk, ts } = JSON.parse(raw);
+    if (!bk || bk.length === 0) return;
+    const age = Math.round((Date.now() - ts) / 60000);
+    const ago = age < 1 ? '방금 전' : `${age}분 전`;
+    // onAuthStateChanged 후 실행되도록 짧은 딜레이
+    setTimeout(() => {
+      if (rows.length === 0 && confirm(
+        `⚠️ 저장되지 않은 백업 데이터가 있습니다. (${ago} · ${bk.length}건)\n복구하시겠습니까?`
+      )) {
+        rows.splice(0, rows.length, ...bk.map(r => ({...r})));
+        renderTable(); renderKpi();
+        window.markDirty && window.markDirty();
+      }
+      localStorage.removeItem(AUTO_SAVE_KEY);
+    }, 2500);
+  } catch(e) { localStorage.removeItem(AUTO_SAVE_KEY); }
+})();
 </script>
 <!-- ── 이탈 방지 다이얼로그 ── -->
 <div id="navGuard" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.52);z-index:9500;align-items:center;justify-content:center;">
   <div style="background:#fff;border-radius:12px;padding:28px 32px;width:380px;box-shadow:0 16px 48px rgba(15,23,42,.28);font-family:'Malgun Gothic','맑은 고딕',Arial,sans-serif;">
     <div style="font-size:18px;font-weight:900;color:#111827;margin-bottom:10px;">저장하시겠습니까?</div>
-    <div style="font-size:14px;font-weight:700;color:#6b7280;line-height:1.6;margin-bottom:24px;">변경된 내용이 있습니다. 저장하지 않으면 변경사항이 사라집니다.</div>
+    <div style="font-size:14px;font-weight:700;color:#6b7280;line-height:1.6;margin-bottom:24px;">변경된 내용이 있습니다.<br>저장하지 않으면 변경사항이 사라집니다.</div>
     <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button id="ngSave"    style="height:40px;padding:0 22px;border:none;border-radius:7px;background:#075bd8;font-size:14px;font-weight:700;cursor:pointer;color:#fff;font-family:inherit;">저장</button>
       <button id="ngDiscard" style="height:40px;padding:0 18px;border:1px solid #e2e7ef;border-radius:7px;background:#fff;font-size:14px;font-weight:700;cursor:pointer;color:#6b7280;font-family:inherit;">저장 안 함</button>
       <button id="ngCancel"  style="height:40px;padding:0 18px;border:1px solid #e2e7ef;border-radius:7px;background:#fff;font-size:14px;font-weight:700;cursor:pointer;color:#111827;font-family:inherit;">취소</button>
-      <button id="ngSave"    style="height:40px;padding:0 22px;border:none;border-radius:7px;background:#075bd8;font-size:14px;font-weight:700;cursor:pointer;color:#fff;font-family:inherit;">저장하기</button>
     </div>
   </div>
 </div>
@@ -924,7 +965,7 @@ function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;')
   var _dirty=false, _url=null;
   function markDirty(){ _dirty=true; }
   function markClean(){ _dirty=false; }
-  window.markDirty=markDirty; window.markClean=markClean;
+  window.markDirty=markDirty; window.markClean=markClean; window.isDirty=function(){ return _dirty; };
   window.safeNav=function(url){
     if(!_dirty){ location.href=url; return; }
     _url=url; document.getElementById('navGuard').style.display='flex';
