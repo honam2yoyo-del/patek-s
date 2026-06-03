@@ -213,10 +213,10 @@
     <div>
       <div class="brand"><img src="log.png" onerror="this.style.display='none'"/>Sales</div>
       <ul class="menu">
-        <li onclick="location.href='sales-plan.html'"><span class="menu-icon">◈</span>전체</li>
-        <li onclick="location.href='sales-report-dashboard.html'"><span class="menu-icon">◥</span>매출 관리</li>
-        <li onclick="location.href='inventory-dashboard.html'"><span class="menu-icon">◤</span>재고 관리</li>
-        <li onclick="location.href='mpds-dashboard.html'"><span class="menu-icon">◣</span>MPDS 관리</li>
+        <li onclick="safeNav('sales-plan.html')"><span class="menu-icon">◈</span>전체</li>
+        <li onclick="safeNav('sales-report-dashboard.html')"><span class="menu-icon">◥</span>매출 관리</li>
+        <li onclick="safeNav('inventory-dashboard.html')"><span class="menu-icon">◤</span>재고 관리</li>
+        <li onclick="safeNav('mpds-dashboard.html')"><span class="menu-icon">◣</span>MPDS 관리</li>
         <li class="active"><span class="menu-icon">◧</span>보고서</li>
       </ul>
     </div>
@@ -820,6 +820,35 @@ window.downloadExcel = function() {
 };
 
 function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+</script>
+
+<!-- ── 이탈 방지 다이얼로그 ── -->
+<div id="navGuard" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.52);z-index:9500;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:12px;padding:28px 32px;width:380px;box-shadow:0 16px 48px rgba(15,23,42,.28);font-family:'Malgun Gothic','맑은 고딕',Arial,sans-serif;">
+    <div style="font-size:18px;font-weight:900;color:#111827;margin-bottom:10px;">저장하시겠습니까?</div>
+    <div style="font-size:14px;font-weight:700;color:#6b7280;line-height:1.6;margin-bottom:24px;">변경된 내용이 있습니다. 저장하지 않으면 변경사항이 사라집니다.</div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button id="ngDiscard" style="height:40px;padding:0 18px;border:1px solid #e2e7ef;border-radius:7px;background:#fff;font-size:14px;font-weight:700;cursor:pointer;color:#6b7280;font-family:inherit;">저장 안 함</button>
+      <button id="ngCancel"  style="height:40px;padding:0 18px;border:1px solid #e2e7ef;border-radius:7px;background:#fff;font-size:14px;font-weight:700;cursor:pointer;color:#111827;font-family:inherit;">취소</button>
+      <button id="ngSave"    style="height:40px;padding:0 22px;border:none;border-radius:7px;background:#075bd8;font-size:14px;font-weight:700;cursor:pointer;color:#fff;font-family:inherit;">저장하기</button>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  var _dirty=false,_url=null;
+  function markDirty(){ _dirty=true; }
+  function markClean(){ _dirty=false; }
+  window.markDirty=markDirty; window.markClean=markClean;
+  window.safeNav=function(url){ if(!_dirty){location.href=url;return;} _url=url; document.getElementById('navGuard').style.display='flex'; };
+  document.addEventListener('DOMContentLoaded',function(){
+    document.getElementById('ngSave').addEventListener('click',function(){ document.getElementById('navGuard').style.display='none'; var b=document.getElementById('save-btn'); if(b)b.click(); setTimeout(function(){ markClean(); if(_url)location.href=_url; },1500); });
+    document.getElementById('ngDiscard').addEventListener('click',function(){ markClean(); document.getElementById('navGuard').style.display='none'; if(_url)location.href=_url; });
+    document.getElementById('ngCancel').addEventListener('click',function(){ _url=null; document.getElementById('navGuard').style.display='none'; });
+    document.addEventListener('input',markDirty); document.addEventListener('change',markDirty);
+    window.addEventListener('beforeunload',function(e){ if(_dirty){e.preventDefault();e.returnValue='';} });
+  });
+})();
 </script>
 </body>
 </html>

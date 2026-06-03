@@ -100,6 +100,8 @@
     .td-edit { background:transparent;border:none;outline:none;font-family:inherit;font-size:14px;font-weight:700;color:#111827;width:100%;text-align:center; }
     .td-del  { background:none;border:none;cursor:pointer;color:#ccc;font-size:14px;padding:2px; }
     .td-del:hover { color:#f00; }
+    #invTbody td { cursor:text; }
+    #invTbody td:first-child, #invTbody td:last-child { cursor:default; }
 
     /* ── 상태 뱃지/셀렉트 ── */
     .badge { display:inline-flex;justify-content:center;align-items:center;min-width:68px;height:26px;padding:0 8px;border-radius:14px;font-size:12px;font-weight:900;white-space:nowrap; }
@@ -179,11 +181,11 @@
     <div>
       <div class="brand"><img src="log.png" onerror="this.style.display='none'"/>Sales</div>
       <ul class="menu">
-        <li onclick="location.href='sales-plan.html'"><span class="menu-icon">◈</span>전체</li>
-        <li onclick="location.href='sales-report-dashboard.html'"><span class="menu-icon">◥</span>매출 관리</li>
+        <li onclick="safeNav('sales-plan.html')"><span class="menu-icon">◈</span>전체</li>
+        <li onclick="safeNav('sales-report-dashboard.html')"><span class="menu-icon">◥</span>매출 관리</li>
         <li class="active"><span class="menu-icon">◤</span>재고 관리</li>
-        <li onclick="location.href='mpds-dashboard.html'"><span class="menu-icon">◣</span>MPDS 관리</li>
-        <li onclick="location.href='report-dashboard.html'"><span class="menu-icon">◧</span>보고서</li>
+        <li onclick="safeNav('mpds-dashboard.html')"><span class="menu-icon">◣</span>MPDS 관리</li>
+        <li onclick="safeNav('report-dashboard.html')"><span class="menu-icon">◧</span>보고서</li>
       </ul>
     </div>
     <div class="logout" id="logout-btn">⏎ 로그아웃</div>
@@ -721,6 +723,7 @@ document.getElementById('bulkStatusSel').addEventListener('change', function() {
 /* ────────── 행 추가 ────────── */
 document.getElementById('addRowBtn').addEventListener('click', () => {
   rows.push({ ref:'', serial:'', amount:null, customer:'', saleDate:'', status:'판매예정', note:'' });
+  window.markDirty && window.markDirty();
   renderTable(); renderKpi();
   const last = document.getElementById('invTbody').lastElementChild;
   if (last) last.scrollIntoView({ behavior:'smooth', block:'nearest' });
@@ -799,6 +802,7 @@ document.getElementById('excelUploadInput').addEventListener('change', function(
 
       // 기존 데이터에 추가 (덮어쓰지 않고 병합)
       rows.push(...imported);
+      window.markDirty && window.markDirty();
       renderTable(); renderKpi();
       showToast(`✔ ${imported.length}건 업로드 완료`);
     } catch(err) {
@@ -880,6 +884,7 @@ async function saveData() {
     };
     await setDoc(doc(db,'artifacts','patek-s','public','data','inventory',`${curYear}-${pad(curMonth)}`), data, {merge:true});
     if (btn) btn.textContent='✔ 저장됨';
+    window.markClean && window.markClean();
     setTimeout(()=>{ if (btn) btn.textContent='💾 저장하기'; }, 2000);
   } catch(e) {
     alert('저장 실패: '+e.message);
@@ -900,6 +905,64 @@ document.getElementById('excelDownBtn').addEventListener('click', ()=>{
 });
 
 function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+</script>
+<!-- ── 이탈 방지 다이얼로그 ── -->
+<div id="navGuard" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.52);z-index:9500;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:12px;padding:28px 32px;width:380px;box-shadow:0 16px 48px rgba(15,23,42,.28);font-family:'Malgun Gothic','맑은 고딕',Arial,sans-serif;">
+    <div style="font-size:18px;font-weight:900;color:#111827;margin-bottom:10px;">저장하시겠습니까?</div>
+    <div style="font-size:14px;font-weight:700;color:#6b7280;line-height:1.6;margin-bottom:24px;">변경된 내용이 있습니다. 저장하지 않으면 변경사항이 사라집니다.</div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button id="ngDiscard" style="height:40px;padding:0 18px;border:1px solid #e2e7ef;border-radius:7px;background:#fff;font-size:14px;font-weight:700;cursor:pointer;color:#6b7280;font-family:inherit;">저장 안 함</button>
+      <button id="ngCancel"  style="height:40px;padding:0 18px;border:1px solid #e2e7ef;border-radius:7px;background:#fff;font-size:14px;font-weight:700;cursor:pointer;color:#111827;font-family:inherit;">취소</button>
+      <button id="ngSave"    style="height:40px;padding:0 22px;border:none;border-radius:7px;background:#075bd8;font-size:14px;font-weight:700;cursor:pointer;color:#fff;font-family:inherit;">저장하기</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var _dirty=false, _url=null;
+  function markDirty(){ _dirty=true; }
+  function markClean(){ _dirty=false; }
+  window.markDirty=markDirty; window.markClean=markClean;
+  window.safeNav=function(url){
+    if(!_dirty){ location.href=url; return; }
+    _url=url; document.getElementById('navGuard').style.display='flex';
+  };
+  document.addEventListener('DOMContentLoaded',function(){
+    /* tbody 클릭 → 해당 셀 입력 포커스 */
+    var tbody=document.getElementById('invTbody');
+    if(tbody) tbody.addEventListener('click',function(e){
+      var tgt=e.target;
+      if(tgt.tagName==='INPUT'||tgt.tagName==='SELECT'||tgt.tagName==='BUTTON') return;
+      var td=tgt.closest('td');
+      if(!td) return;
+      var el=td.querySelector('input:not([type="checkbox"]),select');
+      if(el){ el.focus(); if(el.tagName==='INPUT') el.select(); }
+    });
+    /* 이탈 다이얼로그 버튼 */
+    document.getElementById('ngSave').addEventListener('click',function(){
+      document.getElementById('navGuard').style.display='none';
+      var btn=document.getElementById('save-btn');
+      if(btn) btn.click();
+      setTimeout(function(){ markClean(); if(_url) location.href=_url; },1500);
+    });
+    document.getElementById('ngDiscard').addEventListener('click',function(){
+      markClean(); document.getElementById('navGuard').style.display='none';
+      if(_url) location.href=_url;
+    });
+    document.getElementById('ngCancel').addEventListener('click',function(){
+      _url=null; document.getElementById('navGuard').style.display='none';
+    });
+    /* 변경 감지 */
+    document.addEventListener('input', markDirty);
+    document.addEventListener('change', markDirty);
+    /* 새로고침 / 탭 닫기 */
+    window.addEventListener('beforeunload',function(e){
+      if(_dirty){ e.preventDefault(); e.returnValue=''; }
+    });
+  });
+})();
 </script>
 </body>
 </html>
