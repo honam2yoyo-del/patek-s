@@ -260,27 +260,6 @@
         </div>
         <div class="formula-note">* MPDS 등록 가능 수량 = 전체 재고 - 판매예정 - AS</div>
 
-        <div class="recommend-panel">
-          <div class="section-title">추천 방식 선택</div>
-          <div class="recommend-grid">
-            <div class="recommend-card active" data-mode="min">
-              <div class="recommend-check">✓</div>
-              <div><div class="recommend-title">최소수량 수량 추천</div><div class="recommend-desc">최소 등록 기준 수량에 맞춰 자동으로 추천합니다.</div></div>
-            </div>
-            <div class="recommend-card" data-mode="old">
-              <div class="recommend-icon">📅</div>
-              <div><div class="recommend-title">장기재고 우선 추천</div><div class="recommend-desc">입고일이 오래된 재고부터 우선 추천합니다.</div></div>
-            </div>
-            <div class="recommend-card" data-mode="low">
-              <div class="recommend-icon">💰</div>
-              <div><div class="recommend-title">금액 낮은 순 추천</div><div class="recommend-desc">금액이 낮은 재고부터 우선 추천합니다.</div></div>
-            </div>
-            <div class="recommend-card" data-mode="manual">
-              <div class="recommend-icon">✏️</div>
-              <div><div class="recommend-title">직접 선택</div><div class="recommend-desc">직접 재고를 선택하여 등록 목록을 구성합니다.</div></div>
-            </div>
-          </div>
-        </div>
       </div>
 
       <!-- 등록 상태 패널 -->
@@ -295,13 +274,6 @@
             <span>pcs</span>
           </li>
           <li>
-            <span>판매 가능 재고 포함</span>
-            <div class="radio-wrap">
-              <label><input type="radio" name="incl" value="include" checked onchange="recalcStatus()"/> 포함</label>
-              <label><input type="radio" name="incl" value="exclude" onchange="recalcStatus()"/> 제외</label>
-            </div>
-          </li>
-          <li>
             <span>현재 등록 가능 수량</span>
             <strong class="status-number blue" id="currentPossibleQty">0</strong>
             <span>pcs</span>
@@ -312,7 +284,7 @@
             <span></span>
           </li>
           <li>
-            <span>여유 수량</span>
+            <span id="extraQtyLabel">여유 수량</span>
             <strong class="status-number green" id="extraQty">0</strong>
             <span>pcs</span>
           </li>
@@ -406,7 +378,7 @@
           <ul class="shortage-list">
             <li><span>최소 등록 기준 수량</span><strong id="minQtyView">30 pcs</strong></li>
             <li><span>현재 등록 가능 수량</span><strong id="possibleQtyView">0 pcs</strong></li>
-            <li><span>여유 수량</span><strong class="green" id="extraQtyView">0 pcs</strong></li>
+            <li><span id="extraQtyViewLabel">여유 수량</span><strong class="green" id="extraQtyView">0 pcs</strong></li>
           </ul>
           <div class="status-box ok" id="statusBox">
             <span class="status-icon ok">✓</span>
@@ -483,7 +455,6 @@ let unsubMpds  = null;
 let inventory  = JSON.parse(JSON.stringify(DEFAULT_INV));
 let activeFilter = '전체';
 let selectedIds  = new Set();
-let recommendMode = 'min';
 
 /* ── 월 피커 ── */
 function renderPickerGrid() {
@@ -568,34 +539,35 @@ function renderKpi() {
 
 /* ── 상태 패널 ── */
 window.recalcStatus = function() {
-  const minQty = Number(document.getElementById('minQtyInput').value) || 0;
-  const incl   = document.querySelector('input[name="incl"]:checked')?.value === 'include';
-  const total  = inventory.length;
-  const sale   = inventory.filter(r => r.status === '판매예정').length;
-  const as     = inventory.filter(r => r.status === 'AS').length;
-  const avail  = total - sale - as;
-  const possible = incl ? avail : avail - sale;
-  const extra  = possible - minQty;
+  const minQty  = Number(document.getElementById('minQtyInput').value) || 0;
+  const total   = inventory.length;
+  const sale    = inventory.filter(r => r.status === '판매예정').length;
+  const as      = inventory.filter(r => r.status === 'AS').length;
+  const possible = total - sale - as;
+  const extra   = possible - minQty;
+  const isOk    = extra >= 0;
 
   document.getElementById('currentPossibleQty').textContent = possible;
   document.getElementById('extraQty').textContent = Math.abs(extra);
-  document.getElementById('extraQty').className = 'status-number ' + (extra >= 0 ? 'green' : 'red');
+  document.getElementById('extraQty').className = 'status-number ' + (isOk ? 'green' : 'red');
+  document.getElementById('extraQtyLabel').textContent = isOk ? '여유 수량' : '부족한 수량';
 
   const badge = document.getElementById('statusBadge');
-  badge.textContent = extra >= 0 ? '등록 가능' : '등록 불가';
-  badge.style.background = extra >= 0 ? '#dcfce7' : '#fee2e2';
-  badge.style.color       = extra >= 0 ? '#059669' : '#ef4444';
+  badge.textContent = isOk ? '등록 가능' : '등록 불가';
+  badge.style.background = isOk ? '#dcfce7' : '#fee2e2';
+  badge.style.color       = isOk ? '#059669' : '#ef4444';
 
   // 오른쪽 요약 업데이트
-  document.getElementById('minQtyView').textContent      = minQty + ' pcs';
-  document.getElementById('possibleQtyView').textContent = possible + ' pcs';
-  document.getElementById('extraQtyView').textContent    = (extra >= 0 ? '+ ' : '- ') + Math.abs(extra) + ' pcs';
-  document.getElementById('extraQtyView').className      = extra >= 0 ? 'green' : 'red';
+  document.getElementById('minQtyView').textContent        = minQty + ' pcs';
+  document.getElementById('possibleQtyView').textContent   = possible + ' pcs';
+  document.getElementById('extraQtyViewLabel').textContent = isOk ? '여유 수량' : '부족한 수량';
+  document.getElementById('extraQtyView').textContent      = Math.abs(extra) + ' pcs';
+  document.getElementById('extraQtyView').className        = isOk ? 'green' : 'red';
 
   const box  = document.getElementById('statusBox');
   const icon = box.querySelector('.status-icon');
   const text = document.getElementById('statusBoxText');
-  if (extra >= 0) {
+  if (isOk) {
     box.className = 'status-box ok'; icon.className = 'status-icon ok'; icon.textContent = '✓';
     text.innerHTML = '최소 등록 기준 수량을 충족합니다.<br/>MPDS 등록이 가능합니다.';
   } else {
@@ -784,30 +756,11 @@ window.updateSel = function() {
   document.getElementById('selAmt2').textContent  = fmtW(amt);
 };
 
-/* ── 추천 방식 ── */
-document.querySelectorAll('.recommend-card').forEach(card => {
-  card.addEventListener('click', () => {
-    document.querySelectorAll('.recommend-card').forEach(c => {
-      c.classList.remove('active');
-      const ck = c.querySelector('.recommend-check');
-      if (ck) { ck.replaceWith(Object.assign(document.createElement('div'),{className:'recommend-icon',textContent:c.querySelector('.recommend-icon')?.textContent||'📌'})); }
-    });
-    card.classList.add('active');
-    recommendMode = card.dataset.mode;
-    const ico = card.querySelector('.recommend-icon');
-    if (ico) ico.replaceWith(Object.assign(document.createElement('div'),{className:'recommend-check',textContent:'✓'}));
-  });
-});
 
 window.applyRecommend = function() {
   selectedIds.clear();
   const minQty = Number(document.getElementById('minQtyInput').value) || 30;
   let candidates = inventory.map((r,i) => ({...r,i})).filter(r => !['판매예정','AS'].includes(r.status));
-
-  if (recommendMode === 'old')
-    candidates.sort((a,b) => (a.date||'').localeCompare(b.date||''));
-  else if (recommendMode === 'low')
-    candidates.sort((a,b) => (Number(a.amount)||0) - (Number(b.amount)||0));
 
   candidates.slice(0, minQty).forEach(r => selectedIds.add(r.i));
   renderTable();

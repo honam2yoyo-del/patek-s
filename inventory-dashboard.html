@@ -495,8 +495,9 @@ async function syncExcelToMpds(imported) {
         (m.serial||'').toLowerCase()===(r.serial||'').toLowerCase()
       );
       if (idx < 0) {
+        const mpdsStatusMap = { '판매예정':'판매예정', 'AS':'AS', '기타':'기타' };
         mpdsInv.push({ ref:r.ref, serial:r.serial||'', line:getLineForRef(r.ref),
-          date:r.arrivalDate||'', amount:r.amount, status:'보류', note:'' });
+          date:r.arrivalDate||'', amount:r.amount, status:mpdsStatusMap[r.status]||'보류', note:'' });
         changed = true;
       } else if (!mpdsInv[idx].line) {
         const lineVal = getLineForRef(r.ref);
@@ -511,7 +512,10 @@ async function syncExcelToMpds(imported) {
 /* ────────── MPDS 동기화: 상태 변경 시 ────────── */
 async function syncStatusToMpds(ref, serial, status) {
   const mpdsMap = { '판매예정':'판매예정', 'AS':'AS', '기타':'기타' };
-  if (!mpdsMap[status] || !ref) return;
+  const revertStatuses = ['잔여재고','컨펌예정','이월예정'];
+  if (!ref) return;
+  const mpdsStatus = mpdsMap[status] || (revertStatuses.includes(status) ? '보류' : null);
+  if (!mpdsStatus) return;
   try {
     const docId = `${curYear}-${pad(curMonth)}`;
     const snap = await getDoc(doc(db,'artifacts','patek-s','public','data','mpds',docId));
@@ -522,7 +526,7 @@ async function syncStatusToMpds(ref, serial, status) {
       (m.serial||'').toLowerCase()===(serial||'').toLowerCase()
     );
     if (idx < 0) return;
-    mpdsInv[idx].status = mpdsMap[status];
+    mpdsInv[idx].status = mpdsStatus;
     await setDoc(doc(db,'artifacts','patek-s','public','data','mpds',docId),
       { inventory:mpdsInv, updatedAt:new Date().toISOString() }, {merge:true});
   } catch(e) {}
