@@ -161,20 +161,22 @@
 
     /* ── 하단 바 ── */
     .bottom-actions { position:fixed;left:185px;right:0;bottom:0;height:68px;display:flex;justify-content:flex-end;align-items:center;gap:12px;background:rgba(255,255,255,.98);border-top:1px solid #e2e7ef;padding:0 24px;box-shadow:0 -4px 16px rgba(15,23,42,.06); }
-    .bottom-btn { height:42px;border:1px solid #9bbcff;border-radius:7px;background:#fff;color:#075bd8;padding:0 20px;font-size:14px;font-weight:900;cursor:pointer;white-space:nowrap; }
-    .bottom-btn.primary { background:#075bd8;color:#fff;border-color:#075bd8;min-width:220px; }
+    .bottom-btn { height:42px;border:1px solid #d9e0ea;border-radius:7px;background:#fff;color:#111827;padding:0 20px;font-size:14px;font-weight:900;cursor:pointer;white-space:nowrap; }
+    .bottom-btn:hover { background:#f8fafc; }
+    .btn-save { background:#075bd8;color:#fff;border-color:#075bd8; }
+    .btn-save:hover { background:#0550b3; }
+    .bulk-status-bottom { height:38px;border:1px solid #9bbcff;border-radius:7px;padding:0 12px;font-size:13px;font-weight:800;color:#075bd8;background:#f0f7ff;cursor:pointer;font-family:inherit; }
 
-    @media(max-width:1500px) { .top-layout,.middle-layout { grid-template-columns:1fr; } .summary-grid { grid-template-columns:repeat(3,1fr); } }
-    @media(max-width:900px)  { .app { flex-direction:column; } .sidebar { width:100%; } .recommend-grid { grid-template-columns:1fr 1fr; } .bottom-actions { position:static;left:0;flex-wrap:wrap;height:auto;padding:16px; } }
+    /* ── 라인 필터 팝업 ── */
+    #lineFilterPopup { display:none;position:fixed;z-index:600;background:#fff;border:1px solid #d9e0ea;border-radius:8px;padding:6px;box-shadow:0 6px 20px rgba(15,23,42,.14);min-width:180px;max-height:320px;overflow-y:auto; }
+    .line-filter-item { padding:8px 12px;font-size:13px;font-weight:700;cursor:pointer;border-radius:5px; }
+    .line-filter-item:hover { background:#f0f7ff; }
+    .line-filter-item.active { background:#075bd8;color:#fff; }
+    #lineFilterTh { cursor:pointer;user-select:none; }
+    #lineFilterTh:hover { background:#e8f0fd; }
 
-    .action-btn { height:42px;min-width:116px;border:1px solid #d9e0ea;border-radius:7px;background:#fff;padding:0 14px;display:inline-flex;align-items:center;justify-content:center;gap:9px;font-size:14px;font-weight:900;color:#111827;cursor:pointer;box-shadow:0 1px 2px rgba(15,23,42,.03);transition:all .15s ease; }
-    .action-btn:hover { background:#f8fafc;border-color:#cbd5e1;transform:translateY(-1px); }
-    .btn-icon { width:22px;height:22px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0; }
-    .btn-icon svg { width:17px;height:17px;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round; }
-    .copy-icon { background:#f0f9ff; }
-    .copy-icon svg { stroke:#0284c7; }
-    .final-icon { background:#eff6ff; }
-    .final-icon svg { stroke:#2563eb; }
+    @media(max-width:1500px) { .top-layout { grid-template-columns:1fr; } .summary-grid { grid-template-columns:repeat(3,1fr); } }
+    @media(max-width:900px)  { .app { flex-direction:column; } .sidebar { width:100%; } .bottom-actions { position:static;left:0;flex-wrap:wrap;height:auto;padding:16px; } }
   </style>
 </head>
 <body>
@@ -225,8 +227,7 @@
             <div class="mpp-grid" id="pickerMonthGrid"></div>
           </div>
         </div>
-        <button class="btn excel" id="excelBtn">엑셀 다운로드</button>
-        <button class="btn" onclick="window.print()">인쇄</button>
+        <button class="btn btn-save" id="save-btn">💾 저장하기</button>
       </div>
     </div>
 
@@ -288,20 +289,10 @@
                   <th style="width:40px;"><input type="checkbox" id="checkAll"/></th>
                   <th style="width:130px;">REF.</th>
                   <th style="width:160px;">SERIAL</th>
-                  <th style="width:130px;">라인</th>
+                  <th id="lineFilterTh" style="width:130px;" onclick="window.toggleLineFilter(this)">라인 <span id="lineFilterIndicator" style="font-size:10px;color:#075bd8;"></span></th>
                   <th style="width:110px;">입고일</th>
                   <th style="width:130px;">금액(KRW)</th>
-                  <th style="width:104px;padding:5px 4px;">
-                    <div>상태</div>
-                    <select class="bulk-status-sel" id="bulkMpdsStatusSel">
-                      <option value="">일괄변경 ▾</option>
-                      <option value="등록">등록</option>
-                      <option value="판매예정">판매예정</option>
-                      <option value="AS">AS</option>
-                      <option value="기타">기타</option>
-                      <option value="보류">보류</option>
-                    </select>
-                  </th>
+                  <th style="width:104px;">상태</th>
                   <th>비고</th>
                   <th style="width:26px;"></th>
                 </tr>
@@ -357,47 +348,46 @@
 
         <div class="summary-panel">
           <div class="summary-panel-title">MPDS 등록 요약</div>
+          <div class="donut-wrap" style="margin-top:0;margin-bottom:20px;">
+            <div class="donut-chart" id="mpdsDonut">
+              <div class="donut-hole" id="mpdsDonutLabel">0<br>pcs</div>
+            </div>
+          </div>
           <table class="line-sum-tbl">
             <thead>
-              <tr><th>라인</th><th>수량</th><th>비율</th></tr>
+              <tr><th style="text-align:left;">라인</th><th>수량</th><th>비율</th></tr>
             </thead>
             <tbody id="lineSummaryBody"></tbody>
             <tfoot>
               <tr>
-                <td>합계</td>
+                <td style="text-align:left;">합계</td>
                 <td id="lineSummaryTotal">0 pcs</td>
                 <td>100%</td>
               </tr>
             </tfoot>
           </table>
-          <div class="donut-wrap">
-            <div class="donut-chart" id="mpdsDonut">
-              <div class="donut-hole" id="mpdsDonutLabel">0<br>pcs</div>
-            </div>
-            <ul class="legend" id="mpdsLegend"></ul>
-          </div>
         </div>
       </aside>
     </section>
   </main>
 </div>
 
+<div id="lineFilterPopup"><div id="lineFilterList"></div></div>
+
 <div class="bottom-actions">
-  <button class="bottom-btn" onclick="applyRecommend()">등록 추천 적용</button>
-  <button class="bottom-btn" onclick="clearSelection()">선택 해제</button>
-  <button class="action-btn copy-btn" onclick="copyList()">
-    <span class="btn-icon copy-icon">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 9h10v12H9V9z"/><path d="M5 15H4a1 1 0 0 1-1-1V4h12a1 1 0 0 1 1 1v1"/><path d="M12 13h4"/><path d="M12 17h4"/></svg>
-    </span>
-    <span>등록 리스트 복사</span>
-  </button>
-  <button class="bottom-btn" id="save-btn">💾 저장하기</button>
-  <button class="action-btn final-btn" onclick="printFinalList()">
-    <span class="btn-icon final-icon">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 8V3h10v5"/><path d="M6 17H4v-6h16v6h-2"/><path d="M7 14h10v7H7v-7z"/><path d="M9 18l2 2 4-4"/></svg>
-    </span>
-    <span>최종 확인 및 등록 리스트 출력</span>
-  </button>
+  <div id="bulkStatusWrap" style="display:none;align-items:center;gap:8px;">
+    <span style="font-size:13px;font-weight:900;color:#374151;">상태 일괄변경</span>
+    <select id="bulkMpdsStatusSel" class="bulk-status-bottom">
+      <option value="">선택 ▾</option>
+      <option value="등록">등록</option>
+      <option value="판매예정">판매예정</option>
+      <option value="AS">AS</option>
+      <option value="기타">기타</option>
+      <option value="보류">보류</option>
+    </select>
+  </div>
+  <button class="bottom-btn" id="excelBtn">엑셀 다운로드</button>
+  <button class="bottom-btn" onclick="window.print()">프린트</button>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -446,6 +436,7 @@ let pickerYear = curYear;
 let unsubMpds  = null;
 let inventory  = JSON.parse(JSON.stringify(DEFAULT_INV));
 let activeFilter = '전체';
+let lineFilter   = '';
 let selectedIds  = new Set();
 
 /* ── 월 피커 ── */
@@ -474,8 +465,35 @@ document.getElementById('monthPickerBtn').addEventListener('click', e => {
 });
 document.getElementById('prevYearBtn').addEventListener('click', e => { e.stopPropagation(); pickerYear--; renderPickerGrid(); });
 document.getElementById('nextYearBtn').addEventListener('click', e => { e.stopPropagation(); pickerYear++; renderPickerGrid(); });
-document.addEventListener('click', () => { const p = document.getElementById('monthPickerPopup'); if(p) p.style.display='none'; });
+document.addEventListener('click', () => {
+  const p = document.getElementById('monthPickerPopup'); if(p) p.style.display='none';
+  const lp = document.getElementById('lineFilterPopup'); if(lp) lp.style.display='none';
+});
 document.getElementById('monthPickerWrap').addEventListener('click', e => e.stopPropagation());
+
+/* ── 라인 필터 ── */
+window.toggleLineFilter = function(th) {
+  const popup = document.getElementById('lineFilterPopup');
+  if (popup.style.display !== 'none') { popup.style.display = 'none'; return; }
+  const lines = [...new Set(inventory.map(r => r.line||'').filter(Boolean))].sort();
+  const rect  = th.getBoundingClientRect();
+  popup.style.top  = (rect.bottom + 4) + 'px';
+  popup.style.left = rect.left + 'px';
+  document.getElementById('lineFilterList').innerHTML =
+    ['전체', ...lines].map(l => {
+      const val = l === '전체' ? '' : l;
+      return `<div class="line-filter-item${lineFilter===val?' active':''}" onclick="window.setLineFilter('${val.replace(/'/g,"\\'")}');event.stopPropagation();">${l}</div>`;
+    }).join('');
+  popup.style.display = 'block';
+  event.stopPropagation();
+};
+window.setLineFilter = function(val) {
+  lineFilter = val;
+  document.getElementById('lineFilterPopup').style.display = 'none';
+  const ind = document.getElementById('lineFilterIndicator');
+  if (ind) ind.textContent = val ? `▾ ${val}` : '▾';
+  renderTable();
+};
 
 /* ── Auth ── */
 document.getElementById('login-btn').addEventListener('click', async () => {
@@ -570,13 +588,6 @@ function renderDonut() {
     stops.length > 0 ? `conic-gradient(${stops.join(',')})` : '#e5e7eb';
   document.getElementById('mpdsDonutLabel').innerHTML = `${total}<br>pcs`;
 
-  const legend = document.getElementById('mpdsLegend');
-  legend.innerHTML = entries.map(([line, cnt], i) => {
-    const pct = total > 0 ? (cnt/total*100).toFixed(1) : '0.0';
-    const dc  = DOT_CLASSES[i] || 'd9';
-    return `<li><span class="dot ${dc}"></span><span>${line}</span><b>${cnt} pcs</b><span>${pct}%</span></li>`;
-  }).join('');
-
   const tbody = document.getElementById('lineSummaryBody');
   if (tbody) {
     tbody.innerHTML = entries.map(([line, cnt], i) => {
@@ -609,8 +620,9 @@ function getFiltered() {
   const kw = tblSearch.value.trim().toLowerCase();
   return inventory.map((r,i) => ({...r, _i:i})).filter(r => {
     const fmatch = activeFilter === '전체' || r.status === activeFilter;
+    const lmatch = !lineFilter || (r.line||'') === lineFilter;
     const kmatch = !kw || (r.ref||'').toLowerCase().includes(kw) || (r.serial||'').toLowerCase().includes(kw) || (r.line||'').toLowerCase().includes(kw);
-    return fmatch && kmatch;
+    return fmatch && lmatch && kmatch;
   });
 }
 
@@ -743,6 +755,8 @@ window.updateSel = function() {
   document.getElementById('selAmount').textContent = fmtW(amt);
   document.getElementById('selQty2').textContent  = qty + ' pcs';
   document.getElementById('selAmt2').textContent  = fmtW(amt);
+  const bw = document.getElementById('bulkStatusWrap');
+  if (bw) bw.style.display = qty > 0 ? 'flex' : 'none';
 };
 
 
