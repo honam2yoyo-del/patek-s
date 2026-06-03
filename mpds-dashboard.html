@@ -178,9 +178,7 @@
     #lineFilterTh { cursor:pointer;user-select:none; }
     #lineFilterTh:hover { background:#e8f0fd; }
 
-    @media(max-width:1500px) { .summary-grid { grid-template-columns:repeat(3,1fr); } }
-    @media(max-width:1100px) { .top-layout { grid-template-columns:1fr; } }
-    @media(max-width:900px)  { .app { flex-direction:column; } .sidebar { width:100%; } .bottom-actions { position:static;left:0;flex-wrap:wrap;height:auto;padding:16px; } }
+    html { overflow-x:hidden; }
   </style>
 </head>
 <body>
@@ -922,5 +920,6 @@ function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;'
   });
 })();
 </script>
+<script>(function(){var W=1920;function s(){document.documentElement.style.zoom=Math.min(1,window.innerWidth/W);}s();window.addEventListener('resize',s);})();</script>
 </body>
 </html>

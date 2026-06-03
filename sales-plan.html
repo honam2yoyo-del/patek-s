@@ -89,14 +89,7 @@
     .stat-box-value { font-size:26px;font-weight:900; }
     .stat-box-unit  { font-size:13px;font-weight:700;color:#6b7280;margin-top:2px; }
 
-    @media(max-width:1400px){
-      .kpi-grid { grid-template-columns:repeat(3,1fr); }
-      .mid-grid { grid-template-columns:1fr; }
-      .bot-grid { grid-template-columns:1fr; }
-    }
-    @media(max-width:900px){
-      .kpi-grid { grid-template-columns:repeat(2,1fr); }
-    }
+    html { overflow-x:hidden; }
   </style>
 </head>
 <body>
@@ -450,5 +443,6 @@ onAuthStateChanged(auth, user => {
   if(user) startListeners();
 });
 </script>
+<script>(function(){var W=1920;function s(){document.documentElement.style.zoom=Math.min(1,window.innerWidth/W);}s();window.addEventListener('resize',s);})();</script>
 </body>
 </html>

@@ -136,8 +136,7 @@
     .a4-mode .report-page { background:#fff;width:1120px;min-height:790px;margin:0 auto;padding:22px;box-shadow:0 8px 30px rgba(15,23,42,.18); }
     .a4-mode .save-bar { display:none; }
 
-    @media(max-width:1400px) { .summary-grid { grid-template-columns:repeat(3,1fr); } .report-grid,.bottom-grid { grid-template-columns:1fr; } }
-    @media(max-width:960px)  { .app { flex-direction:column; } .sidebar { width:100%; } .summary-grid { grid-template-columns:1fr; } .analysis-panel { grid-template-columns:1fr; } }
+    html { overflow-x:hidden; }
     @media print {
       body { background:#fff; }
       .sidebar,.toolbar,.note-line,.special-actions,.save-bar { display:none !important; }
@@ -860,5 +859,6 @@ function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;'
   });
 })();
 </script>
+<script>(function(){var W=1920;function s(){document.documentElement.style.zoom=Math.min(1,window.innerWidth/W);}s();window.addEventListener('resize',s);})();</script>
 </body>
 </html>

@@ -143,12 +143,7 @@
     .bottom-btn { height:42px;min-width:120px;border-radius:6px;border:1px solid #d9e0ea;background:#fff;font-size:14px;font-weight:900;cursor:pointer; }
     .bottom-btn.primary { background:#075bd8;color:#fff;border-color:#075bd8; }
 
-    @media(max-width:900px)  {
-      .app { flex-direction:column; }
-      .sidebar { width:100%; }
-      .kpi-grid { grid-template-columns:repeat(4,minmax(0,1fr)); }
-      .bottom-actions { position:static;left:0;flex-wrap:wrap;height:auto;padding:16px; }
-    }
+    html { overflow-x:hidden; }
 
     .action-btn { height:42px;min-width:116px;border:1px solid #d9e0ea;border-radius:7px;background:#fff;padding:0 14px;display:inline-flex;align-items:center;justify-content:center;gap:9px;font-size:14px;font-weight:900;color:#111827;cursor:pointer;box-shadow:0 1px 2px rgba(15,23,42,.03);transition:all .15s ease; }
     .action-btn:hover { background:#f8fafc;border-color:#cbd5e1;transform:translateY(-1px); }
@@ -1106,5 +1101,6 @@ window.addEventListener('beforeunload', () => {
   });
 })();
 </script>
+<script>(function(){var W=1920;function s(){document.documentElement.style.zoom=Math.min(1,window.innerWidth/W);}s();window.addEventListener('resize',s);})();</script>
 </body>
 </html>
