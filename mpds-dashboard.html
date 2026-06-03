@@ -55,7 +55,7 @@
     .mpp-month.sel { background:#075bd8;color:#fff; }
 
     /* ── KPI ── */
-    .top-layout { display:grid;grid-template-columns:1fr 360px;gap:22px;margin-bottom:22px;align-items:start; }
+    .top-layout { display:grid;grid-template-columns:1fr 360px;gap:22px;align-items:start; }
     .summary-grid { display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:14px; }
     .summary-card { background:#fff;border:1px solid #e1e7f0;border-radius:10px;padding:20px 16px;min-height:110px;display:flex;align-items:center;gap:14px;box-shadow:0 2px 8px rgba(15,23,42,.035); }
     .summary-icon { width:50px;height:50px;border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0; }
@@ -233,8 +233,9 @@
       </div>
     </div>
 
-    <!-- KPI + 추천방식 + 상태 -->
+    <!-- 메인 레이아웃: 왼쪽(KPI+표) / 오른쪽(등록상태+요약) -->
     <section class="top-layout">
+      <!-- 왼쪽: KPI + 표 -->
       <div>
         <div class="summary-grid">
           <div class="summary-card">
@@ -260,107 +261,103 @@
         </div>
         <div class="formula-note">* MPDS 등록 가능 수량 = 전체 재고 - 판매예정 - AS</div>
 
-      </div>
-
-      <!-- 등록 상태 패널 -->
-      <aside class="status-panel">
-        <div class="status-head">
-          <div class="status-title">등록 상태</div>
-        </div>
-        <ul class="status-list">
-          <li>
-            <span>최소 등록 기준 수량</span>
-            <input id="minQtyInput" class="status-input" type="number" value="30" min="1" oninput="recalcStatus()"/>
-            <span>pcs</span>
-          </li>
-          <li>
-            <span>현재 등록 가능 수량</span>
-            <strong class="status-number blue" id="currentPossibleQty">0</strong>
-            <span>pcs</span>
-          </li>
-          <li class="divider">
-            <span>등록 상태</span>
-            <span class="status-badge" id="statusBadge">-</span>
-            <span></span>
-          </li>
-          <li>
-            <span id="extraQtyLabel">여유 수량</span>
-            <strong class="status-number green" id="extraQty">0</strong>
-            <span>pcs</span>
-          </li>
-        </ul>
-      </aside>
-    </section>
-
-    <!-- 재고 테이블 -->
-    <section class="middle-layout">
-      <div class="inventory-panel">
-        <div class="table-ctrl">
-          <div class="search-wrap">
-            <input id="tableSearch" class="search-input" type="text" placeholder="REF., SERIAL, 라인 검색"/>
-            <span class="search-icon">🔍</span>
+        <!-- 재고 테이블 -->
+        <div class="inventory-panel" style="margin-top:14px;">
+          <div class="table-ctrl">
+            <div class="search-wrap">
+              <input id="tableSearch" class="search-input" type="text" placeholder="REF., SERIAL, 라인 검색"/>
+              <span class="search-icon">🔍</span>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <button class="add-row-btn" id="addRowBtn">+ 행 추가</button>
+              <button class="btn-del-sel" id="delSelBtn">선택 삭제</button>
+              <button class="btn-del-all" id="delAllBtn">전체 삭제</button>
+            </div>
           </div>
-          <div style="display:flex;gap:8px;align-items:center;">
-            <button class="add-row-btn" id="addRowBtn">+ 행 추가</button>
-            <button class="btn-del-sel" id="delSelBtn">선택 삭제</button>
-            <button class="btn-del-all" id="delAllBtn">전체 삭제</button>
+
+          <div class="tabs" id="tabsBar">
+            <button class="tab active" data-filter="전체">전체</button>
+            <button class="tab" data-filter="등록">등록</button>
+            <button class="tab" data-filter="판매예정">판매예정</button>
+            <button class="tab" data-filter="AS">AS</button>
+            <button class="tab" data-filter="기타">기타</button>
+            <button class="tab" data-filter="보류">보류</button>
           </div>
-        </div>
 
-        <div class="tabs" id="tabsBar">
-          <button class="tab active" data-filter="전체">전체</button>
-          <button class="tab" data-filter="등록">등록</button>
-          <button class="tab" data-filter="판매예정">판매예정</button>
-          <button class="tab" data-filter="AS">AS</button>
-          <button class="tab" data-filter="기타">기타</button>
-          <button class="tab" data-filter="보류">보류</button>
-        </div>
+          <div class="table-wrap">
+            <table class="mpds-table">
+              <thead>
+                <tr>
+                  <th style="width:40px;"><input type="checkbox" id="checkAll"/></th>
+                  <th style="width:130px;">REF.</th>
+                  <th style="width:160px;">SERIAL</th>
+                  <th style="width:130px;">라인</th>
+                  <th style="width:110px;">입고일</th>
+                  <th style="width:130px;">금액(KRW)</th>
+                  <th style="width:104px;padding:5px 4px;">
+                    <div>상태</div>
+                    <select class="bulk-status-sel" id="bulkMpdsStatusSel">
+                      <option value="">일괄변경 ▾</option>
+                      <option value="등록">등록</option>
+                      <option value="판매예정">판매예정</option>
+                      <option value="AS">AS</option>
+                      <option value="기타">기타</option>
+                      <option value="보류">보류</option>
+                    </select>
+                  </th>
+                  <th>비고</th>
+                  <th style="width:26px;"></th>
+                </tr>
+              </thead>
+              <tbody id="invTbody"></tbody>
+              <tfoot>
+                <tr class="selected-row">
+                  <td></td><td>선택 합계</td><td colspan="3"></td>
+                  <td id="selAmount">0 원</td>
+                  <td colspan="4"><b id="selQty">0 pcs</b></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
 
-        <div class="table-wrap">
-          <table class="mpds-table">
-            <thead>
-              <tr>
-                <th style="width:40px;"><input type="checkbox" id="checkAll"/></th>
-                <th style="width:130px;">REF.</th>
-                <th style="width:160px;">SERIAL</th>
-                <th style="width:130px;">라인</th>
-                <th style="width:110px;">입고일</th>
-                <th style="width:130px;">금액(KRW)</th>
-                <th style="width:104px;padding:5px 4px;">
-                  <div>상태</div>
-                  <select class="bulk-status-sel" id="bulkMpdsStatusSel">
-                    <option value="">일괄변경 ▾</option>
-                    <option value="등록">등록</option>
-                    <option value="판매예정">판매예정</option>
-                    <option value="AS">AS</option>
-                    <option value="기타">기타</option>
-                    <option value="보류">보류</option>
-                  </select>
-                </th>
-                <th>비고</th>
-                <th style="width:26px;"></th>
-              </tr>
-            </thead>
-            <tbody id="invTbody"></tbody>
-            <tfoot>
-              <tr class="selected-row">
-                <td></td><td>선택 합계</td><td colspan="3"></td>
-                <td id="selAmount">0 원</td>
-                <td colspan="4"><b id="selQty">0 pcs</b></td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-
-        <div class="sel-summary">
-          <span>체크 합계</span>
-          <span>수량 <b id="selQty2">0 pcs</b></span>
-          <span>금액 <b id="selAmt2">0 원</b></span>
+          <div class="sel-summary">
+            <span>체크 합계</span>
+            <span>수량 <b id="selQty2">0 pcs</b></span>
+            <span>금액 <b id="selAmt2">0 원</b></span>
+          </div>
         </div>
       </div>
 
-      <!-- 오른쪽 요약 -->
+      <!-- 오른쪽: 등록 상태 + 요약 -->
       <aside class="right-summary">
+        <div class="status-panel">
+          <div class="status-head">
+            <div class="status-title">등록 상태</div>
+          </div>
+          <ul class="status-list">
+            <li>
+              <span>최소 등록 기준 수량</span>
+              <input id="minQtyInput" class="status-input" type="number" value="30" min="1" oninput="recalcStatus()"/>
+              <span>pcs</span>
+            </li>
+            <li>
+              <span>현재 등록 가능 수량</span>
+              <strong class="status-number blue" id="currentPossibleQty">0</strong>
+              <span>pcs</span>
+            </li>
+            <li class="divider">
+              <span>등록 상태</span>
+              <span class="status-badge" id="statusBadge">-</span>
+              <span></span>
+            </li>
+            <li>
+              <span id="extraQtyLabel">여유 수량</span>
+              <strong class="status-number green" id="extraQty">0</strong>
+              <span>pcs</span>
+            </li>
+          </ul>
+        </div>
+
         <div class="summary-panel">
           <div class="summary-panel-title">MPDS 등록 요약</div>
           <div class="donut-area">

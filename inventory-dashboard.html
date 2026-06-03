@@ -521,10 +521,11 @@ async function syncStatusToMpds(ref, serial, status) {
     const snap = await getDoc(doc(db,'artifacts','patek-s','public','data','mpds',docId));
     if (!snap.exists()) return;
     const mpdsInv = (snap.data().inventory||[]).map(r=>({...r}));
-    const idx = mpdsInv.findIndex(m =>
+    let idx = mpdsInv.findIndex(m =>
       (m.ref||'').toLowerCase()===(ref||'').toLowerCase() &&
       (m.serial||'').toLowerCase()===(serial||'').toLowerCase()
     );
+    if (idx < 0) idx = mpdsInv.findIndex(m => (m.ref||'').toLowerCase()===(ref||'').toLowerCase());
     if (idx < 0) return;
     mpdsInv[idx].status = mpdsStatus;
     await setDoc(doc(db,'artifacts','patek-s','public','data','mpds',docId),
