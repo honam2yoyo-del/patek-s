@@ -502,7 +502,7 @@ function renderTable() {
       <td><input class="td-edit" value="${esc(r.serial||'')}" oninput="rows[${ri}].serial=this.value" placeholder="Serial"/></td>
       <td style="padding:0;"><div style="display:flex;align-items:center;padding:10px 12px;gap:4px;"><input class="td-edit" type="text" inputmode="numeric" value="${fmtInput(r.amount)}"
           oninput="window.fmtNum(this);rows[${ri}].amount=parseNum(this.value);this.closest('tr').querySelector('.row-check').dataset.amount=parseNum(this.value)||0;updateSel();"
-          placeholder="0" style="width:0;flex:1;text-align:right;"/><span style="white-space:nowrap;font-weight:700;font-size:14px;">원</span></div></td>
+          placeholder="0" style="width:0;flex:1;text-align:center;"/><span style="white-space:nowrap;font-weight:700;font-size:14px;">원</span></div></td>
       <td><input class="td-edit" value="${esc(r.customer||'')}" oninput="rows[${ri}].customer=this.value" placeholder="고객명"/></td>
       <td><input class="td-edit" value="${esc(r.saleDate||'')}" oninput="rows[${ri}].saleDate=this.value" placeholder="예: 6/28(목)"/></td>
       <td>
