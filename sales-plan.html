@@ -38,11 +38,11 @@
 
     /* ── KPI 카드 5개 ── */
     .kpi-grid { display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-bottom:20px; }
-    .kpi-card { background:#fff;border:1px solid #e2e7ef;border-radius:10px;padding:18px 20px 16px;box-shadow:0 2px 8px rgba(15,23,42,.035);display:flex;flex-direction:column; }
-    .kpi-label { font-size:13px;font-weight:700;color:#6b7280;margin-bottom:10px; }
+    .kpi-card { background:#fff;border:1px solid #e2e7ef;border-radius:10px;padding:18px 20px 16px;box-shadow:0 2px 8px rgba(15,23,42,.035);display:flex;flex-direction:column;align-items:center;text-align:center; }
+    .kpi-label { font-size:13px;font-weight:700;color:#6b7280;margin-bottom:10px;width:100%;text-align:center; }
     .kpi-icon { display:flex;align-items:center;justify-content:center;margin:4px 0 10px;color:#374151; }
-    .kpi-value { font-size:28px;font-weight:900;letter-spacing:-.5px;line-height:1.1; }
-    .kpi-sub { font-size:13px;font-weight:700;color:#6b7280;margin-top:4px; }
+    .kpi-value { font-size:28px;font-weight:900;letter-spacing:-.5px;line-height:1.1;text-align:center; }
+    .kpi-sub { font-size:13px;font-weight:700;color:#6b7280;margin-top:4px;text-align:center; }
     .kpi-value.blue { color:#0067e8; }
     .kpi-value.red  { color:#ff0000; }
 
@@ -157,7 +157,7 @@
           </svg>
         </div>
         <div class="kpi-value" id="kpi-expected">-</div>
-        <div class="kpi-sub" id="kpi-expected-pcs">- pcs</div>
+        <div class="kpi-sub" id="kpi-expected-pcs">(- pcs)</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">현재 매출</div>
@@ -169,7 +169,7 @@
           </svg>
         </div>
         <div class="kpi-value blue" id="kpi-current">-</div>
-        <div class="kpi-sub" id="kpi-current-pcs">- pcs</div>
+        <div class="kpi-sub" id="kpi-current-pcs">(- pcs)</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">남은 매출</div>
@@ -181,7 +181,7 @@
           </svg>
         </div>
         <div class="kpi-value red" id="kpi-remain">-</div>
-        <div class="kpi-sub" id="kpi-remain-pcs">- pcs</div>
+        <div class="kpi-sub" id="kpi-remain-pcs">(- pcs)</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">MPDS 등록 가능</div>
@@ -195,7 +195,7 @@
           </svg>
         </div>
         <div class="kpi-value" id="kpi-mpds">-</div>
-        <div class="kpi-sub">pcs</div>
+        <div class="kpi-sub">(pcs)</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">매장 재고 AS</div>
@@ -208,7 +208,7 @@
           </svg>
         </div>
         <div class="kpi-value" id="kpi-as">-</div>
-        <div class="kpi-sub">건</div>
+        <div class="kpi-sub">(건)</div>
       </div>
     </section>
 
@@ -364,11 +364,11 @@ function render(){
 
   // KPI
   document.getElementById('kpi-expected').textContent = expected ? toOk(expected) : '-';
-  document.getElementById('kpi-expected-pcs').textContent = expected ? `${expPcs} pcs` : '- pcs';
+  document.getElementById('kpi-expected-pcs').textContent = expected ? `(${expPcs} pcs)` : '(- pcs)';
   document.getElementById('kpi-current').textContent  = current ? toOk(current) : '-';
-  document.getElementById('kpi-current-pcs').textContent = current ? `${curPcs} pcs` : '- pcs';
+  document.getElementById('kpi-current-pcs').textContent = current ? `(${curPcs} pcs)` : '(- pcs)';
   document.getElementById('kpi-remain').textContent   = expected ? toOk(remain) : '-';
-  document.getElementById('kpi-remain-pcs').textContent  = expected ? `${remainPcs} pcs` : '- pcs';
+  document.getElementById('kpi-remain-pcs').textContent  = expected ? `(${remainPcs} pcs)` : '(- pcs)';
 
   // MPDS 등록 가능 (잔여 재고 또는 등록 상태)
   const mpdsArr = (mpdsData && mpdsData.inventory) ? mpdsData.inventory : [];
