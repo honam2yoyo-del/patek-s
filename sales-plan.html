@@ -56,8 +56,7 @@
     .panel-header { padding:18px 22px 14px;font-size:18px;font-weight:900;border-bottom:1px solid #e5eaf2; }
     .panel-body { padding:18px 22px; }
 
-    /* ── 매출 요약 4열 ── */
-    .summary-4col { display:grid;grid-template-columns:repeat(4,1fr); }
+    /* ── 매출 요약 (3열, To Do 패널 별도) ── */
     .summary-col { padding:22px 26px;border-right:1px solid #e5eaf2; }
     .summary-col:last-child { border-right:none; }
     .summary-col.highlighted { background:#f0fdf4; }
@@ -75,11 +74,40 @@
     .summary-yoy.pos { color:#16a34a; }
     .summary-yoy.neg { color:#dc2626; }
 
-    /* ── 체크리스트 ── */
-    .checklist { list-style:none; }
-    .checklist li { display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #f0f4fa;font-size:13.5px;font-weight:700; }
-    .checklist li:last-child { border-bottom:none; }
-    .check-circle { width:20px;height:20px;border-radius:50%;background:#0067e8;display:flex;align-items:center;justify-content:center;flex-shrink:0; }
+    /* ── To Do & Check list ── */
+    .summary-3col { display:grid;grid-template-columns:repeat(3,1fr); }
+    .todo-header { padding:16px 20px 12px;font-size:15px;font-weight:900;color:#0067e8;border-bottom:1px solid #e5eaf2;letter-spacing:-.2px; }
+    .todo-body { padding:8px 14px;max-height:248px;overflow-y:auto; }
+    .todo-item { display:flex;align-items:center;gap:10px;padding:9px 6px;border-bottom:1px solid #f0f4fa;cursor:pointer;border-radius:6px;transition:background .12s; }
+    .todo-item:last-child { border-bottom:none; }
+    .todo-item:hover { background:#f0f6ff; }
+    .todo-cb { width:20px;height:20px;border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center; }
+    .todo-cb.cb-active { background:#0067e8; }
+    .todo-cb.cb-empty { border:2px solid #cbd5e1;background:#fff; }
+    .todo-cb.cb-done { background:#d1d5db; }
+    .todo-title { flex:1;font-size:12.5px;font-weight:700;color:#111827;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+    .todo-title.t-done { color:#9ca3af; }
+    .todo-badge { font-size:11px;font-weight:800;padding:3px 8px;border-radius:20px;white-space:nowrap;flex-shrink:0; }
+    .todo-badge.b-today { background:#eff6ff;color:#2563eb; }
+    .todo-badge.b-ongoing { background:#fff7ed;color:#ea580c; }
+    .todo-badge.b-done { background:#f0fdf4;color:#16a34a; }
+    .todo-empty { color:#9ca3af;font-size:12.5px;font-weight:600;text-align:center;padding:24px 0; }
+
+    /* ── 공지 상세 모달 (web) ── */
+    #web-notice-modal { position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:2000;display:none;align-items:center;justify-content:center; }
+    #web-notice-modal.open { display:flex; }
+    .wn-card { background:#fff;border-radius:16px;width:500px;max-width:92vw;max-height:82vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.2); }
+    .wn-card-head { padding:18px 24px 14px;border-bottom:1px solid #e5eaf2;display:flex;align-items:center;justify-content:space-between;flex-shrink:0; }
+    .wn-card-body { padding:20px 24px;flex:1;overflow-y:auto; }
+    .wn-field { margin-bottom:16px; }
+    .wn-label { font-size:10px;font-weight:800;color:#9ca3af;margin-bottom:5px;letter-spacing:.6px;text-transform:uppercase; }
+    .wn-val { font-size:14px;font-weight:600;color:#1f2937; }
+    .wn-content-box { background:#f8fafc;border:1px solid #e5eaf2;border-radius:10px;padding:14px;font-size:13.5px;font-weight:500;color:#374151;line-height:1.65;white-space:pre-wrap;word-break:break-word;min-height:80px; }
+    .wn-card-foot { padding:14px 24px 18px;border-top:1px solid #e5eaf2;display:flex;gap:12px;flex-shrink:0; }
+    .btn-wn-complete { flex:1;background:#0067e8;color:#fff;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:800;cursor:pointer;transition:background .12s; }
+    .btn-wn-complete:hover { background:#0055c8; }
+    .btn-wn-close { flex:1;background:#f3f4f6;color:#374151;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;transition:background .12s; }
+    .btn-wn-close:hover { background:#e5e7eb; }
 
     /* ── 고객 / SP오더 ── */
     .bot-section { margin-bottom:16px; }
@@ -203,62 +231,52 @@
       </div>
     </section>
 
-    <!-- 매출 요약 패널 (4열 통합) -->
-    <div class="panel" style="margin-bottom:16px;">
-      <div class="panel-header">매출 요약</div>
-      <div class="summary-4col">
+    <!-- 매출 요약 + To Do & Check list -->
+    <div style="display:grid;grid-template-columns:1.8fr 1fr;gap:16px;margin-bottom:16px;">
 
-        <!-- 목표 달성률 -->
-        <div class="summary-col">
-          <div class="summary-col-label">목표 달성률</div>
-          <div class="summary-big-pct blue" id="achieve-pct">0%</div>
-          <div class="summary-progress">
-            <div class="fill blue" id="achieve-bar" style="width:0%"></div>
+      <!-- 매출 요약 패널 (3열) -->
+      <div class="panel">
+        <div class="panel-header">매출 요약</div>
+        <div class="summary-3col">
+
+          <!-- 목표 달성률 -->
+          <div class="summary-col">
+            <div class="summary-col-label">목표 달성률</div>
+            <div class="summary-big-pct blue" id="achieve-pct">0%</div>
+            <div class="summary-progress">
+              <div class="fill blue" id="achieve-bar" style="width:0%"></div>
+            </div>
+            <div class="summary-sub" id="achieve-sub">현재 -억 / 목표 -억</div>
           </div>
-          <div class="summary-sub" id="achieve-sub">현재 -억 / 목표 -억</div>
-        </div>
 
-        <!-- 센터 목표 달성률 -->
-        <div class="summary-col highlighted">
-          <div class="summary-col-label">센터 목표 달성률</div>
-          <div class="summary-big-pct green" id="centum-pct">0%</div>
-          <div class="summary-progress">
-            <div class="fill green" id="centum-bar" style="width:0%"></div>
+          <!-- 센터 목표 달성률 -->
+          <div class="summary-col highlighted">
+            <div class="summary-col-label">센터 목표 달성률</div>
+            <div class="summary-big-pct green" id="centum-pct">0%</div>
+            <div class="summary-progress">
+              <div class="fill green" id="centum-bar" style="width:0%"></div>
+            </div>
+            <div class="summary-sub" id="centum-sub">현재 -억 / 목표 -억</div>
           </div>
-          <div class="summary-sub" id="centum-sub">현재 -억 / 목표 -억</div>
-        </div>
 
-        <!-- 작년 동일 대비 -->
-        <div class="summary-col">
-          <div class="summary-col-label">작년 동일 대비</div>
-          <div class="summary-yoy" id="yoy-pct">-</div>
-          <div class="summary-sub" id="yoy-sub">작년 동일 -억</div>
-        </div>
+          <!-- 작년 동일 대비 -->
+          <div class="summary-col">
+            <div class="summary-col-label">작년 동일 대비</div>
+            <div class="summary-yoy" id="yoy-pct">-</div>
+            <div class="summary-sub" id="yoy-sub">작년 동일 -억</div>
+          </div>
 
-        <!-- 체크리스트 -->
-        <div class="summary-col">
-          <div class="summary-col-label">체크리스트</div>
-          <ul class="checklist">
-            <li>
-              <span class="check-circle"><svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M2 5.5l2.5 2.5 4.5-4.5" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-              MPDS 등록 마감 전 확인
-            </li>
-            <li>
-              <span class="check-circle"><svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M2 5.5l2.5 2.5 4.5-4.5" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-              미입고 AS 건 확인
-            </li>
-            <li>
-              <span class="check-circle"><svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M2 5.5l2.5 2.5 4.5-4.5" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-              SP오더 진행 현황 확인
-            </li>
-            <li>
-              <span class="check-circle"><svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M2 5.5l2.5 2.5 4.5-4.5" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-              오늘 / 이번 주 일정 확인
-            </li>
-          </ul>
         </div>
-
       </div>
+
+      <!-- To Do & Check list 패널 -->
+      <div class="panel">
+        <div class="todo-header">To Do &amp; Check list</div>
+        <div class="todo-body" id="todo-list">
+          <div class="todo-empty">불러오는 중...</div>
+        </div>
+      </div>
+
     </div>
 
     <!-- 고객 / SP오더 섹션 -->
@@ -307,10 +325,47 @@
   </main>
 </div>
 
+<!-- ── 공지 상세 모달 (web) ── -->
+<div id="web-notice-modal" onclick="if(event.target===this)window.closeWebNoticeModal()">
+  <div class="wn-card">
+    <div class="wn-card-head">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span id="wn-category" style="font-size:12px;font-weight:800;padding:4px 10px;border-radius:6px;"></span>
+        <span id="wn-status-badge" style="font-size:11px;font-weight:800;padding:3px 9px;border-radius:12px;"></span>
+      </div>
+      <button onclick="window.closeWebNoticeModal()" style="background:none;border:none;cursor:pointer;color:#9ca3af;font-size:22px;line-height:1;padding:2px 6px;">&times;</button>
+    </div>
+    <div class="wn-card-body">
+      <div class="wn-field">
+        <div class="wn-label">Title</div>
+        <div class="wn-val" id="wn-title" style="font-size:17px;font-weight:800;color:#111827;line-height:1.35;"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
+        <div class="wn-field" style="margin-bottom:0;">
+          <div class="wn-label">Start Date</div>
+          <div class="wn-val" id="wn-start"></div>
+        </div>
+        <div class="wn-field" style="margin-bottom:0;">
+          <div class="wn-label">Due Date</div>
+          <div class="wn-val" id="wn-due"></div>
+        </div>
+      </div>
+      <div class="wn-field">
+        <div class="wn-label">Memo</div>
+        <div class="wn-content-box" id="wn-content"></div>
+      </div>
+    </div>
+    <div class="wn-card-foot" id="wn-footer">
+      <button class="btn-wn-complete" id="wn-complete-btn" onclick="window.completeWebNotice()">완료 처리</button>
+      <button class="btn-wn-close" onclick="window.closeWebNoticeModal()">닫기</button>
+    </div>
+  </div>
+</div>
+
 <script type="module">
 import { initializeApp }     from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, collection, onSnapshot, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const FC = { apiKey:"AIzaSyCt7aQXA5eFdnDTMHlRhjPAkyH4b8UB6HY", authDomain:"patek-s.firebaseapp.com", projectId:"patek-s", storageBucket:"patek-s.firebasestorage.app", messagingSenderId:"786016749285", appId:"1:786016749285:web:58538eec1cf7e72068b60c" };
 const app  = initializeApp(FC);
@@ -406,6 +461,138 @@ function render(){
   yoySubEl.textContent = `작년 동일 ${lastYear ? toOk(lastYear) : '-'}`;
 }
 
+// ── To Do & Check list (공지사항 연동) ──
+let noticesData = [];
+let webNoticeCurrentId = null;
+
+const NOTICE_CATS = {매장:{bg:'#F9E5E2',text:'#D46B61'},본사:{bg:'#E3EDFD',text:'#5A85DB'},PP:{bg:'#FCE6C3',text:'#D69641'},백화점:{bg:'#E5E5E5',text:'#7A7A7A'},행사:{bg:'#EBE2FB',text:'#8E67C9'}};
+
+function getTodayStr(){ return new Date().toISOString().split('T')[0]; }
+
+function getTodoStatus(notice){
+  if(notice.completed === true) return 'done';
+  const today = getTodayStr();
+  if((notice.registerDate || '') === today) return 'today';
+  if(notice.deadlineDate){
+    const diff = Math.floor((new Date(notice.deadlineDate) - new Date(today)) / 86400000);
+    if(diff >= 0 && diff <= 3) return 'ongoing';
+  }
+  return 'ongoing';
+}
+
+function filterTodoNotices(notices){
+  const today = getTodayStr();
+  return notices.filter(n => {
+    if((n.registerDate || '') === today) return true;
+    if(n.deadlineDate){
+      const diff = Math.floor((new Date(n.deadlineDate) - new Date(today)) / 86400000);
+      if(diff >= 0 && diff <= 3) return true;
+    }
+    if(n.starred === true) return true;
+    return false;
+  });
+}
+
+function renderTodoList(){
+  const list = document.getElementById('todo-list');
+  if(!list) return;
+  const filtered = filterTodoNotices(noticesData);
+
+  filtered.sort((a,b) => {
+    if(!!a.completed !== !!b.completed) return a.completed ? 1 : -1;
+    const da = a.deadlineDate || '9999-12-31';
+    const db2 = b.deadlineDate || '9999-12-31';
+    return da < db2 ? -1 : da > db2 ? 1 : 0;
+  });
+
+  if(filtered.length === 0){
+    list.innerHTML = '<div class="todo-empty">표시할 공지사항이 없습니다</div>';
+    return;
+  }
+
+  const CHECK_SVG = `<svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M2 5.5l2.5 2.5 4.5-4.5" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+  list.innerHTML = filtered.map(n => {
+    const status = getTodoStatus(n);
+    const isDone = n.completed === true;
+    const cbClass = isDone ? 'cb-done' : 'cb-active';
+    const badgeClass = status === 'today' ? 'b-today' : status === 'done' ? 'b-done' : 'b-ongoing';
+    const badgeText = status === 'today' ? '오늘' : status === 'done' ? '완료' : '진행중';
+    const titleClass = isDone ? 'todo-title t-done' : 'todo-title';
+    const title = (n.title || '').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    return `<div class="todo-item" onclick="window.openWebNoticeDetail('${n.id}')">
+      <div class="todo-cb ${cbClass}">${isDone ? CHECK_SVG : ''}</div>
+      <div class="${titleClass}">${title}</div>
+      <span class="todo-badge ${badgeClass}">${badgeText}</span>
+    </div>`;
+  }).join('');
+}
+
+// 공지 상세 열기
+window.openWebNoticeDetail = function(id){
+  const n = noticesData.find(x => x.id === id);
+  if(!n) return;
+  webNoticeCurrentId = id;
+
+  const catStyle = NOTICE_CATS[n.category] || {bg:'#E5E5E5',text:'#7A7A7A'};
+  const catEl = document.getElementById('wn-category');
+  catEl.textContent = n.category || '-';
+  catEl.style.background = n.completed ? '#EEEEEE' : catStyle.bg;
+  catEl.style.color = n.completed ? '#777' : catStyle.text;
+
+  const status = getTodoStatus(n);
+  const statusEl = document.getElementById('wn-status-badge');
+  if(status === 'today'){
+    statusEl.textContent = '오늘'; statusEl.style.background = '#eff6ff'; statusEl.style.color = '#2563eb';
+  } else if(status === 'done'){
+    statusEl.textContent = '완료'; statusEl.style.background = '#f0fdf4'; statusEl.style.color = '#16a34a';
+  } else {
+    statusEl.textContent = '진행중'; statusEl.style.background = '#fff7ed'; statusEl.style.color = '#ea580c';
+  }
+
+  document.getElementById('wn-title').textContent = n.title || '';
+  document.getElementById('wn-start').textContent = n.registerDate || '-';
+  document.getElementById('wn-due').textContent = n.deadlineDate || '-';
+  document.getElementById('wn-content').textContent = n.content || '';
+
+  const completeBtn = document.getElementById('wn-complete-btn');
+  if(n.completed){
+    completeBtn.disabled = true;
+    completeBtn.textContent = '완료됨';
+    completeBtn.style.background = '#9ca3af';
+    completeBtn.style.cursor = 'default';
+  } else {
+    completeBtn.disabled = false;
+    completeBtn.textContent = '완료 처리';
+    completeBtn.style.background = '#0067e8';
+    completeBtn.style.cursor = 'pointer';
+  }
+
+  const modal = document.getElementById('web-notice-modal');
+  modal.style.display = 'flex';
+};
+
+window.closeWebNoticeModal = function(){
+  document.getElementById('web-notice-modal').style.display = 'none';
+  webNoticeCurrentId = null;
+};
+
+window.completeWebNotice = async function(){
+  if(!webNoticeCurrentId) return;
+  const btn = document.getElementById('wn-complete-btn');
+  btn.disabled = true; btn.textContent = '처리 중...';
+  try {
+    await updateDoc(doc(db, 'notices', webNoticeCurrentId), {
+      completed: true,
+      completedAt: new Date().toISOString()
+    });
+    window.closeWebNoticeModal();
+  } catch(e){
+    btn.disabled = false; btn.textContent = '완료 처리';
+    alert('완료 처리에 실패했습니다.');
+  }
+};
+
 // ── Firebase 리스너 ──
 function startListeners(){
   // 매출 데이터
@@ -430,6 +617,12 @@ function startListeners(){
   getDoc(doc(db, `artifacts/patek-s/public/data/centum_annual/${YEAR}`)).then(snap => {
     centumData = snap.exists() ? snap.data() : null;
     render();
+  });
+
+  // 공지사항 (To Do & Check list)
+  onSnapshot(collection(db, 'notices'), snap => {
+    noticesData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderTodoList();
   });
 }
 

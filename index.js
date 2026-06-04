@@ -501,6 +501,9 @@
             const titleTextClass = notice.completed === true ? 'text-[#777]' : 'text-[#333]'; const metaTextClass = notice.completed === true ? 'text-[#888]' : 'text-[#999]';
             const countTextClass = notice.completed === true ? 'text-[#777]' : (isRead ? 'text-[#B4975A]' : 'text-[#999]');
 
+            const isStarred = notice.starred === true;
+            const starFill = isStarred ? '#F59E0B' : 'none';
+            const starStroke = isStarred ? '#F59E0B' : '#C2BDB5';
             list.innerHTML += `
                 <div onclick="window.openNoticeDetail('${notice.id}')" class="${cardBgClass} p-3 rounded-2xl border ${cardBorderClass} shadow-sm cursor-pointer active:scale-[0.98] transition-transform mb-2.5">
                     <div class="flex items-center gap-3">
@@ -509,7 +512,13 @@
                             <div class="flex items-center gap-2 min-w-0"><div class="truncate text-[14px] font-semibold ${titleTextClass}">${notice.title || ''}</div>${completedBadge}</div>
                             <div class="text-[10px] ${metaTextClass} mt-0.5 font-medium truncate">등록 ${rDate} · 마감 ${dDate}</div>
                         </div>
-                        <div class="flex items-center gap-2 shrink-0"><span class="text-xs font-semibold ${countTextClass}">${readCount} / ${MAX_READERS}</span><i data-lucide="chevron-right" class="w-4 h-4 text-[#AAA]"></i></div>
+                        <div class="flex items-center gap-1 shrink-0">
+                            <button onclick="event.stopPropagation(); window.toggleNoticeStarred('${notice.id}', ${isStarred})" class="p-1.5 rounded-full active:scale-90 transition-transform">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="${starFill}" stroke="${starStroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            </button>
+                            <span class="text-xs font-semibold ${countTextClass}">${readCount} / ${MAX_READERS}</span>
+                            <i data-lucide="chevron-right" class="w-4 h-4 text-[#AAA]"></i>
+                        </div>
                     </div>
                 </div>
             `;
@@ -587,7 +596,7 @@
         try {
             await addDoc(collection(db, 'notices'), {
                 category: window.selectedCategory, registerDate, deadlineDate, date: registerDate, title, content,
-                author: currentUser.uid, authorName: window.currentUserData?.name || '관리자', createdAt: new Date().toISOString(), readers: [], completed: false, completedAt: ''
+                author: currentUser.uid, authorName: window.currentUserData?.name || '관리자', createdAt: new Date().toISOString(), readers: [], completed: false, completedAt: '', starred: false
             });
             closeNoticeCreate();
         } catch(e) { window.showCustomAlert('등록 실패'); } finally { document.getElementById('loading-overlay').style.display = 'none'; }
@@ -649,8 +658,16 @@
             vs.innerText = notice.completed === true ? '완료된 공지' : '진행 중인 공지'; 
             vs.className = notice.completed === true ? 'text-xs font-bold text-[#777] bg-[#EFEFEF] px-2 py-1 rounded-md' : 'text-xs font-bold text-[#B4975A] bg-[#F8F3E7] px-2 py-1 rounded-md';
 
-            window.noticeEditCategory = notice.category || '매장'; 
+            window.noticeEditCategory = notice.category || '매장';
             applyEditCategoryStyles();
+
+            // 별표 상태 반영
+            const starSvg = document.querySelector('#view-notice-star-btn svg');
+            if (starSvg) {
+                const s = notice.starred === true;
+                starSvg.setAttribute('fill', s ? '#F59E0B' : 'none');
+                starSvg.setAttribute('stroke', s ? '#F59E0B' : '#C2BDB5');
+            }
 
             document.getElementById('detail-edit-title').value = notice.title || ''; 
             document.getElementById('detail-edit-register-date').value = rDate === '-' ? '' : rDate;
@@ -707,6 +724,23 @@
     };
 
     window.closeNoticeDetail = function() { window.selectedNoticeId = null; document.getElementById('page-notice-detail').style.display = 'none'; document.getElementById('bottom-nav-bar').style.display = 'grid'; applyNoticeFilterButtonStyles(); window.renderNotices(); };
+
+    window.toggleNoticeStarred = async function(id, currentStarred) {
+        try { await updateDoc(doc(db, 'notices', id), { starred: !currentStarred }); }
+        catch(e) { console.error('별표 처리 실패', e); }
+    };
+
+    window.toggleNoticeStarredDetail = async function() {
+        if (!window.selectedNoticeId) return;
+        const notice = window.appNotices.find(n => n.id === window.selectedNoticeId);
+        if (!notice) return;
+        const newVal = !notice.starred;
+        try {
+            await updateDoc(doc(db, 'notices', window.selectedNoticeId), { starred: newVal });
+            const svg = document.querySelector('#view-notice-star-btn svg');
+            if (svg) { svg.setAttribute('fill', newVal ? '#F59E0B' : 'none'); svg.setAttribute('stroke', newVal ? '#F59E0B' : '#C2BDB5'); }
+        } catch(e) { window.showCustomAlert('처리 실패'); }
+    };
 
     const compressImage = (file) => {
         return new Promise((resolve, reject) => {
