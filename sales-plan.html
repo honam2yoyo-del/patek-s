@@ -55,32 +55,30 @@
     .panel-header { padding:18px 22px 14px;font-size:18px;font-weight:900;border-bottom:1px solid #e5eaf2; }
     .panel-body { padding:18px 22px; }
 
-    /* ── 매출 요약 ── */
-    .summary-section { margin-bottom:18px; }
-    .summary-section:last-child { margin-bottom:0; }
-    .summary-section-title { font-size:13px;font-weight:900;color:#6b7280;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px; }
-    .big-pct { font-size:36px;font-weight:900;letter-spacing:-1px;margin-bottom:8px; }
-    .big-pct.green { color:#16a34a; }
-    .big-pct.red   { color:#dc2626; }
-    .progress-bg { height:28px;background:#e9edf4;border-radius:6px;overflow:hidden;margin-bottom:6px; }
-    .progress-fill { height:100%;min-width:0;border-radius:6px;display:flex;align-items:center;justify-content:flex-end;padding-right:10px;font-size:12px;font-weight:900;color:#fff;transition:width .5s; }
-    .progress-fill.blue  { background:#0766e8; }
-    .progress-fill.green { background:#22c55e; }
-    .progress-sub { font-size:13px;font-weight:700;color:#6b7280; }
-    .yoy-value { font-size:22px;font-weight:900;margin-bottom:4px; }
-    .yoy-value.pos { color:#16a34a; }
-    .yoy-value.neg { color:#dc2626; }
+    /* ── 매출 요약 4열 ── */
+    .summary-4col { display:grid;grid-template-columns:repeat(4,1fr); }
+    .summary-col { padding:22px 26px;border-right:1px solid #e5eaf2; }
+    .summary-col:last-child { border-right:none; }
+    .summary-col.highlighted { background:#f0fdf4; }
+    .summary-col-label { font-size:12px;font-weight:800;color:#6b7280;margin-bottom:14px;letter-spacing:.3px; }
+    .summary-col.highlighted .summary-col-label { color:#16a34a; }
+    .summary-big-pct { font-size:42px;font-weight:900;letter-spacing:-1.5px;line-height:1;margin-bottom:12px; }
+    .summary-big-pct.blue  { color:#0067e8; }
+    .summary-big-pct.green { color:#16a34a; }
+    .summary-progress { height:8px;background:#e9edf4;border-radius:4px;overflow:hidden;margin-bottom:8px; }
+    .summary-progress .fill { height:100%;border-radius:4px;transition:width .5s; }
+    .summary-progress .fill.blue  { background:#0067e8; }
+    .summary-progress .fill.green { background:#22c55e; }
+    .summary-sub { font-size:13px;font-weight:700;color:#6b7280; }
+    .summary-yoy { font-size:36px;font-weight:900;letter-spacing:-1px;line-height:1;margin-bottom:8px; }
+    .summary-yoy.pos { color:#16a34a; }
+    .summary-yoy.neg { color:#dc2626; }
 
     /* ── 체크리스트 ── */
     .checklist { list-style:none; }
-    .checklist li { display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid #f0f4fa;font-size:14px;font-weight:700; }
-    .checklist li:last-child { border-bottom:0; }
-    .dot { width:10px;height:10px;border-radius:50%;flex-shrink:0; }
-    .dot-orange { background:#f97316; }
-    .dot-red    { background:#ef4444; }
-    .dot-blue   { background:#3b82f6; }
-    .dot-purple { background:#a855f7; }
-    .dot-gray   { background:#9ca3af; }
+    .checklist li { display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #f0f4fa;font-size:13.5px;font-weight:700; }
+    .checklist li:last-child { border-bottom:none; }
+    .check-circle { width:20px;height:20px;border-radius:50%;background:#0067e8;display:flex;align-items:center;justify-content:center;flex-shrink:0; }
 
     /* ── 고객 / SP오더 패널 ── */
     .stat-row { display:grid;grid-template-columns:1fr 1fr;gap:14px; }
@@ -224,58 +222,62 @@
       </div>
     </section>
 
-    <!-- 미들 섹션 -->
-    <div class="mid-grid">
+    <!-- 매출 요약 패널 (4열 통합) -->
+    <div class="panel" style="margin-bottom:16px;">
+      <div class="panel-header">매출 요약</div>
+      <div class="summary-4col">
 
-      <!-- 매출 요약 패널 -->
-      <div class="panel">
-        <div class="panel-header">매출 요약</div>
-        <div class="panel-body">
-
-          <!-- 목표 달성률 -->
-          <div class="summary-section">
-            <div class="summary-section-title">목표 달성률</div>
-            <div class="big-pct" id="achieve-pct">0%</div>
-            <div class="progress-bg">
-              <div class="progress-fill blue" id="achieve-bar" style="width:0%"></div>
-            </div>
-            <div class="progress-sub" id="achieve-sub">현재 -억 / 목표 -억</div>
+        <!-- 목표 달성률 -->
+        <div class="summary-col">
+          <div class="summary-col-label">목표 달성률</div>
+          <div class="summary-big-pct blue" id="achieve-pct">0%</div>
+          <div class="summary-progress">
+            <div class="fill blue" id="achieve-bar" style="width:0%"></div>
           </div>
-
-          <!-- 센터 목표 달성률 -->
-          <div class="summary-section">
-            <div class="summary-section-title">센터 목표 달성률</div>
-            <div class="big-pct" id="centum-pct" style="font-size:26px;">0%</div>
-            <div class="progress-bg">
-              <div class="progress-fill green" id="centum-bar" style="width:0%"></div>
-            </div>
-            <div class="progress-sub" id="centum-sub">현재 -억 / 목표 -억</div>
-          </div>
-
-          <!-- 작년 동일 대비 -->
-          <div class="summary-section">
-            <div class="summary-section-title">작년 동일 대비</div>
-            <div class="yoy-value" id="yoy-pct">-</div>
-            <div class="progress-sub" id="yoy-sub">작년 동일 -억</div>
-          </div>
-
+          <div class="summary-sub" id="achieve-sub">현재 -억 / 목표 -억</div>
         </div>
-      </div>
 
-      <!-- 체크리스트 패널 -->
-      <div class="panel">
-        <div class="panel-header">체크리스트</div>
-        <div class="panel-body">
+        <!-- 센터 목표 달성률 -->
+        <div class="summary-col highlighted">
+          <div class="summary-col-label">센터 목표 달성률</div>
+          <div class="summary-big-pct green" id="centum-pct">0%</div>
+          <div class="summary-progress">
+            <div class="fill green" id="centum-bar" style="width:0%"></div>
+          </div>
+          <div class="summary-sub" id="centum-sub">현재 -억 / 목표 -억</div>
+        </div>
+
+        <!-- 작년 동일 대비 -->
+        <div class="summary-col">
+          <div class="summary-col-label">작년 동일 대비</div>
+          <div class="summary-yoy" id="yoy-pct">-</div>
+          <div class="summary-sub" id="yoy-sub">작년 동일 -억</div>
+        </div>
+
+        <!-- 체크리스트 -->
+        <div class="summary-col">
+          <div class="summary-col-label">체크리스트</div>
           <ul class="checklist">
-            <li><span class="dot dot-orange"></span>MPDS 목적 재고 확인 필요</li>
-            <li><span class="dot dot-red"></span>AS 건 확인 필요</li>
-            <li><span class="dot dot-blue"></span>이월 대상 확인 필요</li>
-            <li><span class="dot dot-purple"></span>SP오더 확인 필요</li>
-            <li><span class="dot dot-gray"></span>공지 / 매출 보고 확인</li>
+            <li>
+              <span class="check-circle"><svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M2 5.5l2.5 2.5 4.5-4.5" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+              MPDS 등록 마감 전 확인
+            </li>
+            <li>
+              <span class="check-circle"><svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M2 5.5l2.5 2.5 4.5-4.5" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+              미입고 AS 건 확인
+            </li>
+            <li>
+              <span class="check-circle"><svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M2 5.5l2.5 2.5 4.5-4.5" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+              SP오더 진행 현황 확인
+            </li>
+            <li>
+              <span class="check-circle"><svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M2 5.5l2.5 2.5 4.5-4.5" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+              오늘 / 이번 주 일정 확인
+            </li>
           </ul>
         </div>
-      </div>
 
+      </div>
     </div>
 
     <!-- 바텀 섹션 -->
@@ -414,10 +416,10 @@ function render(){
     const yoyPct = ((current - lastYear) / lastYear * 100).toFixed(1);
     const isPos = parseFloat(yoyPct) >= 0;
     yoyEl.textContent = (isPos ? '+' : '') + yoyPct + '%';
-    yoyEl.className = 'yoy-value ' + (isPos ? 'pos' : 'neg');
+    yoyEl.className = 'summary-yoy ' + (isPos ? 'pos' : 'neg');
   } else {
     yoyEl.textContent = '-';
-    yoyEl.className = 'yoy-value';
+    yoyEl.className = 'summary-yoy';
   }
   yoySubEl.textContent = `작년 동일 ${lastYear ? toOk(lastYear) : '-'}`;
 }
