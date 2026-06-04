@@ -57,7 +57,7 @@
     .mpp-month.sel { background:#075bd8;color:#fff; }
 
     /* ── KPI 카드 ── */
-    .kpi-grid { display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:10px;margin-bottom:20px; }
+    .kpi-grid { display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px;margin-bottom:20px; }
     .kpi-card { background:#fff;border:1px solid #e2e7ef;border-radius:8px;padding:13px 14px;box-shadow:0 2px 8px rgba(15,23,42,.035); }
     .kpi-label { font-size:12px;font-weight:900;margin-bottom:6px;color:#374151; }
     .kpi-pcs   { font-size:22px;font-weight:900;letter-spacing:-.5px;line-height:1; }
@@ -111,7 +111,6 @@
     .badge-rest    { background:#e5e7eb;color:#111827; }
     .badge-as      { background:#fee2e2;color:#ff1f1f; }
     .badge-etc     { background:#f3e8ff;color:#7c3aed; }
-    .badge-sold    { background:#fef3c7;color:#b45309; }
     .status-sel { -webkit-appearance:none;appearance:none;height:28px;border:none;border-radius:14px;padding:0 10px;font-size:12px;font-weight:900;cursor:pointer;min-width:84px;text-align:center;font-family:inherit; }
     .status-sel.s-sale    { background:#e6f8ee;color:#009844; }
     .status-sel.s-confirm { background:#fff3e5;color:#ff7a00; }
@@ -119,8 +118,6 @@
     .status-sel.s-rest    { background:#e5e7eb;color:#111827; }
     .status-sel.s-as      { background:#fee2e2;color:#ff1f1f; }
     .status-sel.s-etc     { background:#f3e8ff;color:#7c3aed; }
-    .status-sel.s-sold    { background:#fef3c7;color:#b45309; }
-    .filter-pill.active-sold { background:#b45309;color:#fff;border-color:#b45309; }
 
     /* ── 삭제 버튼 ── */
     .btn-del-sel { height:36px;padding:0 12px;border:1px solid #fca5a5;border-radius:6px;background:#fff5f5;color:#dc2626;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit; }
@@ -261,7 +258,6 @@
       <div class="kpi-card"><div class="kpi-label">기타</div><div class="kpi-pcs purple" id="kpi-etc-pcs">0 <small>pcs</small></div><div class="kpi-amt" id="kpi-etc-amt">0 원</div></div>
       <div class="kpi-card"><div class="kpi-label">이월 예정</div><div class="kpi-pcs blue" id="kpi-carry-pcs">0 <small>pcs</small></div><div class="kpi-amt" id="kpi-carry-amt">0 원</div></div>
       <div class="kpi-card"><div class="kpi-label">잔여 재고</div><div class="kpi-pcs black" id="kpi-rest-pcs">0 <small>pcs</small></div><div class="kpi-amt" id="kpi-rest-amt">0 원</div></div>
-      <div class="kpi-card"><div class="kpi-label">판매 완료</div><div class="kpi-pcs" style="color:#b45309;" id="kpi-sold-pcs">0 <small>pcs</small></div><div class="kpi-amt" id="kpi-sold-amt">0 원</div></div>
     </section>
 
     <!-- 재고 목록 -->
@@ -277,7 +273,6 @@
         <button class="filter-pill"          data-val="잔여재고">잔여 재고</button>
         <button class="filter-pill"          data-val="AS">AS</button>
         <button class="filter-pill"          data-val="기타">기타</button>
-        <button class="filter-pill"          data-val="판매완료">판매 완료</button>
       </div>
 
       <!-- 테이블 컨트롤 -->
@@ -319,7 +314,6 @@
                   <option value="잔여재고">잔여 재고</option>
                   <option value="AS">AS</option>
                   <option value="기타">기타</option>
-                  <option value="판매완료">판매 완료</option>
                 </select>
               </th>
               <th style="width:160px;">비고</th>
@@ -377,28 +371,28 @@ function parseNum(s) {
 }
 window.parseNum = parseNum;
 
-// 상태 목록 (판매완료 포함)
-const STATUSES = ['판매예정','컨펌예정','이월예정','잔여재고','AS','기타','판매완료'];
-const STATUS_DISPLAY = {'판매예정':'판매 예정','컨펌예정':'컨펌 예정','이월예정':'이월 예정','잔여재고':'잔여 재고','판매완료':'판매 완료'};
+// 상태 목록 (기타 포함)
+const STATUSES = ['판매예정','컨펌예정','이월예정','잔여재고','AS','기타'];
+const STATUS_DISPLAY = {'판매예정':'판매 예정','컨펌예정':'컨펌 예정','이월예정':'이월 예정','잔여재고':'잔여 재고'};
 const BADGE_MAP = {
   '판매예정':'badge-sale','컨펌예정':'badge-confirm','이월예정':'badge-carry',
-  '잔여재고':'badge-rest','AS':'badge-as','기타':'badge-etc','판매완료':'badge-sold'
+  '잔여재고':'badge-rest','AS':'badge-as','기타':'badge-etc'
 };
 // 필터 pill 활성 색상
 const PILL_CLASS = {
   '전체':'active','판매예정':'active-green','컨펌예정':'active-orange',
-  '이월예정':'active-blue','잔여재고':'active-black','AS':'active-red','기타':'active-purple','판매완료':'active-sold'
+  '이월예정':'active-blue','잔여재고':'active-black','AS':'active-red','기타':'active-purple'
 };
 
 // 상태별 셀렉트 색상 클래스
 function statusSelClass(s) {
-  return {'판매예정':'s-sale','컨펌예정':'s-confirm','이월예정':'s-carry','잔여재고':'s-rest','AS':'s-as','기타':'s-etc','판매완료':'s-sold'}[s]||'s-rest';
+  return {'판매예정':'s-sale','컨펌예정':'s-confirm','이월예정':'s-carry','잔여재고':'s-rest','AS':'s-as','기타':'s-etc'}[s]||'s-rest';
 }
 window.statusSelClass = statusSelClass;
 
 // 구버전 데이터(공백 포함) 상태값 정규화
 function canonicalStatus(s) {
-  const m = {'판매 예정':'판매예정','컨펌 예정':'컨펌예정','이월 예정':'이월예정','잔여 재고':'잔여재고','판매 완료':'판매완료'};
+  const m = {'판매 예정':'판매예정','컨펌 예정':'컨펌예정','이월 예정':'이월예정','잔여 재고':'잔여재고'};
   const t = String(s||'').trim();
   return m[t] || (STATUSES.includes(t) ? t : '잔여재고');
 }
@@ -410,26 +404,7 @@ window.chStatus = function(ri, val, el) {
   renderKpi();
   renderTable();
   syncStatusToMpds(rows[ri]?.ref, rows[ri]?.serial, val);
-  // 판매완료 처리 시 즉시 자동 저장 (매출 페이지 실시간 연동)
-  if (val === '판매완료') autoSaveForSalesSync();
 };
-
-// 판매완료 변경 시 즉시 inventory 저장
-async function autoSaveForSalesSync() {
-  try {
-    const data = {
-      rows: rows.map(r => ({
-        ref: r.ref||'', serial: r.serial||'',
-        amount: r.amount != null ? Number(r.amount) : null,
-        customer: r.customer||'', saleDate: r.saleDate||'',
-        status: r.status||'잔여재고', note: r.note||''
-      })),
-      updatedAt: new Date().toISOString()
-    };
-    await setDoc(doc(db,'artifacts','patek-s','public','data','inventory',`${curYear}-${pad(curMonth)}`), data, {merge:true});
-    window.markClean && window.markClean();
-  } catch(e) { console.error('판매완료 자동저장 실패:', e); }
-}
 
 // 필드 단순 업데이트 — module 스코프 rows에 안전 접근
 window.setField = function(ri, key, val) {
@@ -647,7 +622,7 @@ function loadMonth() {
 /* ────────── KPI 카드 ────────── */
 function renderKpi() {
   const stat = {};
-  ['전체','판매예정','컨펌예정','이월예정','잔여재고','AS','기타','판매완료'].forEach(s => { stat[s]={qty:0,amt:0}; });
+  ['전체','판매예정','컨펌예정','이월예정','잔여재고','AS','기타'].forEach(s => { stat[s]={qty:0,amt:0}; });
   rows.forEach(r => {
     const s = r.status || '잔여재고';
     if (stat[s]) { stat[s].qty++; stat[s].amt += Number(r.amount)||0; }
@@ -665,7 +640,6 @@ function renderKpi() {
   set('kpi-etc','기타');
   set('kpi-carry','이월예정');
   set('kpi-rest','잔여재고');
-  set('kpi-sold','판매완료');
 }
 
 /* ────────── 필터 (복수 선택) ────────── */

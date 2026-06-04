@@ -135,7 +135,6 @@
     .badge-carry   { background:#eaf3ff;color:#0067e8; }
     .badge-rest    { background:#f1f3f5;color:#111827; }
     .badge-as      { background:#fee2e2;color:#ff0000; }
-    .badge-sold    { background:#fef3c7;color:#b45309; }
     .selected-summary { margin:10px 16px 12px;height:40px;border:1px solid #7aa9ff;border-radius:5px;display:grid;grid-template-columns:1fr 1fr 1fr;align-items:center;padding:0 16px;font-size:14px;font-weight:900; }
     .selected-summary b { color:#0067e8;margin-left:10px; }
     .summary-panel { padding:18px 16px; }
@@ -383,24 +382,31 @@
 
     </section>
 
-    <!-- 재고 매출 관리 (판매 완료 자동 연동) -->
-    <section class="inventory-panel" style="display:block;">
-      <div class="inventory-left" style="border-right:none;">
-        <div class="inventory-header" style="display:flex;justify-content:space-between;align-items:center;padding-bottom:14px;">
-          <span>재고 매출 관리</span>
-          <span style="font-size:12px;font-weight:700;color:#6b7280;">재고 관리에서 '판매 완료' 처리 시 자동 표시됩니다</span>
+    <!-- 재고 매출 관리 -->
+    <section class="inventory-panel">
+      <div class="inventory-left">
+        <div class="inventory-header">재고 매출 관리</div>
+        <div class="tabs" id="tabsBar">
+          <button class="tab active" data-filter="전체">전체</button>
+          <button class="tab" data-filter="판매예정">판매예정</button>
+          <button class="tab" data-filter="컨펌예정">컨펌예정</button>
+          <button class="tab" data-filter="이월예정">이월예정</button>
+          <button class="tab" data-filter="AS">AS</button>
+          <button class="tab" data-filter="잔여재고">잔여재고</button>
         </div>
         <div class="table-wrap">
           <table class="inventory-table" id="inventoryTable">
             <thead>
               <tr>
-                <th style="width:130px;">REF.</th>
-                <th style="width:160px;">Serial</th>
-                <th style="width:160px;">금액</th>
-                <th style="width:110px;">고객명</th>
-                <th style="width:150px;">예상 판매일</th>
-                <th style="width:100px;">상태</th>
+                <th style="width:44px;"><input type="checkbox" id="checkAll"/></th>
+                <th style="width:50px;">No.</th>
+                <th>REF.</th>
+                <th>금액</th>
+                <th>고객명</th>
+                <th>예상 매출일</th>
+                <th>상태</th>
                 <th>비고</th>
+                <th style="width:28px;"></th>
               </tr>
             </thead>
             <tbody id="inventoryTbody"></tbody>
@@ -408,11 +414,18 @@
           </table>
         </div>
         <div class="selected-summary">
-          <span>판매 완료 합계</span>
-          <span>수량 <b id="selectedQty">0 pcs</b></span>
-          <span>금액 <b id="selectedAmount">0 원</b></span>
+          <span>선택 합계</span>
+          <span>선택 수량 <b id="selectedQty">0 pcs</b></span>
+          <span>선택 금액 <b id="selectedAmount">0 원</b></span>
         </div>
       </div>
+      <aside class="summary-panel">
+        <div class="summary-title">재고 상태별 합계</div>
+        <table class="summary-table">
+          <thead><tr><th>상태</th><th>수량(PCS)</th><th>총 금액</th></tr></thead>
+          <tbody id="summaryTbody"></tbody>
+        </table>
+      </aside>
     </section>
   </main>
 

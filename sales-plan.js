@@ -33,13 +33,14 @@ window.fmtNum = function(el) {
   }
 };
 
-// 판매완료 재고 (inventory 컬렉션에서 실시간 로드)
-let invSoldRows = [];
-let unsubInvSales = null;
+// 재고 상태 순서: 전체 재고, 판매 예정, 컨펌 예정, 이월 예정, AS, 잔여 재고
+const STATUSES  = ['판매예정','컨펌예정','이월예정','AS','잔여재고'];
+const BADGE_MAP = { '판매예정':'badge-sale','컨펌예정':'badge-confirm','이월예정':'badge-carry','잔여재고':'badge-rest','AS':'badge-as' };
 
 let curYear  = new Date().getFullYear();
 let curMonth = new Date().getMonth() + 1;
-// rows / activeFilters 제거됨 — inventory 컬렉션에서 직접 로드
+let rows     = [];
+let activeFilters = new Set(['전체']);
 let unsubPlan = null;
 
 // 지점 연간 데이터 (인메모리)
@@ -208,25 +209,13 @@ function saveQuarterGoalData() {
 /* ────────── 데이터 로드 ────────── */
 function loadMonth() {
   if (unsubPlan) unsubPlan();
-  if (unsubInvSales) unsubInvSales();
-  goalRateData = { total: 0, centum: 0, avenue: 0 };
+  goalRateData = { total: 0, centum: 0, avenue: 0 }; // 월 전환 시 초기화 후 분기 데이터로 채움
   const docId = `${curYear}-${pad(curMonth)}`;
-
-  // 매출 대시보드 데이터
   unsubPlan = onSnapshot(doc(db,'artifacts','patek-s','public','data','sales_dashboard',docId), snap => {
     applyData(snap.exists() ? snap.data() : null);
   });
-
-  // 판매완료 재고 실시간 연동
-  unsubInvSales = onSnapshot(doc(db,'artifacts','patek-s','public','data','inventory',docId), snap => {
-    const allRows = snap.exists() ? (snap.data().rows || []) : [];
-    invSoldRows = allRows.filter(r => r.status === '판매완료');
-    renderSalesInventory();
-    updateExpectedFromSold();
-  });
-
   loadBranchDataForYear(curYear);
-  loadQuarterGoalData();
+  loadQuarterGoalData(); // 분기 목표 별도 로드
 }
 
 async function loadBranchDataForYear(year) {
@@ -271,10 +260,11 @@ function applyData(d) {
   });
 
   // goalRateData는 loadQuarterGoalData()에서 별도 로드 (분기 공유)
-  // rows는 inventory 컬렉션에서 직접 로드 (unsubInvSales)
 
+  rows = d?.rows ? JSON.parse(JSON.stringify(d.rows)) : [];
+  renderTable();
   recalcAll();
-  autoFillEmptyFields();
+  autoFillEmptyFields(); // 저장값 없는 필드를 브랜치 데이터로 자동 채우기
 }
 
 /* ────────── 재계산 ────────── */
@@ -644,55 +634,125 @@ document.getElementById('goalRateApply').addEventListener('click', () => {
   document.getElementById('goalRateModal').classList.remove('show');
 });
 
-/* ────────── 재고 매출 관리 테이블 (판매완료 자동 연동) ────────── */
-function renderSalesInventory() {
-  const tbody = document.getElementById('inventoryTbody');
-  const tfoot = document.getElementById('inventoryTfoot');
-  if (!tbody) return;
+/* ────────── 재고 테이블 ────────── */
+function renderTable() {
+  updateTabCounts();
+  const tbody    = document.getElementById('inventoryTbody');
+  const filtered = activeFilters.has('전체') ? rows : rows.filter(r => activeFilters.has(r.status));
+  tbody.innerHTML = '';
 
-  if (invSoldRows.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#9ca3af;padding:28px;font-weight:700;">재고 관리에서 '판매 완료' 처리된 항목이 자동 표시됩니다.</td></tr>`;
-  } else {
-    tbody.innerHTML = invSoldRows.map(r => `<tr>
-      <td>${esc(r.ref||'')}</td>
-      <td>${esc(r.serial||'')}</td>
-      <td style="text-align:right;">${r.amount ? Number(r.amount).toLocaleString('ko-KR')+' 원' : '-'}</td>
-      <td>${esc(r.customer||'')}</td>
-      <td>${esc(r.saleDate||'')}</td>
-      <td><span class="badge badge-sold">판매 완료</span></td>
-      <td>${esc(r.note||'')}</td>
-    </tr>`).join('');
-  }
+  filtered.forEach((r) => {
+    const ri    = rows.indexOf(r);
+    const badge = BADGE_MAP[r.status] || 'badge-rest';
+    const tr    = document.createElement('tr');
+    tr.dataset.status = r.status || '';
+    tr.innerHTML = `
+      <td><input type="checkbox" class="row-check" data-amount="${r.amount||0}" data-qty="1"/></td>
+      <td style="color:#9CA3AF">${ri+1}</td>
+      <td><input class="td-edit" value="${esc(r.ref||'')}" oninput="rows[${ri}].ref=this.value" placeholder="REF."/></td>
+      <td><input class="td-edit" type="text" inputmode="numeric" value="${fmtInput(r.amount)}" oninput="window.fmtNum(this);rows[${ri}].amount=parseNum(this.value);this.closest('tr').querySelector('.row-check').dataset.amount=parseNum(this.value)||0;updateSelectedTotal();renderSummary();" placeholder="0"/> 원</td>
+      <td><input class="td-edit" value="${esc(r.customer||'')}" oninput="rows[${ri}].customer=this.value" placeholder="고객명"/></td>
+      <td><input class="td-edit" value="${esc(r.saleDate||'')}" oninput="rows[${ri}].saleDate=this.value" placeholder="예: 6/28(목)"/></td>
+      <td>
+        <select class="status-sel" oninput="rows[${ri}].status=this.value;renderTable();">
+          ${STATUSES.map(s=>`<option value="${s}" ${r.status===s?'selected':''}>${s}</option>`).join('')}
+        </select>
+      </td>
+      <td><input class="td-edit" value="${esc(r.note||'')}" oninput="rows[${ri}].note=this.value" placeholder="비고"/></td>
+      <td><button class="td-del" onclick="rows.splice(${ri},1);renderTable();">✕</button></td>`;
+    tbody.appendChild(tr);
+  });
 
-  if (tfoot) {
-    const totalAmt = invSoldRows.reduce((s,r) => s+(Number(r.amount)||0), 0);
-    tfoot.innerHTML = `<tr>
-      <td colspan="2" style="font-weight:900;">합계</td>
-      <td style="font-weight:900;text-align:right;">${totalAmt ? totalAmt.toLocaleString('ko-KR')+' 원' : '-'}</td>
-      <td colspan="4" style="font-weight:900;">${invSoldRows.length} pcs</td>
-    </tr>`;
-  }
-
-  const sqEl = document.getElementById('selectedQty');
-  const saEl = document.getElementById('selectedAmount');
-  if (sqEl) sqEl.textContent = invSoldRows.length + ' pcs';
-  if (saEl) saEl.textContent = (invSoldRows.reduce((s,r)=>s+(Number(r.amount)||0),0)).toLocaleString('ko-KR') + ' 원';
+  renderTfoot(filtered);
+  renderSummary();
+  bindCheckboxes();
+  updateSelectedTotal();
 }
 
-/* ── 판매완료 합계 → 월 예상 매출 자동 계산 ── */
-function updateExpectedFromSold() {
-  const totalAmt = invSoldRows.reduce((s, r) => s + (Number(r.amount) || 0), 0);
-  const totalPcs = invSoldRows.length;
+function renderTfoot(filtered) {
+  const total = filtered.reduce((s,r) => s + (Number(r.amount)||0), 0);
+  const filterLabel = activeFilters.has('전체') ? '전체' : [...activeFilters].join('+');
+  document.getElementById('inventoryTfoot').innerHTML = `<tr>
+    <td colspan="3">${filterLabel} 합계</td>
+    <td>${fmtW(total)}</td>
+    <td colspan="5">${filtered.length} pcs</td>
+  </tr>`;
+}
 
-  const expEl    = document.getElementById('f-expectedSales');
-  const expPcsEl = document.getElementById('f-expectedPcs');
+function updateTabCounts() {
+  document.querySelectorAll('.tab').forEach(tab => {
+    const f = tab.dataset.filter;
+    if (f === '전체') return;
+    const cnt = rows.filter(r => r.status === f).length;
+    tab.textContent = `${f} (${cnt})`;
+  });
+}
 
-  if (expEl) expEl.value = totalAmt > 0 ? fmtInput(totalAmt) : '';
-  if (expPcsEl) {
-    expPcsEl.value = totalPcs > 0 ? String(totalPcs) : '';
-    expPcsEl.style.width = Math.max(2, String(totalPcs).length || 1) + 'ch';
+function renderSummary() {
+  const ORDER  = ['전체','판매예정','컨펌예정','이월예정','AS','잔여재고'];
+  const LABELS = { '전체':'전체 재고','판매예정':'판매 예정','컨펌예정':'컨펌 예정','이월예정':'이월 예정','잔여재고':'잔여 재고','AS':'AS' };
+  const COLORS = { '전체':'black','판매예정':'green','컨펌예정':'orange','이월예정':'blue','잔여재고':'black','AS':'red' };
+
+  const summary = {};
+  ORDER.forEach(s => { summary[s] = { qty:0, amount:0 }; });
+  rows.forEach(r => {
+    const s = r.status || '잔여재고';
+    if (summary[s] !== undefined) { summary[s].qty++; summary[s].amount += Number(r.amount)||0; }
+    summary['전체'].qty++; summary['전체'].amount += Number(r.amount)||0;
+  });
+  document.getElementById('summaryTbody').innerHTML = ORDER.map(s =>
+    `<tr><td class="${COLORS[s]}">${LABELS[s]}</td><td>${summary[s].qty} pcs</td><td>${fmtW(summary[s].amount)}</td></tr>`
+  ).join('');
+}
+
+/* ── 탭 필터 (복수 선택) ── */
+document.getElementById('tabsBar').addEventListener('click', e => {
+  const tab = e.target.closest('.tab');
+  if (!tab) return;
+  const f = tab.dataset.filter;
+
+  if (f === '전체') {
+    activeFilters = new Set(['전체']);
+  } else {
+    activeFilters.delete('전체');
+    if (activeFilters.has(f)) {
+      activeFilters.delete(f);
+      if (activeFilters.size === 0) activeFilters.add('전체');
+    } else {
+      activeFilters.add(f);
+    }
   }
-  recalcRemain();
+  document.querySelectorAll('.tab').forEach(t =>
+    t.classList.toggle('active', activeFilters.has(t.dataset.filter))
+  );
+  renderTable();
+});
+
+/* ── 체크박스 ── */
+function bindCheckboxes() {
+  document.querySelectorAll('.row-check').forEach(cb => cb.addEventListener('change', updateSelectedTotal));
+  document.getElementById('checkAll').addEventListener('change', function() {
+    document.querySelectorAll('.row-check').forEach(cb => { cb.checked = this.checked; });
+    updateSelectedTotal();
+  });
+}
+
+function updateSelectedTotal() {
+  let qty = 0, amount = 0;
+  document.querySelectorAll('.row-check:checked').forEach(cb => {
+    qty++; amount += Number(cb.dataset.amount)||0;
+  });
+  document.getElementById('selectedQty').textContent    = qty + ' pcs';
+  document.getElementById('selectedAmount').textContent = fmtW(amount);
+}
+
+/* ── 새 행 추가 버튼 (하단 바에 있을 경우 대비) ── */
+const addRowBtn = document.getElementById('addRowBtn');
+if (addRowBtn) {
+  addRowBtn.addEventListener('click', () => {
+    rows.push({ ref:'', amount:null, customer:'', saleDate:'', status:'판매예정', note:'' });
+    renderTable();
+  });
 }
 
 /* ────────── 저장 ────────── */
@@ -707,8 +767,19 @@ async function saveData() {
     lastYearPcs:     gnv('f-lastYearPcs'),
     currentSales:    gnv('f-currentSales'),
     currentPcs:      gnv('f-currentPcs'),
-    quarterNum: getQuarterNum(curMonth),
-    // rows는 inventory 컬렉션에서 관리 (저장 불필요)
+    quarterNum:      getQuarterNum(curMonth),
+    mpdsMin:         gnv('f-mpdsMin'),
+    mpdsCurrent:     gnv('f-mpdsCurrent'),
+    mpdsIncoming:    gnv('f-mpdsIncoming'),
+    // goalRateData는 quarter_goals 컬렉션에 별도 저장 (saveQuarterGoalData)
+    rows: rows.map(r => ({
+      ref:      r.ref||'',
+      amount:   r.amount != null ? Number(r.amount) : null,
+      customer: r.customer||'',
+      saleDate: r.saleDate||'',
+      status:   r.status||'판매예정',
+      note:     r.note||''
+    })),
     updatedAt: new Date().toISOString()
   };
 
