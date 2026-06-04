@@ -110,7 +110,10 @@ function updateMonthLabels() {
   const m = curMonth;
   document.getElementById('expectedTitle').textContent = `${m}월 예상 매출`;
   document.getElementById('lastYearTitle').textContent = `작년 ${m}월 매출`;
-  document.getElementById('quarterLabelText').textContent = getQuarterNum(m);
+  const qtLabel = document.getElementById('quarterLabelText');
+  if (qtLabel) qtLabel.textContent = getQuarterNum(m);
+  const qGoalLabel = document.getElementById('qGoalLabel');
+  if (qGoalLabel) qGoalLabel.textContent = `${getQuarterNum(m)}분기 목표`;
   updateQuarterBadge();
 }
 
@@ -262,7 +265,6 @@ function recalcAll() {
   recalcRemain();
   updateGoalDisplay();
   recalcQuarter();
-  recalcMpds();
 }
 
 function gn(id) {
@@ -309,6 +311,12 @@ function updateGoalDisplay() {
   setDisp('centumGoalRateDisp', centumRate);
   setDisp('avenueGoalRateDisp', avenueRate);
   setDisp('totalGoalRateDisp',  totalRate);
+
+  // 인라인 목표 입력 필드 동기화
+  const qtInput = document.getElementById('qt-total-inline');
+  if (qtInput && document.activeElement !== qtInput) {
+    qtInput.value = fmtInput(total || null);
+  }
 
   // 목표 달성률 프로그레스 바 (전체 기준)
   const overallRate = total > 0 ? totalAchieved / total * 100 : 0;
@@ -531,6 +539,14 @@ document.getElementById('centumApply').addEventListener('click', () => {
   setDoc(doc(db,'artifacts','patek-s','public','data','centum_annual',String(yr)), saveObj, {merge:true})
     .catch(e => console.error('centum save:', e));
 });
+
+/* ────────── 분기 목표 인라인 입력 ────────── */
+window.onQtTotalChange = function(val) {
+  goalRateData.total = parseNum(val) || 0;
+  updateGoalDisplay();
+  recalcQuarter();
+  saveQuarterGoalData();
+};
 
 /* ────────── 목표 달성률 모달 ────────── */
 window.calcGoalRate = function() {

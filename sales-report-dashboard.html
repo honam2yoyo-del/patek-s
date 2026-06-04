@@ -71,7 +71,7 @@
     .blue{color:#0067e8;} .red{color:#ff0000;} .green{color:#009844;} .orange{color:#ff7a00;} .black{color:#111827;}
 
     /* ── 대시보드 패널 ── */
-    .dashboard-grid { display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-bottom:16px; }
+    .dashboard-grid { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-bottom:16px; }
     .panel { background:#fff;border:1px solid #e2e7ef;border-radius:8px;box-shadow:0 2px 8px rgba(15,23,42,.035); }
     .panel-header { padding:20px 24px 14px;font-size:18px;font-weight:900;border-bottom:1px solid #e5eaf2; }
     .panel-body   { padding:18px 24px; }
@@ -302,6 +302,15 @@
           <table class="goal-table">
             <tbody>
               <tr>
+                <td id="qGoalLabel" style="color:#0067e8;">2분기 목표</td>
+                <td style="text-align:right;">
+                  <input class="ipt w120" id="qt-total-inline" type="text" inputmode="numeric"
+                    placeholder="목표 금액 입력"
+                    oninput="window.fmtNum(this);window.onQtTotalChange(this.value)"/>
+                </td>
+                <td style="text-align:right;color:#6b7280;font-size:13px;">원</td>
+              </tr>
+              <tr>
                 <td><span class="branch-link" id="centumOpen">센텀</span></td>
                 <td id="centumGoalAmountDisp">-</td>
                 <td id="centumGoalRateDisp">-</td>
@@ -333,9 +342,9 @@
         </div>
       </div>
 
-      <!-- 분기 목표 현황 -->
+      <!-- 센텀 목표 현황 -->
       <div class="panel">
-        <div class="panel-header">분기 목표 현황 (<span id="quarterLabelText">2</span>분기)</div>
+        <div class="panel-header">센텀 목표 현황</div>
         <div class="panel-body">
           <ul class="quarter-list">
             <li>
@@ -362,19 +371,6 @@
         </div>
       </div>
 
-      <!-- MPDS -->
-      <div class="panel">
-        <div class="panel-header">MPDS 등록 가능 현황</div>
-        <div class="panel-body">
-          <ul class="mpds-list">
-            <li><span>최소등록기준</span><input class="mpds-input" id="f-mpdsMin" type="number" value="30" oninput="recalcMpds()"/><span>pcs</span></li>
-            <li><span>현재 등록가능 재고</span><input class="mpds-input" id="f-mpdsCurrent" type="number" placeholder="0" oninput="recalcMpds()"/><span>pcs</span></li>
-            <li><span>부족 수량</span><strong class="red" id="mpdsShortText">-</strong><span>pcs</span></li>
-            <li class="divider"><span>입고예정 수량</span><input class="mpds-input" id="f-mpdsIncoming" type="number" placeholder="0" oninput="recalcMpds()"/><span>pcs</span></li>
-            <li><span>예상 등록 가능 수량</span><strong id="mpdsExpectedText">-</strong><span>pcs</span></li>
-          </ul>
-        </div>
-      </div>
     </section>
 
     <!-- 재고 매출 관리 -->
