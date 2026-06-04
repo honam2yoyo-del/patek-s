@@ -180,6 +180,24 @@
     .gm-rate-box { margin-top:12px;padding:14px;background:#eaf3ff;border-radius:8px;display:flex;justify-content:space-between;align-items:center;font-weight:900;font-size:16px; }
 
     html { overflow-x:hidden; }
+    .sidebar { overflow:hidden;transition:width .25s ease; }
+    .sidebar.collapsed { width:52px; }
+    .sidebar-inner { flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column; }
+    .brand { padding:0 14px;cursor:pointer;user-select:none;gap:10px; }
+    .brand:hover { background:rgba(255,255,255,.06); }
+    .sidebar-toggle { width:20px;height:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:17px;line-height:1;color:rgba(255,255,255,.75); }
+    .brand img { flex-shrink:0;transition:opacity .2s,width .25s,margin .25s; }
+    .brand-name { font-size:19px;font-weight:800;white-space:nowrap;max-width:110px;overflow:hidden;transition:opacity .2s,max-width .25s; }
+    .sidebar.collapsed .brand img { opacity:0;width:0;margin:0; }
+    .sidebar.collapsed .brand-name { opacity:0;max-width:0; }
+    .menu li { white-space:nowrap;overflow:hidden;transition:padding .25s,gap .25s; }
+    .sidebar.collapsed .menu li { padding:0!important;gap:0!important;justify-content:center;font-size:0; }
+    .sidebar.collapsed .menu li .menu-icon { font-size:16px; }
+    .logout { white-space:nowrap;overflow:hidden;flex-shrink:0;transition:padding .25s,gap .25s; }
+    .sidebar.collapsed .logout { padding:0!important;gap:0!important;justify-content:center;font-size:0; }
+    .sidebar.collapsed .logout .menu-icon { font-size:16px; }
+    .main { transition:margin-left .25s ease; }
+    .app.sidebar-collapsed .main { margin-left:52px; }
   </style>
 </head>
 <body>
@@ -196,9 +214,9 @@
 </div>
 
 <div class="app">
-  <aside class="sidebar">
-    <div style="flex:1;min-height:0;overflow-y:auto;">
-      <div class="brand"><img src="log.png" onerror="this.style.display='none'"/>Sales</div>
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-inner">
+      <div class="brand" onclick="window.toggleSidebar()"><span class="sidebar-toggle">☰</span><img src="log.png" onerror="this.style.display='none'"/><span class="brand-name">Sales</span></div>
       <ul class="menu">
         <li onclick="safeNav('sales-plan.html')"><span class="menu-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span>메인</li>
         <li><span class="menu-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span>공지사항</li>
@@ -525,6 +543,31 @@
   });
 })();
 </script>
-<script>(function(){var W=1920;function s(){document.documentElement.style.zoom=Math.min(1,window.innerWidth/W);}s();window.addEventListener('resize',s);})();</script>
+<script>
+window.toggleSidebar=function(){
+  var sb=document.getElementById('sidebar'),app=document.querySelector('.app'),ba=document.querySelector('.bottom-actions');
+  var c=sb.classList.toggle('collapsed');
+  if(app)app.classList.toggle('sidebar-collapsed',c);
+  if(ba)ba.style.left=(c?52:185)+'px';
+  try{localStorage.setItem('_sbc',c);}catch(e){}
+  if(window.applyScale)window.applyScale();
+};
+(function(){try{if(localStorage.getItem('_sbc')==='true'){var sb=document.getElementById('sidebar'),app=document.querySelector('.app'),ba=document.querySelector('.bottom-actions');if(sb)sb.classList.add('collapsed');if(app)app.classList.add('sidebar-collapsed');if(ba)ba.style.left='52px';}}catch(e){}})();
+(function(){
+  var W=1920;
+  function apply(){
+    var sc=Math.min(1,window.innerWidth/W);
+    document.documentElement.style.zoom=sc;
+    var h=Math.ceil(window.innerHeight/sc);
+    var sb=document.getElementById('sidebar');
+    if(sb)sb.style.height=sc<1?h+'px':'';
+    var app=document.querySelector('.app');
+    if(app)app.style.minHeight=sc<1?h+'px':'';
+  }
+  window.applyScale=apply;
+  apply();
+  window.addEventListener('resize',apply);
+})();
+</script>
 </body>
 </html>
