@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=1920, initial-scale=1" />
+  <title>공지사항</title>
+  <style>
+    * { box-sizing:border-box; margin:0; padding:0; font-family:"Malgun Gothic","맑은 고딕",Arial,sans-serif; }
+    body { background:#f7f9fc; color:#111827; }
+    .app { display:flex; min-height:100vh; }
+
+    /* ── 로그인 ── */
+    #login-overlay { position:fixed;inset:0;background:rgba(6,27,52,.97);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999; }
+    #login-overlay img { height:52px;margin-bottom:18px;filter:brightness(0) invert(1); }
+    #login-overlay h2 { color:#fff;font-size:22px;font-weight:800;margin-bottom:6px; }
+    #login-overlay p  { color:rgba(255,255,255,.5);font-size:13px;margin-bottom:26px; }
+    .google-btn { display:flex;align-items:center;gap:10px;background:#fff;border:none;border-radius:8px;padding:12px 26px;font-size:14px;font-weight:700;cursor:pointer; }
+
+    /* ── 사이드바 ── */
+    .sidebar { width:185px;background:linear-gradient(180deg,#061b34 0%,#031020 100%);color:#fff;display:flex;flex-direction:column;justify-content:space-between;flex-shrink:0;position:fixed;top:0;left:0;height:100vh;z-index:100;overflow:hidden;transition:width .25s ease; }
+    .sidebar.collapsed { width:52px; }
+    .sidebar-inner { flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column; }
+    .brand { height:78px;display:flex;align-items:center;gap:10px;padding:0 14px;font-size:20px;font-weight:800;border-bottom:1px solid rgba(255,255,255,.08);cursor:pointer;user-select:none; }
+    .brand:hover { background:rgba(255,255,255,.06); }
+    .brand img { height:24px;object-fit:contain;filter:brightness(0) invert(1);opacity:.85;flex-shrink:0;transition:opacity .2s,width .25s,margin .25s; }
+    .brand-name { font-size:19px;font-weight:800;white-space:nowrap;max-width:110px;overflow:hidden;transition:opacity .2s,max-width .25s; }
+    .sidebar-toggle { width:20px;height:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:17px;line-height:1;color:rgba(255,255,255,.75); }
+    .sidebar.collapsed .brand img { opacity:0;width:0;margin:0; }
+    .sidebar.collapsed .brand-name { opacity:0;max-width:0; }
+    .menu { list-style:none;padding:4px 0; }
+    .menu li { height:50px;display:flex;align-items:center;gap:12px;padding:0 16px;color:rgba(255,255,255,.85);font-size:13.5px;font-weight:700;cursor:pointer;white-space:nowrap;overflow:hidden;transition:padding .25s,gap .25s,justify-content .25s; }
+    .menu li.active { background:#075bc9; }
+    .menu li:hover:not(.active) { background:rgba(255,255,255,.06); }
+    .menu-icon { width:20px;height:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0; }
+    .sidebar.collapsed .menu li { padding:0!important;gap:0!important;justify-content:center;font-size:0; }
+    .sidebar.collapsed .menu li .menu-icon { font-size:16px; }
+    .logout { height:60px;display:flex;align-items:center;gap:12px;padding:0 16px;border-top:1px solid rgba(255,255,255,.08);font-size:13.5px;font-weight:700;cursor:pointer;color:rgba(255,255,255,.7);white-space:nowrap;overflow:hidden;flex-shrink:0;transition:padding .25s,gap .25s; }
+    .logout:hover { color:#fff; }
+    .sidebar.collapsed .logout { padding:0!important;gap:0!important;justify-content:center;font-size:0; }
+    .sidebar.collapsed .logout .menu-icon { font-size:16px; }
+
+    /* ── 메인 ── */
+    .main { flex:1;padding:22px 24px 40px;overflow-x:auto;margin-left:185px;transition:margin-left .25s ease; }
+    .app.sidebar-collapsed .main { margin-left:52px; }
+
+    /* ── 탑바 ── */
+    .topbar { display:flex;justify-content:space-between;align-items:center;margin-bottom:20px; }
+    .page-title { font-size:30px;font-weight:900;letter-spacing:-1px; }
+    .topbar-right { display:flex;align-items:center;gap:12px; }
+    .clock { font-size:14px;font-weight:700;color:#6b7280; }
+    .btn-new { display:flex;align-items:center;gap:7px;background:#0067e8;color:#fff;border:none;border-radius:8px;padding:10px 18px;font-size:13.5px;font-weight:800;cursor:pointer;transition:background .12s; }
+    .btn-new:hover { background:#0055c8; }
+
+    /* ── 필터 바 ── */
+    .filter-bar { background:#fff;border:1px solid #e2e7ef;border-radius:10px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;box-shadow:0 2px 6px rgba(15,23,42,.03); }
+    .search-wrap { position:relative;flex:1;min-width:180px;max-width:300px; }
+    .search-wrap svg { position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#9ca3af; }
+    .search-input { width:100%;height:36px;border:1px solid #e2e7ef;border-radius:7px;padding:0 10px 0 34px;font-size:13px;font-weight:600;color:#111827;outline:none;background:#f8fafc; }
+    .search-input:focus { border-color:#0067e8;background:#fff; }
+    .cat-filters { display:flex;gap:6px;flex-wrap:wrap; }
+    .cf-btn { height:30px;padding:0 12px;border-radius:20px;border:1px solid #e2e7ef;background:#fff;font-size:12px;font-weight:700;cursor:pointer;transition:all .12s;color:#6b7280;white-space:nowrap; }
+    .cf-btn.active { border-color:transparent; }
+    .sort-wrap { margin-left:auto; }
+    .sort-sel { height:34px;border:1px solid #e2e7ef;border-radius:7px;background:#fff;padding:0 28px 0 10px;font-size:13px;font-weight:600;color:#374151;cursor:pointer;outline:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center; }
+    .result-count { font-size:13px;font-weight:700;color:#6b7280;white-space:nowrap; }
+
+    /* ── 공지 리스트 패널 ── */
+    .notice-panel { background:#fff;border:1px solid #e2e7ef;border-radius:10px;box-shadow:0 2px 6px rgba(15,23,42,.03);overflow:hidden; }
+    .notice-list-head { display:grid;grid-template-columns:90px 1fr 110px 110px 80px 60px 36px;gap:0;padding:10px 20px;border-bottom:1px solid #e5eaf2;background:#f8fafc; }
+    .notice-list-head span { font-size:11px;font-weight:800;color:#9ca3af;letter-spacing:.4px;text-transform:uppercase; }
+    .notice-row { display:grid;grid-template-columns:90px 1fr 110px 110px 80px 60px 36px;gap:0;padding:14px 20px;border-bottom:1px solid #f0f4fa;cursor:pointer;align-items:center;transition:background .1s; }
+    .notice-row:last-child { border-bottom:none; }
+    .notice-row:hover { background:#f5f8ff; }
+    .notice-row.row-done { background:#fafafa; }
+    .notice-row.row-done:hover { background:#f3f3f3; }
+    .cat-badge { display:inline-flex;align-items:center;justify-content:center;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:800;white-space:nowrap; }
+    .row-title-wrap { display:flex;flex-direction:column;gap:3px;min-width:0; }
+    .row-title { font-size:14px;font-weight:700;color:#111827;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+    .row-title.done-title { color:#9ca3af; }
+    .row-author { font-size:11px;font-weight:600;color:#9ca3af; }
+    .row-date { font-size:13px;font-weight:600;color:#374151; }
+    .row-date.done-date { color:#9ca3af; }
+    .row-date.near { color:#ea580c; }
+    .status-badge { display:inline-flex;align-items:center;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:800;white-space:nowrap; }
+    .sb-active { background:#eff6ff;color:#2563eb; }
+    .sb-done   { background:#f0fdf4;color:#16a34a; }
+    .sb-urgent { background:#fff7ed;color:#ea580c; }
+    .star-btn { background:none;border:none;cursor:pointer;padding:4px;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:transform .1s; }
+    .star-btn:hover { transform:scale(1.2); }
+    .read-count { font-size:12px;font-weight:700;color:#6b7280; }
+    .row-arrow { display:flex;align-items:center;justify-content:flex-end; }
+    .row-arrow svg { color:#d1d5db; }
+    .empty-row { padding:48px 20px;text-align:center;color:#9ca3af;font-size:14px;font-weight:600; }
+    .done-badge { display:inline-flex;align-items:center;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:800;background:#e5e7eb;color:#6b7280;margin-left:6px;vertical-align:middle; }
+
+    /* ── 모달 공통 ── */
+    .modal-overlay { position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:2000;display:none;align-items:center;justify-content:center; }
+    .modal-overlay.open { display:flex; }
+    .modal-card { background:#fff;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.2);display:flex;flex-direction:column;max-height:88vh; }
+
+    /* ── 등록 모달 ── */
+    #create-modal .modal-card { width:540px;max-width:94vw; }
+    .modal-head { padding:18px 24px 14px;border-bottom:1px solid #e5eaf2;display:flex;align-items:center;justify-content:space-between;flex-shrink:0; }
+    .modal-head h2 { font-size:17px;font-weight:900;color:#111827; }
+    .modal-close { background:none;border:none;cursor:pointer;color:#9ca3af;font-size:22px;line-height:1;padding:2px 4px; }
+    .modal-body { padding:20px 24px;flex:1;overflow-y:auto; }
+    .modal-foot { padding:14px 24px 18px;border-top:1px solid #e5eaf2;display:flex;gap:10px;flex-shrink:0;justify-content:flex-end; }
+    .form-label { font-size:11px;font-weight:800;color:#6b7280;margin-bottom:6px;letter-spacing:.4px;text-transform:uppercase; }
+    .form-group { margin-bottom:16px; }
+    .form-input { width:100%;height:40px;border:1px solid #e2e7ef;border-radius:8px;padding:0 12px;font-size:13.5px;font-weight:600;color:#111827;outline:none;font-family:inherit; }
+    .form-input:focus { border-color:#0067e8; }
+    .form-textarea { width:100%;border:1px solid #e2e7ef;border-radius:8px;padding:10px 12px;font-size:13.5px;font-weight:500;color:#111827;outline:none;resize:vertical;min-height:120px;font-family:inherit;line-height:1.6; }
+    .form-textarea:focus { border-color:#0067e8; }
+    .form-grid2 { display:grid;grid-template-columns:1fr 1fr;gap:12px; }
+    .cat-grid { display:flex;flex-wrap:wrap;gap:8px; }
+    .cat-opt { height:36px;padding:0 16px;border-radius:8px;border:1.5px solid #e2e7ef;background:#fff;font-size:12.5px;font-weight:700;cursor:pointer;transition:all .12s;color:#6b7280; }
+    .cat-opt.selected { border-color:transparent; }
+    .btn-cancel { height:40px;padding:0 20px;border-radius:8px;border:1px solid #e2e7ef;background:#fff;font-size:13.5px;font-weight:700;cursor:pointer;color:#374151; }
+    .btn-cancel:hover { background:#f3f4f6; }
+    .btn-submit { height:40px;padding:0 24px;border-radius:8px;border:none;background:#0067e8;color:#fff;font-size:13.5px;font-weight:800;cursor:pointer;transition:background .12s; }
+    .btn-submit:hover { background:#0055c8; }
+    .btn-submit:disabled { background:#93c5fd;cursor:not-allowed; }
+
+    /* ── 상세 모달 ── */
+    #detail-modal .modal-card { width:600px;max-width:94vw; }
+    .detail-head-inner { display:flex;align-items:center;gap:8px; }
+    .detail-meta { display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px; }
+    .detail-meta-box { background:#f8fafc;border:1px solid #e5eaf2;border-radius:8px;padding:10px 14px; }
+    .detail-meta-label { font-size:10px;font-weight:800;color:#9ca3af;margin-bottom:3px;letter-spacing:.5px;text-transform:uppercase; }
+    .detail-meta-val { font-size:13px;font-weight:700;color:#374151; }
+    .detail-content-box { background:#f8fafc;border:1px solid #e5eaf2;border-radius:8px;padding:16px;font-size:13.5px;font-weight:500;color:#374151;line-height:1.7;white-space:pre-wrap;word-break:break-word;min-height:100px; }
+    .btn-complete { height:40px;padding:0 20px;border-radius:8px;border:none;background:#0067e8;color:#fff;font-size:13.5px;font-weight:800;cursor:pointer;transition:background .12s; }
+    .btn-complete:hover { background:#0055c8; }
+    .btn-complete:disabled { background:#9ca3af;cursor:not-allowed; }
+    .btn-delete { height:40px;padding:0 18px;border-radius:8px;border:1px solid #fee2e2;background:#fff;color:#dc2626;font-size:13.5px;font-weight:700;cursor:pointer;transition:all .12s; }
+    .btn-delete:hover { background:#fef2f2; }
+    .btn-edit { height:40px;padding:0 18px;border-radius:8px;border:1px solid #e2e7ef;background:#fff;color:#374151;font-size:13.5px;font-weight:700;cursor:pointer;transition:all .12s; }
+    .btn-edit:hover { background:#f3f4f6; }
+    .star-detail-btn { background:none;border:none;cursor:pointer;padding:6px;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:transform .1s; }
+    .star-detail-btn:hover { transform:scale(1.15); }
+    .read-info { display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#9ca3af;margin-top:12px; }
+
+    /* edit area */
+    #detail-edit-area { display:none; }
+
+    html { overflow-x:hidden; }
+  </style>
+</head>
+<body>
+
+<!-- 로그인 -->
+<div id="login-overlay">
+  <img src="log.png" onerror="this.style.display='none'"/>
+  <h2>Sales Dashboard</h2>
+  <p>Patek Philippe Korea — 매출 관리 시스템</p>
+  <button class="google-btn" id="login-btn">
+    <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+    Google로 로그인
+  </button>
+</div>
+
+<div class="app">
+  <!-- 사이드바 -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-inner">
+      <div class="brand" onclick="window.toggleSidebar()">
+        <span class="sidebar-toggle">☰</span>
+        <img src="log.png" onerror="this.style.display='none'"/>
+        <span class="brand-name">Sales</span>
+      </div>
+      <ul class="menu">
+        <li onclick="safeNav('sales-plan.html')"><span class="menu-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span>메인</li>
+        <li class="active"><span class="menu-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span>공지사항</li>
+        <li><span class="menu-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>캘린더</li>
+        <li onclick="safeNav('sales-report-dashboard.html')"><span class="menu-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg></span>매출</li>
+        <li onclick="safeNav('inventory-dashboard.html')"><span class="menu-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></span>재고</li>
+        <li onclick="safeNav('mpds-dashboard.html')"><span class="menu-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg></span>MPDS</li>
+        <li onclick="safeNav('report-dashboard.html')"><span class="menu-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg></span>동향 보고</li>
+        <li><span class="menu-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></span>AS</li>
+        <li><span class="menu-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></span>SP 오더</li>
+        <li onclick="safeNav('schedule.html')"><span class="menu-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="2" x2="12" y2="4.5"/><line x1="12" y1="19.5" x2="12" y2="22"/><line x1="2" y1="12" x2="4.5" y2="12"/><line x1="19.5" y1="12" x2="22" y2="12"/><polyline points="8 12 11 15 16 9"/></svg></span>스케줄</li>
+      </ul>
+    </div>
+    <div>
+      <ul class="menu" style="border-top:1px solid rgba(255,255,255,.1);padding:0;">
+        <li onclick="safeNav('settings-dashboard.html')"><span class="menu-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>설정</li>
+      </ul>
+      <div class="logout" id="logout-btn"><span class="menu-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span>로그아웃</div>
+    </div>
+  </aside>
+
+  <!-- 메인 콘텐츠 -->
+  <main class="main">
+    <div class="topbar">
+      <h1 class="page-title">공지사항</h1>
+      <div class="topbar-right">
+        <div class="clock" id="clockDisplay"></div>
+        <button class="btn-new" onclick="openCreateModal()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          새 공지 등록
+        </button>
+      </div>
+    </div>
+
+    <!-- 필터 바 -->
+    <div class="filter-bar">
+      <div class="search-wrap">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="search-input" class="search-input" type="text" placeholder="제목 또는 내용 검색" oninput="onSearch(this.value)"/>
+      </div>
+      <div class="cat-filters" id="cat-filters">
+        <button class="cf-btn active" data-cat="전체" onclick="setCat('전체')">전체</button>
+        <button class="cf-btn" data-cat="매장" onclick="setCat('매장')">매장</button>
+        <button class="cf-btn" data-cat="본사" onclick="setCat('본사')">본사</button>
+        <button class="cf-btn" data-cat="PP" onclick="setCat('PP')">PP</button>
+        <button class="cf-btn" data-cat="백화점" onclick="setCat('백화점')">백화점</button>
+        <button class="cf-btn" data-cat="행사" onclick="setCat('행사')">행사</button>
+      </div>
+      <span class="result-count" id="result-count">전체 0</span>
+      <div class="sort-wrap">
+        <select class="sort-sel" onchange="setSort(this.value)">
+          <option value="registerDesc">등록순</option>
+          <option value="deadlineAsc">마감순</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- 공지 리스트 패널 -->
+    <div class="notice-panel">
+      <div class="notice-list-head">
+        <span>카테고리</span>
+        <span>제목</span>
+        <span>등록일</span>
+        <span>마감일</span>
+        <span>상태</span>
+        <span>열람</span>
+        <span></span>
+      </div>
+      <div id="notice-list"></div>
+    </div>
+  </main>
+</div>
+
+<!-- ── 공지 등록 모달 ── -->
+<div class="modal-overlay" id="create-modal" onclick="if(event.target===this)closeCreateModal()">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h2>새 공지 등록</h2>
+      <button class="modal-close" onclick="closeCreateModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <div class="form-label">카테고리</div>
+        <div class="cat-grid" id="create-cat-grid">
+          <button class="cat-opt" data-cat="매장" onclick="selectCreateCat('매장')">매장</button>
+          <button class="cat-opt" data-cat="본사" onclick="selectCreateCat('본사')">본사</button>
+          <button class="cat-opt" data-cat="PP" onclick="selectCreateCat('PP')">PP</button>
+          <button class="cat-opt" data-cat="백화점" onclick="selectCreateCat('백화점')">백화점</button>
+          <button class="cat-opt" data-cat="행사" onclick="selectCreateCat('행사')">행사</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <div class="form-label">제목</div>
+        <input id="create-title" class="form-input" type="text" placeholder="공지 제목 입력" />
+      </div>
+      <div class="form-grid2 form-group">
+        <div>
+          <div class="form-label">등록일</div>
+          <input id="create-reg-date" class="form-input" type="date" />
+        </div>
+        <div>
+          <div class="form-label">마감일</div>
+          <input id="create-due-date" class="form-input" type="date" />
+        </div>
+      </div>
+      <div class="form-group">
+        <div class="form-label">내용</div>
+        <textarea id="create-content" class="form-textarea" placeholder="공지 내용 입력"></textarea>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-cancel" onclick="closeCreateModal()">취소</button>
+      <button class="btn-submit" id="create-submit-btn" onclick="submitCreate()">등록</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 공지 상세 모달 ── -->
+<div class="modal-overlay" id="detail-modal" onclick="if(event.target===this)closeDetailModal()">
+  <div class="modal-card">
+    <div class="modal-head">
+      <div class="detail-head-inner">
+        <span id="detail-cat-badge" class="cat-badge"></span>
+        <span id="detail-status-badge" class="status-badge"></span>
+        <button class="star-detail-btn" id="detail-star-btn" onclick="toggleDetailStar()">
+          <svg id="detail-star-svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C2BDB5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        </button>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn-edit" id="detail-edit-toggle-btn" onclick="toggleDetailEdit()">수정</button>
+        <button class="modal-close" onclick="closeDetailModal()">&times;</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <!-- 보기 모드 -->
+      <div id="detail-view-area">
+        <div style="margin-bottom:14px;">
+          <div class="form-label">제목</div>
+          <div id="detail-title" style="font-size:18px;font-weight:800;color:#111827;line-height:1.35;margin-top:4px;"></div>
+        </div>
+        <div class="detail-meta">
+          <div class="detail-meta-box">
+            <div class="detail-meta-label">등록일</div>
+            <div class="detail-meta-val" id="detail-reg-date"></div>
+          </div>
+          <div class="detail-meta-box">
+            <div class="detail-meta-label">마감일</div>
+            <div class="detail-meta-val" id="detail-due-date"></div>
+          </div>
+        </div>
+        <div>
+          <div class="form-label">내용</div>
+          <div class="detail-content-box" id="detail-content" style="margin-top:6px;"></div>
+        </div>
+        <div class="read-info">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          <span id="detail-read-count">0 / 6</span>
+          <span>명 열람</span>
+        </div>
+      </div>
+      <!-- 수정 모드 -->
+      <div id="detail-edit-area">
+        <div class="form-group">
+          <div class="form-label">카테고리</div>
+          <div class="cat-grid" id="edit-cat-grid">
+            <button class="cat-opt" data-cat="매장" onclick="selectEditCat('매장')">매장</button>
+            <button class="cat-opt" data-cat="본사" onclick="selectEditCat('본사')">본사</button>
+            <button class="cat-opt" data-cat="PP" onclick="selectEditCat('PP')">PP</button>
+            <button class="cat-opt" data-cat="백화점" onclick="selectEditCat('백화점')">백화점</button>
+            <button class="cat-opt" data-cat="행사" onclick="selectEditCat('행사')">행사</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <div class="form-label">제목</div>
+          <input id="edit-title" class="form-input" type="text" />
+        </div>
+        <div class="form-grid2 form-group">
+          <div>
+            <div class="form-label">등록일</div>
+            <input id="edit-reg-date" class="form-input" type="date" />
+          </div>
+          <div>
+            <div class="form-label">마감일</div>
+            <input id="edit-due-date" class="form-input" type="date" />
+          </div>
+        </div>
+        <div class="form-group">
+          <div class="form-label">내용</div>
+          <textarea id="edit-content" class="form-textarea"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot" id="detail-foot">
+      <button class="btn-delete" onclick="deleteNotice()">삭제</button>
+      <div style="margin-left:auto;display:flex;gap:8px;">
+        <button class="btn-cancel" id="detail-save-btn" style="display:none;" onclick="saveEdit()">저장</button>
+        <button class="btn-complete" id="detail-complete-btn" onclick="completeNotice()">완료 처리</button>
+        <button class="btn-cancel" onclick="closeDetailModal()">닫기</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+const FC = { apiKey:"AIzaSyCt7aQXA5eFdnDTMHlRhjPAkyH4b8UB6HY", authDomain:"patek-s.firebaseapp.com", projectId:"patek-s", storageBucket:"patek-s.firebasestorage.app", messagingSenderId:"786016749285", appId:"1:786016749285:web:58538eec1cf7e72068b60c" };
+const app  = initializeApp(FC);
+const auth = getAuth(app);
+const db   = getFirestore(app);
+
+window.safeNav = url => { location.href = url; };
+
+// ── 시계 ──
+function updateClock(){
+  const n = new Date(), days=['일','월','화','수','목','금','토'];
+  document.getElementById('clockDisplay').textContent =
+    `${n.getFullYear()}.${String(n.getMonth()+1).padStart(2,'0')}.${String(n.getDate()).padStart(2,'0')} (${days[n.getDay()]}) ${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`;
+}
+updateClock(); setInterval(updateClock, 1000);
+
+// ── 카테고리 설정 ──
+const CATS = {
+  '매장': { bg:'#F9E5E2', text:'#D46B61' },
+  '본사': { bg:'#E3EDFD', text:'#5A85DB' },
+  'PP':   { bg:'#FCE6C3', text:'#D69641' },
+  '백화점': { bg:'#E5E5E5', text:'#7A7A7A' },
+  '행사': { bg:'#EBE2FB', text:'#8E67C9' }
+};
+const MAX_READERS = 6;
+
+// ── 상태 ──
+let allNotices = [];
+let currentUser = null;
+let filterCat = '전체';
+let filterQuery = '';
+let sortType = 'registerDesc';
+let currentDetailId = null;
+let createCat = '';
+let editCat = '';
+let isEditMode = false;
+
+// ── 렌더링 ──
+function render(){
+  const today = new Date().toISOString().split('T')[0];
+  let list = [...allNotices];
+
+  // 검색
+  if(filterQuery.trim()){
+    const q = filterQuery.trim().toLowerCase();
+    list = list.filter(n => (n.title||'').toLowerCase().includes(q) || (n.content||'').toLowerCase().includes(q));
+  }
+  // 카테고리
+  if(filterCat !== '전체') list = list.filter(n => n.category === filterCat);
+
+  // 정렬: 미완료 → 완료, 안에서 날짜순
+  list.sort((a,b) => {
+    if(!!a.completed !== !!b.completed) return a.completed ? 1 : -1;
+    if(sortType === 'deadlineAsc'){
+      const da = a.deadlineDate || '9999-12-31', db2 = b.deadlineDate || '9999-12-31';
+      return da < db2 ? -1 : da > db2 ? 1 : 0;
+    }
+    const da = a.registerDate || a.createdAt || '', db2 = b.registerDate || b.createdAt || '';
+    return da < db2 ? 1 : da > db2 ? -1 : 0;
+  });
+
+  document.getElementById('result-count').textContent = `${filterCat === '전체' ? '전체' : filterCat} ${list.length}`;
+
+  const el = document.getElementById('notice-list');
+  if(list.length === 0){ el.innerHTML = '<div class="empty-row">공지사항이 없습니다.</div>'; return; }
+
+  el.innerHTML = list.map(n => {
+    const cs = n.completed ? {bg:'#E5E5E5',text:'#7A7A7A'} : (CATS[n.category]||CATS['매장']);
+    const isDone = n.completed === true;
+    const rowCls = isDone ? 'notice-row row-done' : 'notice-row';
+    const titleCls = isDone ? 'row-title done-title' : 'row-title';
+    const dateCls = isDone ? 'row-date done-date' : 'row-date';
+
+    // D-day
+    let dDayBadge = '';
+    if(!isDone && n.deadlineDate){
+      const diff = Math.floor((new Date(n.deadlineDate) - new Date(today)) / 86400000);
+      if(diff >= 0 && diff <= 3){
+        const label = diff === 0 ? 'D-day' : `D-${diff}`;
+        dDayBadge = `<span style="font-size:10px;font-weight:800;color:#ea580c;background:#fff7ed;padding:1px 6px;border-radius:4px;margin-left:6px;">${label}</span>`;
+      }
+    }
+    if(isDone) dDayBadge = '<span class="done-badge">완료</span>';
+
+    // 상태 배지
+    let sbHtml = '';
+    if(isDone){
+      sbHtml = '<span class="status-badge sb-done">완료</span>';
+    } else if(n.deadlineDate && Math.floor((new Date(n.deadlineDate)-new Date(today))/86400000) <= 3 && Math.floor((new Date(n.deadlineDate)-new Date(today))/86400000) >= 0){
+      sbHtml = '<span class="status-badge sb-urgent">긴급</span>';
+    } else if((n.registerDate||'') === today){
+      sbHtml = '<span class="status-badge sb-active" style="background:#eff6ff;color:#2563eb;">오늘</span>';
+    } else {
+      sbHtml = '<span class="status-badge sb-active">진행중</span>';
+    }
+
+    // 별표
+    const starF = n.starred ? '#F59E0B' : 'none';
+    const starS = n.starred ? '#F59E0B' : '#D1D5DB';
+    const readCount = (n.readers||[]).length;
+
+    return `<div class="${rowCls}" onclick="openDetail('${n.id}')">
+      <div><span class="cat-badge" style="background:${cs.bg};color:${cs.text};">${n.category||'매장'}</span></div>
+      <div class="row-title-wrap">
+        <div class="${titleCls}">${esc(n.title||'')}${dDayBadge}</div>
+        <div class="row-author">${esc(n.authorName||'')}</div>
+      </div>
+      <div class="${dateCls}">${n.registerDate||'-'}</div>
+      <div class="${dateCls}">${n.deadlineDate||'-'}</div>
+      <div>${sbHtml}</div>
+      <div class="read-count">${readCount} / ${MAX_READERS}</div>
+      <div class="row-arrow">
+        <button class="star-btn" onclick="event.stopPropagation(); toggleStar('${n.id}', ${!!n.starred})">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="${starF}" stroke="${starS}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ── 필터 함수 ──
+window.onSearch = v => { filterQuery = v; render(); };
+window.setCat = cat => {
+  filterCat = cat;
+  document.querySelectorAll('.cf-btn').forEach(b => {
+    const isMine = b.dataset.cat === cat;
+    if(isMine){
+      b.classList.add('active');
+      if(cat === '전체'){ b.style.background='#1e3a5f'; b.style.color='#fff'; b.style.borderColor='transparent'; }
+      else{ const s=CATS[cat]; b.style.background=s.bg; b.style.color=s.text; b.style.borderColor='transparent'; }
+    } else {
+      b.classList.remove('active');
+      b.style.background='#fff'; b.style.color='#6b7280'; b.style.borderColor='#e2e7ef';
+    }
+  });
+  render();
+};
+window.setSort = v => { sortType = v; render(); };
+
+// ── 별표 토글 ──
+window.toggleStar = async (id, cur) => {
+  try { await updateDoc(doc(db,'notices',id), { starred: !cur }); }
+  catch(e){ console.error(e); }
+};
+
+// ── 등록 모달 ──
+window.openCreateModal = () => {
+  createCat = '';
+  document.getElementById('create-title').value = '';
+  document.getElementById('create-reg-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('create-due-date').value = '';
+  document.getElementById('create-content').value = '';
+  applyCreateCatStyles();
+  document.getElementById('create-modal').classList.add('open');
+};
+window.closeCreateModal = () => { document.getElementById('create-modal').classList.remove('open'); };
+
+window.selectCreateCat = cat => { createCat = cat; applyCreateCatStyles(); };
+function applyCreateCatStyles(){
+  document.querySelectorAll('#create-cat-grid .cat-opt').forEach(b => {
+    const isMine = b.dataset.cat === createCat;
+    const s = CATS[b.dataset.cat] || CATS['매장'];
+    if(isMine){ b.style.background=s.bg; b.style.color=s.text; b.style.borderColor=s.text; }
+    else { b.style.background='#fff'; b.style.color='#6b7280'; b.style.borderColor='#e2e7ef'; }
+  });
+}
+
+window.submitCreate = async () => {
+  const title = document.getElementById('create-title').value.trim();
+  const regDate = document.getElementById('create-reg-date').value;
+  const dueDate = document.getElementById('create-due-date').value;
+  const content = document.getElementById('create-content').value.trim();
+  if(!createCat || !title || !regDate || !dueDate){ alert('카테고리, 제목, 날짜를 모두 입력해주세요.'); return; }
+  const btn = document.getElementById('create-submit-btn');
+  btn.disabled = true; btn.textContent = '등록 중...';
+  try {
+    await addDoc(collection(db,'notices'), {
+      category: createCat, title, content,
+      registerDate: regDate, deadlineDate: dueDate, date: regDate,
+      author: currentUser.uid,
+      authorName: currentUser.displayName || currentUser.email || '관리자',
+      createdAt: new Date().toISOString(),
+      readers: [], completed: false, completedAt: '', starred: false
+    });
+    closeCreateModal();
+  } catch(e){ alert('등록 실패: ' + e.message); }
+  finally { btn.disabled = false; btn.textContent = '등록'; }
+};
+
+// ── 상세 모달 ──
+window.openDetail = id => {
+  const n = allNotices.find(x => x.id === id);
+  if(!n) return;
+  currentDetailId = id;
+  isEditMode = false;
+
+  const cs = n.completed ? {bg:'#E5E5E5',text:'#7A7A7A'} : (CATS[n.category]||CATS['매장']);
+  const catBadge = document.getElementById('detail-cat-badge');
+  catBadge.textContent = n.category || '매장';
+  catBadge.style.background = cs.bg; catBadge.style.color = cs.text;
+
+  const today = new Date().toISOString().split('T')[0];
+  const sb = document.getElementById('detail-status-badge');
+  if(n.completed){ sb.textContent='완료'; sb.className='status-badge sb-done'; }
+  else if(n.deadlineDate && Math.floor((new Date(n.deadlineDate)-new Date(today))/86400000) <= 3 && Math.floor((new Date(n.deadlineDate)-new Date(today))/86400000) >= 0){ sb.textContent='긴급'; sb.className='status-badge sb-urgent'; }
+  else if((n.registerDate||'') === today){ sb.textContent='오늘'; sb.className='status-badge sb-active'; sb.style.background='#eff6ff'; sb.style.color='#2563eb'; }
+  else { sb.textContent='진행중'; sb.className='status-badge sb-active'; sb.style.background=''; sb.style.color=''; }
+
+  // 별표
+  const starSvg = document.getElementById('detail-star-svg');
+  starSvg.setAttribute('fill', n.starred ? '#F59E0B' : 'none');
+  starSvg.setAttribute('stroke', n.starred ? '#F59E0B' : '#C2BDB5');
+
+  document.getElementById('detail-title').textContent = n.title || '';
+  document.getElementById('detail-reg-date').textContent = n.registerDate || '-';
+  document.getElementById('detail-due-date').textContent = n.deadlineDate || '-';
+  document.getElementById('detail-content').textContent = n.content || '';
+  document.getElementById('detail-read-count').textContent = `${(n.readers||[]).length} / ${MAX_READERS}`;
+
+  // 완료 버튼
+  const cb = document.getElementById('detail-complete-btn');
+  if(n.completed){ cb.disabled=true; cb.textContent='완료됨'; cb.style.background='#9ca3af'; cb.style.cursor='default'; }
+  else { cb.disabled=false; cb.textContent='완료 처리'; cb.style.background='#0067e8'; cb.style.cursor='pointer'; }
+
+  // 수정 모드 초기화
+  setDetailViewMode();
+
+  // 열람 기록
+  if(currentUser){
+    const readers = n.readers || [];
+    if(!readers.includes(currentUser.uid) && readers.length < MAX_READERS){
+      updateDoc(doc(db,'notices',id), { readers: [...readers, currentUser.uid] }).catch(()=>{});
+    }
+  }
+
+  document.getElementById('detail-modal').classList.add('open');
+};
+
+window.closeDetailModal = () => {
+  document.getElementById('detail-modal').classList.remove('open');
+  currentDetailId = null; isEditMode = false;
+};
+
+function setDetailViewMode(){
+  document.getElementById('detail-view-area').style.display = 'block';
+  document.getElementById('detail-edit-area').style.display = 'none';
+  document.getElementById('detail-save-btn').style.display = 'none';
+  document.getElementById('detail-complete-btn').style.display = '';
+  document.getElementById('detail-edit-toggle-btn').textContent = '수정';
+  isEditMode = false;
+}
+function setDetailEditMode(){
+  const n = allNotices.find(x => x.id === currentDetailId);
+  if(!n) return;
+  editCat = n.category || '매장';
+  document.getElementById('edit-title').value = n.title || '';
+  document.getElementById('edit-reg-date').value = n.registerDate || '';
+  document.getElementById('edit-due-date').value = n.deadlineDate || '';
+  document.getElementById('edit-content').value = n.content || '';
+  applyEditCatStyles();
+  document.getElementById('detail-view-area').style.display = 'none';
+  document.getElementById('detail-edit-area').style.display = 'block';
+  document.getElementById('detail-save-btn').style.display = '';
+  document.getElementById('detail-complete-btn').style.display = 'none';
+  document.getElementById('detail-edit-toggle-btn').textContent = '취소';
+  isEditMode = true;
+}
+
+window.toggleDetailEdit = () => { isEditMode ? setDetailViewMode() : setDetailEditMode(); };
+
+window.selectEditCat = cat => { editCat = cat; applyEditCatStyles(); };
+function applyEditCatStyles(){
+  document.querySelectorAll('#edit-cat-grid .cat-opt').forEach(b => {
+    const isMine = b.dataset.cat === editCat;
+    const s = CATS[b.dataset.cat] || CATS['매장'];
+    if(isMine){ b.style.background=s.bg; b.style.color=s.text; b.style.borderColor=s.text; }
+    else { b.style.background='#fff'; b.style.color='#6b7280'; b.style.borderColor='#e2e7ef'; }
+  });
+}
+
+window.saveEdit = async () => {
+  if(!currentDetailId) return;
+  const title = document.getElementById('edit-title').value.trim();
+  const regDate = document.getElementById('edit-reg-date').value;
+  const dueDate = document.getElementById('edit-due-date').value;
+  const content = document.getElementById('edit-content').value.trim();
+  if(!editCat || !title || !regDate || !dueDate){ alert('모두 입력해주세요.'); return; }
+  const btn = document.getElementById('detail-save-btn');
+  btn.disabled = true; btn.textContent = '저장 중...';
+  try {
+    await updateDoc(doc(db,'notices',currentDetailId), { category:editCat, title, registerDate:regDate, deadlineDate:dueDate, date:regDate, content, updatedAt:new Date().toISOString() });
+    setDetailViewMode();
+  } catch(e){ alert('저장 실패'); }
+  finally { btn.disabled = false; btn.textContent = '저장'; }
+};
+
+window.completeNotice = async () => {
+  if(!currentDetailId) return;
+  if(!confirm('완료 처리하시겠습니까?')) return;
+  const btn = document.getElementById('detail-complete-btn');
+  btn.disabled = true; btn.textContent = '처리 중...';
+  try {
+    await updateDoc(doc(db,'notices',currentDetailId), { completed:true, completedAt:new Date().toISOString(), completedBy:currentUser.uid });
+    closeDetailModal();
+  } catch(e){ alert('실패'); btn.disabled=false; btn.textContent='완료 처리'; }
+};
+
+window.deleteNotice = async () => {
+  if(!currentDetailId) return;
+  if(!confirm('삭제하시겠습니까?')) return;
+  try {
+    await deleteDoc(doc(db,'notices',currentDetailId));
+    closeDetailModal();
+  } catch(e){ alert('삭제 실패'); }
+};
+
+window.toggleDetailStar = async () => {
+  if(!currentDetailId) return;
+  const n = allNotices.find(x => x.id === currentDetailId);
+  if(!n) return;
+  const newVal = !n.starred;
+  try {
+    await updateDoc(doc(db,'notices',currentDetailId), { starred: newVal });
+    const svg = document.getElementById('detail-star-svg');
+    svg.setAttribute('fill', newVal ? '#F59E0B' : 'none');
+    svg.setAttribute('stroke', newVal ? '#F59E0B' : '#C2BDB5');
+  } catch(e){ alert('실패'); }
+};
+
+// ── Firebase 리스너 ──
+function startListeners(){
+  onSnapshot(collection(db,'notices'), snap => {
+    allNotices = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    render();
+    // 열려있는 상세 모달 갱신
+    if(currentDetailId) openDetail(currentDetailId);
+  });
+}
+
+// ── 인증 ──
+document.getElementById('login-btn').addEventListener('click', async () => {
+  try { await signInWithPopup(auth, new GoogleAuthProvider()); }
+  catch(e){ alert('로그인 실패: ' + e.message); }
+});
+document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
+
+onAuthStateChanged(auth, user => {
+  document.getElementById('login-overlay').style.display = user ? 'none' : 'flex';
+  if(user){ currentUser = user; startListeners(); }
+});
+</script>
+<script>
+window.toggleSidebar = function(){
+  var sb=document.getElementById('sidebar'), app=document.querySelector('.app');
+  var c=sb.classList.toggle('collapsed');
+  if(app) app.classList.toggle('sidebar-collapsed',c);
+  try{ localStorage.setItem('_sbc',c); }catch(e){}
+  if(window.applyScale) window.applyScale();
+};
+(function(){
+  try{ if(localStorage.getItem('_sbc')==='true'){ var sb=document.getElementById('sidebar'),app=document.querySelector('.app'); if(sb)sb.classList.add('collapsed'); if(app)app.classList.add('sidebar-collapsed'); } }catch(e){}
+})();
+(function(){
+  var W=1920;
+  function apply(){
+    var sc=Math.min(1,window.innerWidth/W);
+    document.documentElement.style.zoom=sc;
+    var h=Math.ceil(window.innerHeight/sc);
+    var sb=document.getElementById('sidebar');
+    if(sb)sb.style.height=sc<1?h+'px':'';
+    var app=document.querySelector('.app');
+    if(app)app.style.minHeight=sc<1?h+'px':'';
+  }
+  window.applyScale=apply; apply(); window.addEventListener('resize',apply);
+})();
+</script>
+</body>
+</html>
