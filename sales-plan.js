@@ -47,6 +47,7 @@ let unsubPlan = null;
 let avenueData = {}; // m1..m12: 금액, m1_pcs..m12_pcs: pcs
 let centumData = {};
 let prevYearCentumData = {}; // 전년도 센텀 데이터 (비교용)
+let prevYearAvenueData = {}; // 전년도 에비뉴엘 데이터 (작년 매출 자동 채우기용)
 let showPrevYear = false;    // 전년 비교 토글 상태
 
 // 목표 달성률 데이터
@@ -114,6 +115,8 @@ function updateMonthLabels() {
   if (qtLabel) qtLabel.textContent = getQuarterNum(m);
   const qGoalLabel = document.getElementById('qGoalLabel');
   if (qGoalLabel) qGoalLabel.textContent = `${getQuarterNum(m)}분기 목표`;
+  const ctQGoalLabel = document.getElementById('ct-qGoalLabel');
+  if (ctQGoalLabel) ctQGoalLabel.textContent = `${getQuarterNum(m)}분기 목표`;
   updateQuarterBadge();
 }
 
@@ -217,19 +220,22 @@ function loadMonth() {
 
 async function loadBranchDataForYear(year) {
   try {
-    const [avSnap, ctSnap, prevCtSnap] = await Promise.all([
+    const [avSnap, ctSnap, prevCtSnap, prevAvSnap] = await Promise.all([
       getDoc(doc(db,'artifacts','patek-s','public','data','avenue_annual',String(year))),
       getDoc(doc(db,'artifacts','patek-s','public','data','centum_annual',String(year))),
-      getDoc(doc(db,'artifacts','patek-s','public','data','centum_annual',String(year - 1)))
+      getDoc(doc(db,'artifacts','patek-s','public','data','centum_annual',String(year - 1))),
+      getDoc(doc(db,'artifacts','patek-s','public','data','avenue_annual',String(year - 1)))
     ]);
-    avenueData          = avSnap.exists()     ? avSnap.data()     : {};
-    centumData          = ctSnap.exists()     ? ctSnap.data()     : {};
-    prevYearCentumData  = prevCtSnap.exists() ? prevCtSnap.data() : {};
+    avenueData         = avSnap.exists()     ? avSnap.data()     : {};
+    centumData         = ctSnap.exists()     ? ctSnap.data()     : {};
+    prevYearCentumData = prevCtSnap.exists() ? prevCtSnap.data() : {};
+    prevYearAvenueData = prevAvSnap.exists() ? prevAvSnap.data() : {};
   } catch(e) {
-    avenueData = {}; centumData = {}; prevYearCentumData = {};
+    avenueData = {}; centumData = {}; prevYearCentumData = {}; prevYearAvenueData = {};
   }
   renderChart();
   recalcQuarter();
+  autoFillEmptyFields(); // 브랜치 데이터 로드 후 빈 필드 자동 채우기
 }
 
 function applyData(d) {
@@ -258,6 +264,7 @@ function applyData(d) {
   rows = d?.rows ? JSON.parse(JSON.stringify(d.rows)) : [];
   renderTable();
   recalcAll();
+  autoFillEmptyFields(); // 저장값 없는 필드를 브랜치 데이터로 자동 채우기
 }
 
 /* ────────── 재계산 ────────── */
@@ -265,6 +272,36 @@ function recalcAll() {
   recalcRemain();
   updateGoalDisplay();
   recalcQuarter();
+}
+
+/* ── 빈 필드 자동 채우기 (작년 매출 / 예상 매출) ── */
+function autoFillEmptyFields() {
+  const m = curMonth;
+
+  // 작년 월 매출: 전년도 센텀+에비뉴엘 실적
+  const lyEl    = document.getElementById('f-lastYearSales');
+  const lyPcsEl = document.getElementById('f-lastYearPcs');
+  if (lyEl && !lyEl.value) {
+    const v = (Number(prevYearCentumData[`m${m}`]) || 0) + (Number(prevYearAvenueData[`m${m}`]) || 0);
+    if (v) lyEl.value = fmtInput(v);
+  }
+  if (lyPcsEl && !lyPcsEl.value) {
+    const v = (Number(prevYearCentumData[`m${m}_pcs`]) || 0) + (Number(prevYearAvenueData[`m${m}_pcs`]) || 0);
+    if (v) { lyPcsEl.value = fmtInput(v); lyPcsEl.style.width = Math.max(2, lyPcsEl.value.length || 1) + 'ch'; }
+  }
+
+  // 월 예상 매출: 올해 센텀+에비뉴엘 월별 데이터 (입력된 경우)
+  const expEl    = document.getElementById('f-expectedSales');
+  const expPcsEl = document.getElementById('f-expectedPcs');
+  if (expEl && !expEl.value) {
+    const v = (Number(centumData[`m${m}`]) || 0) + (Number(avenueData[`m${m}`]) || 0);
+    if (v) expEl.value = fmtInput(v);
+  }
+  if (expPcsEl && !expPcsEl.value) {
+    const v = (Number(centumData[`m${m}_pcs`]) || 0) + (Number(avenueData[`m${m}_pcs`]) || 0);
+    if (v) { expPcsEl.value = fmtInput(v); expPcsEl.style.width = Math.max(2, expPcsEl.value.length || 1) + 'ch'; }
+  }
+  recalcRemain();
 }
 
 function gn(id) {
@@ -345,6 +382,12 @@ function recalcQuarter() {
   setDisp('quarterAchievedDisplay',  fmtW(achieved));
   setDisp('quarterRemainDisplay',    fmtW(Math.max(remain, 0)));
   setDisp('quarterAccumPcsDisplay',  achievedPcs + ' pcs');
+
+  // 센텀 목표 현황의 N분기 목표 인라인 입력 동기화
+  const ctInput = document.getElementById('qt-centum-inline');
+  if (ctInput && document.activeElement !== ctInput) {
+    ctInput.value = centumTarget ? parseFloat((centumTarget / 100000000).toFixed(4)) : '';
+  }
 }
 
 function recalcMpds() {
@@ -541,6 +584,14 @@ document.getElementById('centumApply').addEventListener('click', () => {
 });
 
 /* ────────── 분기 목표 인라인 입력 (억 단위) ────────── */
+window.onQtCentumChange = function(val) {
+  const 억 = parseFloat(val) || 0;
+  goalRateData.centum = Math.round(억 * 100000000);
+  updateGoalDisplay();
+  recalcQuarter();
+  saveQuarterGoalData();
+};
+
 window.onQtTotalChange = function(val) {
   const 억 = parseFloat(val) || 0;
   goalRateData.total = Math.round(억 * 100000000);
@@ -736,6 +787,22 @@ async function saveData() {
   if (btn) btn.textContent = '저장 중...';
   try {
     await setDoc(doc(db,'artifacts','patek-s','public','data','sales_dashboard',`${curYear}-${pad(curMonth)}`), data, {merge:true});
+
+    // 차트용 centum_annual 자동 동기화 (현재 월 실적 → 그래프 연동)
+    const cSales = data.currentSales, cPcs = data.currentPcs;
+    if (cSales !== null || cPcs !== null) {
+      const sync = { updatedAt: new Date().toISOString() };
+      if (cSales !== null) sync[`m${curMonth}`]     = cSales;
+      if (cPcs   !== null) sync[`m${curMonth}_pcs`] = cPcs;
+      setDoc(doc(db,'artifacts','patek-s','public','data','centum_annual',String(curYear)), sync, {merge:true})
+        .then(() => {
+          if (cSales !== null) centumData[`m${curMonth}`]     = cSales;
+          if (cPcs   !== null) centumData[`m${curMonth}_pcs`] = cPcs;
+          renderChart();
+        })
+        .catch(e => console.error('centum-sync:', e));
+    }
+
     if (btn) btn.textContent = '✔ 저장됨';
     setTimeout(() => { if (btn) btn.textContent = '💾 저장하기'; }, 2000);
   } catch(e) {
