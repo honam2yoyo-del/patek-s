@@ -80,12 +80,24 @@
     .checklist li:last-child { border-bottom:none; }
     .check-circle { width:20px;height:20px;border-radius:50%;background:#0067e8;display:flex;align-items:center;justify-content:center;flex-shrink:0; }
 
-    /* ── 고객 / SP오더 패널 ── */
-    .stat-row { display:grid;grid-template-columns:1fr 1fr;gap:14px; }
-    .stat-box { background:#f7f9fc;border:1px solid #e2e7ef;border-radius:8px;padding:16px 18px;text-align:center; }
-    .stat-box-label { font-size:12px;font-weight:700;color:#6b7280;margin-bottom:8px; }
-    .stat-box-value { font-size:26px;font-weight:900; }
-    .stat-box-unit  { font-size:13px;font-weight:700;color:#6b7280;margin-top:2px; }
+    /* ── 고객 / SP오더 ── */
+    .bot-section { margin-bottom:16px; }
+    .bot-section-label { font-size:15px;font-weight:900;color:#111827;margin-bottom:10px; }
+    .bot-cards { display:grid;grid-template-columns:1fr 1fr;gap:14px; }
+    .bot-card { border-radius:10px;padding:18px 22px;position:relative;overflow:hidden;background:#fff; }
+    .bot-card.blue   { border:1.5px solid #93c5fd; }
+    .bot-card.orange { border:1.5px solid #fdba74; }
+    .bot-card-title { font-size:14px;font-weight:900;margin-bottom:18px; }
+    .bot-card.blue   .bot-card-title { color:#2563eb; }
+    .bot-card.orange .bot-card-title { color:#ea580c; }
+    .bot-stat-row { display:grid;grid-template-columns:1fr 1fr; }
+    .bot-stat-col { padding:0 20px; }
+    .bot-stat-col:first-child { padding-left:0;border-right:1px solid #e5eaf2; }
+    .bot-stat-col:last-child  { padding-right:0; }
+    .bot-stat-label { font-size:13px;font-weight:700;color:#6b7280;margin-bottom:8px; }
+    .bot-stat-value { font-size:30px;font-weight:900;line-height:1;color:#111827; }
+    .bot-stat-unit  { font-size:14px;font-weight:700;color:#6b7280;margin-left:3px; }
+    .bot-watermark  { position:absolute;right:14px;bottom:8px;opacity:.07;pointer-events:none; }
 
     html { overflow-x:hidden; }
     /* ── 사이드바 접기/펴기 ── */
@@ -280,47 +292,48 @@
       </div>
     </div>
 
-    <!-- 바텀 섹션 -->
-    <div class="bot-grid">
+    <!-- 고객 / SP오더 섹션 -->
+    <div class="bot-section">
+      <div class="bot-section-label">고객</div>
+      <div class="bot-cards">
 
-      <!-- 고객 패널 -->
-      <div class="panel">
-        <div class="panel-header">고객</div>
-        <div class="panel-body">
-          <div class="stat-row">
-            <div class="stat-box">
-              <div class="stat-box-label">AS 진행중</div>
-              <div class="stat-box-value" id="bot-as-active">-</div>
-              <div class="stat-box-unit">건</div>
+        <!-- AS 현황 (파란 테두리) -->
+        <div class="bot-card blue">
+          <div class="bot-card-title">AS 현황</div>
+          <div class="bot-stat-row">
+            <div class="bot-stat-col">
+              <div class="bot-stat-label">AS 진행중</div>
+              <div class="bot-stat-value"><span id="bot-as-active">-</span><span class="bot-stat-unit">건</span></div>
             </div>
-            <div class="stat-box">
-              <div class="stat-box-label">AS 입고</div>
-              <div class="stat-box-value">0</div>
-              <div class="stat-box-unit">건</div>
+            <div class="bot-stat-col">
+              <div class="bot-stat-label">AS 입고</div>
+              <div class="bot-stat-value"><span>0</span><span class="bot-stat-unit">건</span></div>
+            </div>
+          </div>
+          <!-- 워터마크 기어 아이콘 -->
+          <div class="bot-watermark">
+            <svg width="90" height="90" viewBox="0 0 24 24" fill="#3b82f6">
+              <path d="M12 15.5A3.5 3.5 0 0 1 8.5 12 3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5 3.5 3.5 0 0 1-3.5 3.5m7.43-2.92c.04-.34.07-.68.07-1.08s-.03-.73-.07-1.08l2.33-1.82c.21-.17.27-.45.13-.68l-2.2-3.82c-.13-.23-.41-.3-.64-.23l-2.75 1.1c-.6-.44-1.24-.8-1.86-1.08l-.41-2.92A.5.5 0 0 0 13.5 2h-4a.5.5 0 0 0-.5.42l-.41 2.92c-.62.28-1.26.64-1.86 1.08L3.98 5.32c-.23-.07-.51 0-.64.23L1.14 9.37c-.14.23-.08.51.13.68l2.33 1.82c-.04.35-.07.7-.07 1.08s.03.73.07 1.08L1.27 15.85c-.21.17-.27.45-.13.68l2.2 3.82c.13.23.41.3.64.23l2.75-1.1c.6.44 1.24.8 1.86 1.08l.41 2.92c.1.24.27.42.5.42h4c.23 0 .4-.18.5-.42l.41-2.92c.62-.28 1.26-.64 1.86-1.08l2.75 1.1c.23.07.51 0 .64-.23l2.2-3.82c.14-.23.08-.51-.13-.68l-2.33-1.82z"/>
+            </svg>
+          </div>
+        </div>
+
+        <!-- SP오더 현황 (오렌지 테두리) -->
+        <div class="bot-card orange">
+          <div class="bot-card-title">SP오더 현황</div>
+          <div class="bot-stat-row">
+            <div class="bot-stat-col">
+              <div class="bot-stat-label">SP오더 진행중</div>
+              <div class="bot-stat-value"><span>0</span><span class="bot-stat-unit">건</span></div>
+            </div>
+            <div class="bot-stat-col">
+              <div class="bot-stat-label">SP오더 입고</div>
+              <div class="bot-stat-value"><span>0</span><span class="bot-stat-unit">건</span></div>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- SP오더 현황 패널 -->
-      <div class="panel">
-        <div class="panel-header">SP오더 현황</div>
-        <div class="panel-body">
-          <div class="stat-row">
-            <div class="stat-box">
-              <div class="stat-box-label">SP오더 진행중</div>
-              <div class="stat-box-value">0</div>
-              <div class="stat-box-unit">건</div>
-            </div>
-            <div class="stat-box">
-              <div class="stat-box-label">SP오더 입고</div>
-              <div class="stat-box-value">0</div>
-              <div class="stat-box-unit">건</div>
-            </div>
-          </div>
-        </div>
       </div>
-
     </div>
   </main>
 </div>
