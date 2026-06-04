@@ -58,7 +58,8 @@
     .top-layout { display:grid;grid-template-columns:1fr 360px;gap:22px;align-items:start; }
     .summary-grid { display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:14px; }
     .summary-card { background:#fff;border:1px solid #e1e7f0;border-radius:12px;padding:26px 14px;min-height:160px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;box-shadow:0 2px 8px rgba(15,23,42,.035); }
-    .summary-icon { width:60px;height:60px;border-radius:50%;background:#EEF2FF;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:visible;position:relative; }
+    .summary-icon { width:68px;height:68px;border-radius:50%;background:#EEF2FF;display:flex;align-items:center;justify-content:center;flex-shrink:0; }
+    .summary-icon img { width:60px;height:60px;object-fit:contain;display:block; }
     .summary-title { font-size:13px;font-weight:800;color:#64748b;text-align:center; }
     .summary-value { font-size:26px;font-weight:900;letter-spacing:-.6px;line-height:1;text-align:center; }
     .summary-value small { font-size:14px;font-weight:700;margin-left:4px; }
@@ -260,86 +261,47 @@
       <div>
         <div class="summary-grid">
 
-          <!-- 전체 재고: 3 boxes pyramid -->
+          <!-- 전체 재고 -->
           <div class="summary-card">
             <div class="summary-title">전체 재고</div>
             <div class="summary-icon">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1E3A8A" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="0.5" y="13" width="10" height="10" rx="1.2"/>
-                <rect x="13.5" y="13" width="10" height="10" rx="1.2"/>
-                <rect x="7" y="1" width="10" height="10" rx="1.2"/>
-              </svg>
+              <img src="MPDS01.png" alt="전체 재고 아이콘"/>
             </div>
             <div class="summary-value" id="kpi-total">0 <small>pcs</small></div>
           </div>
 
-          <!-- 판매 예정: shopping bag + check badge -->
+          <!-- 판매 예정 -->
           <div class="summary-card">
             <div class="summary-title">판매 예정</div>
             <div class="summary-icon">
-              <svg width="28" height="28" viewBox="0 0 30 30" fill="none">
-                <path d="M3.5 9L6 5h18l2.5 4V24a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 24V9z" stroke="#1E3A8A" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-                <line x1="3.5" y1="9" x2="26.5" y2="9" stroke="#1E3A8A" stroke-width="1.6" stroke-linecap="round"/>
-                <path d="M10 13.5a5 5 0 0 0 10 0" stroke="#1E3A8A" stroke-width="1.6" stroke-linecap="round" fill="none"/>
-                <circle cx="25" cy="25" r="5.5" fill="#EEF2FF" stroke="#1E3A8A" stroke-width="1.6"/>
-                <path d="M22.3 25l1.8 1.8 3.5-3.5" stroke="#1E3A8A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
+              <img src="MPDS02.png" alt="판매 예정 아이콘"/>
             </div>
             <div class="summary-value green" id="kpi-sale">0 <small>pcs</small></div>
           </div>
 
-          <!-- AS: gear + wrench overlapping -->
+          <!-- AS -->
           <div class="summary-card">
             <div class="summary-title">AS</div>
             <div class="summary-icon">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1E3A8A" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-                <!-- Gear: center (8,10), outer r=5.5, inner r=2, 8 teeth -->
-                <circle cx="8" cy="10" r="5.5"/>
-                <circle cx="8" cy="10" r="2"/>
-                <line x1="8" y1="4.5" x2="8" y2="3.2"/>
-                <line x1="8" y1="15.5" x2="8" y2="16.8"/>
-                <line x1="2.5" y1="10" x2="1.2" y2="10"/>
-                <line x1="13.5" y1="10" x2="14.8" y2="10"/>
-                <line x1="4.1" y1="6.1" x2="3.2" y2="5.2"/>
-                <line x1="11.9" y1="13.9" x2="12.8" y2="14.8"/>
-                <line x1="4.1" y1="13.9" x2="3.2" y2="14.8"/>
-                <line x1="11.9" y1="6.1" x2="12.8" y2="5.2"/>
-                <!-- Wrench overlapping lower-right (Lucide wrench path) -->
-                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-3.76 3.76a2.12 2.12 0 0 1-3-3l3.76-3.76a6 6 0 0 1 7.94-7.94l-3.77 3.77z"/>
-              </svg>
+              <img src="MPDS03.png" alt="AS 아이콘"/>
             </div>
             <div class="summary-value red" id="kpi-as">0 <small>pcs</small></div>
           </div>
 
-          <!-- MPDS 등록: clipboard + check badge -->
+          <!-- MPDS 등록 -->
           <div class="summary-card" style="border-color:#9bbcff;">
             <div class="summary-title blue">MPDS 등록</div>
             <div class="summary-icon">
-              <svg width="28" height="28" viewBox="0 0 30 30" fill="none">
-                <rect x="4" y="3" width="18" height="23" rx="2" stroke="#1E3A8A" stroke-width="1.6"/>
-                <path d="M9 3V2a1.5 1.5 0 0 1 1.5-1.5h5A1.5 1.5 0 0 1 17 2v1" stroke="#1E3A8A" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-                <line x1="4" y1="7.5" x2="22" y2="7.5" stroke="#1E3A8A" stroke-width="1.3" stroke-linecap="round"/>
-                <line x1="8" y1="13" x2="18" y2="13" stroke="#1E3A8A" stroke-width="1.4" stroke-linecap="round"/>
-                <line x1="8" y1="17" x2="18" y2="17" stroke="#1E3A8A" stroke-width="1.4" stroke-linecap="round"/>
-                <line x1="8" y1="21" x2="14" y2="21" stroke="#1E3A8A" stroke-width="1.4" stroke-linecap="round"/>
-                <circle cx="25" cy="25" r="5.5" fill="#EEF2FF" stroke="#1E3A8A" stroke-width="1.6"/>
-                <path d="M22.3 25l1.8 1.8 3.5-3.5" stroke="#1E3A8A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
+              <img src="MPDS04.png" alt="MPDS 등록 아이콘"/>
             </div>
             <div class="summary-value blue" id="kpi-possible">0 <small>pcs</small></div>
           </div>
 
-          <!-- 잔여 재고: box + minus badge -->
+          <!-- 잔여 재고 -->
           <div class="summary-card">
             <div class="summary-title">잔여 재고</div>
             <div class="summary-icon">
-              <svg width="28" height="28" viewBox="0 0 30 30" fill="none">
-                <rect x="3" y="8" width="19" height="17" rx="2" stroke="#1E3A8A" stroke-width="1.6"/>
-                <path d="M7 8V6a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v2" stroke="#1E3A8A" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-                <line x1="8" y1="15.5" x2="17" y2="15.5" stroke="#1E3A8A" stroke-width="1.5" stroke-linecap="round"/>
-                <circle cx="25" cy="25" r="5.5" fill="#EEF2FF" stroke="#1E3A8A" stroke-width="1.6"/>
-                <line x1="22.3" y1="25" x2="27.7" y2="25" stroke="#1E3A8A" stroke-width="2" stroke-linecap="round"/>
-              </svg>
+              <img src="MPDS05.png" alt="잔여 재고 아이콘"/>
             </div>
             <div class="summary-value black" id="kpi-avail">0 <small>pcs</small></div>
           </div>
