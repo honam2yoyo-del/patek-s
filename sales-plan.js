@@ -312,10 +312,10 @@ function updateGoalDisplay() {
   setDisp('avenueGoalRateDisp', avenueRate);
   setDisp('totalGoalRateDisp',  totalRate);
 
-  // 인라인 목표 입력 필드 동기화
+  // 인라인 목표 입력 필드 동기화 (억 단위)
   const qtInput = document.getElementById('qt-total-inline');
   if (qtInput && document.activeElement !== qtInput) {
-    qtInput.value = fmtInput(total || null);
+    qtInput.value = total ? parseFloat((total / 100000000).toFixed(4)) : '';
   }
 
   // 목표 달성률 프로그레스 바 (전체 기준)
@@ -540,9 +540,10 @@ document.getElementById('centumApply').addEventListener('click', () => {
     .catch(e => console.error('centum save:', e));
 });
 
-/* ────────── 분기 목표 인라인 입력 ────────── */
+/* ────────── 분기 목표 인라인 입력 (억 단위) ────────── */
 window.onQtTotalChange = function(val) {
-  goalRateData.total = parseNum(val) || 0;
+  const 억 = parseFloat(val) || 0;
+  goalRateData.total = Math.round(억 * 100000000);
   updateGoalDisplay();
   recalcQuarter();
   saveQuarterGoalData();

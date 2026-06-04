@@ -299,17 +299,18 @@
       <div class="panel">
         <div class="panel-header">목표 달성 현황</div>
         <div class="panel-body">
+          <!-- N분기 목표 (표 외부) -->
+          <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:16px;color:#111827;">
+            <span id="qGoalLabel" style="font-size:14px;font-weight:900;white-space:nowrap;">2분기 목표</span>
+            <input id="qt-total-inline" type="number" step="0.01" min="0"
+              style="width:72px;border:none;border-bottom:2px solid #d1d5db;outline:none;font-size:22px;font-weight:900;color:#111827;text-align:right;background:transparent;padding:0 2px;font-family:inherit;"
+              placeholder="0"
+              oninput="window.onQtTotalChange(this.value)"/>
+            <span style="font-size:15px;font-weight:700;color:#374151;">억</span>
+          </div>
+
           <table class="goal-table">
             <tbody>
-              <tr>
-                <td id="qGoalLabel" style="color:#0067e8;">2분기 목표</td>
-                <td style="text-align:right;">
-                  <input class="ipt w120" id="qt-total-inline" type="text" inputmode="numeric"
-                    placeholder="목표 금액 입력"
-                    oninput="window.fmtNum(this);window.onQtTotalChange(this.value)"/>
-                </td>
-                <td style="text-align:right;color:#6b7280;font-size:13px;">원</td>
-              </tr>
               <tr>
                 <td><span class="branch-link" id="centumOpen">센텀</span></td>
                 <td id="centumGoalAmountDisp">-</td>
