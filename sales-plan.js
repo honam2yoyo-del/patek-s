@@ -828,6 +828,32 @@ if (addRowBtn) {
   });
 }
 
+/* ── 매출→MPDS 동기화 (REF. 기준) ── */
+const SALES_TO_MPDS_STATUS = {
+  '판매예정':'판매예정','판매완료':'판매 완료','잔여재고':'잔여 재고','AS':'AS','기타':'기타'
+};
+async function syncSalesToMpds(invRows) {
+  const docId = `${curYear}-${pad(curMonth)}`;
+  try {
+    const snap = await getDoc(doc(db,'artifacts','patek-s','public','data','mpds',docId));
+    if (!snap.exists()) return;
+    const mpdsInv = (snap.data().inventory||[]).map(r=>({...r}));
+    let changed = false;
+    invRows.forEach(inv => {
+      if (!inv.ref) return;
+      const idx = mpdsInv.findIndex(m=>(m.ref||'').toLowerCase()===(inv.ref||'').toLowerCase());
+      if (idx < 0) return;
+      const ns = SALES_TO_MPDS_STATUS[inv.status];
+      if (ns && mpdsInv[idx].status !== ns) { mpdsInv[idx].status = ns; changed = true; }
+      if (inv.serial !== undefined && mpdsInv[idx].serial !== inv.serial) { mpdsInv[idx].serial = inv.serial||''; changed = true; }
+      if (inv.amount != null && mpdsInv[idx].amount !== Number(inv.amount)) { mpdsInv[idx].amount = Number(inv.amount); changed = true; }
+      if (inv.note !== undefined && mpdsInv[idx].note !== inv.note) { mpdsInv[idx].note = inv.note||''; changed = true; }
+    });
+    if (changed) await setDoc(doc(db,'artifacts','patek-s','public','data','mpds',docId),
+      { inventory:mpdsInv, updatedAt:new Date().toISOString() }, {merge:true});
+  } catch(e) { console.error('syncSalesToMpds:', e); }
+}
+
 /* ────────── 저장 ────────── */
 async function saveData() {
   const gv  = id => { const el=document.getElementById(id); return el?el.value.trim():''; };
@@ -866,6 +892,7 @@ async function saveData() {
       setDoc(doc(db,'artifacts','patek-s','public','data','sales_dashboard',`${curYear}-${pad(curMonth)}`), data, {merge:true}),
       setDoc(doc(db,'artifacts','patek-s','public','data','inventory',`${curYear}-${pad(curMonth)}`), invData, {merge:true})
     ]);
+    syncSalesToMpds(invData.rows); // REF. 기준으로 MPDS에도 반영
 
     // 차트용 centum_annual 자동 동기화 (현재 월 실적 → 그래프 연동)
     const cSales = data.currentSales, cPcs = data.currentPcs;

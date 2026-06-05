@@ -57,7 +57,7 @@
     .mpp-month.sel { background:#075bd8;color:#fff; }
 
     /* ── KPI 카드 ── */
-    .kpi-grid { display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px;margin-bottom:20px; }
+    .kpi-grid { display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:10px;margin-bottom:20px; }
     .kpi-card { background:#fff;border:1px solid #e2e7ef;border-radius:8px;padding:13px 14px;box-shadow:0 2px 8px rgba(15,23,42,.035); }
     .kpi-label { font-size:12px;font-weight:900;margin-bottom:6px;color:#374151; }
     .kpi-pcs   { font-size:22px;font-weight:900;letter-spacing:-.5px;line-height:1; }
@@ -65,7 +65,7 @@
     .kpi-amt   { margin-top:6px;font-size:12px;font-weight:800;color:#374151; }
 
     .blue { color:#0067e8; } .green { color:#009844; } .red { color:#ff1f1f; }
-    .orange { color:#ff7a00; } .black { color:#111827; } .purple { color:#7c3aed; }
+    .orange { color:#ff7a00; } .black { color:#111827; } .purple { color:#7c3aed; } .amber { color:#d97706; }
 
     /* ── 재고 패널 ── */
     .inv-panel { background:#fff;border:1px solid #e2e7ef;border-radius:8px;box-shadow:0 2px 8px rgba(15,23,42,.035);padding:20px; }
@@ -260,6 +260,7 @@
       <div class="kpi-card"><div class="kpi-label">AS</div><div class="kpi-pcs red" id="kpi-as-pcs">0 <small>pcs</small></div><div class="kpi-amt" id="kpi-as-amt">0 원</div></div>
       <div class="kpi-card"><div class="kpi-label">기타</div><div class="kpi-pcs purple" id="kpi-etc-pcs">0 <small>pcs</small></div><div class="kpi-amt" id="kpi-etc-amt">0 원</div></div>
       <div class="kpi-card"><div class="kpi-label">이월 예정</div><div class="kpi-pcs blue" id="kpi-carry-pcs">0 <small>pcs</small></div><div class="kpi-amt" id="kpi-carry-amt">0 원</div></div>
+      <div class="kpi-card"><div class="kpi-label">판매 완료</div><div class="kpi-pcs amber" id="kpi-done-pcs">0 <small>pcs</small></div><div class="kpi-amt" id="kpi-done-amt">0 원</div></div>
       <div class="kpi-card"><div class="kpi-label">잔여 재고</div><div class="kpi-pcs black" id="kpi-rest-pcs">0 <small>pcs</small></div><div class="kpi-amt" id="kpi-rest-amt">0 원</div></div>
     </section>
 
@@ -537,12 +538,14 @@ async function syncExcelToMpds(imported) {
   } catch(e) { console.error('MPDS sync error:', e); }
 }
 
-/* ────────── MPDS 동기화: 상태 변경 시 ────────── */
+/* ────────── MPDS 동기화 ────────── */
+const INV_TO_MPDS_STATUS = {
+  '판매예정':'판매예정','판매완료':'판매 완료','잔여재고':'잔여 재고','AS':'AS','기타':'기타'
+};
+
 async function syncStatusToMpds(ref, serial, status) {
-  const mpdsMap = { '판매예정':'판매예정', 'AS':'AS', '기타':'기타' };
-  const revertStatuses = ['잔여재고','컨펌예정','이월예정'];
   if (!ref) return;
-  const mpdsStatus = mpdsMap[status] || (revertStatuses.includes(status) ? '보류' : null);
+  const mpdsStatus = INV_TO_MPDS_STATUS[status];
   if (!mpdsStatus) return;
   try {
     const docId = `${curYear}-${pad(curMonth)}`;
@@ -559,6 +562,28 @@ async function syncStatusToMpds(ref, serial, status) {
     await setDoc(doc(db,'artifacts','patek-s','public','data','mpds',docId),
       { inventory:mpdsInv, updatedAt:new Date().toISOString() }, {merge:true});
   } catch(e) {}
+}
+
+async function syncAllToMpds(invRows) {
+  const docId = `${curYear}-${pad(curMonth)}`;
+  try {
+    const snap = await getDoc(doc(db,'artifacts','patek-s','public','data','mpds',docId));
+    if (!snap.exists()) return;
+    const mpdsInv = (snap.data().inventory||[]).map(r=>({...r}));
+    let changed = false;
+    invRows.forEach(inv => {
+      if (!inv.ref) return;
+      const idx = mpdsInv.findIndex(m=>(m.ref||'').toLowerCase()===(inv.ref||'').toLowerCase());
+      if (idx < 0) return;
+      const ns = INV_TO_MPDS_STATUS[inv.status];
+      if (ns && mpdsInv[idx].status !== ns) { mpdsInv[idx].status = ns; changed = true; }
+      if (inv.serial !== undefined && mpdsInv[idx].serial !== inv.serial) { mpdsInv[idx].serial = inv.serial||''; changed = true; }
+      if (inv.amount != null && mpdsInv[idx].amount !== Number(inv.amount)) { mpdsInv[idx].amount = Number(inv.amount); changed = true; }
+      if (inv.note !== undefined && mpdsInv[idx].note !== inv.note) { mpdsInv[idx].note = inv.note||''; changed = true; }
+    });
+    if (changed) await setDoc(doc(db,'artifacts','patek-s','public','data','mpds',docId),
+      { inventory:mpdsInv, updatedAt:new Date().toISOString() }, {merge:true});
+  } catch(e) { console.error('syncAllToMpds:', e); }
 }
 
 let curYear  = new Date().getFullYear();
@@ -644,6 +669,7 @@ function renderKpi() {
   set('kpi-as','AS');
   set('kpi-etc','기타');
   set('kpi-carry','이월예정');
+  set('kpi-done','판매완료');
   set('kpi-rest','잔여재고');
 }
 
@@ -1007,6 +1033,7 @@ async function saveData() {
       updatedAt: new Date().toISOString()
     };
     await setDoc(doc(db,'artifacts','patek-s','public','data','inventory',`${curYear}-${pad(curMonth)}`), data, {merge:true});
+    syncAllToMpds(data.rows); // REF. 기준으로 MPDS에도 반영
     if (btn) btn.textContent='✔ 저장됨';
     window.markClean && window.markClean();
     try { localStorage.removeItem(AUTO_SAVE_KEY); } catch(e) {}

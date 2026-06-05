@@ -457,7 +457,7 @@
 <script type="module">
 import { initializeApp }   from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, onSnapshot, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const FC = { apiKey:"AIzaSyCt7aQXA5eFdnDTMHlRhjPAkyH4b8UB6HY", authDomain:"patek-s.firebaseapp.com", projectId:"patek-s", storageBucket:"patek-s.firebasestorage.app", messagingSenderId:"786016749285", appId:"1:786016749285:web:58538eec1cf7e72068b60c" };
 const app  = initializeApp(FC);
@@ -860,17 +860,44 @@ window.copyList = function() {
 
 window.printFinalList = function() { window.print(); };
 
+/* ── MPDS→재고 동기화 ── */
+const MPDS_TO_INV_STATUS = {
+  '판매예정':'판매예정','판매 완료':'판매완료','잔여 재고':'잔여재고','AS':'AS','기타':'기타'
+};
+async function syncAllToInventory(mpdsRows) {
+  const docId = `${curYear}-${pad(curMonth)}`;
+  try {
+    const snap = await getDoc(doc(db,'artifacts','patek-s','public','data','inventory',docId));
+    const invRows = snap.exists() ? (snap.data().rows||[]).map(r=>({...r})) : [];
+    let changed = false;
+    mpdsRows.forEach(mpds => {
+      if (!mpds.ref) return;
+      const idx = invRows.findIndex(r=>(r.ref||'').toLowerCase()===(mpds.ref||'').toLowerCase());
+      if (idx < 0) return;
+      const ns = MPDS_TO_INV_STATUS[mpds.status];
+      if (ns && invRows[idx].status !== ns) { invRows[idx].status = ns; changed = true; }
+      if (mpds.serial !== undefined && invRows[idx].serial !== mpds.serial) { invRows[idx].serial = mpds.serial||''; changed = true; }
+      if (mpds.amount != null && invRows[idx].amount !== Number(mpds.amount)) { invRows[idx].amount = Number(mpds.amount); changed = true; }
+      if (mpds.note !== undefined && invRows[idx].note !== mpds.note) { invRows[idx].note = mpds.note||''; changed = true; }
+    });
+    if (changed) await setDoc(doc(db,'artifacts','patek-s','public','data','inventory',docId),
+      { rows:invRows, updatedAt:new Date().toISOString() }, {merge:true});
+  } catch(e) { console.error('syncAllToInventory:', e); }
+}
+
 /* ── 저장 ── */
 document.getElementById('save-btn').addEventListener('click', async () => {
   const btn = document.getElementById('save-btn');
   btn.textContent = '저장 중...';
   try {
+    const mpdsData = inventory.map(r => ({...r, amount: r.amount != null ? Number(r.amount) : null}));
     await setDoc(doc(db,'artifacts','patek-s','public','data','mpds',`${curYear}-${pad(curMonth)}`), {
-      inventory: inventory.map(r => ({...r, amount: r.amount != null ? Number(r.amount) : null})),
+      inventory: mpdsData,
       minQty: Number(document.getElementById('minQtyInput').value) || 30,
       incomingQty: Number(document.getElementById('incomingQtyInput')?.value) || 0,
       updatedAt: new Date().toISOString()
     }, {merge:true});
+    syncAllToInventory(mpdsData); // REF. 기준으로 재고 목록에도 반영
     btn.textContent = '✔ 저장됨';
     window.markClean && window.markClean();
     setTimeout(() => { btn.textContent = '💾 저장하기'; }, 2000);
