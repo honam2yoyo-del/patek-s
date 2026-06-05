@@ -34,15 +34,17 @@ window.fmtNum = function(el) {
   }
 };
 
-const STATUSES  = ['판매예정','컨펌예정','이월예정','AS','잔여재고','기타','판매완료'];
+const STATUSES  = ['판매예정','컨펌예정','이월예정','AS','잔여재고','기타','판매완료','등록','선수금'];
 const STATUS_DISPLAY = {
   '판매예정':'판매 예정','컨펌예정':'컨펌 예정','이월예정':'이월 예정',
-  '잔여재고':'잔여 재고','AS':'AS','기타':'기타','판매완료':'판매 완료'
+  '잔여재고':'잔여 재고','AS':'AS','기타':'기타','판매완료':'판매 완료','등록':'등록','선수금':'선수금'
 };
 const BADGE_MAP = {
   '판매예정':'badge-sale','컨펌예정':'badge-confirm','이월예정':'badge-carry',
-  '잔여재고':'badge-rest','AS':'badge-as','기타':'badge-rest','판매완료':'badge-done'
+  '잔여재고':'badge-rest','AS':'badge-as','기타':'badge-rest','판매완료':'badge-done',
+  '등록':'badge-reg','선수금':'badge-advance'
 };
+const IS_NO_PCS = s => s === '선수금'; // 선수금: 금액만 집계, pcs 제외
 
 function canonicalStatus(s) {
   const m = {'판매 예정':'판매예정','컨펌 예정':'컨펌예정','이월 예정':'이월예정','잔여 재고':'잔여재고','판매 완료':'판매완료'};
@@ -51,7 +53,7 @@ function canonicalStatus(s) {
 }
 
 function statusSelClass(s) {
-  return {'판매예정':'s-sale','컨펌예정':'s-confirm','이월예정':'s-carry','잔여재고':'s-rest','AS':'s-as','기타':'s-etc','판매완료':'s-done'}[s]||'s-rest';
+  return {'판매예정':'s-sale','컨펌예정':'s-confirm','이월예정':'s-carry','잔여재고':'s-rest','AS':'s-as','기타':'s-etc','판매완료':'s-done','등록':'s-reg','선수금':'s-advance'}[s]||'s-rest';
 }
 
 let curYear  = new Date().getFullYear();
@@ -644,7 +646,7 @@ function renderTable() {
     const tr    = document.createElement('tr');
     tr.dataset.status = r.status || '';
     tr.innerHTML = `
-      <td><input type="checkbox" class="row-check" data-amount="${r.amount||0}" data-qty="1"/></td>
+      <td><input type="checkbox" class="row-check" data-amount="${r.amount||0}" data-status="${r.status||''}"/></td>
       <td><input class="td-edit" value="${esc(r.ref||'')}" oninput="window.invSet(${ri},'ref',this.value)" placeholder="REF."/></td>
       <td><input class="td-edit" value="${esc(r.serial||'')}" oninput="window.invSet(${ri},'serial',this.value)" placeholder="Serial"/></td>
       <td style="padding:0;"><div style="display:flex;align-items:center;justify-content:center;padding:10px 12px;gap:0;">
@@ -676,12 +678,13 @@ function renderTable() {
 
 function renderTfoot(filtered) {
   const total = filtered.reduce((s,r) => s + (Number(r.amount)||0), 0);
+  const pcs   = filtered.filter(r => !IS_NO_PCS(r.status)).length;
   const filterLabel = activeFilters.has('전체') ? '전체' : [...activeFilters].map(f => STATUS_DISPLAY[f]||f).join('+');
   document.getElementById('inventoryTfoot').innerHTML = `<tr>
     <td colspan="2">${filterLabel} 합계</td>
     <td></td>
     <td>${fmtW(total)}</td>
-    <td colspan="5">${filtered.length} pcs</td>
+    <td colspan="5">${pcs} pcs</td>
   </tr>`;
 }
 
@@ -696,21 +699,24 @@ function updateTabCounts() {
 }
 
 function renderSummary() {
-  const ORDER  = ['전체','판매예정','컨펌예정','이월예정','AS','잔여재고','기타','판매완료'];
-  const LABELS = { '전체':'전체 재고','판매예정':'판매 예정','컨펌예정':'컨펌 예정','이월예정':'이월 예정','잔여재고':'잔여 재고','AS':'AS','기타':'기타','판매완료':'판매 완료' };
-  const COLORS = { '전체':'black','판매예정':'green','컨펌예정':'orange','이월예정':'blue','잔여재고':'black','AS':'red','기타':'black','판매완료':'blue' };
+  const ORDER  = ['전체','판매예정','컨펌예정','이월예정','AS','잔여재고','기타','판매완료','등록','선수금'];
+  const LABELS = { '전체':'전체 재고','판매예정':'판매 예정','컨펌예정':'컨펌 예정','이월예정':'이월 예정','잔여재고':'잔여 재고','AS':'AS','기타':'기타','판매완료':'판매 완료','등록':'등록','선수금':'선수금' };
+  const COLORS = { '전체':'black','판매예정':'green','컨펌예정':'orange','이월예정':'blue','잔여재고':'black','AS':'red','기타':'black','판매완료':'blue','등록':'blue','선수금':'black' };
 
   const summary = {};
   ORDER.forEach(s => { summary[s] = { qty:0, amount:0 }; });
   rows.forEach(r => {
     const s = r.status || '잔여재고';
-    if (summary[s] !== undefined) { summary[s].qty++; summary[s].amount += Number(r.amount)||0; }
-    else { summary['기타'].qty++; summary['기타'].amount += Number(r.amount)||0; }
-    summary['전체'].qty++; summary['전체'].amount += Number(r.amount)||0;
+    const pcs = IS_NO_PCS(s) ? 0 : 1;
+    const amt = Number(r.amount)||0;
+    if (summary[s] !== undefined) { summary[s].qty += pcs; summary[s].amount += amt; }
+    else { summary['기타'].qty += pcs; summary['기타'].amount += amt; }
+    summary['전체'].qty += pcs; summary['전체'].amount += amt;
   });
-  document.getElementById('summaryTbody').innerHTML = ORDER.map(s =>
-    `<tr><td class="${COLORS[s]}">${LABELS[s]}</td><td>${summary[s].qty} pcs</td><td>${fmtW(summary[s].amount)}</td></tr>`
-  ).join('');
+  document.getElementById('summaryTbody').innerHTML = ORDER.map(s => {
+    const qtyDisp = s === '선수금' ? '-' : summary[s].qty + ' pcs';
+    return `<tr><td class="${COLORS[s]}">${LABELS[s]}</td><td>${qtyDisp}</td><td>${fmtW(summary[s].amount)}</td></tr>`;
+  }).join('');
 }
 
 /* ── 판매예정·판매완료 합산 → 예상 매출 자동 반영 ── */
@@ -812,7 +818,8 @@ function bindCheckboxes() {
 function updateSelectedTotal() {
   let qty = 0, amount = 0;
   document.querySelectorAll('.row-check:checked').forEach(cb => {
-    qty++; amount += Number(cb.dataset.amount)||0;
+    if (!IS_NO_PCS(cb.dataset.status)) qty++;
+    amount += Number(cb.dataset.amount)||0;
   });
   document.getElementById('selectedQty').textContent    = qty + ' pcs';
   document.getElementById('selectedAmount').textContent = fmtW(amount);
@@ -830,7 +837,8 @@ if (addRowBtn) {
 
 /* ── 매출→MPDS 동기화 (REF. 기준) ── */
 const SALES_TO_MPDS_STATUS = {
-  '판매예정':'판매예정','판매완료':'판매 완료','잔여재고':'잔여 재고','AS':'AS','기타':'기타'
+  '판매예정':'판매예정','판매완료':'판매 완료','잔여재고':'잔여 재고',
+  'AS':'AS','기타':'기타','등록':'등록','선수금':'선수금'
 };
 async function syncSalesToMpds(invRows) {
   const docId = `${curYear}-${pad(curMonth)}`;

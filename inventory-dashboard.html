@@ -57,7 +57,7 @@
     .mpp-month.sel { background:#075bd8;color:#fff; }
 
     /* ── KPI 카드 ── */
-    .kpi-grid { display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:10px;margin-bottom:20px; }
+    .kpi-grid { display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:10px;margin-bottom:20px; }
     .kpi-card { background:#fff;border:1px solid #e2e7ef;border-radius:8px;padding:13px 14px;box-shadow:0 2px 8px rgba(15,23,42,.035); }
     .kpi-label { font-size:12px;font-weight:900;margin-bottom:6px;color:#374151; }
     .kpi-pcs   { font-size:22px;font-weight:900;letter-spacing:-.5px;line-height:1; }
@@ -83,6 +83,7 @@
     .filter-pill.active-red    { background:#ff1f1f;color:#fff;border-color:#ff1f1f; }
     .filter-pill.active-purple { background:#7c3aed;color:#fff;border-color:#7c3aed; }
     .filter-pill.active-teal   { background:#d97706;color:#fff;border-color:#d97706; }
+    .filter-pill.active-cyan   { background:#0891b2;color:#fff;border-color:#0891b2; }
 
     /* ── 테이블 컨트롤 ── */
     .table-ctrl { display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 4px 12px; }
@@ -113,6 +114,8 @@
     .badge-as      { background:#fee2e2;color:#ff1f1f; }
     .badge-etc     { background:#f3e8ff;color:#7c3aed; }
     .badge-done    { background:#fef3c7;color:#d97706; }
+    .badge-reg     { background:#eaf3ff;color:#0067e8; }
+    .badge-advance { background:#cffafe;color:#0891b2; }
     .status-sel { -webkit-appearance:none;appearance:none;height:28px;border:none;border-radius:14px;padding:0 10px;font-size:12px;font-weight:900;cursor:pointer;min-width:84px;text-align:center;font-family:inherit; }
     .status-sel.s-sale    { background:#e6f8ee;color:#009844; }
     .status-sel.s-confirm { background:#fff3e5;color:#ff7a00; }
@@ -121,6 +124,8 @@
     .status-sel.s-as      { background:#fee2e2;color:#ff1f1f; }
     .status-sel.s-etc     { background:#f3e8ff;color:#7c3aed; }
     .status-sel.s-done    { background:#fef3c7;color:#d97706; }
+    .status-sel.s-reg     { background:#eaf3ff;color:#0067e8; }
+    .status-sel.s-advance { background:#cffafe;color:#0891b2; }
 
     /* ── 삭제 버튼 ── */
     .btn-del-sel { height:36px;padding:0 12px;border:1px solid #fca5a5;border-radius:6px;background:#fff5f5;color:#dc2626;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit; }
@@ -262,6 +267,8 @@
       <div class="kpi-card"><div class="kpi-label">이월 예정</div><div class="kpi-pcs blue" id="kpi-carry-pcs">0 <small>pcs</small></div><div class="kpi-amt" id="kpi-carry-amt">0 원</div></div>
       <div class="kpi-card"><div class="kpi-label">판매 완료</div><div class="kpi-pcs amber" id="kpi-done-pcs">0 <small>pcs</small></div><div class="kpi-amt" id="kpi-done-amt">0 원</div></div>
       <div class="kpi-card"><div class="kpi-label">잔여 재고</div><div class="kpi-pcs black" id="kpi-rest-pcs">0 <small>pcs</small></div><div class="kpi-amt" id="kpi-rest-amt">0 원</div></div>
+      <div class="kpi-card"><div class="kpi-label">등록</div><div class="kpi-pcs blue" id="kpi-reg-pcs">0 <small>pcs</small></div><div class="kpi-amt" id="kpi-reg-amt">0 원</div></div>
+      <div class="kpi-card"><div class="kpi-label">선수금</div><div class="kpi-pcs" style="color:#0891b2;" id="kpi-adv-pcs">- <small>pcs</small></div><div class="kpi-amt" id="kpi-adv-amt">0 원</div></div>
     </section>
 
     <!-- 재고 목록 -->
@@ -278,6 +285,8 @@
         <button class="filter-pill"          data-val="AS">AS</button>
         <button class="filter-pill"          data-val="기타">기타</button>
         <button class="filter-pill"          data-val="판매완료">판매 완료</button>
+        <button class="filter-pill"          data-val="등록">등록</button>
+        <button class="filter-pill"          data-val="선수금">선수금</button>
       </div>
 
       <!-- 테이블 컨트롤 -->
@@ -320,6 +329,8 @@
                   <option value="AS">AS</option>
                   <option value="기타">기타</option>
                   <option value="판매완료">판매 완료</option>
+                  <option value="등록">등록</option>
+                  <option value="선수금">선수금</option>
                 </select>
               </th>
               <th style="width:160px;">비고</th>
@@ -378,21 +389,23 @@ function parseNum(s) {
 window.parseNum = parseNum;
 
 // 상태 목록 (기타, 판매완료 포함)
-const STATUSES = ['판매예정','컨펌예정','이월예정','잔여재고','AS','기타','판매완료'];
-const STATUS_DISPLAY = {'판매예정':'판매 예정','컨펌예정':'컨펌 예정','이월예정':'이월 예정','잔여재고':'잔여 재고','판매완료':'판매 완료'};
+const STATUSES = ['판매예정','컨펌예정','이월예정','잔여재고','AS','기타','판매완료','등록','선수금'];
+const STATUS_DISPLAY = {'판매예정':'판매 예정','컨펌예정':'컨펌 예정','이월예정':'이월 예정','잔여재고':'잔여 재고','판매완료':'판매 완료','등록':'등록','선수금':'선수금'};
 const BADGE_MAP = {
   '판매예정':'badge-sale','컨펌예정':'badge-confirm','이월예정':'badge-carry',
-  '잔여재고':'badge-rest','AS':'badge-as','기타':'badge-etc','판매완료':'badge-done'
+  '잔여재고':'badge-rest','AS':'badge-as','기타':'badge-etc','판매완료':'badge-done',
+  '등록':'badge-reg','선수금':'badge-advance'
 };
 // 필터 pill 활성 색상
 const PILL_CLASS = {
   '전체':'active','판매예정':'active-green','컨펌예정':'active-orange',
-  '이월예정':'active-blue','잔여재고':'active-black','AS':'active-red','기타':'active-purple','판매완료':'active-teal'
+  '이월예정':'active-blue','잔여재고':'active-black','AS':'active-red',
+  '기타':'active-purple','판매완료':'active-teal','등록':'active-blue','선수금':'active-cyan'
 };
 
 // 상태별 셀렉트 색상 클래스
 function statusSelClass(s) {
-  return {'판매예정':'s-sale','컨펌예정':'s-confirm','이월예정':'s-carry','잔여재고':'s-rest','AS':'s-as','기타':'s-etc','판매완료':'s-done'}[s]||'s-rest';
+  return {'판매예정':'s-sale','컨펌예정':'s-confirm','이월예정':'s-carry','잔여재고':'s-rest','AS':'s-as','기타':'s-etc','판매완료':'s-done','등록':'s-reg','선수금':'s-advance'}[s]||'s-rest';
 }
 window.statusSelClass = statusSelClass;
 
@@ -402,6 +415,7 @@ function canonicalStatus(s) {
   const t = String(s||'').trim();
   return m[t] || (STATUSES.includes(t) ? t : '잔여재고');
 }
+const IS_NO_PCS = s => s === '선수금'; // 선수금: 금액만 집계, pcs 제외
 
 // 상태 변경 핸들러 — window 노출로 인라인 핸들러에서 안전하게 호출
 window.chStatus = function(ri, val, el) {
@@ -540,7 +554,8 @@ async function syncExcelToMpds(imported) {
 
 /* ────────── MPDS 동기화 ────────── */
 const INV_TO_MPDS_STATUS = {
-  '판매예정':'판매예정','판매완료':'판매 완료','잔여재고':'잔여 재고','AS':'AS','기타':'기타'
+  '판매예정':'판매예정','판매완료':'판매 완료','잔여재고':'잔여 재고',
+  'AS':'AS','기타':'기타','등록':'등록','선수금':'선수금'
 };
 
 async function syncStatusToMpds(ref, serial, status) {
@@ -652,12 +667,14 @@ function loadMonth() {
 /* ────────── KPI 카드 ────────── */
 function renderKpi() {
   const stat = {};
-  ['전체','판매예정','컨펌예정','이월예정','잔여재고','AS','기타','판매완료'].forEach(s => { stat[s]={qty:0,amt:0}; });
+  ['전체','판매예정','컨펌예정','이월예정','잔여재고','AS','기타','판매완료','등록','선수금'].forEach(s => { stat[s]={qty:0,amt:0}; });
   rows.forEach(r => {
     const s = r.status || '잔여재고';
-    if (stat[s]) { stat[s].qty++; stat[s].amt += Number(r.amount)||0; }
-    else         { stat['기타'].qty++; stat['기타'].amt += Number(r.amount)||0; }
-    stat['전체'].qty++; stat['전체'].amt += Number(r.amount)||0;
+    const pcs = IS_NO_PCS(s) ? 0 : 1;
+    const amt = Number(r.amount)||0;
+    if (stat[s]) { stat[s].qty += pcs; stat[s].amt += amt; }
+    else         { stat['기타'].qty += pcs; stat['기타'].amt += amt; }
+    stat['전체'].qty += pcs; stat['전체'].amt += amt;
   });
   const set = (id, s) => {
     const ep = document.getElementById(id+'-pcs'); if(ep) ep.innerHTML=`${stat[s].qty} <small>pcs</small>`;
@@ -671,6 +688,12 @@ function renderKpi() {
   set('kpi-carry','이월예정');
   set('kpi-done','판매완료');
   set('kpi-rest','잔여재고');
+  set('kpi-reg','등록');
+  // 선수금: pcs는 "-"로 표시, 금액만 표시
+  const advEl = document.getElementById('kpi-adv-pcs');
+  if (advEl) advEl.innerHTML = `- <small>pcs</small>`;
+  const advAmt = document.getElementById('kpi-adv-amt');
+  if (advAmt) advAmt.textContent = fmtW(stat['선수금'].amt);
 }
 
 /* ────────── 필터 (복수 선택) ────────── */
@@ -734,7 +757,7 @@ function renderTable() {
     const ri = rows.indexOf(r);
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td><input type="checkbox" class="row-check" data-amount="${r.amount||0}"/></td>
+      <td><input type="checkbox" class="row-check" data-amount="${r.amount||0}" data-status="${r.status||''}"/></td>
       <td><input class="td-edit" value="${esc(r.ref||'')}" oninput="window.setField(${ri},'ref',this.value)" placeholder="REF."/></td>
       <td><input class="td-edit" value="${esc(r.serial||'')}" oninput="window.setField(${ri},'serial',this.value)" placeholder="Serial"/></td>
       <td style="padding:0;"><div style="display:flex;align-items:center;justify-content:center;padding:10px 12px;gap:0;"><input class="td-edit" type="text" inputmode="numeric" value="${fmtInput(r.amount)}" size="${Math.max(3,(fmtInput(r.amount)||'').length)+1}"
@@ -760,11 +783,12 @@ function renderTable() {
 
 function renderTfoot(filtered) {
   const total = filtered.reduce((s,r)=>s+(Number(r.amount)||0), 0);
+  const pcs   = filtered.filter(r=>!IS_NO_PCS(r.status)).length;
   const label = activeFilters.has('전체') ? '전체' : [...activeFilters].join('+');
   document.getElementById('invTfoot').innerHTML = `<tr>
     <td colspan="3" style="font-weight:900;">${label} 합계</td>
     <td style="font-weight:900;">${fmtW(total)}</td>
-    <td colspan="5" style="font-weight:900;">${filtered.length} pcs</td>
+    <td colspan="5" style="font-weight:900;">${pcs} pcs</td>
   </tr>`;
 }
 
@@ -1007,7 +1031,10 @@ function bindChecks() {
 
 window.updateSel = function() {
   let qty=0, amt=0;
-  document.querySelectorAll('.row-check:checked').forEach(cb => { qty++; amt+=Number(cb.dataset.amount)||0; });
+  document.querySelectorAll('.row-check:checked').forEach(cb => {
+    if (!IS_NO_PCS(cb.dataset.status)) qty++;
+    amt += Number(cb.dataset.amount)||0;
+  });
   document.getElementById('selQty').textContent = qty+' pcs';
   document.getElementById('selAmt').textContent = fmtW(amt);
   const checks = document.querySelectorAll('.row-check');
