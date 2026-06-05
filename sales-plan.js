@@ -232,11 +232,24 @@ function loadMonth() {
   unsubPlan = onSnapshot(doc(db,'artifacts','patek-s','public','data','sales_dashboard',docId), snap => {
     applyData(snap.exists() ? snap.data() : null);
   });
-  // 재고 목록 연동: getDoc으로 일회 로드 (onSnapshot 사용 시 로컬 편집이 덮어씌워지는 문제 방지)
+  // 재고 목록 연동: getDoc으로 일회 로드
   getDoc(doc(db,'artifacts','patek-s','public','data','inventory',docId)).then(snap => {
     rows = snap.exists() ? (snap.data().rows||[]).map(r=>({...r, status:canonicalStatus(r.status)})) : [];
     renderTable();
   }).catch(() => { rows = []; renderTable(); });
+  // 작년 같은 달 현재 매출 → 작년 월 매출 필드에 자동 반영
+  const prevDocId = `${curYear - 1}-${pad(curMonth)}`;
+  getDoc(doc(db,'artifacts','patek-s','public','data','sales_dashboard', prevDocId)).then(snap => {
+    const d = snap.exists() ? snap.data() : null;
+    const lyEl    = document.getElementById('f-lastYearSales');
+    const lyPcsEl = document.getElementById('f-lastYearPcs');
+    if (lyEl)    lyEl.value    = d?.currentSales != null ? fmtInput(d.currentSales) : '';
+    if (lyPcsEl) {
+      lyPcsEl.value = d?.currentPcs != null ? String(d.currentPcs) : '';
+      lyPcsEl.style.width = Math.max(2, lyPcsEl.value.length || 1) + 'ch';
+    }
+    recalcRemain();
+  }).catch(() => {});
   loadBranchDataForYear(curYear);
   loadQuarterGoalData();
 }
@@ -266,19 +279,10 @@ function applyData(d) {
     const el = document.getElementById(id); if (!el) return;
     el.value = (el.type === 'text' && val != null) ? fmtInput(val) : (val ?? '');
   };
-  sv('f-lastYearSales', d?.lastYearSales);
-  sv('f-lastYearPcs',   d?.lastYearPcs);
-  sv('f-currentSales',  d?.currentSales);
-  sv('f-currentPcs',    d?.currentPcs);
   sv('f-mpdsMin',       d?.mpdsMin ?? 30);
   sv('f-mpdsCurrent',   d?.mpdsCurrent);
   sv('f-mpdsIncoming',  d?.mpdsIncoming);
 
-  // pcs 입력 너비 초기화
-  ['f-lastYearPcs','f-currentPcs'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.style.width = Math.max(2, el.value.length || 1) + 'ch';
-  });
 
   // goalRateData는 loadQuarterGoalData()에서 별도 로드 (분기 공유)
   // rows는 inventory onSnapshot에서 별도 관리 (재고 목록 양방향 연동)
@@ -293,22 +297,7 @@ function recalcAll() {
   recalcQuarter();
 }
 
-/* ── 빈 필드 자동 채우기 (작년 매출 / 예상 매출) ── */
 function autoFillEmptyFields() {
-  const m = curMonth;
-
-  // 작년 월 매출: 전년도 센텀+에비뉴엘 실적
-  const lyEl    = document.getElementById('f-lastYearSales');
-  const lyPcsEl = document.getElementById('f-lastYearPcs');
-  if (lyEl && !lyEl.value) {
-    const v = (Number(prevYearCentumData[`m${m}`]) || 0) + (Number(prevYearAvenueData[`m${m}`]) || 0);
-    if (v) lyEl.value = fmtInput(v);
-  }
-  if (lyPcsEl && !lyPcsEl.value) {
-    const v = (Number(prevYearCentumData[`m${m}_pcs`]) || 0) + (Number(prevYearAvenueData[`m${m}_pcs`]) || 0);
-    if (v) { lyPcsEl.value = fmtInput(v); lyPcsEl.style.width = Math.max(2, lyPcsEl.value.length || 1) + 'ch'; }
-  }
-
   recalcRemain();
 }
 
@@ -682,6 +671,7 @@ function renderTable() {
   bindCheckboxes();
   updateSelectedTotal();
   autoCalcFromInventory();
+  autoCalcCurrentSales();
 }
 
 function renderTfoot(filtered) {
@@ -741,6 +731,23 @@ function autoCalcFromInventory() {
   recalcRemain();
 }
 
+/* ── 판매완료 합산 → 현재 매출 자동 반영 ── */
+function autoCalcCurrentSales() {
+  const completed = rows.filter(r => r.status === '판매완료');
+  const totalAmt = completed.reduce((s, r) => s + (Number(r.amount)||0), 0);
+  const totalPcs = completed.length;
+  const salesEl = document.getElementById('f-currentSales');
+  const pcsEl   = document.getElementById('f-currentPcs');
+  if (salesEl && document.activeElement !== salesEl) {
+    salesEl.value = totalAmt > 0 ? totalAmt.toLocaleString('ko-KR') : '';
+  }
+  if (pcsEl && document.activeElement !== pcsEl) {
+    pcsEl.value = totalPcs > 0 ? String(totalPcs) : '';
+    pcsEl.style.width = Math.max(2, pcsEl.value.length || 1) + 'ch';
+  }
+  recalcRemain();
+}
+
 /* ── inline 핸들러용 window 노출 (module scope → global scope 접근) ── */
 window.invSet = function(ri, key, val) {
   if (rows[ri]) rows[ri][key] = val;
@@ -755,12 +762,13 @@ window.invSetAmt = function(ri, el) {
   updateSelectedTotal();
   renderSummary();
   autoCalcFromInventory();
+  autoCalcCurrentSales();
   window.markDirty && window.markDirty();
 };
 window.invChStatus = function(ri, val, el) {
   if (rows[ri]) rows[ri].status = val;
   el.className = 'status-sel ' + statusSelClass(val);
-  renderTable();
+  renderTable();  // renderTable이 autoCalcFromInventory + autoCalcCurrentSales 호출함
   window.markDirty && window.markDirty();
 };
 window.invDelRow = function(ri) {
