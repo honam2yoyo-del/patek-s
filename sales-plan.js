@@ -266,8 +266,6 @@ function applyData(d) {
     const el = document.getElementById(id); if (!el) return;
     el.value = (el.type === 'text' && val != null) ? fmtInput(val) : (val ?? '');
   };
-  sv('f-expectedSales', d?.expectedSales);
-  sv('f-expectedPcs',   d?.expectedPcs);
   sv('f-lastYearSales', d?.lastYearSales);
   sv('f-lastYearPcs',   d?.lastYearPcs);
   sv('f-currentSales',  d?.currentSales);
@@ -277,7 +275,7 @@ function applyData(d) {
   sv('f-mpdsIncoming',  d?.mpdsIncoming);
 
   // pcs 입력 너비 초기화
-  ['f-expectedPcs','f-lastYearPcs','f-currentPcs'].forEach(id => {
+  ['f-lastYearPcs','f-currentPcs'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.width = Math.max(2, el.value.length || 1) + 'ch';
   });
@@ -311,17 +309,6 @@ function autoFillEmptyFields() {
     if (v) { lyPcsEl.value = fmtInput(v); lyPcsEl.style.width = Math.max(2, lyPcsEl.value.length || 1) + 'ch'; }
   }
 
-  // 월 예상 매출: 올해 센텀+에비뉴엘 월별 데이터 (입력된 경우)
-  const expEl    = document.getElementById('f-expectedSales');
-  const expPcsEl = document.getElementById('f-expectedPcs');
-  if (expEl && !expEl.value) {
-    const v = (Number(centumData[`m${m}`]) || 0) + (Number(avenueData[`m${m}`]) || 0);
-    if (v) expEl.value = fmtInput(v);
-  }
-  if (expPcsEl && !expPcsEl.value) {
-    const v = (Number(centumData[`m${m}_pcs`]) || 0) + (Number(avenueData[`m${m}_pcs`]) || 0);
-    if (v) { expPcsEl.value = fmtInput(v); expPcsEl.style.width = Math.max(2, expPcsEl.value.length || 1) + 'ch'; }
-  }
   recalcRemain();
 }
 
@@ -664,27 +651,29 @@ function renderTable() {
 
   filtered.forEach((r) => {
     const ri    = rows.indexOf(r);
+    const amtFmt = fmtInput(r.amount) || '';
     const tr    = document.createElement('tr');
     tr.dataset.status = r.status || '';
     tr.innerHTML = `
       <td><input type="checkbox" class="row-check" data-amount="${r.amount||0}" data-qty="1"/></td>
-      <td><input class="td-edit" value="${esc(r.ref||'')}" oninput="rows[${ri}].ref=this.value" placeholder="REF."/></td>
-      <td><input class="td-edit" value="${esc(r.serial||'')}" oninput="rows[${ri}].serial=this.value" placeholder="Serial"/></td>
-      <td style="padding:0;"><div style="display:flex;align-items:center;justify-content:center;padding:10px 12px;gap:4px;">
-        <input class="td-edit" type="text" inputmode="numeric" value="${fmtInput(r.amount)}"
-          oninput="window.fmtNum(this);rows[${ri}].amount=parseNum(this.value);this.closest('tr').querySelector('.row-check').dataset.amount=parseNum(this.value)||0;updateSelectedTotal();renderSummary();autoCalcFromInventory();"
-          placeholder="0" style="width:auto;min-width:60px;text-align:right;"/>
-        <span style="font-weight:700;font-size:14px;white-space:nowrap;">원</span>
+      <td><input class="td-edit" value="${esc(r.ref||'')}" oninput="window.invSet(${ri},'ref',this.value)" placeholder="REF."/></td>
+      <td><input class="td-edit" value="${esc(r.serial||'')}" oninput="window.invSet(${ri},'serial',this.value)" placeholder="Serial"/></td>
+      <td style="padding:0;"><div style="display:flex;align-items:center;justify-content:center;padding:10px 12px;gap:0;">
+        <input class="td-edit amt" type="text" inputmode="numeric" value="${amtFmt}"
+          size="${Math.max(3, amtFmt.length) + 1}"
+          oninput="window.invSetAmt(${ri},this)"
+          placeholder="0"/>
+        <span style="font-weight:700;font-size:14px;">원</span>
       </div></td>
-      <td><input class="td-edit" value="${esc(r.customer||'')}" oninput="rows[${ri}].customer=this.value" placeholder="고객명"/></td>
-      <td><input class="td-edit" value="${esc(r.saleDate||'')}" oninput="rows[${ri}].saleDate=this.value" placeholder="예: 6/28"/></td>
+      <td><input class="td-edit" value="${esc(r.customer||'')}" oninput="window.invSet(${ri},'customer',this.value)" placeholder="고객명"/></td>
+      <td><input class="td-edit" value="${esc(r.saleDate||'')}" oninput="window.invSet(${ri},'saleDate',this.value)" placeholder="예: 6/28"/></td>
       <td>
-        <select class="status-sel ${statusSelClass(r.status)}" onchange="rows[${ri}].status=this.value;this.className='status-sel '+statusSelClass(this.value);renderTable();">
+        <select class="status-sel ${statusSelClass(r.status)}" onchange="window.invChStatus(${ri},this.value,this);">
           ${STATUSES.map(s=>`<option value="${s}" ${r.status===s?'selected':''}>${STATUS_DISPLAY[s]||s}</option>`).join('')}
         </select>
       </td>
-      <td><input class="td-edit" value="${esc(r.note||'')}" oninput="rows[${ri}].note=this.value" placeholder="비고"/></td>
-      <td><button class="td-del" onclick="rows.splice(${ri},1);renderTable();">✕</button></td>`;
+      <td><input class="td-edit" value="${esc(r.note||'')}" oninput="window.invSet(${ri},'note',this.value)" placeholder="비고"/></td>
+      <td><button class="td-del" onclick="window.invDelRow(${ri});">✕</button></td>`;
     tbody.appendChild(tr);
   });
 
@@ -752,6 +741,34 @@ function autoCalcFromInventory() {
   recalcRemain();
 }
 
+/* ── inline 핸들러용 window 노출 (module scope → global scope 접근) ── */
+window.invSet = function(ri, key, val) {
+  if (rows[ri]) rows[ri][key] = val;
+  window.markDirty && window.markDirty();
+};
+window.invSetAmt = function(ri, el) {
+  window.fmtNum(el);
+  el.size = Math.max(3, el.value.length) + 1;
+  if (rows[ri]) rows[ri].amount = parseNum(el.value);
+  const cb = el.closest('tr') && el.closest('tr').querySelector('.row-check');
+  if (cb) cb.dataset.amount = parseNum(el.value) || 0;
+  updateSelectedTotal();
+  renderSummary();
+  autoCalcFromInventory();
+  window.markDirty && window.markDirty();
+};
+window.invChStatus = function(ri, val, el) {
+  if (rows[ri]) rows[ri].status = val;
+  el.className = 'status-sel ' + statusSelClass(val);
+  renderTable();
+  window.markDirty && window.markDirty();
+};
+window.invDelRow = function(ri) {
+  rows.splice(ri, 1);
+  renderTable();
+  window.markDirty && window.markDirty();
+};
+
 /* ── 탭 필터 (복수 선택) ── */
 document.getElementById('tabsBar').addEventListener('click', e => {
   const tab = e.target.closest('.tab');
@@ -799,6 +816,7 @@ if (addRowBtn) {
   addRowBtn.addEventListener('click', () => {
     rows.push({ ref:'', serial:'', amount:null, customer:'', saleDate:'', status:'판매예정', note:'' });
     renderTable();
+    window.markDirty && window.markDirty();
   });
 }
 
@@ -808,8 +826,6 @@ async function saveData() {
   const gnv = id => { const v=gv(id).replace(/,/g,''); return v!==''?Number(v):null; };
 
   const data = {
-    expectedSales:   gnv('f-expectedSales'),
-    expectedPcs:     gnv('f-expectedPcs'),
     lastYearSales:   gnv('f-lastYearSales'),
     lastYearPcs:     gnv('f-lastYearPcs'),
     currentSales:    gnv('f-currentSales'),
