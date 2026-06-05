@@ -50,6 +50,10 @@ function canonicalStatus(s) {
   return m[t] || (STATUSES.includes(t) ? t : '잔여재고');
 }
 
+function statusSelClass(s) {
+  return {'판매예정':'s-sale','컨펌예정':'s-confirm','이월예정':'s-carry','잔여재고':'s-rest','AS':'s-as','기타':'s-etc','판매완료':'s-done'}[s]||'s-rest';
+}
+
 let curYear  = new Date().getFullYear();
 let curMonth = new Date().getMonth() + 1;
 let rows     = [];
@@ -223,17 +227,16 @@ function saveQuarterGoalData() {
 /* ────────── 데이터 로드 ────────── */
 function loadMonth() {
   if (unsubPlan) unsubPlan();
-  if (unsubInventory) unsubInventory();
   goalRateData = { total: 0, centum: 0, avenue: 0 };
   const docId = `${curYear}-${pad(curMonth)}`;
   unsubPlan = onSnapshot(doc(db,'artifacts','patek-s','public','data','sales_dashboard',docId), snap => {
     applyData(snap.exists() ? snap.data() : null);
   });
-  // 재고 목록과 동일한 inventory 컬렉션에서 rows 가져옴 (양방향 연동)
-  unsubInventory = onSnapshot(doc(db,'artifacts','patek-s','public','data','inventory',docId), snap => {
-    rows = snap.exists() ? (snap.data().rows || []).map(r => ({...r, status: canonicalStatus(r.status)})) : [];
+  // 재고 목록 연동: getDoc으로 일회 로드 (onSnapshot 사용 시 로컬 편집이 덮어씌워지는 문제 방지)
+  getDoc(doc(db,'artifacts','patek-s','public','data','inventory',docId)).then(snap => {
+    rows = snap.exists() ? (snap.data().rows||[]).map(r=>({...r, status:canonicalStatus(r.status)})) : [];
     renderTable();
-  });
+  }).catch(() => { rows = []; renderTable(); });
   loadBranchDataForYear(curYear);
   loadQuarterGoalData();
 }
@@ -667,11 +670,16 @@ function renderTable() {
       <td><input type="checkbox" class="row-check" data-amount="${r.amount||0}" data-qty="1"/></td>
       <td><input class="td-edit" value="${esc(r.ref||'')}" oninput="rows[${ri}].ref=this.value" placeholder="REF."/></td>
       <td><input class="td-edit" value="${esc(r.serial||'')}" oninput="rows[${ri}].serial=this.value" placeholder="Serial"/></td>
-      <td><input class="td-edit" type="text" inputmode="numeric" value="${fmtInput(r.amount)}" oninput="window.fmtNum(this);rows[${ri}].amount=parseNum(this.value);this.closest('tr').querySelector('.row-check').dataset.amount=parseNum(this.value)||0;updateSelectedTotal();renderSummary();" placeholder="0"/> 원</td>
+      <td style="padding:0;"><div style="display:flex;align-items:center;justify-content:center;padding:10px 12px;gap:4px;">
+        <input class="td-edit" type="text" inputmode="numeric" value="${fmtInput(r.amount)}"
+          oninput="window.fmtNum(this);rows[${ri}].amount=parseNum(this.value);this.closest('tr').querySelector('.row-check').dataset.amount=parseNum(this.value)||0;updateSelectedTotal();renderSummary();autoCalcFromInventory();"
+          placeholder="0" style="width:auto;min-width:60px;text-align:right;"/>
+        <span style="font-weight:700;font-size:14px;white-space:nowrap;">원</span>
+      </div></td>
       <td><input class="td-edit" value="${esc(r.customer||'')}" oninput="rows[${ri}].customer=this.value" placeholder="고객명"/></td>
       <td><input class="td-edit" value="${esc(r.saleDate||'')}" oninput="rows[${ri}].saleDate=this.value" placeholder="예: 6/28"/></td>
       <td>
-        <select class="status-sel" oninput="rows[${ri}].status=this.value;renderTable();">
+        <select class="status-sel ${statusSelClass(r.status)}" onchange="rows[${ri}].status=this.value;this.className='status-sel '+statusSelClass(this.value);renderTable();">
           ${STATUSES.map(s=>`<option value="${s}" ${r.status===s?'selected':''}>${STATUS_DISPLAY[s]||s}</option>`).join('')}
         </select>
       </td>
@@ -684,6 +692,7 @@ function renderTable() {
   renderSummary();
   bindCheckboxes();
   updateSelectedTotal();
+  autoCalcFromInventory();
 }
 
 function renderTfoot(filtered) {
@@ -723,6 +732,24 @@ function renderSummary() {
   document.getElementById('summaryTbody').innerHTML = ORDER.map(s =>
     `<tr><td class="${COLORS[s]}">${LABELS[s]}</td><td>${summary[s].qty} pcs</td><td>${fmtW(summary[s].amount)}</td></tr>`
   ).join('');
+}
+
+/* ── 판매예정·판매완료 합산 → 예상 매출 자동 반영 ── */
+function autoCalcFromInventory() {
+  const targets = ['판매예정', '판매완료'];
+  const filtered = rows.filter(r => targets.includes(r.status));
+  const totalAmt = filtered.reduce((s, r) => s + (Number(r.amount)||0), 0);
+  const totalPcs = filtered.length;
+  const salesEl = document.getElementById('f-expectedSales');
+  const pcsEl   = document.getElementById('f-expectedPcs');
+  if (salesEl && document.activeElement !== salesEl) {
+    salesEl.value = totalAmt > 0 ? totalAmt.toLocaleString('ko-KR') : '';
+  }
+  if (pcsEl && document.activeElement !== pcsEl) {
+    pcsEl.value = totalPcs > 0 ? String(totalPcs) : '';
+    pcsEl.style.width = Math.max(2, pcsEl.value.length || 1) + 'ch';
+  }
+  recalcRemain();
 }
 
 /* ── 탭 필터 (복수 선택) ── */
@@ -832,6 +859,7 @@ async function saveData() {
     }
 
     if (btn) btn.textContent = '✔ 저장됨';
+    window.markClean && window.markClean();
     setTimeout(() => { if (btn) btn.textContent = '💾 저장하기'; }, 2000);
   } catch(e) {
     alert('저장 실패: '+e.message);
