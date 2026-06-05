@@ -116,12 +116,12 @@
     .td-del:hover { color:#f00; }
     .selected-row td { background:#fbfdff;font-weight:900;color:#075bd8; }
 
-    .status-sel { -webkit-appearance:none;appearance:none;height:27px;border:none;border-radius:12px;padding:0 10px;font-size:11px;font-weight:900;cursor:pointer;min-width:80px;text-align:center;font-family:inherit; }
+    .status-sel { -webkit-appearance:none;appearance:none;height:28px;border:none;border-radius:14px;padding:0 10px;font-size:12px;font-weight:900;cursor:pointer;min-width:84px;text-align:center;font-family:inherit;outline:none; }
     .status-sel.s-reg  { background:#eaf3ff;color:#0067e8; }
     .status-sel.s-sale { background:#e6f8ee;color:#009844; }
     .status-sel.s-as   { background:#fee2e2;color:#ff1f1f; }
     .status-sel.s-etc  { background:#f3e8ff;color:#7c3aed; }
-    .status-sel.s-hold { background:#e5e7eb;color:#111827; }
+    .status-sel.s-rest { background:#e5e7eb;color:#111827; }
     .status-sel.s-done { background:#fef3c7;color:#d97706; }
     #invTbody td { cursor:text; }
     #invTbody td:first-child, #invTbody td:last-child { cursor:default; }
@@ -486,7 +486,7 @@ window.fmtNum = function(el) {
 const STATUS_OPTIONS = ['등록','판매예정','AS','기타','잔여 재고','판매 완료'];
 const MPDS_STATUS_DISPLAY = {'판매예정':'판매 예정','판매 완료':'판매 완료'};
 function statusSelClass(s) {
-  return {'등록':'s-reg','판매예정':'s-sale','AS':'s-as','기타':'s-etc','잔여 재고':'s-hold','보류':'s-hold','판매 완료':'s-done'}[s]||'s-hold';
+  return {'등록':'s-reg','판매예정':'s-sale','AS':'s-as','기타':'s-etc','잔여 재고':'s-rest','보류':'s-rest','판매 완료':'s-done'}[s]||'s-rest';
 }
 window.statusSelClass = statusSelClass;
 const LINE_COLORS = ['#3b82f6','#22c55e','#f97316','#8b5cf6','#d28c45','#0ea5a4','#2d9cdb','#9ca3af','#9bc4a6','#e11d48'];
