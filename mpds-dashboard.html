@@ -121,7 +121,9 @@
     .status-sel.s-sale { background:#e6f8ee;color:#009844; }
     .status-sel.s-as   { background:#fee2e2;color:#ff1f1f; }
     .status-sel.s-etc  { background:#f3e8ff;color:#7c3aed; }
-    .status-sel.s-rest { background:#e5e7eb;color:#111827; }
+    .status-sel.s-confirm { background:#fff3e5;color:#ff7a00; }
+    .status-sel.s-carry   { background:#eaf3ff;color:#0067e8; }
+    .status-sel.s-rest    { background:#e5e7eb;color:#111827; }
     .status-sel.s-done    { background:#fef3c7;color:#d97706; }
     .status-sel.s-advance { background:#cffafe;color:#0891b2; }
     #invTbody td { cursor:text; }
@@ -329,6 +331,8 @@
             <button class="tab active" data-filter="전체">전체</button>
             <button class="tab" data-filter="등록">등록</button>
             <button class="tab" data-filter="판매예정">판매 예정</button>
+            <button class="tab" data-filter="컨펌예정">컨펌 예정</button>
+            <button class="tab" data-filter="이월예정">이월 예정</button>
             <button class="tab" data-filter="AS">AS</button>
             <button class="tab" data-filter="기타">기타</button>
             <button class="tab" data-filter="잔여 재고">잔여 재고</button>
@@ -445,6 +449,8 @@
       <option value="">선택 ▾</option>
       <option value="등록">등록</option>
       <option value="판매예정">판매 예정</option>
+      <option value="컨펌예정">컨펌 예정</option>
+      <option value="이월예정">이월 예정</option>
       <option value="AS">AS</option>
       <option value="기타">기타</option>
       <option value="잔여 재고">잔여 재고</option>
@@ -486,11 +492,11 @@ window.fmtNum = function(el) {
   el.value = raw !== '' ? Number(raw).toLocaleString('ko-KR') : '';
 };
 
-const STATUS_OPTIONS = ['등록','판매예정','AS','기타','잔여 재고','판매 완료','선수금'];
-const MPDS_STATUS_DISPLAY = {'판매예정':'판매 예정','판매 완료':'판매 완료','선수금':'선수금'};
+const STATUS_OPTIONS = ['등록','판매예정','컨펌예정','이월예정','AS','기타','잔여 재고','판매 완료','선수금'];
+const MPDS_STATUS_DISPLAY = {'판매예정':'판매 예정','컨펌예정':'컨펌 예정','이월예정':'이월 예정','판매 완료':'판매 완료','선수금':'선수금'};
 const IS_NO_PCS = s => s === '선수금';
 function statusSelClass(s) {
-  return {'등록':'s-reg','판매예정':'s-sale','AS':'s-as','기타':'s-etc','잔여 재고':'s-rest','보류':'s-rest','판매 완료':'s-done','선수금':'s-advance'}[s]||'s-rest';
+  return {'등록':'s-reg','판매예정':'s-sale','컨펌예정':'s-confirm','이월예정':'s-carry','AS':'s-as','기타':'s-etc','잔여 재고':'s-rest','보류':'s-rest','판매 완료':'s-done','선수금':'s-advance'}[s]||'s-rest';
 }
 window.statusSelClass = statusSelClass;
 const LINE_COLORS = ['#3b82f6','#22c55e','#f97316','#8b5cf6','#d28c45','#0ea5a4','#2d9cdb','#9ca3af','#9bc4a6','#e11d48'];
@@ -868,7 +874,8 @@ window.printFinalList = function() { window.print(); };
 
 /* ── MPDS→재고 동기화 ── */
 const MPDS_TO_INV_STATUS = {
-  '판매예정':'판매예정','판매 완료':'판매완료','잔여 재고':'잔여재고',
+  '판매예정':'판매예정','컨펌예정':'컨펌예정','이월예정':'이월예정',
+  '판매 완료':'판매완료','잔여 재고':'잔여재고',
   'AS':'AS','기타':'기타','등록':'등록','선수금':'선수금'
 };
 async function syncAllToInventory(mpdsRows) {
