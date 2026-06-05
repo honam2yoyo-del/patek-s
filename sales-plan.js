@@ -2,6 +2,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebas
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, onSnapshot, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+
 const FC = { apiKey:"AIzaSyCt7aQXA5eFdnDTMHlRhjPAkyH4b8UB6HY", authDomain:"patek-s.firebaseapp.com", projectId:"patek-s", storageBucket:"patek-s.firebasestorage.app", messagingSenderId:"786016749285", appId:"1:786016749285:web:58538eec1cf7e72068b60c" };
 const app  = initializeApp(FC);
 const auth = getAuth(app);
@@ -33,15 +34,28 @@ window.fmtNum = function(el) {
   }
 };
 
-// 재고 상태 순서: 전체 재고, 판매 예정, 컨펌 예정, 이월 예정, AS, 잔여 재고
-const STATUSES  = ['판매예정','컨펌예정','이월예정','AS','잔여재고'];
-const BADGE_MAP = { '판매예정':'badge-sale','컨펌예정':'badge-confirm','이월예정':'badge-carry','잔여재고':'badge-rest','AS':'badge-as' };
+const STATUSES  = ['판매예정','컨펌예정','이월예정','AS','잔여재고','기타','판매완료'];
+const STATUS_DISPLAY = {
+  '판매예정':'판매 예정','컨펌예정':'컨펌 예정','이월예정':'이월 예정',
+  '잔여재고':'잔여 재고','AS':'AS','기타':'기타','판매완료':'판매 완료'
+};
+const BADGE_MAP = {
+  '판매예정':'badge-sale','컨펌예정':'badge-confirm','이월예정':'badge-carry',
+  '잔여재고':'badge-rest','AS':'badge-as','기타':'badge-rest','판매완료':'badge-done'
+};
+
+function canonicalStatus(s) {
+  const m = {'판매 예정':'판매예정','컨펌 예정':'컨펌예정','이월 예정':'이월예정','잔여 재고':'잔여재고','판매 완료':'판매완료'};
+  const t = String(s||'').trim();
+  return m[t] || (STATUSES.includes(t) ? t : '잔여재고');
+}
 
 let curYear  = new Date().getFullYear();
 let curMonth = new Date().getMonth() + 1;
 let rows     = [];
 let activeFilters = new Set(['전체']);
 let unsubPlan = null;
+let unsubInventory = null;
 
 // 지점 연간 데이터 (인메모리)
 let avenueData = {}; // m1..m12: 금액, m1_pcs..m12_pcs: pcs
@@ -209,13 +223,19 @@ function saveQuarterGoalData() {
 /* ────────── 데이터 로드 ────────── */
 function loadMonth() {
   if (unsubPlan) unsubPlan();
-  goalRateData = { total: 0, centum: 0, avenue: 0 }; // 월 전환 시 초기화 후 분기 데이터로 채움
+  if (unsubInventory) unsubInventory();
+  goalRateData = { total: 0, centum: 0, avenue: 0 };
   const docId = `${curYear}-${pad(curMonth)}`;
   unsubPlan = onSnapshot(doc(db,'artifacts','patek-s','public','data','sales_dashboard',docId), snap => {
     applyData(snap.exists() ? snap.data() : null);
   });
+  // 재고 목록과 동일한 inventory 컬렉션에서 rows 가져옴 (양방향 연동)
+  unsubInventory = onSnapshot(doc(db,'artifacts','patek-s','public','data','inventory',docId), snap => {
+    rows = snap.exists() ? (snap.data().rows || []).map(r => ({...r, status: canonicalStatus(r.status)})) : [];
+    renderTable();
+  });
   loadBranchDataForYear(curYear);
-  loadQuarterGoalData(); // 분기 목표 별도 로드
+  loadQuarterGoalData();
 }
 
 async function loadBranchDataForYear(year) {
@@ -260,11 +280,9 @@ function applyData(d) {
   });
 
   // goalRateData는 loadQuarterGoalData()에서 별도 로드 (분기 공유)
-
-  rows = d?.rows ? JSON.parse(JSON.stringify(d.rows)) : [];
-  renderTable();
+  // rows는 inventory onSnapshot에서 별도 관리 (재고 목록 양방향 연동)
   recalcAll();
-  autoFillEmptyFields(); // 저장값 없는 필드를 브랜치 데이터로 자동 채우기
+  autoFillEmptyFields();
 }
 
 /* ────────── 재계산 ────────── */
@@ -643,19 +661,18 @@ function renderTable() {
 
   filtered.forEach((r) => {
     const ri    = rows.indexOf(r);
-    const badge = BADGE_MAP[r.status] || 'badge-rest';
     const tr    = document.createElement('tr');
     tr.dataset.status = r.status || '';
     tr.innerHTML = `
       <td><input type="checkbox" class="row-check" data-amount="${r.amount||0}" data-qty="1"/></td>
-      <td style="color:#9CA3AF">${ri+1}</td>
       <td><input class="td-edit" value="${esc(r.ref||'')}" oninput="rows[${ri}].ref=this.value" placeholder="REF."/></td>
+      <td><input class="td-edit" value="${esc(r.serial||'')}" oninput="rows[${ri}].serial=this.value" placeholder="Serial"/></td>
       <td><input class="td-edit" type="text" inputmode="numeric" value="${fmtInput(r.amount)}" oninput="window.fmtNum(this);rows[${ri}].amount=parseNum(this.value);this.closest('tr').querySelector('.row-check').dataset.amount=parseNum(this.value)||0;updateSelectedTotal();renderSummary();" placeholder="0"/> 원</td>
       <td><input class="td-edit" value="${esc(r.customer||'')}" oninput="rows[${ri}].customer=this.value" placeholder="고객명"/></td>
-      <td><input class="td-edit" value="${esc(r.saleDate||'')}" oninput="rows[${ri}].saleDate=this.value" placeholder="예: 6/28(목)"/></td>
+      <td><input class="td-edit" value="${esc(r.saleDate||'')}" oninput="rows[${ri}].saleDate=this.value" placeholder="예: 6/28"/></td>
       <td>
         <select class="status-sel" oninput="rows[${ri}].status=this.value;renderTable();">
-          ${STATUSES.map(s=>`<option value="${s}" ${r.status===s?'selected':''}>${s}</option>`).join('')}
+          ${STATUSES.map(s=>`<option value="${s}" ${r.status===s?'selected':''}>${STATUS_DISPLAY[s]||s}</option>`).join('')}
         </select>
       </td>
       <td><input class="td-edit" value="${esc(r.note||'')}" oninput="rows[${ri}].note=this.value" placeholder="비고"/></td>
@@ -671,9 +688,10 @@ function renderTable() {
 
 function renderTfoot(filtered) {
   const total = filtered.reduce((s,r) => s + (Number(r.amount)||0), 0);
-  const filterLabel = activeFilters.has('전체') ? '전체' : [...activeFilters].join('+');
+  const filterLabel = activeFilters.has('전체') ? '전체' : [...activeFilters].map(f => STATUS_DISPLAY[f]||f).join('+');
   document.getElementById('inventoryTfoot').innerHTML = `<tr>
-    <td colspan="3">${filterLabel} 합계</td>
+    <td colspan="2">${filterLabel} 합계</td>
+    <td></td>
     <td>${fmtW(total)}</td>
     <td colspan="5">${filtered.length} pcs</td>
   </tr>`;
@@ -683,21 +701,23 @@ function updateTabCounts() {
   document.querySelectorAll('.tab').forEach(tab => {
     const f = tab.dataset.filter;
     if (f === '전체') return;
+    const displayName = STATUS_DISPLAY[f] || f;
     const cnt = rows.filter(r => r.status === f).length;
-    tab.textContent = `${f} (${cnt})`;
+    tab.textContent = `${displayName} (${cnt})`;
   });
 }
 
 function renderSummary() {
-  const ORDER  = ['전체','판매예정','컨펌예정','이월예정','AS','잔여재고'];
-  const LABELS = { '전체':'전체 재고','판매예정':'판매 예정','컨펌예정':'컨펌 예정','이월예정':'이월 예정','잔여재고':'잔여 재고','AS':'AS' };
-  const COLORS = { '전체':'black','판매예정':'green','컨펌예정':'orange','이월예정':'blue','잔여재고':'black','AS':'red' };
+  const ORDER  = ['전체','판매예정','컨펌예정','이월예정','AS','잔여재고','기타','판매완료'];
+  const LABELS = { '전체':'전체 재고','판매예정':'판매 예정','컨펌예정':'컨펌 예정','이월예정':'이월 예정','잔여재고':'잔여 재고','AS':'AS','기타':'기타','판매완료':'판매 완료' };
+  const COLORS = { '전체':'black','판매예정':'green','컨펌예정':'orange','이월예정':'blue','잔여재고':'black','AS':'red','기타':'black','판매완료':'blue' };
 
   const summary = {};
   ORDER.forEach(s => { summary[s] = { qty:0, amount:0 }; });
   rows.forEach(r => {
     const s = r.status || '잔여재고';
     if (summary[s] !== undefined) { summary[s].qty++; summary[s].amount += Number(r.amount)||0; }
+    else { summary['기타'].qty++; summary['기타'].amount += Number(r.amount)||0; }
     summary['전체'].qty++; summary['전체'].amount += Number(r.amount)||0;
   });
   document.getElementById('summaryTbody').innerHTML = ORDER.map(s =>
@@ -750,7 +770,7 @@ function updateSelectedTotal() {
 const addRowBtn = document.getElementById('addRowBtn');
 if (addRowBtn) {
   addRowBtn.addEventListener('click', () => {
-    rows.push({ ref:'', amount:null, customer:'', saleDate:'', status:'판매예정', note:'' });
+    rows.push({ ref:'', serial:'', amount:null, customer:'', saleDate:'', status:'판매예정', note:'' });
     renderTable();
   });
 }
@@ -771,9 +791,14 @@ async function saveData() {
     mpdsMin:         gnv('f-mpdsMin'),
     mpdsCurrent:     gnv('f-mpdsCurrent'),
     mpdsIncoming:    gnv('f-mpdsIncoming'),
-    // goalRateData는 quarter_goals 컬렉션에 별도 저장 (saveQuarterGoalData)
+    updatedAt: new Date().toISOString()
+  };
+
+  // 재고 목록과 공유: rows는 inventory 컬렉션에 별도 저장
+  const invData = {
     rows: rows.map(r => ({
       ref:      r.ref||'',
+      serial:   r.serial||'',
       amount:   r.amount != null ? Number(r.amount) : null,
       customer: r.customer||'',
       saleDate: r.saleDate||'',
@@ -786,7 +811,10 @@ async function saveData() {
   const btn = document.getElementById('save-btn');
   if (btn) btn.textContent = '저장 중...';
   try {
-    await setDoc(doc(db,'artifacts','patek-s','public','data','sales_dashboard',`${curYear}-${pad(curMonth)}`), data, {merge:true});
+    await Promise.all([
+      setDoc(doc(db,'artifacts','patek-s','public','data','sales_dashboard',`${curYear}-${pad(curMonth)}`), data, {merge:true}),
+      setDoc(doc(db,'artifacts','patek-s','public','data','inventory',`${curYear}-${pad(curMonth)}`), invData, {merge:true})
+    ]);
 
     // 차트용 centum_annual 자동 동기화 (현재 월 실적 → 그래프 연동)
     const cSales = data.currentSales, cPcs = data.currentPcs;
@@ -815,8 +843,8 @@ document.getElementById('save-btn').addEventListener('click', saveData);
 /* ────────── 엑셀 ────────── */
 document.getElementById('excelBtn').addEventListener('click', () => {
   if (!window.XLSX) { alert('라이브러리 로딩 중입니다.'); return; }
-  const header = ['No.','REF.','금액','고객명','예상 매출일','상태','비고'];
-  const data   = rows.map((r,i) => [i+1, r.ref, r.amount, r.customer, r.saleDate, r.status, r.note]);
+  const header = ['REF.','Serial','금액','고객명','예상 판매일','상태','비고'];
+  const data   = rows.map(r => [r.ref, r.serial, r.amount, r.customer, r.saleDate, STATUS_DISPLAY[r.status]||r.status, r.note]);
   const ws = window.XLSX.utils.aoa_to_sheet([header,...data]);
   const wb = window.XLSX.utils.book_new();
   window.XLSX.utils.book_append_sheet(wb, ws, `${curYear}년${curMonth}월`);

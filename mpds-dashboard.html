@@ -122,6 +122,7 @@
     .status-sel.s-as   { background:#fee2e2;color:#ff1f1f; }
     .status-sel.s-etc  { background:#f3e8ff;color:#7c3aed; }
     .status-sel.s-hold { background:#e5e7eb;color:#111827; }
+    .status-sel.s-done { background:#f0fdf4;color:#059669; }
     #invTbody td { cursor:text; }
     #invTbody td:first-child, #invTbody td:last-child { cursor:default; }
     .bulk-status-sel { font-size:10px;padding:2px 3px;border-radius:4px;border:1px solid #d9e0ea;background:#f6f8fb;cursor:pointer;width:84px;font-weight:700;font-family:inherit;color:#374151;margin-top:3px; }
@@ -330,6 +331,7 @@
             <button class="tab" data-filter="AS">AS</button>
             <button class="tab" data-filter="기타">기타</button>
             <button class="tab" data-filter="잔여 재고">잔여 재고</button>
+            <button class="tab" data-filter="판매 완료">판매 완료</button>
           </div>
 
           <div class="table-wrap">
@@ -444,6 +446,7 @@
       <option value="AS">AS</option>
       <option value="기타">기타</option>
       <option value="잔여 재고">잔여 재고</option>
+      <option value="판매 완료">판매 완료</option>
     </select>
   </div>
   <button class="bottom-btn" id="excelBtn">엑셀 다운로드</button>
@@ -480,10 +483,10 @@ window.fmtNum = function(el) {
   el.value = raw !== '' ? Number(raw).toLocaleString('ko-KR') : '';
 };
 
-const STATUS_OPTIONS = ['등록','판매예정','AS','기타','잔여 재고'];
-const MPDS_STATUS_DISPLAY = {'판매예정':'판매 예정'};
+const STATUS_OPTIONS = ['등록','판매예정','AS','기타','잔여 재고','판매 완료'];
+const MPDS_STATUS_DISPLAY = {'판매예정':'판매 예정','판매 완료':'판매 완료'};
 function statusSelClass(s) {
-  return {'등록':'s-reg','판매예정':'s-sale','AS':'s-as','기타':'s-etc','잔여 재고':'s-hold','보류':'s-hold'}[s]||'s-hold';
+  return {'등록':'s-reg','판매예정':'s-sale','AS':'s-as','기타':'s-etc','잔여 재고':'s-hold','보류':'s-hold','판매 완료':'s-done'}[s]||'s-hold';
 }
 window.statusSelClass = statusSelClass;
 const LINE_COLORS = ['#3b82f6','#22c55e','#f97316','#8b5cf6','#d28c45','#0ea5a4','#2d9cdb','#9ca3af','#9bc4a6','#e11d48'];

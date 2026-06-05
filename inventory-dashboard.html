@@ -82,6 +82,7 @@
     .filter-pill.active-black  { background:#111827;color:#fff;border-color:#111827; }
     .filter-pill.active-red    { background:#ff1f1f;color:#fff;border-color:#ff1f1f; }
     .filter-pill.active-purple { background:#7c3aed;color:#fff;border-color:#7c3aed; }
+    .filter-pill.active-teal   { background:#059669;color:#fff;border-color:#059669; }
 
     /* ── 테이블 컨트롤 ── */
     .table-ctrl { display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 4px 12px; }
@@ -111,6 +112,7 @@
     .badge-rest    { background:#e5e7eb;color:#111827; }
     .badge-as      { background:#fee2e2;color:#ff1f1f; }
     .badge-etc     { background:#f3e8ff;color:#7c3aed; }
+    .badge-done    { background:#f0fdf4;color:#059669; }
     .status-sel { -webkit-appearance:none;appearance:none;height:28px;border:none;border-radius:14px;padding:0 10px;font-size:12px;font-weight:900;cursor:pointer;min-width:84px;text-align:center;font-family:inherit; }
     .status-sel.s-sale    { background:#e6f8ee;color:#009844; }
     .status-sel.s-confirm { background:#fff3e5;color:#ff7a00; }
@@ -118,6 +120,7 @@
     .status-sel.s-rest    { background:#e5e7eb;color:#111827; }
     .status-sel.s-as      { background:#fee2e2;color:#ff1f1f; }
     .status-sel.s-etc     { background:#f3e8ff;color:#7c3aed; }
+    .status-sel.s-done    { background:#f0fdf4;color:#059669; }
 
     /* ── 삭제 버튼 ── */
     .btn-del-sel { height:36px;padding:0 12px;border:1px solid #fca5a5;border-radius:6px;background:#fff5f5;color:#dc2626;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit; }
@@ -273,6 +276,7 @@
         <button class="filter-pill"          data-val="잔여재고">잔여 재고</button>
         <button class="filter-pill"          data-val="AS">AS</button>
         <button class="filter-pill"          data-val="기타">기타</button>
+        <button class="filter-pill"          data-val="판매완료">판매 완료</button>
       </div>
 
       <!-- 테이블 컨트롤 -->
@@ -314,6 +318,7 @@
                   <option value="잔여재고">잔여 재고</option>
                   <option value="AS">AS</option>
                   <option value="기타">기타</option>
+                  <option value="판매완료">판매 완료</option>
                 </select>
               </th>
               <th style="width:160px;">비고</th>
@@ -371,28 +376,28 @@ function parseNum(s) {
 }
 window.parseNum = parseNum;
 
-// 상태 목록 (기타 포함)
-const STATUSES = ['판매예정','컨펌예정','이월예정','잔여재고','AS','기타'];
-const STATUS_DISPLAY = {'판매예정':'판매 예정','컨펌예정':'컨펌 예정','이월예정':'이월 예정','잔여재고':'잔여 재고'};
+// 상태 목록 (기타, 판매완료 포함)
+const STATUSES = ['판매예정','컨펌예정','이월예정','잔여재고','AS','기타','판매완료'];
+const STATUS_DISPLAY = {'판매예정':'판매 예정','컨펌예정':'컨펌 예정','이월예정':'이월 예정','잔여재고':'잔여 재고','판매완료':'판매 완료'};
 const BADGE_MAP = {
   '판매예정':'badge-sale','컨펌예정':'badge-confirm','이월예정':'badge-carry',
-  '잔여재고':'badge-rest','AS':'badge-as','기타':'badge-etc'
+  '잔여재고':'badge-rest','AS':'badge-as','기타':'badge-etc','판매완료':'badge-done'
 };
 // 필터 pill 활성 색상
 const PILL_CLASS = {
   '전체':'active','판매예정':'active-green','컨펌예정':'active-orange',
-  '이월예정':'active-blue','잔여재고':'active-black','AS':'active-red','기타':'active-purple'
+  '이월예정':'active-blue','잔여재고':'active-black','AS':'active-red','기타':'active-purple','판매완료':'active-teal'
 };
 
 // 상태별 셀렉트 색상 클래스
 function statusSelClass(s) {
-  return {'판매예정':'s-sale','컨펌예정':'s-confirm','이월예정':'s-carry','잔여재고':'s-rest','AS':'s-as','기타':'s-etc'}[s]||'s-rest';
+  return {'판매예정':'s-sale','컨펌예정':'s-confirm','이월예정':'s-carry','잔여재고':'s-rest','AS':'s-as','기타':'s-etc','판매완료':'s-done'}[s]||'s-rest';
 }
 window.statusSelClass = statusSelClass;
 
 // 구버전 데이터(공백 포함) 상태값 정규화
 function canonicalStatus(s) {
-  const m = {'판매 예정':'판매예정','컨펌 예정':'컨펌예정','이월 예정':'이월예정','잔여 재고':'잔여재고'};
+  const m = {'판매 예정':'판매예정','컨펌 예정':'컨펌예정','이월 예정':'이월예정','잔여 재고':'잔여재고','판매 완료':'판매완료'};
   const t = String(s||'').trim();
   return m[t] || (STATUSES.includes(t) ? t : '잔여재고');
 }
@@ -622,7 +627,7 @@ function loadMonth() {
 /* ────────── KPI 카드 ────────── */
 function renderKpi() {
   const stat = {};
-  ['전체','판매예정','컨펌예정','이월예정','잔여재고','AS','기타'].forEach(s => { stat[s]={qty:0,amt:0}; });
+  ['전체','판매예정','컨펌예정','이월예정','잔여재고','AS','기타','판매완료'].forEach(s => { stat[s]={qty:0,amt:0}; });
   rows.forEach(r => {
     const s = r.status || '잔여재고';
     if (stat[s]) { stat[s].qty++; stat[s].amt += Number(r.amount)||0; }
