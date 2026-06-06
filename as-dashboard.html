@@ -88,7 +88,7 @@
     .filter-btn:hover { border-color:#075bd8;color:#075bd8; }
 
     /* ── 상태 탭 ── */
-    .status-tabs { display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap; }
+    .status-tabs { display:flex;align-items:center;gap:8px;margin-bottom:14px; }
     .stab { padding:7px 16px;border-radius:20px;background:#f1f3f5;border:none;font-size:13px;font-weight:700;color:#374151;cursor:pointer;white-space:nowrap;transition:.12s; }
     .stab:hover { background:#e5e7eb; }
     .stab.active { background:#075bd8;color:#fff; }
@@ -246,64 +246,64 @@
           <div class="kpi-unit">건</div>
         </div>
       </div>
-      <!-- 접수완료 -->
-      <div class="kpi-card" data-filter="접수완료" onclick="setTabFilter('접수완료')">
+      <!-- 접수 완료 -->
+      <div class="kpi-card" data-filter="접수 완료" onclick="setTabFilter('접수 완료')">
         <div class="kpi-icon ic-gray">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4b5563" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><polyline points="9 13 11 15 15 11"/></svg>
         </div>
         <div class="kpi-text">
-          <div class="kpi-label">접수완료</div>
+          <div class="kpi-label">접수 완료</div>
           <div class="kpi-value v-gray" id="cnt-접수완료">3</div>
           <div class="kpi-unit">건</div>
         </div>
       </div>
-      <!-- 견적대기 -->
-      <div class="kpi-card" data-filter="견적대기" onclick="setTabFilter('견적대기')">
+      <!-- 견적 대기 -->
+      <div class="kpi-card" data-filter="견적 대기" onclick="setTabFilter('견적 대기')">
         <div class="kpi-icon ic-orange">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"/><path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"/></svg>
         </div>
         <div class="kpi-text">
-          <div class="kpi-label">견적대기</div>
+          <div class="kpi-label">견적 대기</div>
           <div class="kpi-value v-orange" id="cnt-견적대기">4</div>
           <div class="kpi-unit">건</div>
         </div>
       </div>
-      <!-- 수리중 -->
-      <div class="kpi-card" data-filter="수리중" onclick="setTabFilter('수리중')">
+      <!-- 수리 중 -->
+      <div class="kpi-card" data-filter="수리 중" onclick="setTabFilter('수리 중')">
         <div class="kpi-icon ic-blue">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
         </div>
         <div class="kpi-text">
-          <div class="kpi-label">수리중</div>
+          <div class="kpi-label">수리 중</div>
           <div class="kpi-value v-blue" id="cnt-수리중">7</div>
           <div class="kpi-unit">건</div>
         </div>
       </div>
-      <!-- 수리완료 -->
-      <div class="kpi-card" data-filter="수리완료" onclick="setTabFilter('수리완료')">
+      <!-- 수리 완료 -->
+      <div class="kpi-card" data-filter="수리 완료" onclick="setTabFilter('수리 완료')">
         <div class="kpi-icon ic-green">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
         </div>
         <div class="kpi-text">
-          <div class="kpi-label">수리완료</div>
+          <div class="kpi-label">수리 완료</div>
           <div class="kpi-value v-green" id="cnt-수리완료">2</div>
           <div class="kpi-unit">건</div>
         </div>
       </div>
-      <!-- 전달완료 -->
-      <div class="kpi-card" data-filter="전달완료" onclick="setTabFilter('전달완료')">
+      <!-- 전달 완료 -->
+      <div class="kpi-card" data-filter="전달 완료" onclick="setTabFilter('전달 완료')">
         <div class="kpi-icon ic-emerald">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
         </div>
         <div class="kpi-text">
-          <div class="kpi-label">전달완료</div>
+          <div class="kpi-label">전달 완료</div>
           <div class="kpi-value v-emerald" id="cnt-전달완료">2</div>
           <div class="kpi-unit">건</div>
         </div>
       </div>
     </section>
 
-    <!-- 3. 검색 + 필터 -->
+    <!-- 3. 검색 -->
     <div class="search-filter-bar">
       <div class="search-wrap">
         <input class="search-input" id="searchInput" type="text" placeholder="고객명 / 제품명 / 시리얼 / REF. 검색" oninput="applyFilter()"/>
@@ -311,31 +311,21 @@
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         </span>
       </div>
-      <div style="display:flex;flex-direction:column;gap:6px;">
-        <select class="filter-btn" id="statusFilter" onchange="applyFilter()">
-          <option value="">⏳ 전체 필터</option>
-          <option value="접수완료">접수완료</option>
-          <option value="견적대기">견적대기</option>
-          <option value="수리중">수리중</option>
-          <option value="수리완료">수리완료</option>
-          <option value="전달완료">전달완료</option>
-        </select>
-        <select class="pag-size" id="pagSize" onchange="changePageSize()" style="width:100%;">
-          <option value="10">10개씩</option>
-          <option value="20">20개씩</option>
-          <option value="50">50개씩</option>
-        </select>
-      </div>
     </div>
 
     <!-- 4. 상태 탭 -->
     <div class="status-tabs" id="statusTabs">
       <button class="stab active" data-filter="전체" onclick="setTabFilter('전체')">전체 (<span id="tab-cnt-전체">18</span>)</button>
-      <button class="stab" data-filter="접수완료" onclick="setTabFilter('접수완료')">접수완료 (<span id="tab-cnt-접수완료">3</span>)</button>
-      <button class="stab" data-filter="견적대기" onclick="setTabFilter('견적대기')">견적대기 (<span id="tab-cnt-견적대기">4</span>)</button>
-      <button class="stab" data-filter="수리중" onclick="setTabFilter('수리중')">수리중 (<span id="tab-cnt-수리중">7</span>)</button>
-      <button class="stab" data-filter="수리완료" onclick="setTabFilter('수리완료')">수리완료 (<span id="tab-cnt-수리완료">2</span>)</button>
-      <button class="stab" data-filter="전달완료" onclick="setTabFilter('전달완료')">전달완료 (<span id="tab-cnt-전달완료">2</span>)</button>
+      <button class="stab" data-filter="접수 완료" onclick="setTabFilter('접수 완료')">접수 완료 (<span id="tab-cnt-접수완료">3</span>)</button>
+      <button class="stab" data-filter="견적 대기" onclick="setTabFilter('견적 대기')">견적 대기 (<span id="tab-cnt-견적대기">4</span>)</button>
+      <button class="stab" data-filter="수리 중" onclick="setTabFilter('수리 중')">수리 중 (<span id="tab-cnt-수리중">7</span>)</button>
+      <button class="stab" data-filter="수리 완료" onclick="setTabFilter('수리 완료')">수리 완료 (<span id="tab-cnt-수리완료">2</span>)</button>
+      <button class="stab" data-filter="전달 완료" onclick="setTabFilter('전달 완료')">전달 완료 (<span id="tab-cnt-전달완료">2</span>)</button>
+      <select class="pag-size" id="pagSize" onchange="changePageSize()" style="margin-left:auto;">
+        <option value="10">10개씩</option>
+        <option value="20">20개씩</option>
+        <option value="50">50개씩</option>
+      </select>
     </div>
 
     <!-- 5. 테이블 -->
@@ -390,11 +380,11 @@
     <div class="form-row"><label>비용</label><input class="form-input" id="f-cost" type="text" inputmode="numeric" placeholder="0" oninput="fmtNum(this)"/></div>
     <div class="form-row"><label>상태</label>
       <select class="form-select" id="f-status">
-        <option value="접수완료">접수완료</option>
-        <option value="견적대기">견적대기</option>
-        <option value="수리중">수리중</option>
-        <option value="수리완료">수리완료</option>
-        <option value="전달완료">전달완료</option>
+        <option value="접수 완료">접수 완료</option>
+        <option value="견적 대기">견적 대기</option>
+        <option value="수리 중">수리 중</option>
+        <option value="수리 완료">수리 완료</option>
+        <option value="전달 완료">전달 완료</option>
       </select>
     </div>
     <div class="form-row"><label>입고일</label><input class="form-input" id="f-indate" type="date"/></div>
@@ -504,14 +494,24 @@ function loadData() {
 }
 
 /* ── KPI 업데이트 ── */
+const KEY_TO_ID = {
+  '전체':      'total',
+  '접수 완료': '접수완료',
+  '견적 대기': '견적대기',
+  '수리 중':   '수리중',
+  '수리 완료': '수리완료',
+  '전달 완료': '전달완료',
+};
 function updateKPI() {
-  const counts = { '전체': allRecords.length, '접수완료':0, '견적대기':0, '수리중':0, '수리완료':0, '전달완료':0 };
+  const counts = {};
+  Object.keys(KEY_TO_ID).forEach(k => counts[k] = 0);
+  counts['전체'] = allRecords.length;
   allRecords.forEach(r => { if (counts[r.status] !== undefined) counts[r.status]++; });
-  ['전체','접수완료','견적대기','수리중','수리완료','전달완료'].forEach(k => {
-    const el = document.getElementById('cnt-' + (k === '전체' ? 'total' : k));
-    if (el) el.textContent = counts[k];
-    const tel = document.getElementById('tab-cnt-' + k);
-    if (tel) tel.textContent = counts[k];
+  Object.entries(KEY_TO_ID).forEach(([k, id]) => {
+    const el  = document.getElementById('cnt-' + id);
+    const tel = document.getElementById('tab-cnt-' + id);
+    if (el)  el.textContent  = counts[k] ?? 0;
+    if (tel) tel.textContent = counts[k] ?? 0;
   });
 }
 
@@ -520,15 +520,12 @@ window.setTabFilter = function(f) {
   activeTab = f;
   document.querySelectorAll('.stab').forEach(b => b.classList.toggle('active', b.dataset.filter === f));
   document.querySelectorAll('.kpi-card').forEach(c => c.classList.toggle('active-card', c.dataset.filter === f));
-  document.getElementById('statusFilter').value = f === '전체' ? '' : f;
   curPage = 1;
   applyFilter();
 };
 
 window.applyFilter = function() {
   const q = document.getElementById('searchInput').value.toLowerCase();
-  const sf = document.getElementById('statusFilter').value;
-  if (sf) { activeTab = sf; document.querySelectorAll('.stab').forEach(b => b.classList.toggle('active', b.dataset.filter === sf)); document.querySelectorAll('.kpi-card').forEach(c => c.classList.toggle('active-card', c.dataset.filter === sf)); }
   let rows = allRecords.filter(r => {
     const matchTab = activeTab === '전체' || r.status === activeTab;
     const matchQ   = !q || [r.customer||'', r.ref||'', r.serial||'', r.type||''].some(v => v.toLowerCase().includes(q));
@@ -539,8 +536,8 @@ window.applyFilter = function() {
 
 /* ── 테이블 렌더 ── */
 function badgeHtml(status) {
-  const map = { '접수완료':'b-접수완료','견적대기':'b-견적대기','수리중':'b-수리중','수리완료':'b-수리완료','전달완료':'b-전달완료' };
-  return `<span class="badge ${map[status]||''}">${status}</span>`;
+  const map = { '접수 완료':'b-접수완료','견적 대기':'b-견적대기','수리 중':'b-수리중','수리 완료':'b-수리완료','전달 완료':'b-전달완료' };
+  return `<span class="badge ${map[status]||''}">${status||'-'}</span>`;
 }
 function arrivalHtml(v) {
   if (v === '완료') return `<span class="arr-done">완료</span>`;
@@ -575,7 +572,7 @@ function renderTable(rows) {
         <td>${r.ref||'-'}</td>
         <td>${r.serial||'-'}</td>
         <td>${fmtCost(r.cost)}</td>
-        <td>${badgeHtml(r.status||'접수완료')}</td>
+        <td>${badgeHtml(r.status||'접수 완료')}</td>
         <td>${r.indate||'-'}</td>
         <td>${arrivalHtml(r.arrival||'미완료')}</td>
         <td>${r.pickup||'-'}</td>
@@ -632,7 +629,7 @@ function openRegModal() {
   editingId = null;
   ['type','date','customer','ref','serial','cost','status','indate','arrival','pickup','memo'].forEach(k => {
     const el = document.getElementById('f-'+k);
-    if (el) el.value = k === 'status' ? '접수완료' : k === 'arrival' ? '미완료' : k === 'type' ? '에비뉴엘' : '';
+    if (el) el.value = k === 'status' ? '접수 완료' : k === 'arrival' ? '미완료' : k === 'type' ? '에비뉴엘' : '';
   });
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('f-date').value = today;
@@ -647,7 +644,7 @@ function openEditModal(r) {
   document.getElementById('f-ref').value     = r.ref     || '';
   document.getElementById('f-serial').value  = r.serial  || '';
   document.getElementById('f-cost').value    = r.cost    ? Number(String(r.cost).replace(/,/g,'')).toLocaleString('ko-KR') : '';
-  document.getElementById('f-status').value  = r.status  || '접수완료';
+  document.getElementById('f-status').value  = r.status  || '접수 완료';
   document.getElementById('f-indate').value  = r.indate  || '';
   document.getElementById('f-arrival').value = r.arrival || '미완료';
   document.getElementById('f-pickup').value  = r.pickup  || '';
