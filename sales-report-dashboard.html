@@ -114,9 +114,18 @@
     .inventory-panel { background:#fff;border:1px solid #e2e7ef;border-radius:8px;box-shadow:0 2px 8px rgba(15,23,42,.035);display:grid;grid-template-columns:2.25fr 1fr;overflow:hidden;margin-bottom:0; }
     .inventory-left  { border-right:1px solid #e5eaf2; }
     .inventory-header { padding:18px 24px 10px;font-size:19px;font-weight:900; }
-    .tabs { display:flex;padding:0 16px;border-bottom:1px solid #e5eaf2;gap:10px; }
-    .tab  { appearance:none;border:0;background:transparent;padding:14px 20px;font-size:14px;font-weight:900;color:#111827;border-bottom:3px solid transparent;cursor:pointer; }
-    .tab.active { color:#0067e8;border-bottom-color:#0067e8; }
+    .filter-bar { display:flex;align-items:center;gap:6px;padding:8px 16px 14px;border-bottom:1px solid #e5eaf2;flex-wrap:wrap; }
+    .filter-pill { display:inline-flex;align-items:center;height:32px;padding:0 14px;border:1px solid #d9e0ea;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;user-select:none;transition:.12s;background:#fff;color:#374151;font-family:inherit; }
+    .filter-pill:hover { border-color:#9ca3af; }
+    .filter-pill.active        { background:#374151;color:#fff;border-color:#374151; }
+    .filter-pill.active-green  { background:#009844;color:#fff;border-color:#009844; }
+    .filter-pill.active-orange { background:#ff7a00;color:#fff;border-color:#ff7a00; }
+    .filter-pill.active-blue   { background:#0067e8;color:#fff;border-color:#0067e8; }
+    .filter-pill.active-black  { background:#111827;color:#fff;border-color:#111827; }
+    .filter-pill.active-red    { background:#ff1f1f;color:#fff;border-color:#ff1f1f; }
+    .filter-pill.active-purple { background:#7c3aed;color:#fff;border-color:#7c3aed; }
+    .filter-pill.active-teal   { background:#d97706;color:#fff;border-color:#d97706; }
+    .filter-pill.active-cyan   { background:#0891b2;color:#fff;border-color:#0891b2; }
     .table-wrap { padding:14px 16px 12px;overflow-x:auto; }
     table { width:100%;border-collapse:collapse; }
     .inventory-table { min-width:780px; }
@@ -399,16 +408,17 @@
     <section class="inventory-panel">
       <div class="inventory-left">
         <div class="inventory-header">재고 매출 관리</div>
-        <div class="tabs" id="tabsBar">
-          <button class="tab active" data-filter="전체">전체</button>
-          <button class="tab" data-filter="판매예정">판매 예정</button>
-          <button class="tab" data-filter="컨펌예정">컨펌 예정</button>
-          <button class="tab" data-filter="이월예정">이월 예정</button>
-          <button class="tab" data-filter="AS">AS</button>
-          <button class="tab" data-filter="잔여재고">잔여 재고</button>
-          <button class="tab" data-filter="판매완료">판매 완료</button>
-          <button class="tab" data-filter="등록">등록</button>
-          <button class="tab" data-filter="선수금">선수금</button>
+        <div class="filter-bar" id="tabsBar">
+          <button class="filter-pill active" data-filter="전체">전체</button>
+          <button class="filter-pill" data-filter="등록">등록</button>
+          <button class="filter-pill" data-filter="판매예정">판매 예정</button>
+          <button class="filter-pill" data-filter="컨펌예정">컨펌 예정</button>
+          <button class="filter-pill" data-filter="이월예정">이월 예정</button>
+          <button class="filter-pill" data-filter="AS">AS</button>
+          <button class="filter-pill" data-filter="기타">기타</button>
+          <button class="filter-pill" data-filter="잔여재고">잔여 재고</button>
+          <button class="filter-pill" data-filter="판매완료">판매 완료</button>
+          <button class="filter-pill" data-filter="선수금">선수금</button>
         </div>
         <div class="table-wrap">
           <table class="inventory-table" id="inventoryTable">

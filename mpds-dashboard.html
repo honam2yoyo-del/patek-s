@@ -63,7 +63,7 @@
     .summary-text { display:flex;flex-direction:column;gap:3px;min-width:0; }
     .summary-title { font-size:13px;font-weight:800;color:#64748b; }
     .summary-value { font-size:26px;font-weight:900;letter-spacing:-.6px;line-height:1; }
-    .summary-value small { display:block;font-size:13px;font-weight:700;margin-top:2px;color:#64748b; }
+    .summary-value small { font-size:14px;font-weight:700;margin-left:4px; }
     .formula-note { font-size:12px;color:#64748b;font-weight:700;margin:6px 0 18px 4px; }
 
     /* ── 추천 방식 ── */
@@ -102,10 +102,18 @@
     .search-input { width:100%;height:42px;border:1px solid #d9e0ea;border-radius:7px;padding:0 40px 0 12px;font-size:14px;font-weight:700;outline:none; }
     .search-icon { position:absolute;right:12px;top:50%;transform:translateY(-50%);color:#64748b;font-size:15px;pointer-events:none; }
     .add-row-btn { height:38px;border:1px solid #009844;border-radius:6px;background:#009844;color:#fff;padding:0 14px;font-size:13px;font-weight:700;cursor:pointer; }
-    .tabs { display:flex;border-bottom:1px solid #e2e7ef;overflow-x:auto; }
-    .tab { appearance:none;border:1px solid #d9e0ea;border-left:0;border-bottom:0;background:#f8fafc;padding:12px 20px;min-width:90px;font-size:13px;font-weight:900;color:#111827;cursor:pointer; }
-    .tab:first-child { border-left:1px solid #d9e0ea; }
-    .tab.active { background:#075bd8;color:#fff;border-color:#075bd8; }
+    .filter-bar { display:flex;align-items:center;gap:6px;padding:0 4px 14px;border-bottom:1px solid #e5eaf2;flex-wrap:wrap; }
+    .filter-pill { display:inline-flex;align-items:center;height:32px;padding:0 14px;border:1px solid #d9e0ea;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;user-select:none;transition:.12s;background:#fff;color:#374151;font-family:inherit; }
+    .filter-pill:hover { border-color:#9ca3af; }
+    .filter-pill.active        { background:#374151;color:#fff;border-color:#374151; }
+    .filter-pill.active-green  { background:#009844;color:#fff;border-color:#009844; }
+    .filter-pill.active-orange { background:#ff7a00;color:#fff;border-color:#ff7a00; }
+    .filter-pill.active-blue   { background:#0067e8;color:#fff;border-color:#0067e8; }
+    .filter-pill.active-black  { background:#111827;color:#fff;border-color:#111827; }
+    .filter-pill.active-red    { background:#ff1f1f;color:#fff;border-color:#ff1f1f; }
+    .filter-pill.active-purple { background:#7c3aed;color:#fff;border-color:#7c3aed; }
+    .filter-pill.active-teal   { background:#d97706;color:#fff;border-color:#d97706; }
+    .filter-pill.active-cyan   { background:#0891b2;color:#fff;border-color:#0891b2; }
     .table-wrap { padding:6px 8px 0;overflow-x:auto; }
     table { width:100%;border-collapse:collapse; }
     .mpds-table { min-width:960px; }
@@ -338,17 +346,17 @@
             </div>
           </div>
 
-          <div class="tabs" id="tabsBar">
-            <button class="tab active" data-filter="전체">전체</button>
-            <button class="tab" data-filter="등록">등록</button>
-            <button class="tab" data-filter="판매예정">판매 예정</button>
-            <button class="tab" data-filter="컨펌예정">컨펌 예정</button>
-            <button class="tab" data-filter="이월예정">이월 예정</button>
-            <button class="tab" data-filter="AS">AS</button>
-            <button class="tab" data-filter="기타">기타</button>
-            <button class="tab" data-filter="잔여 재고">잔여 재고</button>
-            <button class="tab" data-filter="판매 완료">판매 완료</button>
-            <button class="tab" data-filter="선수금">선수금</button>
+          <div class="filter-bar" id="tabsBar">
+            <button class="filter-pill active" data-filter="전체">전체</button>
+            <button class="filter-pill" data-filter="등록">등록</button>
+            <button class="filter-pill" data-filter="판매예정">판매 예정</button>
+            <button class="filter-pill" data-filter="컨펌예정">컨펌 예정</button>
+            <button class="filter-pill" data-filter="이월예정">이월 예정</button>
+            <button class="filter-pill" data-filter="AS">AS</button>
+            <button class="filter-pill" data-filter="기타">기타</button>
+            <button class="filter-pill" data-filter="잔여 재고">잔여 재고</button>
+            <button class="filter-pill" data-filter="판매 완료">판매 완료</button>
+            <button class="filter-pill" data-filter="선수금">선수금</button>
           </div>
 
           <div class="table-wrap">
@@ -520,7 +528,12 @@ let curMonth = new Date().getMonth() + 1;
 let pickerYear = curYear;
 let unsubMpds  = null;
 let inventory  = JSON.parse(JSON.stringify(DEFAULT_INV));
-let activeFilter = '전체';
+let activeFilters = new Set(['전체']);
+const MPDS_PILL_CLASS = {
+  '전체':'active','등록':'active-blue','판매예정':'active-green','컨펌예정':'active-orange',
+  '이월예정':'active-blue','AS':'active-red','기타':'active-purple',
+  '잔여 재고':'active-black','판매 완료':'active-teal','선수금':'active-cyan'
+};
 let lineFilter   = '';
 let dateSortDir  = null;
 let selectedIds  = new Set();
@@ -697,12 +710,26 @@ function renderDonut() {
   }
 }
 
-/* ── 필터/탭 ── */
+/* ── 필터/탭 (복수 선택) ── */
+function applyPillClasses() {
+  document.querySelectorAll('.filter-pill').forEach(p => {
+    const f = p.dataset.filter;
+    const on = activeFilters.has(f);
+    p.className = 'filter-pill' + (on ? ' ' + (MPDS_PILL_CLASS[f] || 'active') : '');
+  });
+}
 document.getElementById('tabsBar').addEventListener('click', e => {
-  const tab = e.target.closest('.tab');
-  if (!tab) return;
-  activeFilter = tab.dataset.filter;
-  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.filter === activeFilter));
+  const pill = e.target.closest('.filter-pill');
+  if (!pill) return;
+  const f = pill.dataset.filter;
+  if (f === '전체') {
+    activeFilters = new Set(['전체']);
+  } else {
+    activeFilters.delete('전체');
+    activeFilters.has(f) ? activeFilters.delete(f) : activeFilters.add(f);
+    if (activeFilters.size === 0) activeFilters.add('전체');
+  }
+  applyPillClasses();
   renderTable();
 });
 
@@ -712,7 +739,7 @@ const tblSearch = document.getElementById('tableSearch');
 function getFiltered() {
   const kw = tblSearch.value.trim().toLowerCase();
   let list = inventory.map((r,i) => ({...r, _i:i})).filter(r => {
-    const fmatch = activeFilter === '전체' || r.status === activeFilter;
+    const fmatch = activeFilters.has('전체') || activeFilters.has(r.status);
     const lmatch = !lineFilter || (r.line||'') === lineFilter;
     const kmatch = !kw || (r.ref||'').toLowerCase().includes(kw) || (r.serial||'').toLowerCase().includes(kw) || (r.line||'').toLowerCase().includes(kw);
     return fmatch && lmatch && kmatch;

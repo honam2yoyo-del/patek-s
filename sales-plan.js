@@ -688,8 +688,13 @@ function renderTfoot(filtered) {
   </tr>`;
 }
 
+const SALES_PILL_CLASS = {
+  '전체':'active','등록':'active-blue','판매예정':'active-green','컨펌예정':'active-orange',
+  '이월예정':'active-blue','AS':'active-red','기타':'active-purple',
+  '잔여재고':'active-black','판매완료':'active-teal','선수금':'active-cyan'
+};
 function updateTabCounts() {
-  document.querySelectorAll('.tab').forEach(tab => {
+  document.querySelectorAll('.filter-pill').forEach(tab => {
     const f = tab.dataset.filter;
     if (f === '전체') return;
     const displayName = STATUS_DISPLAY[f] || f;
@@ -784,25 +789,25 @@ window.invDelRow = function(ri) {
 };
 
 /* ── 탭 필터 (복수 선택) ── */
+function applySalesPillClasses() {
+  document.querySelectorAll('.filter-pill').forEach(p => {
+    const f = p.dataset.filter;
+    const on = activeFilters.has(f);
+    p.className = 'filter-pill' + (on ? ' ' + (SALES_PILL_CLASS[f] || 'active') : '');
+  });
+}
 document.getElementById('tabsBar').addEventListener('click', e => {
-  const tab = e.target.closest('.tab');
-  if (!tab) return;
-  const f = tab.dataset.filter;
-
+  const pill = e.target.closest('.filter-pill');
+  if (!pill) return;
+  const f = pill.dataset.filter;
   if (f === '전체') {
     activeFilters = new Set(['전체']);
   } else {
     activeFilters.delete('전체');
-    if (activeFilters.has(f)) {
-      activeFilters.delete(f);
-      if (activeFilters.size === 0) activeFilters.add('전체');
-    } else {
-      activeFilters.add(f);
-    }
+    activeFilters.has(f) ? activeFilters.delete(f) : activeFilters.add(f);
+    if (activeFilters.size === 0) activeFilters.add('전체');
   }
-  document.querySelectorAll('.tab').forEach(t =>
-    t.classList.toggle('active', activeFilters.has(t.dataset.filter))
-  );
+  applySalesPillClasses();
   renderTable();
 });
 
