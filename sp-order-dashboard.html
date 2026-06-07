@@ -177,6 +177,13 @@
     .dp-textarea:focus { border-color:#075bd8;box-shadow:0 0 0 3px #075bd820; }
     .dp-textarea::placeholder { color:#9ca3af; }
 
+    /* 상세 패널 액션 버튼 */
+    .dp-actions { display:flex;gap:8px;justify-content:flex-end;padding:10px 16px;border-bottom:1px solid #e2e7ef;background:#fafbfc; }
+    .dp-edit-btn { height:30px;border:1px solid #d1d5db;border-radius:6px;background:#fff;padding:0 14px;font-size:12.5px;font-weight:700;cursor:pointer;color:#374151; }
+    .dp-edit-btn:hover { background:#f3f4f6; }
+    .dp-del-btn  { height:30px;border:none;border-radius:6px;background:#ef4444;color:#fff;padding:0 14px;font-size:12.5px;font-weight:700;cursor:pointer; }
+    .dp-del-btn:hover { background:#dc2626; }
+
     /* 빈 상태 */
     .dp-empty { display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;color:#9ca3af; }
     .dp-empty svg { margin-bottom:12px;opacity:.35; }
@@ -329,40 +336,40 @@
           <span class="kpi-value v-blue" id="cnt-전체">24</span>
         </div>
       </div>
-      <div class="kpi-card" data-filter="오더대기" onclick="setTabFilter('오더대기')">
+      <div class="kpi-card" data-filter="오더 대기" onclick="setTabFilter('오더 대기')">
         <div class="kpi-icon ic-orange">
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h14"/><path d="M17 3v6l-5 3-5-3V3"/><path d="M5 21h14"/><path d="M17 21v-6l-5-3-5 3v6"/></svg>
         </div>
         <div class="kpi-text">
-          <span class="kpi-label">오더대기</span>
-          <span class="kpi-value v-orange" id="cnt-오더대기">7</span>
+          <span class="kpi-label">오더 대기</span>
+          <span class="kpi-value v-orange" id="cnt-오더대기">0</span>
         </div>
       </div>
-      <div class="kpi-card" data-filter="오더중" onclick="setTabFilter('오더중')">
+      <div class="kpi-card" data-filter="오더 중" onclick="setTabFilter('오더 중')">
         <div class="kpi-icon ic-purple">
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
         </div>
         <div class="kpi-text">
-          <span class="kpi-label">오더중</span>
-          <span class="kpi-value v-purple" id="cnt-오더중">6</span>
+          <span class="kpi-label">오더 중</span>
+          <span class="kpi-value v-purple" id="cnt-오더중">0</span>
         </div>
       </div>
-      <div class="kpi-card" data-filter="입고완료" onclick="setTabFilter('입고완료')">
+      <div class="kpi-card" data-filter="입고 완료" onclick="setTabFilter('입고 완료')">
         <div class="kpi-icon ic-green">
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
         </div>
         <div class="kpi-text">
-          <span class="kpi-label">입고완료</span>
-          <span class="kpi-value v-green" id="cnt-입고완료">4</span>
+          <span class="kpi-label">입고 완료</span>
+          <span class="kpi-value v-green" id="cnt-입고완료">0</span>
         </div>
       </div>
-      <div class="kpi-card" data-filter="판매완료" onclick="setTabFilter('판매완료')">
+      <div class="kpi-card" data-filter="판매 완료" onclick="setTabFilter('판매 완료')">
         <div class="kpi-icon ic-sky">
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         </div>
         <div class="kpi-text">
-          <span class="kpi-label">판매완료</span>
-          <span class="kpi-value v-sky" id="cnt-판매완료">2</span>
+          <span class="kpi-label">판매 완료</span>
+          <span class="kpi-value v-sky" id="cnt-판매완료">0</span>
         </div>
       </div>
       <div class="kpi-card" data-filter="재접수" onclick="setTabFilter('재접수')">
@@ -378,13 +385,12 @@
 
     <!-- 3. 상태 탭 -->
     <div class="status-tabs">
-      <button class="stab active" data-filter="전체"          onclick="setTabFilter('전체')">전체 <span id="tab-cnt-전체">24</span></button>
-      <button class="stab"        data-filter="오더대기"      onclick="setTabFilter('오더대기')">오더대기 <span id="tab-cnt-오더대기">7</span></button>
-      <button class="stab"        data-filter="오더중"        onclick="setTabFilter('오더중')">오더중 <span id="tab-cnt-오더중">6</span></button>
-      <button class="stab"        data-filter="오더번호 확인" onclick="setTabFilter('오더번호 확인')">오더번호 확인 <span id="tab-cnt-오더번호확인">5</span></button>
-      <button class="stab"        data-filter="입고완료"      onclick="setTabFilter('입고완료')">입고완료 <span id="tab-cnt-입고완료">4</span></button>
-      <button class="stab"        data-filter="재오더"        onclick="setTabFilter('재오더')">재오더 <span id="tab-cnt-재오더">2</span></button>
-      <button class="stab"        data-filter="전달완료"      onclick="setTabFilter('전달완료')">전달완료 <span id="tab-cnt-전달완료">0</span></button>
+      <button class="stab active" data-filter="전체"    onclick="setTabFilter('전체')">전체 <span id="tab-cnt-전체">0</span></button>
+      <button class="stab"  data-filter="오더 대기"     onclick="setTabFilter('오더 대기')">오더 대기 <span id="tab-cnt-오더대기">0</span></button>
+      <button class="stab"  data-filter="오더 중"       onclick="setTabFilter('오더 중')">오더 중 <span id="tab-cnt-오더중">0</span></button>
+      <button class="stab"  data-filter="입고 완료"     onclick="setTabFilter('입고 완료')">입고 완료 <span id="tab-cnt-입고완료">0</span></button>
+      <button class="stab"  data-filter="판매 완료"     onclick="setTabFilter('판매 완료')">판매 완료 <span id="tab-cnt-판매완료">0</span></button>
+      <button class="stab"  data-filter="재접수"        onclick="setTabFilter('재접수')">재접수 <span id="tab-cnt-재접수">0</span></button>
     </div>
 
     <!-- 4. 메인 2단 분할 -->
@@ -420,6 +426,11 @@
           <p>오더를 선택하면 상세 정보가 표시됩니다</p>
         </div>
         <div id="detailContent" style="display:none">
+          <!-- 수정/삭제 버튼 -->
+          <div class="dp-actions">
+            <button class="dp-edit-btn" onclick="openEditFromDetail()">수정</button>
+            <button class="dp-del-btn"  onclick="deleteFromDetail()">삭제</button>
+          </div>
           <!-- 패널 헤더 -->
           <div class="dp-header">
             <div class="dp-header-cell">
@@ -442,19 +453,23 @@
               <div class="dp-section-title">기본 오더 정보</div>
               <div class="kv-list">
                 <div class="kv-item"><span class="kv-key">시계 REF.</span><span class="kv-val" id="dp-watchRef">—</span></div>
-                <div class="kv-item"><span class="kv-key">러그사이즈</span><span class="kv-val" id="dp-lugSize">—</span></div>
-                <div class="kv-item"><span class="kv-key">컬러번호</span><span class="kv-val" id="dp-colorNum">—</span></div>
-                <div class="kv-item"><span class="kv-key">스트랩길이</span><span class="kv-val" id="dp-strapLen">—</span></div>
-                <div class="kv-item"><span class="kv-key">버클형태</span><span class="kv-val" id="dp-buckle">—</span></div>
-                <div class="kv-item"><span class="kv-key">금액</span><span class="kv-val" id="dp-amount">—</span></div>
+                <div class="kv-item"><span class="kv-key">알파 코드</span><span class="kv-val" id="dp-alphaCode">—</span></div>
+                <div class="kv-item"><span class="kv-key">링크 사이즈</span><span class="kv-val" id="dp-linkSize">—</span></div>
+                <div class="kv-item"><span class="kv-key">스트랩 길이</span><span class="kv-val" id="dp-strapLen">—</span></div>
+                <div class="kv-item"><span class="kv-key">버클 형태</span><span class="kv-val" id="dp-buckle">—</span></div>
+                <div class="kv-item"><span class="kv-key">걸쇠 유무</span><span class="kv-val" id="dp-clasp">—</span></div>
+                <div class="kv-item"><span class="kv-key">스티치 컬러</span><span class="kv-val" id="dp-stitchColor">—</span></div>
+                <div class="kv-item"><span class="kv-key">판매용/증정용</span><span class="kv-val" id="dp-purpose">—</span></div>
               </div>
             </div>
             <!-- B. 레퍼런스 / 입고 확인 -->
             <div class="dp-section">
-              <div class="dp-section-title">레퍼런스 / 입고 확인</div>
+              <div class="dp-section-title">주문 정보</div>
               <div class="kv-list">
-                <div class="kv-item"><span class="kv-key">오더번호</span><span class="kv-val" id="dp-orderNum">—</span></div>
+                <div class="kv-item"><span class="kv-key">오더 번호</span><span class="kv-val" id="dp-orderNum">—</span></div>
                 <div class="kv-item"><span class="kv-key">스트랩 Ref.</span><span class="kv-val" id="dp-strapRef">—</span></div>
+                <div class="kv-item"><span class="kv-key">컬러 번호</span><span class="kv-val" id="dp-colorNum">—</span></div>
+                <div class="kv-item"><span class="kv-key">금액</span><span class="kv-val" id="dp-amount">—</span></div>
                 <div class="kv-item"><span class="kv-key">입고여부</span><span class="kv-val" id="dp-instock">—</span></div>
                 <div class="kv-item"><span class="kv-key">고객 연락</span><span class="kv-val" id="dp-contact">—</span></div>
                 <div class="kv-item"><span class="kv-key">판매 완료일</span><span class="kv-val" id="dp-saleDate">—</span></div>
@@ -611,6 +626,44 @@
 
     </div>
 
+    <!-- ③ 주문 정보 -->
+    <div class="form-section">
+      <div class="fs-title"><span class="fs-num">3</span> 주문 정보</div>
+
+      <div class="fg2">
+        <div class="fg-item">
+          <div class="fg-label">컬러 번호</div>
+          <input class="form-input" id="f-colorNum" type="text" placeholder="컬러 번호 입력"/>
+        </div>
+        <div class="fg-item">
+          <div class="fg-label">금액</div>
+          <input class="form-input" id="f-amount" type="text" inputmode="numeric" placeholder="0" oninput="fmtNum(this)"/>
+        </div>
+      </div>
+      <div class="fg2" style="margin-top:10px;">
+        <div class="fg-item">
+          <div class="fg-label">오더 번호</div>
+          <input class="form-input" id="f-orderNum" type="text" placeholder="오더 번호 입력"/>
+        </div>
+        <div class="fg-item">
+          <div class="fg-label">스트랩 Ref.</div>
+          <input class="form-input" id="f-strapRef" type="text" placeholder="스트랩 Ref. 입력"/>
+        </div>
+      </div>
+
+      <div class="chip-row" style="margin-top:14px;">
+        <div class="chip-row-label">상태</div>
+        <div class="chip-group" id="grp-status">
+          <div class="chip" data-group="status" data-val="오더 대기" onclick="selectChip('status','오더 대기')">오더 대기</div>
+          <div class="chip" data-group="status" data-val="오더 중" onclick="selectChip('status','오더 중')">오더 중</div>
+          <div class="chip" data-group="status" data-val="입고 완료" onclick="selectChip('status','입고 완료')">입고 완료</div>
+          <div class="chip" data-group="status" data-val="판매 완료" onclick="selectChip('status','판매 완료')">판매 완료</div>
+          <div class="chip" data-group="status" data-val="재접수" onclick="selectChip('status','재접수')">재접수</div>
+        </div>
+      </div>
+
+    </div>
+
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeRegModal()">취소</button>
       <button class="btn-save" onclick="saveOrder()">저장</button>
@@ -711,22 +764,22 @@ function loadData() {
   });
 }
 
-/* ── KPI ── */
-const STATUS_LIST = ['전체','오더대기','오더중','오더번호 확인','입고완료','재오더','전달완료','판매완료','재접수'];
-function updateKPI() {
-  const counts = {};
-  STATUS_LIST.forEach(s => counts[s] = 0);
-  counts['전체'] = allRecords.length;
-  allRecords.forEach(r => { if (counts[r.status] !== undefined) counts[r.status]++; });
+/* ── 상태 정규화 (스페이스 제거) ── */
+const normStatus = s => (s || '').replace(/ /g, '');
 
-  const idMap = {
-    '전체':'전체','오더대기':'오더대기','오더중':'오더중','오더번호 확인':'오더번호확인',
-    '입고완료':'입고완료','재오더':'재오더','전달완료':'전달완료','판매완료':'판매완료','재접수':'재접수'
-  };
+/* ── KPI ── */
+function updateKPI() {
+  const counts = { '전체':0, '오더대기':0, '오더중':0, '입고완료':0, '판매완료':0, '재접수':0 };
+  counts['전체'] = allRecords.length;
+  allRecords.forEach(r => {
+    const n = normStatus(r.status);
+    if (counts[n] !== undefined) counts[n]++;
+  });
+  const idMap = { '전체':'전체', '오더대기':'오더대기', '오더중':'오더중', '입고완료':'입고완료', '판매완료':'판매완료', '재접수':'재접수' };
   Object.entries(idMap).forEach(([key, id]) => {
-    const el = document.getElementById('cnt-' + key);
+    const el  = document.getElementById('cnt-'     + key);
     const tel = document.getElementById('tab-cnt-' + id);
-    if (el) el.textContent = counts[key] ?? 0;
+    if (el)  el.textContent  = counts[key] ?? 0;
     if (tel) tel.textContent = counts[key] ?? 0;
   });
 }
@@ -743,7 +796,7 @@ window.setTabFilter = function(f) {
 window.applyFilter = function() {
   const q = document.getElementById('searchInput').value.toLowerCase();
   let rows = allRecords.filter(r => {
-    const matchTab = activeTab === '전체' || r.status === activeTab;
+    const matchTab = activeTab === '전체' || normStatus(r.status) === normStatus(activeTab);
     const matchQ   = !q || [r.customer||'', r.orderNum||'', r.watchRef||'', r.strapRef||'', r.manager||''].some(v => v.toLowerCase().includes(q));
     return matchTab && matchQ;
   });
@@ -755,8 +808,9 @@ function badgeHtml(cls, text) {
   return `<span class="badge b-${cls}">${text}</span>`;
 }
 function statusBadge(s) {
-  const map = {'오더대기':'오더대기','오더중':'오더중','입고완료':'입고완료','판매완료':'판매완료','재접수':'재접수','재오더':'재오더','전달완료':'전달완료','오더번호 확인':'오더중'};
-  return badgeHtml(map[s] || '오더대기', s || '-');
+  const n = normStatus(s);
+  const map = { '오더대기':'오더대기','오더중':'오더중','입고완료':'입고완료','판매완료':'판매완료','재접수':'재접수','재오더':'재오더','전달완료':'전달완료','오더번호확인':'오더중' };
+  return badgeHtml(map[n] || 'oorder', s || '-');
 }
 function instockBadge(v) {
   return v === '입고' ? badgeHtml('입고','입고') : badgeHtml('미입고','미입고');
@@ -805,33 +859,39 @@ window.selectRow = function(id) {
 };
 
 /* ── 상세 패널 렌더 ── */
-const STATUS_COLOR = {
+const STATUS_COLOR_MAP = {
   '오더대기':'status-orange','오더중':'status-purple','입고완료':'status-green',
   '판매완료':'status-sky','재접수':'status-red','재오더':'status-red',
-  '전달완료':'status-green','오더번호 확인':'status-blue'
+  '전달완료':'status-green','오더번호확인':'status-blue'
 };
 function renderDetail(r) {
   document.getElementById('detailEmpty').style.display = 'none';
   document.getElementById('detailContent').style.display = 'block';
 
-  document.getElementById('dp-customer').textContent = r.customer || '—';
-  document.getElementById('dp-manager').textContent  = r.manager  || '—';
+  const tv = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v || '—'; };
+
+  tv('dp-customer', r.customer);
+  tv('dp-manager',  r.manager);
 
   const sEl = document.getElementById('dp-status');
-  sEl.textContent  = r.status || '—';
-  sEl.className    = 'dp-h-value ' + (STATUS_COLOR[r.status] || '');
+  sEl.textContent = r.status || '—';
+  sEl.className   = 'dp-h-value ' + (STATUS_COLOR_MAP[normStatus(r.status)] || '');
 
-  document.getElementById('dp-watchRef').textContent = r.watchRef  || '—';
-  document.getElementById('dp-lugSize').textContent  = r.lugSize   || '—';
-  document.getElementById('dp-colorNum').textContent = r.colorNum  || '—';
-  document.getElementById('dp-strapLen').textContent = r.strapLen  || '—';
-  document.getElementById('dp-buckle').textContent   = r.buckle    || '—';
-  document.getElementById('dp-amount').textContent   = fmtAmt(r.amount);
+  tv('dp-watchRef',   r.watchRef);
+  tv('dp-alphaCode',  r.alphaCode);
+  tv('dp-linkSize',   r.linkSize);
+  tv('dp-strapLen',   r.strapLen);
+  tv('dp-buckle',     r.buckle);
+  tv('dp-clasp',      r.clasp);
+  tv('dp-stitchColor',r.stitchColor);
+  tv('dp-purpose',    r.purpose);
 
-  document.getElementById('dp-orderNum').textContent = r.orderNum  || '—';
-  document.getElementById('dp-strapRef').textContent = r.strapRef  || '—';
-  document.getElementById('dp-contact').textContent  = r.contact   || '—';
-  document.getElementById('dp-saleDate').textContent = r.saleDate  || '—';
+  tv('dp-orderNum',   r.orderNum);
+  tv('dp-strapRef',   r.strapRef);
+  tv('dp-colorNum',   r.colorNum);
+  document.getElementById('dp-amount').textContent = fmtAmt(r.amount);
+  tv('dp-contact',    r.contact);
+  tv('dp-saleDate',   r.saleDate);
 
   const instEl = document.getElementById('dp-instock');
   instEl.innerHTML = r.instock === '입고'
@@ -915,10 +975,8 @@ window.applyDate = function(nativeId, dispId) {
 };
 
 /* ── 모달 ── */
-window.openRegModal = function() {
-  editingId = null;
-  document.getElementById('regModalTitle').textContent = 'SP 오더 등록';
-  ['f-customer','f-watchRef','f-alphaCode','f-linkSize','f-stitchColor'].forEach(id => {
+function resetModal() {
+  ['f-customer','f-watchRef','f-alphaCode','f-linkSize','f-stitchColor','f-colorNum','f-amount','f-orderNum','f-strapRef'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
   const dn = document.getElementById('dn-f-date'); if (dn) dn.value = '';
@@ -929,8 +987,57 @@ window.openRegModal = function() {
   Object.keys(chipState).forEach(k => delete chipState[k]);
   document.getElementById('stitch-input-wrap').style.display = 'none';
   updateStrapSizes('');
+}
+
+window.openRegModal = function() {
+  editingId = null;
+  document.getElementById('regModalTitle').textContent = 'SP 오더 등록';
+  resetModal();
+  selectChip('status', '오더 대기');
   document.getElementById('regModal').classList.add('open');
 };
+
+window.openEditFromDetail = function() {
+  const r = allRecords.find(rec => rec.id === selectedId);
+  if (!r) return;
+  editingId = r.id;
+  document.getElementById('regModalTitle').textContent = 'SP 오더 수정';
+  resetModal();
+  const sv = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
+  sv('f-customer',  r.customer);
+  sv('f-watchRef',  r.watchRef);
+  sv('f-alphaCode', r.alphaCode);
+  sv('f-linkSize',  r.linkSize);
+  sv('f-colorNum',  r.colorNum);
+  sv('f-amount',    r.amount ? Number(String(r.amount).replace(/,/g,'')).toLocaleString('ko-KR') : '');
+  sv('f-orderNum',  r.orderNum);
+  sv('f-strapRef',  r.strapRef);
+  if (r.date) { document.getElementById('dn-f-date').value = r.date; applyDate('dn-f-date','f-date'); }
+  document.getElementById('f-orderType').value = r.orderType || '스트랩';
+  document.getElementById('f-manager').value   = r.manager || '임영지';
+  if (r.buckle)      selectChip('buckle',      r.buckle);
+  if (r.strapLen)    selectChip('strapLen',    r.strapLen);
+  if (r.clasp)       selectChip('clasp',       r.clasp);
+  if (r.stitchColor) {
+    const isCustom = !['톤온톤'].includes(r.stitchColor);
+    selectChip('stitchColor', isCustom ? '직접 입력' : r.stitchColor);
+    if (isCustom) sv('f-stitchColor', r.stitchColor);
+  }
+  if (r.purpose)     selectChip('purpose',     r.purpose);
+  selectChip('status', r.status || '오더 대기');
+  document.getElementById('regModal').classList.add('open');
+};
+
+window.deleteFromDetail = async function() {
+  const r = allRecords.find(rec => rec.id === selectedId);
+  if (!r) return;
+  if (!confirm(`'${r.customer}' 고객의 SP 오더를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) return;
+  try {
+    await deleteDoc(doc(db, 'sp_orders', r.id));
+    clearDetail();
+  } catch(e) { alert('삭제 실패: ' + e.message); }
+};
+
 window.closeRegModal = function() {
   document.getElementById('regModal').classList.remove('open');
   editingId = null;
@@ -952,21 +1059,26 @@ window.saveOrder = async function() {
   const stitchVal = stitchSel === '직접 입력'
     ? (document.getElementById('f-stitchColor').value.trim() || '직접 입력')
     : stitchSel;
+  const g = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
   const data = {
     yearMonth:   ym,
     date:        dateVal,
-    orderType:   document.getElementById('f-orderType').value,
+    orderType:   g('f-orderType'),
     customer,
-    manager:     document.getElementById('f-manager').value,
-    watchRef:    document.getElementById('f-watchRef').value.trim(),
-    alphaCode:   document.getElementById('f-alphaCode').value.trim(),
-    linkSize:    document.getElementById('f-linkSize').value.trim(),
-    buckle:      chipState['buckle']    || '',
-    strapLen:    chipState['strapLen']  || '',
-    clasp:       chipState['clasp']     || '',
+    manager:     g('f-manager'),
+    watchRef:    g('f-watchRef'),
+    alphaCode:   g('f-alphaCode'),
+    linkSize:    g('f-linkSize'),
+    buckle:      chipState['buckle']      || '',
+    strapLen:    chipState['strapLen']    || '',
+    clasp:       chipState['clasp']       || '',
     stitchColor: stitchVal,
-    purpose:     chipState['purpose']   || '',
-    status:      '오더대기',
+    purpose:     chipState['purpose']     || '',
+    colorNum:    g('f-colorNum'),
+    amount:      g('f-amount').replace(/,/g,''),
+    orderNum:    g('f-orderNum'),
+    strapRef:    g('f-strapRef'),
+    status:      chipState['status']      || '오더 대기',
     instock:     '미입고',
     contact:     '미완료',
     memo:        '',
