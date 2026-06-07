@@ -248,16 +248,16 @@
 
     /* 접수내용·견적 */
     .req-2col { display:grid;grid-template-columns:1fr 1fr;gap:18px; }
-    .req-col-hdr { font-size:12px;font-weight:800;color:#374151;margin-bottom:8px; }
+    .req-col-hdr { font-size:12.5px;font-weight:800;color:#374151;margin-bottom:6px;line-height:1.5; }
+    /* req-2col 안의 d-bullet: text가 헤더 첫 글자 아래 정렬되도록 padding-left 사용 */
+    .req-2col .d-bullet { list-style:disc;padding:0 0 0 14px;margin:0;color:#374151;font-size:13px;font-weight:600;line-height:1.9; }
     .d-bullet { padding:0;margin:0 0 0 16px;color:#374151;font-size:13.5px;font-weight:600;line-height:1.9; }
     .d-text { color:#374151;font-size:13.5px;font-weight:600;line-height:1.7;margin:0; }
 
     /* 컨택 로그 */
-    .clog-list { display:flex;flex-direction:column;gap:5px;margin-bottom:13px; }
+    .clog-list { display:flex;flex-direction:column;gap:5px; }
     .clog-row { font-size:13px;font-weight:600;color:#111827;line-height:1.7;padding:2px 0; }
     .clog-empty { font-size:13px;color:#9ca3af; }
-    .snote-label { font-size:11px;font-weight:800;color:#9ca3af;letter-spacing:.3px;margin-bottom:6px; }
-    .snote-area { background:#f9fafb;border-radius:7px;padding:10px 14px;font-size:13px;font-weight:600;color:#374151;line-height:1.6;border:1px solid #f0f0f0;min-height:36px; }
 
     /* 타임라인 */
     .tl-wrap { position:relative;padding-left:26px; }
@@ -568,11 +568,11 @@
           <div class="d-card-title">접수 내용</div>
           <div class="req-2col">
             <div>
-              <div class="req-col-hdr">● 고객 의뢰 내용</div>
+              <div class="req-col-hdr">• 고객 의뢰 내용</div>
               <ul class="d-bullet" id="dc-request-list"><li style="color:#9ca3af;">내용 없음</li></ul>
             </div>
             <div>
-              <div class="req-col-hdr">● 매장 확인사항</div>
+              <div class="req-col-hdr">• 매장 확인사항</div>
               <ul class="d-bullet" id="dc-storeNote-list"><li style="color:#9ca3af;">내용 없음</li></ul>
             </div>
           </div>
@@ -590,8 +590,6 @@
           <div class="clog-list" id="dc-contactLog-list">
             <div class="clog-empty">컨택 내역 없음</div>
           </div>
-          <div class="snote-label">특이사항</div>
-          <div class="snote-area" id="dc-memo">-</div>
         </div>
       </div>
 
@@ -1097,13 +1095,13 @@ function openDetailModal(r) {
   if (r.update) { updateEl.textContent = r.update; updateEl.style.color = ''; }
   else { updateEl.textContent = '견적 내용이 없습니다.'; updateEl.style.color = '#9ca3af'; }
 
-  // 컨택 로그
+  // 컨택 로그 + 특이사항 통합 표시
   const clogLines = (r.contactLog || '').split('\n').filter(l => l.trim());
-  document.getElementById('dc-contactLog-list').innerHTML = clogLines.length
-    ? clogLines.map(l => `<div class="clog-row">${l}</div>`).join('')
+  const memoLines = (r.memo || '').split('\n').filter(l => l.trim());
+  const allClogLines = [...clogLines, ...memoLines];
+  document.getElementById('dc-contactLog-list').innerHTML = allClogLines.length
+    ? allClogLines.map(l => `<div class="clog-row">${l}</div>`).join('')
     : '<div class="clog-empty">컨택 내역 없음</div>';
-
-  tv('dc-memo', r.memo || '특이사항 없음');
 
   // 타임라인
   const STEPS = [
