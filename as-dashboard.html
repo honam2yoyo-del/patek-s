@@ -181,9 +181,11 @@
     input[type="date"].form-input { cursor:pointer; }
     input[type="date"].form-input::-webkit-calendar-picker-indicator { cursor:pointer;opacity:.6; }
     input[type="date"].form-input::-webkit-calendar-picker-indicator:hover { opacity:1; }
-    /* 요일 표시 */
-    .day-dow { font-size:11.5px;font-weight:900;min-height:15px;margin-top:2px;letter-spacing:.2px; }
-    .day-dow.wd { color:#374151; }
+    /* 날짜 + 요일 가로 배치 */
+    .date-row { display:flex;align-items:center;gap:6px; }
+    .date-row input[type="date"] { flex:1;min-width:0; }
+    .day-dow { font-size:12px;font-weight:900;white-space:nowrap;flex-shrink:0; }
+    .day-dow.wd  { color:#374151; }
     .day-dow.sat { color:#2563eb; }
     .day-dow.sun { color:#dc2626; }
 
@@ -442,8 +444,10 @@
         <!-- 접수일 -->
         <div class="fg-item">
           <label class="fg-label">접수일</label>
-          <input type="date" class="form-input" id="f-date" onchange="updateDayOfWeek(this,'dow-f-date')"/>
-          <span class="day-dow" id="dow-f-date"></span>
+          <div class="date-row">
+            <input type="date" class="form-input" id="f-date" onchange="updateDayOfWeek(this,'dow-f-date')"/>
+            <span class="day-dow" id="dow-f-date"></span>
+          </div>
         </div>
         <!-- A/S 접수 타입 -->
         <div class="fg-item">
@@ -508,8 +512,10 @@
         </div>
         <div class="fg-item">
           <label class="fg-label">구매일</label>
-          <input type="date" class="form-input" id="f-purchase-date" onchange="updateDayOfWeek(this,'dow-f-purchase-date')"/>
-          <span class="day-dow" id="dow-f-purchase-date"></span>
+          <div class="date-row">
+            <input type="date" class="form-input" id="f-purchase-date" onchange="updateDayOfWeek(this,'dow-f-purchase-date')"/>
+            <span class="day-dow" id="dow-f-purchase-date"></span>
+          </div>
         </div>
       </div>
     </div>
@@ -539,18 +545,24 @@
         </div>
         <div class="fg-item">
           <label class="fg-label">스위스 수리 동의일</label>
-          <input type="date" class="form-input" id="f-swiss-agree" onchange="updateDayOfWeek(this,'dow-f-swiss-agree')"/>
-          <span class="day-dow" id="dow-f-swiss-agree"></span>
+          <div class="date-row">
+            <input type="date" class="form-input" id="f-swiss-agree" onchange="updateDayOfWeek(this,'dow-f-swiss-agree')"/>
+            <span class="day-dow" id="dow-f-swiss-agree"></span>
+          </div>
         </div>
         <div class="fg-item">
           <label class="fg-label">수리 완료일</label>
-          <input type="date" class="form-input" id="f-repair-done" onchange="updateDayOfWeek(this,'dow-f-repair-done')"/>
-          <span class="day-dow" id="dow-f-repair-done"></span>
+          <div class="date-row">
+            <input type="date" class="form-input" id="f-repair-done" onchange="updateDayOfWeek(this,'dow-f-repair-done')"/>
+            <span class="day-dow" id="dow-f-repair-done"></span>
+          </div>
         </div>
         <div class="fg-item">
           <label class="fg-label">전달 완료일</label>
-          <input type="date" class="form-input" id="f-pickup" onchange="updateDayOfWeek(this,'dow-f-pickup')"/>
-          <span class="day-dow" id="dow-f-pickup"></span>
+          <div class="date-row">
+            <input type="date" class="form-input" id="f-pickup" onchange="updateDayOfWeek(this,'dow-f-pickup')"/>
+            <span class="day-dow" id="dow-f-pickup"></span>
+          </div>
         </div>
       </div>
     </div>
@@ -930,7 +942,7 @@ window.updateDayOfWeek = function(inputEl, dowId) {
   if (!val) { el.textContent = ''; el.className = 'day-dow'; return; }
   const date = new Date(val + 'T00:00:00');
   const day  = date.getDay();
-  el.textContent = DAYS_KO[day] + '요일';
+  el.textContent = '(' + DAYS_KO[day] + ')';
   el.className   = 'day-dow ' + (day === 0 ? 'sun' : day === 6 ? 'sat' : 'wd');
 };
 function refreshAllDayOfWeek() {
