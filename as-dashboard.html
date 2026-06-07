@@ -150,19 +150,45 @@
     .main { transition:margin-left .25s ease; }
     .app.sidebar-collapsed .main { margin-left:52px; }
 
-    /* ── 모달 (A/S 등록 / 공지) ── */
+    /* ── 모달 공통 ── */
     .modal-backdrop { display:none;position:fixed;inset:0;background:rgba(15,23,42,.4);z-index:200;justify-content:center;align-items:center; }
     .modal-backdrop.open { display:flex; }
-    .modal { background:#fff;border-radius:12px;box-shadow:0 20px 60px rgba(15,23,42,.25);padding:26px 28px;width:520px;max-width:96vw;max-height:90vh;overflow-y:auto; }
-    .modal-title { font-size:20px;font-weight:900;margin-bottom:18px; }
+    .modal { background:#fff;border-radius:14px;box-shadow:0 24px 64px rgba(15,23,42,.28);padding:28px 30px;width:740px;max-width:96vw;max-height:92vh;overflow-y:auto; }
+    .modal-header { display:flex;justify-content:space-between;align-items:center;margin-bottom:22px; }
+    .modal-title { font-size:20px;font-weight:900;color:#111827; }
+    .modal-close-btn { width:30px;height:30px;border:none;background:none;cursor:pointer;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#6b7280;font-size:18px;line-height:1; }
+    .modal-close-btn:hover { background:#f3f4f6;color:#111827; }
+
+    /* ── 모달 섹션 ── */
+    .form-section { margin-bottom:20px; }
+    .form-section:last-of-type { margin-bottom:0; }
+    .fs-title { display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:900;color:#374151;margin-bottom:11px;padding-bottom:9px;border-bottom:2px solid #f0f4fa; }
+    .fs-num { width:20px;height:20px;background:#075bd8;color:#fff;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:900;flex-shrink:0; }
+
+    /* ── 폼 그리드 ── */
+    .fg2 { display:grid;grid-template-columns:1fr 1fr;gap:10px 18px; }
+    .fg3 { display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px 18px; }
+    .fg-item { display:flex;flex-direction:column;gap:5px; }
+    .fg-label { font-size:12px;font-weight:800;color:#374151; }
+    .req { color:#ef4444;margin-left:1px; }
+    .form-input { height:38px;border:1px solid #d9e0ea;border-radius:7px;padding:0 12px;font-size:13.5px;font-weight:600;outline:none;width:100%;font-family:inherit; }
+    .form-input:focus { border-color:#075bd8;box-shadow:0 0 0 3px #075bd818; }
+    .form-select { height:38px;border:1px solid #d9e0ea;border-radius:7px;padding:0 10px;font-size:13.5px;font-weight:600;outline:none;width:100%;background:#fff;font-family:inherit; }
+    .form-select:focus { border-color:#075bd8; }
+    .form-textarea { border:1px solid #d9e0ea;border-radius:7px;padding:9px 12px;font-size:13px;font-weight:600;outline:none;width:100%;min-height:72px;resize:vertical;font-family:inherit;line-height:1.55; }
+    .form-textarea:focus { border-color:#075bd8;box-shadow:0 0 0 3px #075bd818; }
+    .form-input.smart-date { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='2' ry='2'/%3E%3Cline x1='16' y1='2' x2='16' y2='6'/%3E%3Cline x1='8' y1='2' x2='8' y2='6'/%3E%3Cline x1='3' y1='10' x2='21' y2='10'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:32px; }
+    .form-input.smart-date.parsed { border-color:#16a34a;background-color:#f0fdf4; }
+
+    /* ── 모달 액션 ── */
+    .modal-actions { display:flex;justify-content:flex-end;gap:10px;margin-top:22px;padding-top:18px;border-top:1px solid #f0f4fa; }
+    .btn-cancel { height:38px;border:1px solid #d9e0ea;border-radius:7px;background:#fff;padding:0 20px;font-size:14px;font-weight:700;cursor:pointer; }
+    .btn-save   { height:38px;border:none;border-radius:7px;background:#075bd8;color:#fff;padding:0 22px;font-size:14px;font-weight:700;cursor:pointer; }
+    .btn-save:hover { background:#0550b3; }
+
+    /* 옛날 form-row (공지 모달 등 호환) */
     .form-row { display:grid;grid-template-columns:110px 1fr;align-items:center;gap:10px;margin-bottom:12px;font-size:14px;font-weight:700; }
     .form-row label { color:#374151; }
-    .form-input { height:38px;border:1px solid #d9e0ea;border-radius:6px;padding:0 12px;font-size:14px;font-weight:600;outline:none;width:100%; }
-    .form-input:focus { border-color:#075bd8; }
-    .form-select { height:38px;border:1px solid #d9e0ea;border-radius:6px;padding:0 10px;font-size:14px;font-weight:600;outline:none;width:100%;background:#fff; }
-    .modal-actions { display:flex;justify-content:flex-end;gap:10px;margin-top:20px; }
-    .btn-cancel { height:38px;border:1px solid #d9e0ea;border-radius:7px;background:#fff;padding:0 20px;font-size:14px;font-weight:700;cursor:pointer; }
-    .btn-save   { height:38px;border:none;border-radius:7px;background:#075bd8;color:#fff;padding:0 20px;font-size:14px;font-weight:700;cursor:pointer; }
   </style>
 </head>
 <body>
@@ -367,36 +393,135 @@
 <!-- A/S 등록 모달 -->
 <div class="modal-backdrop" id="regModal">
   <div class="modal">
-    <div class="modal-title">A/S 등록</div>
-    <div class="form-row"><label>타입</label>
-      <select class="form-select" id="f-type">
-        <option value="에비뉴엘">에비뉴엘</option>
-        <option value="센텀">센텀</option>
-      </select>
+
+    <!-- 모달 헤더 -->
+    <div class="modal-header">
+      <span class="modal-title" id="regModalTitle">A/S 등록</span>
+      <button class="modal-close-btn" onclick="closeRegModal()">✕</button>
     </div>
-    <div class="form-row"><label>접수일</label><input class="form-input" id="f-date" type="date"/></div>
-    <div class="form-row"><label>고객명</label><input class="form-input" id="f-customer" type="text" placeholder="고객명 입력"/></div>
-    <div class="form-row"><label>Ref.</label><input class="form-input" id="f-ref" type="text" placeholder="REF. 번호"/></div>
-    <div class="form-row"><label>Serial</label><input class="form-input" id="f-serial" type="text" placeholder="시리얼 번호"/></div>
-    <div class="form-row"><label>비용</label><input class="form-input" id="f-cost" type="text" inputmode="numeric" placeholder="0" oninput="fmtNum(this)"/></div>
-    <div class="form-row"><label>상태</label>
-      <select class="form-select" id="f-status">
-        <option value="접수 완료">접수 완료</option>
-        <option value="견적 대기">견적 대기</option>
-        <option value="수리 중">수리 중</option>
-        <option value="수리 완료">수리 완료</option>
-        <option value="전달 완료">전달 완료</option>
-      </select>
+
+    <!-- ① 기본 정보 -->
+    <div class="form-section">
+      <div class="fs-title"><span class="fs-num">1</span> 기본 정보</div>
+      <div class="fg3">
+        <div class="fg-item">
+          <label class="fg-label">A/S 접수 타입</label>
+          <select class="form-select" id="f-type">
+            <option value="IE">IE</option>
+            <option value="SG">SG</option>
+            <option value="RG">RG</option>
+            <option value="일반">일반</option>
+          </select>
+        </div>
+        <div class="fg-item">
+          <label class="fg-label">담당 직원</label>
+          <input class="form-input" id="f-staff" type="text" placeholder="담당 직원"/>
+        </div>
+        <div class="fg-item">
+          <label class="fg-label">상태</label>
+          <select class="form-select" id="f-status">
+            <option value="접수 완료">접수 완료</option>
+            <option value="견적 대기">견적 대기</option>
+            <option value="수리 중">수리 중</option>
+            <option value="수리 완료">수리 완료</option>
+            <option value="전달 완료">전달 완료</option>
+          </select>
+        </div>
+      </div>
     </div>
-    <div class="form-row"><label>입고일</label><input class="form-input" id="f-indate" type="date"/></div>
-    <div class="form-row"><label>도착연락</label>
-      <select class="form-select" id="f-arrival">
-        <option value="미완료">미완료</option>
-        <option value="완료">완료</option>
-      </select>
+
+    <!-- ② 고객 / 제품 정보 -->
+    <div class="form-section">
+      <div class="fs-title"><span class="fs-num">2</span> 고객 / 제품 정보</div>
+      <div class="fg2">
+        <div class="fg-item">
+          <label class="fg-label">고객명<span class="req">*</span></label>
+          <input class="form-input" id="f-customer" type="text" placeholder="고객명 입력"/>
+        </div>
+        <div class="fg-item">
+          <label class="fg-label">영문명</label>
+          <input class="form-input" id="f-customer-en" type="text" placeholder="English Name"/>
+        </div>
+        <div class="fg-item">
+          <label class="fg-label">Ref.<span class="req">*</span></label>
+          <input class="form-input" id="f-ref" type="text" placeholder="REF. 번호"/>
+        </div>
+        <div class="fg-item">
+          <label class="fg-label">Serial<span class="req">*</span></label>
+          <input class="form-input" id="f-serial" type="text" placeholder="시리얼 번호"/>
+        </div>
+        <div class="fg-item">
+          <label class="fg-label">구매처</label>
+          <input class="form-input" id="f-purchase-place" type="text" placeholder="구매처 입력"/>
+        </div>
+        <div class="fg-item">
+          <label class="fg-label">구매일</label>
+          <input class="form-input smart-date" id="f-purchase-date" type="text" placeholder="예: 20250607 또는 25.6.7"/>
+        </div>
+      </div>
     </div>
-    <div class="form-row"><label>수령일</label><input class="form-input" id="f-pickup" type="date"/></div>
-    <div class="form-row"><label>메모</label><input class="form-input" id="f-memo" type="text" placeholder="메모 입력"/></div>
+
+    <!-- ③ 접수 내용 -->
+    <div class="form-section">
+      <div class="fs-title"><span class="fs-num">3</span> 접수 내용</div>
+      <div class="fg-item" style="margin-bottom:10px;">
+        <label class="fg-label">접수일</label>
+        <input class="form-input smart-date" id="f-date" type="text" placeholder="예: 20250607 또는 25.6.7" style="max-width:260px;"/>
+      </div>
+      <div class="fg2">
+        <div class="fg-item">
+          <label class="fg-label">고객 의뢰 내용</label>
+          <textarea class="form-textarea" id="f-request" placeholder="고객이 의뢰한 내용을 입력하세요..."></textarea>
+        </div>
+        <div class="fg-item">
+          <label class="fg-label">매장 확인사항</label>
+          <textarea class="form-textarea" id="f-store-note" placeholder="매장에서 확인한 사항을 입력하세요..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- ④ 수리 / 진행 정보 -->
+    <div class="form-section">
+      <div class="fs-title"><span class="fs-num">4</span> 수리 / 진행 정보</div>
+      <div class="fg2">
+        <div class="fg-item">
+          <label class="fg-label">수리 비용</label>
+          <input class="form-input" id="f-cost" type="text" inputmode="numeric" placeholder="0" oninput="fmtNum(this)"/>
+        </div>
+        <div class="fg-item">
+          <label class="fg-label">스위스 수리 동의일</label>
+          <input class="form-input smart-date" id="f-swiss-agree" type="text" placeholder="예: 20250607"/>
+        </div>
+        <div class="fg-item">
+          <label class="fg-label">수리 완료일</label>
+          <input class="form-input smart-date" id="f-repair-done" type="text" placeholder="예: 20250607"/>
+        </div>
+        <div class="fg-item">
+          <label class="fg-label">전달 완료일</label>
+          <input class="form-input smart-date" id="f-pickup" type="text" placeholder="예: 20250607"/>
+        </div>
+      </div>
+    </div>
+
+    <!-- ⑤ 업데이트 / 메모 -->
+    <div class="form-section">
+      <div class="fs-title"><span class="fs-num">5</span> 업데이트 / 메모</div>
+      <div class="fg3">
+        <div class="fg-item">
+          <label class="fg-label">중간 업데이트</label>
+          <textarea class="form-textarea" id="f-update" placeholder="중간 진행 상황을 입력하세요..."></textarea>
+        </div>
+        <div class="fg-item">
+          <label class="fg-label">고객 컨택 내용</label>
+          <textarea class="form-textarea" id="f-contact-log" placeholder="고객과의 연락 내용을 입력하세요..."></textarea>
+        </div>
+        <div class="fg-item">
+          <label class="fg-label">특이사항</label>
+          <textarea class="form-textarea" id="f-memo" placeholder="특이사항을 입력하세요..."></textarea>
+        </div>
+      </div>
+    </div>
+
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeRegModal()">취소</button>
       <button class="btn-save" onclick="saveRecord()">저장</button>
@@ -430,9 +555,13 @@ document.getElementById('login-btn').onclick = async () => {
 };
 document.getElementById('logout-btn').onclick = () => signOut(auth);
 
+let currentUser = null;
 onAuthStateChanged(auth, user => {
   document.getElementById('login-overlay').style.display = user ? 'none' : 'flex';
-  if (user) initPage();
+  if (user) {
+    currentUser = user;
+    initPage();
+  }
 });
 
 /* ── 데이터 & 상태 ── */
@@ -628,56 +757,96 @@ document.getElementById('regModal').addEventListener('click', e => {
 
 function openRegModal() {
   editingId = null;
-  ['type','date','customer','ref','serial','cost','status','indate','arrival','pickup','memo'].forEach(k => {
-    const el = document.getElementById('f-'+k);
-    if (el) el.value = k === 'status' ? '접수 완료' : k === 'arrival' ? '미완료' : k === 'type' ? '에비뉴엘' : '';
+  document.getElementById('regModalTitle').textContent = 'A/S 등록';
+  const allFields = ['f-type','f-staff','f-status','f-customer','f-customer-en','f-ref','f-serial',
+    'f-purchase-place','f-purchase-date','f-date','f-request','f-store-note',
+    'f-cost','f-swiss-agree','f-repair-done','f-pickup','f-update','f-contact-log','f-memo'];
+  allFields.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (el.tagName === 'SELECT') {
+      if (id === 'f-status') el.value = '접수 완료';
+      else if (id === 'f-type') el.value = 'IE';
+    } else {
+      el.value = '';
+    }
+    el.classList.remove('parsed');
   });
-  const today = new Date().toISOString().split('T')[0];
-  document.getElementById('f-date').value = today;
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+  document.getElementById('f-date').value = todayStr;
+  document.getElementById('f-date').classList.add('parsed');
+  if (currentUser) {
+    document.getElementById('f-staff').value = currentUser.displayName || currentUser.email || '';
+  }
   document.getElementById('regModal').classList.add('open');
 }
 
 function openEditModal(r) {
   editingId = r.id;
-  document.getElementById('f-type').value    = r.type    || '에비뉴엘';
-  document.getElementById('f-date').value    = r.date    || '';
-  document.getElementById('f-customer').value= r.customer|| '';
-  document.getElementById('f-ref').value     = r.ref     || '';
-  document.getElementById('f-serial').value  = r.serial  || '';
-  document.getElementById('f-cost').value    = r.cost    ? Number(String(r.cost).replace(/,/g,'')).toLocaleString('ko-KR') : '';
-  document.getElementById('f-status').value  = r.status  || '접수 완료';
-  document.getElementById('f-indate').value  = r.indate  || '';
-  document.getElementById('f-arrival').value = r.arrival || '미완료';
-  document.getElementById('f-pickup').value  = r.pickup  || '';
-  document.getElementById('f-memo').value    = r.memo    || '';
+  document.getElementById('regModalTitle').textContent = 'A/S 수정';
+  const set = (id, val) => { const el = document.getElementById(id); if (el) { el.value = val||''; if (val) el.classList.add('parsed'); else el.classList.remove('parsed'); } };
+  document.getElementById('f-type').value   = r.type   || 'IE';
+  document.getElementById('f-status').value = r.status || '접수 완료';
+  set('f-staff',          r.staff);
+  set('f-customer',       r.customer);
+  set('f-customer-en',    r.customerEn);
+  set('f-ref',            r.ref);
+  set('f-serial',         r.serial);
+  set('f-purchase-place', r.purchasePlace);
+  set('f-purchase-date',  r.purchaseDate);
+  set('f-date',           r.date);
+  set('f-request',        r.request);
+  set('f-store-note',     r.storeNote);
+  const costEl = document.getElementById('f-cost');
+  costEl.value = r.cost ? Number(String(r.cost).replace(/,/g,'')).toLocaleString('ko-KR') : '';
+  set('f-swiss-agree',    r.swissAgree);
+  set('f-repair-done',    r.repairDone);
+  set('f-pickup',         r.pickup);
+  set('f-update',         r.update);
+  set('f-contact-log',    r.contactLog);
+  set('f-memo',           r.memo);
   document.getElementById('regModal').classList.add('open');
 }
 
 window.saveRecord = async function() {
-  const dateVal = document.getElementById('f-date').value;
-  if (!dateVal) { alert('접수일을 입력해주세요.'); return; }
-  const ym = dateVal.slice(0,7);
+  const customer = document.getElementById('f-customer').value.trim();
+  const ref      = document.getElementById('f-ref').value.trim();
+  const serial   = document.getElementById('f-serial').value.trim();
+  if (!customer) { alert('고객명은 필수 항목입니다.'); document.getElementById('f-customer').focus(); return; }
+  if (!ref)      { alert('Ref.는 필수 항목입니다.'); document.getElementById('f-ref').focus(); return; }
+  if (!serial)   { alert('Serial은 필수 항목입니다.'); document.getElementById('f-serial').focus(); return; }
+
+  const dateVal = document.getElementById('f-date').value.trim();
+  const ym = dateVal ? dateVal.slice(0,7) : `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}`;
   const costRaw = document.getElementById('f-cost').value.replace(/,/g,'');
+
+  const g = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
   const data = {
-    yearMonth: ym,
-    type:     document.getElementById('f-type').value,
-    date:     dateVal,
-    customer: document.getElementById('f-customer').value,
-    ref:      document.getElementById('f-ref').value,
-    serial:   document.getElementById('f-serial').value,
-    cost:     costRaw ? Number(costRaw) : null,
-    status:   document.getElementById('f-status').value,
-    indate:   document.getElementById('f-indate').value,
-    arrival:  document.getElementById('f-arrival').value,
-    pickup:   document.getElementById('f-pickup').value,
-    memo:     document.getElementById('f-memo').value,
+    yearMonth:     ym,
+    type:          g('f-type'),
+    staff:         g('f-staff'),
+    status:        g('f-status'),
+    customer,
+    customerEn:    g('f-customer-en'),
+    ref,
+    serial,
+    purchasePlace: g('f-purchase-place'),
+    purchaseDate:  g('f-purchase-date'),
+    date:          dateVal,
+    request:       g('f-request'),
+    storeNote:     g('f-store-note'),
+    cost:          costRaw ? Number(costRaw) : null,
+    swissAgree:    g('f-swiss-agree'),
+    repairDone:    g('f-repair-done'),
+    pickup:        g('f-pickup'),
+    update:        g('f-update'),
+    contactLog:    g('f-contact-log'),
+    memo:          g('f-memo'),
   };
   try {
-    if (editingId) {
-      await updateDoc(doc(db, 'as_records', editingId), data);
-    } else {
-      await addDoc(collection(db, 'as_records'), data);
-    }
+    if (editingId) { await updateDoc(doc(db, 'as_records', editingId), data); }
+    else           { await addDoc(collection(db, 'as_records'), data); }
     window.closeRegModal();
   } catch(e) { alert('저장 실패: ' + e.message); }
 };
@@ -687,6 +856,56 @@ window.fmtNum = function(el) {
   const raw = String(el.value).replace(/[^0-9]/g,'');
   el.value = raw !== '' ? Number(raw).toLocaleString('ko-KR') : '';
 };
+
+/* ── 스마트 날짜 파싱 ── */
+function parseSmartDate(raw) {
+  if (!raw) return '';
+  const trimmed = raw.trim();
+  const digits  = trimmed.replace(/\D/g, '');
+
+  let y, m, d;
+
+  if (digits.length === 8) {                         // YYYYMMDD
+    y = digits.slice(0,4); m = digits.slice(4,6); d = digits.slice(6,8);
+  } else if (digits.length === 6) {                  // YYMMDD
+    y = '20'+digits.slice(0,2); m = digits.slice(2,4); d = digits.slice(4,6);
+  } else if (digits.length === 4) {                  // MMDD → 올해
+    y = String(new Date().getFullYear()); m = digits.slice(0,2); d = digits.slice(2,4);
+  } else {
+    // 구분자 있는 포맷 (예: 25.6.7 / 2025/6/7 / 6-7 등)
+    const parts = trimmed.split(/[\.\-\/\s]+/).filter(Boolean);
+    if (parts.length === 3) {
+      const [p0,p1,p2] = parts;
+      y = p0.length <= 2 ? '20'+p0.padStart(2,'0') : p0;
+      m = p1.padStart(2,'0');
+      d = p2.padStart(2,'0');
+    } else if (parts.length === 2) {
+      y = String(new Date().getFullYear());
+      m = parts[0].padStart(2,'0');
+      d = parts[1].padStart(2,'0');
+    } else {
+      return trimmed;
+    }
+  }
+
+  const date = new Date(`${y}-${m}-${d}`);
+  if (isNaN(date.getTime()) || date.getMonth()+1 !== Number(m)) return trimmed;
+  return `${y}-${m}-${d}`;
+}
+
+function attachSmartDate(el) {
+  el.addEventListener('blur', () => {
+    const parsed = parseSmartDate(el.value);
+    if (parsed && parsed !== el.value && /^\d{4}-\d{2}-\d{2}$/.test(parsed)) {
+      el.value = parsed;
+      el.classList.add('parsed');
+    } else if (!el.value) {
+      el.classList.remove('parsed');
+    }
+  });
+  el.addEventListener('input', () => el.classList.remove('parsed'));
+}
+document.querySelectorAll('.smart-date').forEach(attachSmartDate);
 
 /* ── 공지 버튼 (placeholder) ── */
 document.getElementById('noticeBtn').onclick = () => alert('A/S 공지 기능은 준비 중입니다.');
