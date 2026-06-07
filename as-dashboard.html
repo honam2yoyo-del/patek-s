@@ -189,6 +189,34 @@
     /* 옛날 form-row (공지 모달 등 호환) */
     .form-row { display:grid;grid-template-columns:110px 1fr;align-items:center;gap:10px;margin-bottom:12px;font-size:14px;font-weight:700; }
     .form-row label { color:#374151; }
+
+    /* ── 4열 그리드 ── */
+    .fg4 { display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px 16px; }
+
+    /* ── 날짜 입력 + 달력 아이콘 ── */
+    .date-wrap { display:flex; }
+    .date-wrap .form-input { flex:1;border-radius:7px 0 0 7px;border-right:none; }
+    .date-wrap .form-input:focus { border-right:1px solid #075bd8;position:relative;z-index:1; }
+    .date-wrap .form-input.parsed { border-right:1px solid #16a34a; }
+    .date-cal-wrap { position:relative;width:34px;flex-shrink:0; }
+    .date-cal-icon { width:34px;height:38px;border:1px solid #d9e0ea;border-radius:0 7px 7px 0;background:#f9fafb;display:flex;align-items:center;justify-content:center;color:#6b7280;pointer-events:none; }
+    .date-cal-wrap:hover .date-cal-icon { background:#eff6ff;color:#075bd8;border-color:#9bbcff; }
+    .date-picker-overlay { position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;z-index:2;border:none; }
+
+    /* ── 커스텀 상태 드롭다운 ── */
+    .cs-wrap { position:relative;width:100%; }
+    .cs-btn { display:flex;align-items:center;gap:7px;height:38px;border:1px solid #d9e0ea;border-radius:7px;padding:0 10px 0 12px;background:#fff;cursor:pointer;width:100%;font-size:13.5px;font-weight:600;color:#111827;user-select:none; }
+    .cs-btn:hover { border-color:#9bbcff; }
+    .cs-btn.open { border-color:#075bd8;box-shadow:0 0 0 3px #075bd818; }
+    .cs-dot { width:9px;height:9px;border-radius:50%;flex-shrink:0; }
+    .cs-label { flex:1;text-align:left; }
+    .cs-arrow { font-size:9px;color:#9ca3af;transition:transform .15s; }
+    .cs-btn.open .cs-arrow { transform:rotate(180deg); }
+    .cs-dropdown { position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1px solid #d9e0ea;border-radius:8px;box-shadow:0 8px 28px rgba(15,23,42,.14);z-index:1000;overflow:hidden;display:none; }
+    .cs-dropdown.open { display:block; }
+    .cs-opt { display:flex;align-items:center;gap:8px;padding:9px 12px;cursor:pointer;font-size:13px;font-weight:600;color:#111827;transition:background .1s; }
+    .cs-opt:hover { background:#f0f6ff; }
+    .cs-opt.selected { background:#eff6ff; }
   </style>
 </head>
 <body>
@@ -403,9 +431,21 @@
     <!-- ① 기본 정보 -->
     <div class="form-section">
       <div class="fs-title"><span class="fs-num">1</span> 기본 정보</div>
-      <div class="fg3">
+      <div class="fg4">
+        <!-- 접수일 -->
         <div class="fg-item">
-          <label class="fg-label">A/S 접수 타입</label>
+          <label class="fg-label">접수일</label>
+          <div class="date-wrap">
+            <input class="form-input smart-date" id="f-date" type="text"/>
+            <div class="date-cal-wrap">
+              <div class="date-cal-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+              <input type="date" class="date-picker-overlay" id="dp-f-date" onchange="syncDatePicker('dp-f-date','f-date')"/>
+            </div>
+          </div>
+        </div>
+        <!-- A/S 접수 타입 -->
+        <div class="fg-item">
+          <label class="fg-label">A/S 접수 타입<span class="req">*</span></label>
           <select class="form-select" id="f-type">
             <option value="IE">IE</option>
             <option value="SG">SG</option>
@@ -413,19 +453,29 @@
             <option value="일반">일반</option>
           </select>
         </div>
+        <!-- 담당 직원 -->
         <div class="fg-item">
           <label class="fg-label">담당 직원</label>
-          <input class="form-input" id="f-staff" type="text" placeholder="담당 직원"/>
+          <select class="form-select" id="f-staff"></select>
         </div>
+        <!-- 상태 (커스텀 드롭다운) -->
         <div class="fg-item">
           <label class="fg-label">상태</label>
-          <select class="form-select" id="f-status">
-            <option value="접수 완료">접수 완료</option>
-            <option value="견적 대기">견적 대기</option>
-            <option value="수리 중">수리 중</option>
-            <option value="수리 완료">수리 완료</option>
-            <option value="전달 완료">전달 완료</option>
-          </select>
+          <div class="cs-wrap" id="statusWrap">
+            <div class="cs-btn" id="csBtn" onclick="toggleStatusDropdown()">
+              <span class="cs-dot" id="csDot" style="background:#6b7280;"></span>
+              <span class="cs-label" id="csLabel">접수 완료</span>
+              <span class="cs-arrow">▼</span>
+            </div>
+            <div class="cs-dropdown" id="csDropdown">
+              <div class="cs-opt selected" data-value="접수 완료" data-color="#6b7280" onclick="selectStatus(this)"><span class="cs-dot" style="background:#6b7280;"></span>접수 완료</div>
+              <div class="cs-opt" data-value="견적 대기" data-color="#f97316" onclick="selectStatus(this)"><span class="cs-dot" style="background:#f97316;"></span>견적 대기</div>
+              <div class="cs-opt" data-value="수리 중"   data-color="#2563eb" onclick="selectStatus(this)"><span class="cs-dot" style="background:#2563eb;"></span>수리 중</div>
+              <div class="cs-opt" data-value="수리 완료" data-color="#4ade80" onclick="selectStatus(this)"><span class="cs-dot" style="background:#4ade80;"></span>수리 완료</div>
+              <div class="cs-opt" data-value="전달 완료" data-color="#16a34a" onclick="selectStatus(this)"><span class="cs-dot" style="background:#16a34a;"></span>전달 완료</div>
+            </div>
+            <input type="hidden" id="f-status" value="접수 완료"/>
+          </div>
         </div>
       </div>
     </div>
@@ -456,7 +506,13 @@
         </div>
         <div class="fg-item">
           <label class="fg-label">구매일</label>
-          <input class="form-input smart-date" id="f-purchase-date" type="text" placeholder="예: 20250607 또는 25.6.7"/>
+          <div class="date-wrap">
+            <input class="form-input smart-date" id="f-purchase-date" type="text"/>
+            <div class="date-cal-wrap">
+              <div class="date-cal-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+              <input type="date" class="date-picker-overlay" id="dp-f-purchase-date" onchange="syncDatePicker('dp-f-purchase-date','f-purchase-date')"/>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -464,10 +520,6 @@
     <!-- ③ 접수 내용 -->
     <div class="form-section">
       <div class="fs-title"><span class="fs-num">3</span> 접수 내용</div>
-      <div class="fg-item" style="margin-bottom:10px;">
-        <label class="fg-label">접수일</label>
-        <input class="form-input smart-date" id="f-date" type="text" placeholder="예: 20250607 또는 25.6.7" style="max-width:260px;"/>
-      </div>
       <div class="fg2">
         <div class="fg-item">
           <label class="fg-label">고객 의뢰 내용</label>
@@ -483,22 +535,40 @@
     <!-- ④ 수리 / 진행 정보 -->
     <div class="form-section">
       <div class="fs-title"><span class="fs-num">4</span> 수리 / 진행 정보</div>
-      <div class="fg2">
+      <div class="fg4">
         <div class="fg-item">
           <label class="fg-label">수리 비용</label>
           <input class="form-input" id="f-cost" type="text" inputmode="numeric" placeholder="0" oninput="fmtNum(this)"/>
         </div>
         <div class="fg-item">
           <label class="fg-label">스위스 수리 동의일</label>
-          <input class="form-input smart-date" id="f-swiss-agree" type="text" placeholder="예: 20250607"/>
+          <div class="date-wrap">
+            <input class="form-input smart-date" id="f-swiss-agree" type="text"/>
+            <div class="date-cal-wrap">
+              <div class="date-cal-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+              <input type="date" class="date-picker-overlay" id="dp-f-swiss-agree" onchange="syncDatePicker('dp-f-swiss-agree','f-swiss-agree')"/>
+            </div>
+          </div>
         </div>
         <div class="fg-item">
           <label class="fg-label">수리 완료일</label>
-          <input class="form-input smart-date" id="f-repair-done" type="text" placeholder="예: 20250607"/>
+          <div class="date-wrap">
+            <input class="form-input smart-date" id="f-repair-done" type="text"/>
+            <div class="date-cal-wrap">
+              <div class="date-cal-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+              <input type="date" class="date-picker-overlay" id="dp-f-repair-done" onchange="syncDatePicker('dp-f-repair-done','f-repair-done')"/>
+            </div>
+          </div>
         </div>
         <div class="fg-item">
           <label class="fg-label">전달 완료일</label>
-          <input class="form-input smart-date" id="f-pickup" type="text" placeholder="예: 20250607"/>
+          <div class="date-wrap">
+            <input class="form-input smart-date" id="f-pickup" type="text"/>
+            <div class="date-cal-wrap">
+              <div class="date-cal-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+              <input type="date" class="date-picker-overlay" id="dp-f-pickup" onchange="syncDatePicker('dp-f-pickup','f-pickup')"/>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -560,6 +630,8 @@ onAuthStateChanged(auth, user => {
   document.getElementById('login-overlay').style.display = user ? 'none' : 'flex';
   if (user) {
     currentUser = user;
+    const displayName = user.displayName || user.email?.split('@')[0] || '';
+    populateStaffSelect(displayName);
     initPage();
   }
 });
@@ -776,8 +848,10 @@ function openRegModal() {
   const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
   document.getElementById('f-date').value = todayStr;
   document.getElementById('f-date').classList.add('parsed');
+  setStatusUI('접수 완료');
   if (currentUser) {
-    document.getElementById('f-staff').value = currentUser.displayName || currentUser.email || '';
+    const dn = currentUser.displayName || currentUser.email?.split('@')[0] || '';
+    populateStaffSelect(dn);
   }
   document.getElementById('regModal').classList.add('open');
 }
@@ -786,8 +860,15 @@ function openEditModal(r) {
   editingId = r.id;
   document.getElementById('regModalTitle').textContent = 'A/S 수정';
   const set = (id, val) => { const el = document.getElementById(id); if (el) { el.value = val||''; if (val) el.classList.add('parsed'); else el.classList.remove('parsed'); } };
-  document.getElementById('f-type').value   = r.type   || 'IE';
-  document.getElementById('f-status').value = r.status || '접수 완료';
+  document.getElementById('f-type').value = r.type || 'IE';
+  setStatusUI(r.status || '접수 완료');
+  const staffSel = document.getElementById('f-staff');
+  if (r.staff && ![...staffSel.options].some(o => o.value === r.staff)) {
+    const opt = document.createElement('option');
+    opt.value = r.staff; opt.textContent = r.staff;
+    staffSel.insertBefore(opt, staffSel.firstChild);
+  }
+  if (r.staff) staffSel.value = r.staff;
   set('f-staff',          r.staff);
   set('f-customer',       r.customer);
   set('f-customer-en',    r.customerEn);
@@ -857,6 +938,64 @@ window.fmtNum = function(el) {
   el.value = raw !== '' ? Number(raw).toLocaleString('ko-KR') : '';
 };
 
+/* ── 날짜 picker 동기화 ── */
+window.syncDatePicker = function(pickerId, textId) {
+  const val = document.getElementById(pickerId).value;
+  if (!val) return;
+  const txt = document.getElementById(textId);
+  txt.value = val;
+  txt.classList.add('parsed');
+};
+
+/* ── 커스텀 상태 드롭다운 ── */
+window.toggleStatusDropdown = function() {
+  document.getElementById('csBtn').classList.toggle('open');
+  document.getElementById('csDropdown').classList.toggle('open');
+};
+window.selectStatus = function(el) {
+  const val   = el.dataset.value;
+  const color = el.dataset.color;
+  document.getElementById('csLabel').textContent = val;
+  document.getElementById('csDot').style.background = color;
+  document.getElementById('f-status').value = val;
+  document.querySelectorAll('#csDropdown .cs-opt').forEach(o => o.classList.toggle('selected', o.dataset.value === val));
+  document.getElementById('csBtn').classList.remove('open');
+  document.getElementById('csDropdown').classList.remove('open');
+};
+function setStatusUI(val) {
+  const opt = document.querySelector(`#csDropdown .cs-opt[data-value="${val}"]`);
+  if (opt) selectStatus(opt);
+}
+document.addEventListener('click', e => {
+  const wrap = document.getElementById('statusWrap');
+  if (wrap && !wrap.contains(e.target)) {
+    document.getElementById('csBtn')?.classList.remove('open');
+    document.getElementById('csDropdown')?.classList.remove('open');
+  }
+});
+
+/* ── 담당 직원 셀렉트 ── */
+const DEFAULT_STAFF = ['임지', '임영지', '박준혁'];
+function populateStaffSelect(loggedInName) {
+  const sel = document.getElementById('f-staff');
+  const names = loggedInName
+    ? [loggedInName, ...DEFAULT_STAFF.filter(n => n !== loggedInName)]
+    : DEFAULT_STAFF;
+  sel.innerHTML = names.map(n => `<option value="${n}">${n}</option>`).join('');
+  if (loggedInName) sel.value = loggedInName;
+}
+
+/* ── 날짜 placeholder 동적 설정 ── */
+function setDatePlaceholders() {
+  const n = new Date();
+  const y2 = String(n.getFullYear()).slice(2);
+  const m  = n.getMonth() + 1;
+  const d  = n.getDate();
+  const yyyymmdd = `${n.getFullYear()}${String(m).padStart(2,'0')}${String(d).padStart(2,'0')}`;
+  const ph = `${yyyymmdd} 또는 ${y2}.${m}.${d} 또는 ${m}.${d}`;
+  document.querySelectorAll('.smart-date').forEach(el => { el.placeholder = ph; });
+}
+
 /* ── 스마트 날짜 파싱 ── */
 function parseSmartDate(raw) {
   if (!raw) return '';
@@ -906,6 +1045,8 @@ function attachSmartDate(el) {
   el.addEventListener('input', () => el.classList.remove('parsed'));
 }
 document.querySelectorAll('.smart-date').forEach(attachSmartDate);
+setDatePlaceholders();
+populateStaffSelect(null);
 
 /* ── 공지 버튼 (placeholder) ── */
 document.getElementById('noticeBtn').onclick = () => alert('A/S 공지 기능은 준비 중입니다.');
