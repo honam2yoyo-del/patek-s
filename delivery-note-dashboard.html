@@ -116,14 +116,13 @@
     .note-card:hover { background:#fafbfd;box-shadow:0 2px 8px rgba(15,23,42,.06); }
     .note-card.selected { background:#eff6ff;border-color:#bfdbfe; }
     .cat-badge { display:inline-flex;align-items:center;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:800;background:var(--cb);color:var(--cc);white-space:nowrap; }
-    .nc-col1 { display:flex;flex-direction:column;gap:5px;flex-shrink:0;min-width:48px; }
+    .nc-col1 { display:flex;flex-direction:column;gap:5px;flex-shrink:0;min-width:48px;align-items:flex-end; }
     .nc-col2 { flex:1;min-width:0;display:flex;flex-direction:column;gap:3px; }
     .note-title { font-size:13.5px;font-weight:800;color:#111827;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
     .note-meta  { font-size:11.5px;font-weight:600;color:#9ca3af;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
-    .nc-date { font-size:11px;font-weight:700;color:#6b7280;text-align:center;flex-shrink:0;min-width:80px;line-height:1.55; }
-    .nc-date.nc-overdue { color:#dc2626; }
-    .nc-date.nc-done    { color:#16a34a; }
-    .nc-date b { font-size:11.5px; }
+    .nc-date { font-size:11px;font-weight:700;color:#6b7280;text-align:center;flex-shrink:0;min-width:90px;white-space:nowrap; }
+    .nc-date-val { color:#dc2626;font-size:11.5px;font-weight:800; }
+    .nc-date-val.done { color:#16a34a; }
     .nc-stat { display:flex;align-items:center;gap:3px;font-size:11.5px;font-weight:700;color:#9ca3af;flex-shrink:0;min-width:32px; }
     .nc-reads { font-size:11.5px;font-weight:700;color:#9ca3af;flex-shrink:0;min-width:30px;text-align:center; }
     .nc-star { flex-shrink:0;cursor:pointer;line-height:0;transition:opacity .12s; }
@@ -445,8 +444,8 @@
           <div class="detail-scroll">
             <div class="dp-title" id="dpTitle">—</div>
             <div class="dp-status-row">
-              <span class="dp-sbadge" id="dpStatusBadge">—</span>
               <span class="cat-badge" id="dpCatBadge" style="--cc:#6b7280;--cb:#f3f4f6;">—</span>
+              <span class="s-badge" id="dpStatusBadge">—</span>
             </div>
 
             <!-- 정보 그리드 -->
@@ -689,10 +688,9 @@ function renderList(notes) {
     // 날짜 컬럼
     let dateHtml = '<span class="nc-date"></span>';
     if (n.status === '완료' && n.completedDate) {
-      dateHtml = `<span class="nc-date nc-done">완료일<br><b>${n.completedDate.replace(/-/g,'.')}</b></span>`;
+      dateHtml = `<span class="nc-date">완료일 <span class="nc-date-val done">${n.completedDate.replace(/-/g,'.')}</span></span>`;
     } else if (n.dueDate) {
-      const ov = n.dueDate <= TODAY;
-      dateHtml = `<span class="nc-date${ov ? ' nc-overdue' : ''}">마감일<br><b>${n.dueDate.replace(/-/g,'.')}</b></span>`;
+      dateHtml = `<span class="nc-date">마감일 <span class="nc-date-val">${n.dueDate.replace(/-/g,'.')}</span></span>`;
     }
 
     return `
@@ -735,7 +733,7 @@ function renderDetail(n) {
 
   const sb = document.getElementById('dpStatusBadge');
   sb.textContent = n.status || '대기';
-  sb.className   = `dp-sbadge s-${n.status||'대기'}`;
+  sb.className   = `s-badge s-${n.status||'대기'}`;
 
   const cm = CAT_MAP[n.category] || CAT_MAP['기타'];
   const cb = document.getElementById('dpCatBadge');
