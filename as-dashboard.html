@@ -539,9 +539,9 @@
       <div class="fg4">
         <div class="fg-item">
           <label class="fg-label">수리 비용</label>
-          <div style="display:flex;align-items:center;gap:6px;">
-            <input class="form-input" id="f-cost" type="text" inputmode="numeric" placeholder="0" oninput="fmtNum(this)" style="flex:1;"/>
-            <span style="font-size:13.5px;font-weight:700;color:#374151;white-space:nowrap;">원</span>
+          <div style="display:flex;align-items:center;height:38px;border:1px solid #d9e0ea;border-radius:7px;background:#fff;padding-right:10px;transition:border-color .15s;outline:none;" onfocusin="this.style.borderColor='#075bd8';this.style.boxShadow='0 0 0 3px #075bd818'" onfocusout="this.style.borderColor='#d9e0ea';this.style.boxShadow='none'">
+            <input id="f-cost" type="text" inputmode="numeric" placeholder="0" oninput="fmtNum(this)" style="flex:1;border:none;outline:none;padding:0 12px;font-size:13.5px;font-weight:600;background:transparent;font-family:inherit;height:100%;"/>
+            <span style="font-size:13.5px;font-weight:700;color:#6b7280;flex-shrink:0;">원</span>
           </div>
         </div>
         <div class="fg-item">
