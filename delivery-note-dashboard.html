@@ -115,8 +115,10 @@
     .note-card::before { content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--cc); }
     .note-card:hover { background:#fafbfd;box-shadow:0 2px 8px rgba(15,23,42,.06); }
     .note-card.selected { background:#eff6ff;border-color:#bfdbfe; }
-    .cat-badge { display:inline-flex;align-items:center;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:800;background:var(--cb);color:var(--cc);white-space:nowrap;margin:0; }
-    .nc-col1 { display:flex;flex-direction:column;gap:4px;flex-shrink:0;align-items:center;margin:0; }
+    .cat-badge { display:inline-flex;align-items:center;justify-content:center;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:800;background:var(--cb);color:var(--cc);white-space:nowrap;margin:0; }
+    .nc-col1 { display:flex;flex-direction:column;gap:4px;flex-shrink:0;align-items:flex-start;margin:0;padding:0; }
+    .nc-col1 .cat-badge,
+    .nc-col1 .s-badge { width:52px;min-width:52px;justify-content:center;text-align:center;margin:0; }
     .nc-col2 { flex:1;min-width:0;display:flex;flex-direction:column;gap:3px; }
     .note-title { font-size:13.5px;font-weight:800;color:#111827;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
     .note-meta  { font-size:11.5px;font-weight:600;color:#9ca3af;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
@@ -143,8 +145,10 @@
     .dp-empty { flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#9ca3af;gap:12px; }
     .dp-empty p { font-size:13.5px;font-weight:700; }
 
-    /* 상세 패널 탑 (아이콘 툴바) */
-    .dp-top { flex-shrink:0;display:flex;justify-content:flex-end;align-items:center;gap:6px;padding:12px 16px;border-bottom:1px solid #f0f4fa; }
+    /* 상세 패널 탑 (제목 + 아이콘 툴바) */
+    .dp-top { flex-shrink:0;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid #f0f4fa; }
+    .dp-top-title { font-size:16px;font-weight:900;color:#111827;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.3; }
+    .dp-top-btns { display:flex;align-items:center;gap:6px;flex-shrink:0; }
     .dp-icon-btn { width:32px;height:32px;border:none;background:none;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#6b7280;transition:background .12s,color .12s; }
     .dp-icon-btn:hover { background:#f0f4fa;color:#075bd8; }
     .dp-icon-btn.star-active { color:#f59e0b; }
@@ -425,25 +429,27 @@
         <!-- 상세 내용 -->
         <div id="dpContent" style="display:none;display:none;flex:1;min-height:0;flex-direction:column;overflow:hidden">
 
-          <!-- 패널 탑 아이콘 -->
+          <!-- 패널 탑: 제목 + 아이콘 -->
           <div class="dp-top">
-            <button class="dp-icon-btn" id="dpStarBtn" title="즐겨찾기" onclick="toggleDetailStar()">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-            </button>
-            <button class="dp-icon-btn" title="수정" onclick="editCurrentNote()">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-            </button>
-            <button class="dp-icon-btn" title="더보기">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
-            </button>
-            <button class="dp-icon-btn" title="닫기" onclick="closeDetail()">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            </button>
+            <div class="dp-top-title" id="dpTitle">—</div>
+            <div class="dp-top-btns">
+              <button class="dp-icon-btn" id="dpStarBtn" title="즐겨찾기" onclick="toggleDetailStar()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              </button>
+              <button class="dp-icon-btn" title="수정" onclick="editCurrentNote()">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </button>
+              <button class="dp-icon-btn" title="더보기">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+              </button>
+              <button class="dp-icon-btn" title="닫기" onclick="closeDetail()">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
           </div>
 
           <!-- 스크롤 영역 -->
           <div class="detail-scroll">
-            <div class="dp-title" id="dpTitle">—</div>
             <div class="dp-status-row">
               <span class="cat-badge" id="dpCatBadge" style="--cc:#6b7280;--cb:#f3f4f6;">—</span>
               <span class="s-badge" id="dpStatusBadge">—</span>
