@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=1920, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>메인</title>
   <style>
     * { box-sizing:border-box; margin:0; padding:0; font-family:"Malgun Gothic","맑은 고딕",Arial,sans-serif; }
@@ -149,6 +149,44 @@
     .sidebar.collapsed .logout .menu-icon { font-size:16px; }
     .main { transition:margin-left .25s ease; }
     .app.sidebar-collapsed .main { margin-left:52px; }
+
+    /* ── 반응형 CSS (zoom 제거 대체) ── */
+    .page-title { font-size: clamp(18px, 2.2vw, 30px); }
+    .kpi-value  { font-size: clamp(16px, 2vw, 26px); }
+    .kpi-label, .kpi-sub { font-size: clamp(11px, 1vw, 13px); }
+    .summary-big-pct { font-size: clamp(20px, 3vw, 42px); }
+    .summary-yoy     { font-size: clamp(18px, 2.6vw, 36px); }
+    .summary-sub, .summary-col-label { font-size: clamp(11px, 1vw, 13px); }
+    .bot-stat-value { font-size: clamp(18px, 2.2vw, 30px); }
+    .bot-stat-label { font-size: clamp(11px, 1vw, 13px); }
+    .bot-stat-unit  { font-size: clamp(11px, 1vw, 14px); }
+    .kpi-text, .summary-col, .bot-stat-col { min-width: 0; }
+    .kpi-label, .kpi-sub, .summary-sub, .summary-col-label,
+    .bot-stat-label, .bot-card-title { word-break: keep-all; }
+    @media (max-width: 1400px) {
+      .kpi-grid     { gap: 10px; }
+      .kpi-card     { padding: 12px 12px; }
+      .kpi-icon     { width: 56px; height: 56px; }
+      .kpi-icon img { width: 40px; height: 40px; }
+      .summary-col  { padding: 16px 14px; }
+      .panel-header { padding: 14px 16px 10px; }
+      .panel-body   { padding: 14px 16px; }
+      .bot-card     { padding: 14px 14px; }
+      .bot-stat-col { padding: 0 10px; }
+    }
+    @media (max-width: 1100px) {
+      .main         { padding: 14px 12px 32px; }
+      .kpi-grid     { gap: 6px; }
+      .kpi-card     { padding: 8px 8px; }
+      .kpi-icon     { width: 40px; height: 40px; }
+      .kpi-icon img { width: 28px; height: 28px; }
+      .summary-col  { padding: 10px 8px; }
+      .panel-header { padding: 10px 10px 8px; }
+      .panel-body   { padding: 10px 10px; }
+      .bot-card     { padding: 10px 10px; }
+      .bot-stat-col { padding: 0 6px; }
+      .bot-cards    { gap: 8px; }
+    }
   </style>
 </head>
 <body>
@@ -666,26 +704,8 @@ window.toggleSidebar=function(){
   if(app)app.classList.toggle('sidebar-collapsed',c);
   if(ba)ba.style.left=(c?52:185)+'px';
   try{localStorage.setItem('_sbc',c);}catch(e){}
-  if(window.applyScale)window.applyScale();
 };
 (function(){try{if(localStorage.getItem('_sbc')==='true'){var sb=document.getElementById('sidebar'),app=document.querySelector('.app'),ba=document.querySelector('.bottom-actions');if(sb)sb.classList.add('collapsed');if(app)app.classList.add('sidebar-collapsed');if(ba)ba.style.left='52px';}}catch(e){}})();
-/* 전체 페이지 비율 축소 (zoom) */
-(function(){
-  var W=1920;
-  function apply(){
-    var sc=Math.min(1,window.innerWidth/W);
-    document.documentElement.style.zoom=sc;
-    var h=Math.ceil(window.innerHeight/sc);
-    /* position:fixed 사이드바는 100vh가 zoom에 의해 짧아지므로 JS로 보정 */
-    var sb=document.getElementById('sidebar');
-    if(sb)sb.style.height=sc<1?h+'px':'';
-    var app=document.querySelector('.app');
-    if(app)app.style.minHeight=sc<1?h+'px':'';
-  }
-  window.applyScale=apply;
-  apply();
-  window.addEventListener('resize',apply);
-})();
 </script>
 </body>
 </html>

@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=1920, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>매출</title>
   <style>
     * { box-sizing:border-box; margin:0; padding:0; font-family:"Malgun Gothic","맑은 고딕",Arial,sans-serif; }
@@ -219,6 +219,40 @@
     .sidebar.collapsed .logout .menu-icon { font-size:16px; }
     .main { transition:margin-left .25s ease; }
     .app.sidebar-collapsed .main { margin-left:52px; }
+
+    /* ── 반응형 CSS (zoom 제거 대체) ── */
+    .title        { font-size: clamp(18px, 2.2vw, 30px); }
+    .panel-header { font-size: clamp(14px, 1.4vw, 18px); }
+    .kpi-title    { font-size: clamp(12px, 1.1vw, 14px); word-break: keep-all; }
+    .kpi-unit     { font-size: clamp(12px, 1.2vw, 16px); }
+    .kpi-pcs-row  { font-size: clamp(12px, 1vw, 14px); }
+    .quarter-list li { font-size: clamp(12px, 1.1vw, 15px); }
+    .goal-table td   { font-size: clamp(12px, 1.1vw, 15px); }
+    .remain-box      { font-size: clamp(13px, 1.2vw, 16px); }
+    .progress-title  { font-size: clamp(13px, 1.2vw, 16px); }
+    .inventory-panel { min-width: 0; }
+    @media (max-width: 1400px) {
+      .kpi-grid       { gap: 10px; }
+      .kpi-card       { padding: 14px 16px; }
+      .dashboard-grid { gap: 10px; }
+      .panel-header   { padding: 16px 18px 12px; }
+      .panel-body     { padding: 14px 18px; }
+    }
+    @media (max-width: 1200px) {
+      .main           { padding: 16px 16px 88px; }
+      .kpi-grid       { gap: 8px; }
+      .kpi-card       { padding: 12px 12px; }
+      .dashboard-grid { gap: 8px; }
+      .panel-header   { padding: 12px 14px 10px; }
+      .panel-body     { padding: 12px 14px; }
+    }
+    @media (max-width: 1000px) {
+      .kpi-grid       { gap: 6px; }
+      .kpi-card       { padding: 10px 10px; }
+      .dashboard-grid { gap: 6px; }
+      .panel-header   { padding: 10px 12px 8px; }
+      .panel-body     { padding: 10px 12px; }
+    }
   </style>
 </head>
 <body>
@@ -310,7 +344,7 @@
       </div>
       <div class="kpi-card">
         <div class="kpi-title">남은 매출</div>
-        <div id="remainDisplay" style="margin-top:6px;font-size:24px;font-weight:900;letter-spacing:-.5px;">계산 중...</div>
+        <div id="remainDisplay" style="margin-top:6px;font-size:clamp(16px,1.8vw,24px);font-weight:900;letter-spacing:-.5px;">계산 중...</div>
       </div>
     </section>
 
@@ -582,24 +616,8 @@ window.toggleSidebar=function(){
   if(app)app.classList.toggle('sidebar-collapsed',c);
   if(ba)ba.style.left=(c?52:185)+'px';
   try{localStorage.setItem('_sbc',c);}catch(e){}
-  if(window.applyScale)window.applyScale();
 };
 (function(){try{if(localStorage.getItem('_sbc')==='true'){var sb=document.getElementById('sidebar'),app=document.querySelector('.app'),ba=document.querySelector('.bottom-actions');if(sb)sb.classList.add('collapsed');if(app)app.classList.add('sidebar-collapsed');if(ba)ba.style.left='52px';}}catch(e){}})();
-(function(){
-  var W=1920;
-  function apply(){
-    var sc=Math.min(1,window.innerWidth/W);
-    document.documentElement.style.zoom=sc;
-    var h=Math.ceil(window.innerHeight/sc);
-    var sb=document.getElementById('sidebar');
-    if(sb)sb.style.height=sc<1?h+'px':'';
-    var app=document.querySelector('.app');
-    if(app)app.style.minHeight=sc<1?h+'px':'';
-  }
-  window.applyScale=apply;
-  apply();
-  window.addEventListener('resize',apply);
-})();
 </script>
 </body>
 </html>
