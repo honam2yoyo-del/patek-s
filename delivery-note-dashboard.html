@@ -350,10 +350,13 @@
         </div>
       </div>
 
-      <!-- 검색창 -->
-      <div class="search-box" style="width:100%;margin-bottom:10px;">
-        <input type="text" id="searchInput" placeholder="제목, 내용, 고객명, Ref, # 검색" oninput="applyFilter()"/>
-        <span class="s-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
+      <!-- 검색창 (리스트 패널 너비와 동일하게 5.5fr 그리드 사용) -->
+      <div style="display:grid;grid-template-columns:5.5fr 4.5fr;gap:16px;margin-bottom:10px;">
+        <div class="search-box">
+          <input type="text" id="searchInput" placeholder="제목, 내용, 고객명, Ref, # 검색" oninput="applyFilter()"/>
+          <span class="s-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
+        </div>
+        <div></div>
       </div>
 
       <!-- 3. 필터 바 -->
