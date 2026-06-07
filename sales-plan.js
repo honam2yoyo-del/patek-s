@@ -317,9 +317,13 @@ function recalcRemain() {
   const currentPcs  = gn('f-currentPcs');
   const remSales    = expected - current;
   const remPcs      = expectedPcs - currentPcs;
-  const el = document.getElementById('remainDisplay');
-  el.innerHTML = `<span>${fmtN(remSales)}</span>&nbsp;원&nbsp;<span style="font-size:14px;font-weight:700;">(${remPcs} pcs)</span>`;
-  el.style.color = remSales > 0 ? '#ff0000' : '#009844';
+  const color = remSales > 0 ? '#ff0000' : '#009844';
+  const numEl  = document.getElementById('remain-num');
+  const unitEl = document.getElementById('remain-unit');
+  const pcsEl  = document.getElementById('remain-pcs-row');
+  if (numEl)  { numEl.textContent  = fmtN(remSales); numEl.style.color  = color; }
+  if (unitEl) { unitEl.style.color = color; }
+  if (pcsEl)  { pcsEl.textContent  = `(${remPcs} pcs)`; }
 }
 
 function updateGoalDisplay() {

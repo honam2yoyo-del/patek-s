@@ -268,7 +268,6 @@
         <div class="kpi-text">
           <div class="kpi-label">MPDS 등록 가능</div>
           <div class="kpi-value" id="kpi-mpds">-</div>
-          <div class="kpi-sub">(pcs)</div>
         </div>
       </div>
       <div class="kpi-card">
@@ -276,7 +275,6 @@
         <div class="kpi-text">
           <div class="kpi-label">매장 재고 AS</div>
           <div class="kpi-value" id="kpi-as">-</div>
-          <div class="kpi-sub">(건)</div>
         </div>
       </div>
     </section>
@@ -478,12 +476,12 @@ function render(){
   // MPDS 등록 가능 (잔여 재고 또는 등록 상태)
   const mpdsArr = (mpdsData && mpdsData.inventory) ? mpdsData.inventory : [];
   const mpdsCount = mpdsArr.filter(i => i.status === '잔여 재고' || i.status === '등록').length;
-  document.getElementById('kpi-mpds').textContent = mpdsCount;
+  document.getElementById('kpi-mpds').textContent = mpdsCount + ' pcs';
 
   // 매장 재고 AS
   const invRows = (invData && invData.rows) ? invData.rows : [];
   const asCount = invRows.filter(r => r.status === 'AS').length;
-  document.getElementById('kpi-as').textContent = asCount;
+  document.getElementById('kpi-as').textContent = asCount + '건';
   document.getElementById('bot-as-active').textContent = asCount;
 
   // 목표 달성률
