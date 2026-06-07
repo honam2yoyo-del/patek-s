@@ -181,10 +181,11 @@
     input[type="date"].form-input { cursor:pointer; }
     input[type="date"].form-input::-webkit-calendar-picker-indicator { cursor:pointer;opacity:.6; }
     input[type="date"].form-input::-webkit-calendar-picker-indicator:hover { opacity:1; }
-    /* 날짜 overlay 방식: 텍스트 칸 위에 투명 date picker 덮기 */
+    /* 날짜: 텍스트 표시 칸 + 숨겨진 date picker */
     .date-row { position:relative; }
-    .date-disp { width:100%;background:#fff;cursor:pointer; }
-    .date-native { position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;z-index:2;border:none; }
+    .date-disp { cursor:pointer;background:#fff; }
+    .date-disp:hover { border-color:#9bbcff; }
+    .date-native-hidden { position:absolute;width:0;height:0;opacity:0;border:none;pointer-events:none;bottom:0;left:0; }
 
     /* ── 모달 액션 ── */
     .modal-actions { display:flex;justify-content:flex-end;gap:10px;margin-top:22px;padding-top:18px;border-top:1px solid #f0f4fa; }
@@ -442,8 +443,8 @@
         <div class="fg-item">
           <label class="fg-label">접수일</label>
           <div class="date-row">
-            <input type="text" class="form-input date-disp" id="f-date" readonly placeholder="날짜 선택"/>
-            <input type="date" class="date-native" id="dn-f-date" onchange="applyDate('dn-f-date','f-date')"/>
+            <input type="text" class="form-input date-disp" id="f-date" readonly placeholder="날짜 선택" onclick="openDatePicker('dn-f-date')"/>
+            <input type="date" class="date-native-hidden" id="dn-f-date" onchange="applyDate('dn-f-date','f-date')"/>
           </div>
         </div>
         <!-- A/S 접수 타입 -->
@@ -510,8 +511,8 @@
         <div class="fg-item">
           <label class="fg-label">구매일</label>
           <div class="date-row">
-            <input type="text" class="form-input date-disp" id="f-purchase-date" readonly placeholder="날짜 선택"/>
-            <input type="date" class="date-native" id="dn-f-purchase-date" onchange="applyDate('dn-f-purchase-date','f-purchase-date')"/>
+            <input type="text" class="form-input date-disp" id="f-purchase-date" readonly placeholder="날짜 선택" onclick="openDatePicker('dn-f-purchase-date')"/>
+            <input type="date" class="date-native-hidden" id="dn-f-purchase-date" onchange="applyDate('dn-f-purchase-date','f-purchase-date')"/>
           </div>
         </div>
       </div>
@@ -543,22 +544,22 @@
         <div class="fg-item">
           <label class="fg-label">스위스 수리 동의일</label>
           <div class="date-row">
-            <input type="text" class="form-input date-disp" id="f-swiss-agree" readonly placeholder="날짜 선택"/>
-            <input type="date" class="date-native" id="dn-f-swiss-agree" onchange="applyDate('dn-f-swiss-agree','f-swiss-agree')"/>
+            <input type="text" class="form-input date-disp" id="f-swiss-agree" readonly placeholder="날짜 선택" onclick="openDatePicker('dn-f-swiss-agree')"/>
+            <input type="date" class="date-native-hidden" id="dn-f-swiss-agree" onchange="applyDate('dn-f-swiss-agree','f-swiss-agree')"/>
           </div>
         </div>
         <div class="fg-item">
           <label class="fg-label">수리 완료일</label>
           <div class="date-row">
-            <input type="text" class="form-input date-disp" id="f-repair-done" readonly placeholder="날짜 선택"/>
-            <input type="date" class="date-native" id="dn-f-repair-done" onchange="applyDate('dn-f-repair-done','f-repair-done')"/>
+            <input type="text" class="form-input date-disp" id="f-repair-done" readonly placeholder="날짜 선택" onclick="openDatePicker('dn-f-repair-done')"/>
+            <input type="date" class="date-native-hidden" id="dn-f-repair-done" onchange="applyDate('dn-f-repair-done','f-repair-done')"/>
           </div>
         </div>
         <div class="fg-item">
           <label class="fg-label">전달 완료일</label>
           <div class="date-row">
-            <input type="text" class="form-input date-disp" id="f-pickup" readonly placeholder="날짜 선택"/>
-            <input type="date" class="date-native" id="dn-f-pickup" onchange="applyDate('dn-f-pickup','f-pickup')"/>
+            <input type="text" class="form-input date-disp" id="f-pickup" readonly placeholder="날짜 선택" onclick="openDatePicker('dn-f-pickup')"/>
+            <input type="date" class="date-native-hidden" id="dn-f-pickup" onchange="applyDate('dn-f-pickup','f-pickup')"/>
           </div>
         </div>
       </div>
@@ -935,6 +936,13 @@ window.saveRecord = async function() {
 window.fmtNum = function(el) {
   const raw = String(el.value).replace(/[^0-9]/g,'');
   el.value = raw !== '' ? Number(raw).toLocaleString('ko-KR') : '';
+};
+
+/* ── 날짜 picker 열기 ── */
+window.openDatePicker = function(nativeId) {
+  const el = document.getElementById(nativeId);
+  if (!el) return;
+  try { el.showPicker(); } catch(e) { el.focus(); el.click(); }
 };
 
 /* ── 날짜 + 요일 통합 표시 ── */
