@@ -185,16 +185,55 @@
     /* ── 모달 ── */
     .modal-backdrop { display:none;position:fixed;inset:0;background:rgba(15,23,42,.4);z-index:200;justify-content:center;align-items:center; }
     .modal-backdrop.open { display:flex; }
-    .modal { background:#fff;border-radius:12px;box-shadow:0 20px 60px rgba(15,23,42,.25);padding:26px 28px;width:540px;max-width:96vw;max-height:90vh;overflow-y:auto; }
-    .modal-title { font-size:20px;font-weight:900;margin-bottom:18px; }
+    .modal { background:#fff;border-radius:14px;box-shadow:0 24px 64px rgba(15,23,42,.28);padding:28px 32px;width:800px;max-width:97vw;max-height:92vh;overflow-y:auto; }
+    .modal-header { display:flex;justify-content:space-between;align-items:center;margin-bottom:22px; }
+    .modal-title { font-size:20px;font-weight:900;color:#111827; }
+    .modal-close-btn { width:30px;height:30px;border:none;background:none;cursor:pointer;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#6b7280;font-size:18px;line-height:1; }
+    .modal-close-btn:hover { background:#f3f4f6;color:#111827; }
+
+    /* 폼 섹션 */
+    .form-section { margin-bottom:20px; }
+    .fs-title { display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:900;color:#374151;margin-bottom:11px;padding-bottom:9px;border-bottom:2px solid #f0f4fa; }
+    .fs-num { width:20px;height:20px;background:#075bd8;color:#fff;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:900;flex-shrink:0; }
+
+    /* 폼 그리드 */
+    .fg2 { display:grid;grid-template-columns:1fr 1fr;gap:10px 18px; }
+    .fg-item { display:flex;flex-direction:column;gap:5px; }
+    .fg-label { font-size:12px;font-weight:800;color:#374151; }
+    .req { color:#ef4444;margin-left:1px; }
+    .form-input { height:38px;border:1px solid #d9e0ea;border-radius:7px;padding:0 12px;font-size:13.5px;font-weight:600;outline:none;width:100%;font-family:inherit;background:#fff; }
+    .form-input:focus { border-color:#075bd8;box-shadow:0 0 0 3px #075bd818; }
+    .form-select { height:38px;border:1px solid #d9e0ea;border-radius:7px;padding:0 10px;font-size:13.5px;font-weight:600;outline:none;width:100%;background:#fff;font-family:inherit; }
+    .form-select:focus { border-color:#075bd8; }
+
+    /* 날짜 picker */
+    .date-wrap { display:flex; }
+    .date-wrap .form-input { flex:1;border-radius:7px 0 0 7px;border-right:none;cursor:pointer; }
+    .date-cal-wrap { position:relative;width:34px;flex-shrink:0; }
+    .date-cal-icon { width:34px;height:38px;border:1px solid #d9e0ea;border-radius:0 7px 7px 0;background:#f9fafb;display:flex;align-items:center;justify-content:center;color:#6b7280;pointer-events:none; }
+    .date-cal-wrap:hover .date-cal-icon { background:#eff6ff;color:#075bd8;border-color:#9bbcff; }
+    .date-picker-overlay { position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;z-index:2;border:none; }
+
+    /* 칩 선택기 */
+    .chip-row { display:flex;flex-direction:column;gap:7px; }
+    .chip-row-label { font-size:12px;font-weight:800;color:#374151; }
+    .chip-group { display:flex;flex-wrap:wrap;gap:8px; }
+    .chip { border:1.5px solid #d1d5db;border-radius:8px;padding:10px 18px;font-size:13px;font-weight:700;color:#374151;cursor:pointer;background:#fff;user-select:none;transition:border-color .12s,background .12s,color .12s; }
+    .chip:hover { border-color:#9bbcff;background:#f8faff; }
+    .chip.selected { border-color:#075bd8;background:#eff6ff;color:#075bd8; }
+    .chip-size { display:flex;flex-direction:column;align-items:center;gap:4px;min-width:80px;padding:10px 14px; }
+    .chip-main { font-size:13px;font-weight:700; }
+    .chip-sub { font-size:11px;font-weight:600;color:#9ca3af;min-height:14px; }
+    .chip.selected .chip-sub { color:#2563eb; }
+
+    /* 모달 액션 */
+    .modal-actions { display:flex;justify-content:flex-end;gap:10px;margin-top:22px;padding-top:18px;border-top:1px solid #f0f4fa; }
+    .btn-cancel { height:38px;border:1px solid #d9e0ea;border-radius:7px;background:#fff;padding:0 20px;font-size:14px;font-weight:700;cursor:pointer; }
+    .btn-save { height:38px;border:none;border-radius:7px;background:#075bd8;color:#fff;padding:0 22px;font-size:14px;font-weight:700;cursor:pointer; }
+    .btn-save:hover { background:#0550b3; }
+    /* 하위 호환 */
     .form-row { display:grid;grid-template-columns:110px 1fr;align-items:center;gap:10px;margin-bottom:12px;font-size:14px;font-weight:700; }
     .form-row label { color:#374151; }
-    .form-input { height:38px;border:1px solid #d9e0ea;border-radius:6px;padding:0 12px;font-size:14px;font-weight:600;outline:none;width:100%;font-family:inherit; }
-    .form-input:focus { border-color:#075bd8; }
-    .form-select { height:38px;border:1px solid #d9e0ea;border-radius:6px;padding:0 10px;font-size:14px;font-weight:600;outline:none;width:100%;background:#fff;font-family:inherit; }
-    .modal-actions { display:flex;justify-content:flex-end;gap:10px;margin-top:20px; }
-    .btn-cancel { height:38px;border:1px solid #d9e0ea;border-radius:7px;background:#fff;padding:0 20px;font-size:14px;font-weight:700;cursor:pointer; }
-    .btn-save { height:38px;border:none;border-radius:7px;background:#075bd8;color:#fff;padding:0 20px;font-size:14px;font-weight:700;cursor:pointer; }
   </style>
 </head>
 <body>
@@ -443,51 +482,140 @@
 <!-- 오더 등록 모달 -->
 <div class="modal-backdrop" id="regModal">
   <div class="modal">
-    <div class="modal-title">SP 오더 등록</div>
-    <div class="form-row"><label>고객명</label><input class="form-input" id="f-customer" type="text" placeholder="고객명 입력"/></div>
-    <div class="form-row"><label>담당자</label><input class="form-input" id="f-manager" type="text" placeholder="담당자명"/></div>
-    <div class="form-row"><label>시계 REF.</label><input class="form-input" id="f-watchRef" type="text" placeholder="5711/1A-001"/></div>
-    <div class="form-row"><label>스트랩 REF.</label><input class="form-input" id="f-strapRef" type="text" placeholder="스트랩 REF. 번호"/></div>
-    <div class="form-row"><label>러그사이즈</label><input class="form-input" id="f-lugSize" type="text" placeholder="예: 21mm"/></div>
-    <div class="form-row"><label>컬러번호</label><input class="form-input" id="f-colorNum" type="text" placeholder="컬러 번호"/></div>
-    <div class="form-row"><label>스트랩길이</label><input class="form-input" id="f-strapLen" type="text" placeholder="예: 115/75"/></div>
-    <div class="form-row"><label>버클형태</label>
-      <select class="form-select" id="f-buckle">
-        <option value="핀버클">핀버클</option>
-        <option value="폴딩버클">폴딩버클</option>
-        <option value="기타">기타</option>
-      </select>
+
+    <!-- 헤더 -->
+    <div class="modal-header">
+      <span class="modal-title" id="regModalTitle">SP 오더 등록</span>
+      <button class="modal-close-btn" onclick="closeRegModal()">✕</button>
     </div>
-    <div class="form-row"><label>금액</label><input class="form-input" id="f-amount" type="text" inputmode="numeric" placeholder="0" oninput="fmtNum(this)"/></div>
-    <div class="form-row"><label>상태</label>
-      <select class="form-select" id="f-status">
-        <option value="오더대기">오더대기</option>
-        <option value="오더중">오더중</option>
-        <option value="오더번호 확인">오더번호 확인</option>
-        <option value="입고완료">입고완료</option>
-        <option value="재오더">재오더</option>
-        <option value="전달완료">전달완료</option>
-        <option value="판매완료">판매완료</option>
-        <option value="재접수">재접수</option>
-      </select>
+
+    <!-- ① 기본 정보 -->
+    <div class="form-section">
+      <div class="fs-title"><span class="fs-num">1</span> 기본 정보</div>
+      <div class="fg2">
+        <div class="fg-item">
+          <div class="fg-label">고객 접수일 <span class="req">*</span></div>
+          <div class="date-wrap">
+            <input class="form-input" id="f-date" type="text" placeholder="날짜 선택" readonly onclick="openDatePicker('dn-f-date')"/>
+            <div class="date-cal-wrap" onclick="openDatePicker('dn-f-date')">
+              <div class="date-cal-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              </div>
+              <input type="date" id="dn-f-date" class="date-picker-overlay" onchange="applyDate('dn-f-date','f-date')"/>
+            </div>
+          </div>
+        </div>
+        <div class="fg-item">
+          <div class="fg-label">타입</div>
+          <select class="form-select" id="f-orderType">
+            <option value="스트랩">스트랩</option>
+            <option value="버클">버클</option>
+            <option value="링크">링크</option>
+            <option value="스페어">스페어</option>
+          </select>
+        </div>
+      </div>
+      <div class="fg2" style="margin-top:10px;">
+        <div class="fg-item">
+          <div class="fg-label">고객명 <span class="req">*</span></div>
+          <input class="form-input" id="f-customer" type="text" placeholder="고객명 입력"/>
+        </div>
+        <div class="fg-item">
+          <div class="fg-label">담당자</div>
+          <select class="form-select" id="f-manager">
+            <option value="임지">임지</option>
+            <option value="임영지">임영지</option>
+            <option value="박준혁">박준혁</option>
+          </select>
+        </div>
+      </div>
     </div>
-    <div class="form-row"><label>입고여부</label>
-      <select class="form-select" id="f-instock">
-        <option value="미입고">미입고</option>
-        <option value="입고">입고</option>
-      </select>
+
+    <!-- ② 오더 내용 -->
+    <div class="form-section">
+      <div class="fs-title"><span class="fs-num">2</span> 오더 내용</div>
+
+      <div class="fg2">
+        <div class="fg-item">
+          <div class="fg-label">시계 Ref.</div>
+          <input class="form-input" id="f-watchRef" type="text" placeholder="시계 Ref.를 입력하세요."/>
+        </div>
+        <div class="fg-item">
+          <div class="fg-label">알파 코드</div>
+          <input class="form-input" id="f-alphaCode" type="text" placeholder="알파 코드를 입력하세요."/>
+        </div>
+      </div>
+
+      <div class="fg-item" style="margin-top:10px;">
+        <div class="fg-label">링크 사이즈</div>
+        <input class="form-input" id="f-linkSize" type="text" placeholder=""/>
+      </div>
+
+      <div class="chip-row" style="margin-top:14px;">
+        <div class="chip-row-label">버클 형태</div>
+        <div class="chip-group" id="grp-buckle">
+          <div class="chip" data-group="buckle" data-val="핀" onclick="selectChip('buckle','핀')">핀</div>
+          <div class="chip" data-group="buckle" data-val="폴딩" onclick="selectChip('buckle','폴딩')">폴딩</div>
+          <div class="chip" data-group="buckle" data-val="노틸러스" onclick="selectChip('buckle','노틸러스')">노틸러스</div>
+          <div class="chip" data-group="buckle" data-val="큐비투스" onclick="selectChip('buckle','큐비투스')">큐비투스</div>
+        </div>
+      </div>
+
+      <div class="chip-row" style="margin-top:14px;">
+        <div class="chip-row-label">스트랩 길이</div>
+        <div class="chip-group" id="grp-strapLen">
+          <div class="chip chip-size" data-group="strapLen" data-val="XS" onclick="selectChip('strapLen','XS')">
+            <span class="chip-main">XS</span><span class="chip-sub" id="sz-XS"></span>
+          </div>
+          <div class="chip chip-size" data-group="strapLen" data-val="S" onclick="selectChip('strapLen','S')">
+            <span class="chip-main">S</span><span class="chip-sub" id="sz-S"></span>
+          </div>
+          <div class="chip chip-size" data-group="strapLen" data-val="STANDARD" onclick="selectChip('strapLen','STANDARD')">
+            <span class="chip-main">STANDARD</span><span class="chip-sub" id="sz-STANDARD"></span>
+          </div>
+          <div class="chip chip-size" data-group="strapLen" data-val="L" onclick="selectChip('strapLen','L')">
+            <span class="chip-main">L</span><span class="chip-sub" id="sz-L"></span>
+          </div>
+          <div class="chip chip-size" data-group="strapLen" data-val="XL" onclick="selectChip('strapLen','XL')">
+            <span class="chip-main">XL</span><span class="chip-sub" id="sz-XL"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="chip-row" style="margin-top:14px;">
+        <div class="chip-row-label">걸쇠 유무</div>
+        <div class="chip-group" id="grp-clasp">
+          <div class="chip" data-group="clasp" data-val="유" onclick="selectChip('clasp','유')">유</div>
+          <div class="chip" data-group="clasp" data-val="무" onclick="selectChip('clasp','무')">무</div>
+        </div>
+      </div>
+
+      <div class="chip-row" style="margin-top:14px;">
+        <div class="chip-row-label">스티치 컬러</div>
+        <div class="chip-group" id="grp-stitchColor">
+          <div class="chip" data-group="stitchColor" data-val="톤온톤" onclick="selectChip('stitchColor','톤온톤')">톤온톤</div>
+          <div class="chip" data-group="stitchColor" data-val="직접 입력" onclick="selectChip('stitchColor','직접 입력')">직접 입력</div>
+        </div>
+        <div id="stitch-input-wrap" style="display:none;margin-top:6px;">
+          <input class="form-input" id="f-stitchColor" type="text" placeholder="스티치 컬러를 입력하세요."/>
+        </div>
+      </div>
+
+      <div class="chip-row" style="margin-top:14px;">
+        <div class="chip-row-label">판매용 / 증정용</div>
+        <div class="chip-group" id="grp-purpose">
+          <div class="chip" data-group="purpose" data-val="판매용" onclick="selectChip('purpose','판매용')">판매용</div>
+          <div class="chip" data-group="purpose" data-val="증정용" onclick="selectChip('purpose','증정용')">증정용</div>
+        </div>
+      </div>
+
     </div>
-    <div class="form-row"><label>고객 연락</label>
-      <select class="form-select" id="f-contact">
-        <option value="미완료">미완료</option>
-        <option value="완료">완료</option>
-      </select>
-    </div>
-    <div class="form-row"><label>메모</label><input class="form-input" id="f-memo" type="text" placeholder="메모 입력"/></div>
+
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeRegModal()">취소</button>
       <button class="btn-save" onclick="saveOrder()">저장</button>
     </div>
+
   </div>
 </div>
 
@@ -742,18 +870,72 @@ window.toggleAll = function(cb) {
   document.querySelectorAll('.row-cb').forEach(c => { c.checked = cb.checked; });
 };
 
+/* ── 칩 선택 ── */
+const STRAP_SIZE_DATA = {
+  '핀':      { XS:'', S:'', STANDARD:'', L:'', XL:'' },
+  '폴딩':    { XS:'', S:'', STANDARD:'', L:'', XL:'' },
+  '노틸러스': { XS:'', S:'', STANDARD:'', L:'', XL:'' },
+  '큐비투스': { XS:'', S:'', STANDARD:'', L:'', XL:'' },
+};
+const chipState = {};
+
+window.selectChip = function(group, val) {
+  chipState[group] = val;
+  document.querySelectorAll(`.chip[data-group="${group}"]`).forEach(el => {
+    el.classList.toggle('selected', el.dataset.val === val);
+  });
+  if (group === 'buckle') updateStrapSizes(val);
+  if (group === 'stitchColor') {
+    document.getElementById('stitch-input-wrap').style.display = val === '직접 입력' ? 'block' : 'none';
+  }
+};
+
+function updateStrapSizes(buckle) {
+  const sizes = STRAP_SIZE_DATA[buckle] || {};
+  ['XS','S','STANDARD','L','XL'].forEach(sz => {
+    const el = document.getElementById(`sz-${sz}`);
+    if (el) el.textContent = sizes[sz] || '';
+  });
+}
+
+/* ── 날짜 picker ── */
+const DAYS_KO_SP = ['일','월','화','수','목','금','토'];
+window.openDatePicker = function(nativeId) {
+  const el = document.getElementById(nativeId);
+  if (!el) return;
+  try { el.showPicker(); } catch(e) { el.focus(); el.click(); }
+};
+window.applyDate = function(nativeId, dispId) {
+  const val = document.getElementById(nativeId)?.value || '';
+  const el  = document.getElementById(dispId);
+  if (!el) return;
+  if (!val) { el.value = ''; return; }
+  const d = new Date(val + 'T00:00:00');
+  el.value = val + ' (' + DAYS_KO_SP[d.getDay()] + ')';
+};
+
 /* ── 모달 ── */
 window.openRegModal = function() {
   editingId = null;
-  ['f-customer','f-manager','f-watchRef','f-strapRef','f-lugSize','f-colorNum','f-strapLen','f-amount','f-memo'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
-  document.getElementById('f-buckle').value  = '핀버클';
-  document.getElementById('f-status').value  = '오더대기';
-  document.getElementById('f-instock').value = '미입고';
-  document.getElementById('f-contact').value = '미완료';
+  document.getElementById('regModalTitle').textContent = 'SP 오더 등록';
+  ['f-customer','f-watchRef','f-alphaCode','f-linkSize','f-stitchColor'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  const dn = document.getElementById('dn-f-date'); if (dn) dn.value = '';
+  const fd = document.getElementById('f-date');    if (fd) fd.value = '';
+  document.getElementById('f-orderType').value = '스트랩';
+  document.getElementById('f-manager').value   = '임영지';
+  document.querySelectorAll('.chip').forEach(el => el.classList.remove('selected'));
+  Object.keys(chipState).forEach(k => delete chipState[k]);
+  document.getElementById('stitch-input-wrap').style.display = 'none';
+  updateStrapSizes('');
   document.getElementById('regModal').classList.add('open');
 };
-window.closeRegModal = function() { document.getElementById('regModal').classList.remove('open'); };
-document.getElementById('regModal').addEventListener('click', e => { if(e.target === e.currentTarget) closeRegModal(); });
+window.closeRegModal = function() {
+  document.getElementById('regModal').classList.remove('open');
+  editingId = null;
+};
+document.getElementById('regModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeRegModal(); });
 
 window.fmtNum = function(el) {
   const raw = el.value.replace(/[^\d]/g,'');
@@ -763,25 +945,36 @@ window.fmtNum = function(el) {
 window.saveOrder = async function() {
   const customer = document.getElementById('f-customer').value.trim();
   if (!customer) { alert('고객명을 입력하세요.'); return; }
-  const ym = `${curYear}-${String(curMonth).padStart(2,'0')}`;
+  const dateNative = document.getElementById('dn-f-date');
+  const dateVal    = dateNative ? dateNative.value : '';
+  const ym = dateVal ? dateVal.slice(0,7) : `${curYear}-${String(curMonth).padStart(2,'0')}`;
+  const stitchSel = chipState['stitchColor'] || '';
+  const stitchVal = stitchSel === '직접 입력'
+    ? (document.getElementById('f-stitchColor').value.trim() || '직접 입력')
+    : stitchSel;
   const data = {
-    yearMonth: ym,
+    yearMonth:   ym,
+    date:        dateVal,
+    orderType:   document.getElementById('f-orderType').value,
     customer,
-    manager:  document.getElementById('f-manager').value.trim(),
-    watchRef: document.getElementById('f-watchRef').value.trim(),
-    strapRef: document.getElementById('f-strapRef').value.trim(),
-    lugSize:  document.getElementById('f-lugSize').value.trim(),
-    colorNum: document.getElementById('f-colorNum').value.trim(),
-    strapLen: document.getElementById('f-strapLen').value.trim(),
-    buckle:   document.getElementById('f-buckle').value,
-    amount:   document.getElementById('f-amount').value.replace(/,/g,''),
-    status:   document.getElementById('f-status').value,
-    instock:  document.getElementById('f-instock').value,
-    contact:  document.getElementById('f-contact').value,
-    memo:     document.getElementById('f-memo').value.trim(),
-    timeline: [{ date: new Date().toLocaleDateString('ko-KR'), text: '오더 등록' }],
-    createdAt: new Date().toISOString(),
+    manager:     document.getElementById('f-manager').value,
+    watchRef:    document.getElementById('f-watchRef').value.trim(),
+    alphaCode:   document.getElementById('f-alphaCode').value.trim(),
+    linkSize:    document.getElementById('f-linkSize').value.trim(),
+    buckle:      chipState['buckle']    || '',
+    strapLen:    chipState['strapLen']  || '',
+    clasp:       chipState['clasp']     || '',
+    stitchColor: stitchVal,
+    purpose:     chipState['purpose']   || '',
+    status:      '오더대기',
+    instock:     '미입고',
+    contact:     '미완료',
+    memo:        '',
   };
+  if (!editingId) {
+    data.timeline  = [{ date: new Date().toLocaleDateString('ko-KR'), text: '오더 등록' }];
+    data.createdAt = new Date().toISOString();
+  }
   try {
     if (editingId) { await updateDoc(doc(db,'sp_orders',editingId), data); }
     else           { await addDoc(collection(db,'sp_orders'), data); }
