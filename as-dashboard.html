@@ -247,14 +247,15 @@
     .dkv-value { font-size:13.5px;font-weight:700;color:#111827;line-height:1.45; }
 
     /* 접수내용·견적 */
+    .req-2col { display:grid;grid-template-columns:1fr 1fr;gap:18px; }
+    .req-col-hdr { font-size:12px;font-weight:800;color:#374151;margin-bottom:8px; }
     .d-bullet { padding:0;margin:0 0 0 16px;color:#374151;font-size:13.5px;font-weight:600;line-height:1.9; }
     .d-text { color:#374151;font-size:13.5px;font-weight:600;line-height:1.7;margin:0; }
 
     /* 컨택 로그 */
-    .clog-list { display:flex;flex-direction:column;gap:9px;margin-bottom:13px; }
-    .clog-item { display:flex;gap:12px; }
-    .clog-date { font-size:11.5px;font-weight:700;color:#6b7280;white-space:nowrap;padding-top:1px; }
-    .clog-text { font-size:13px;font-weight:600;color:#111827;flex:1;line-height:1.55; }
+    .clog-list { display:flex;flex-direction:column;gap:5px;margin-bottom:13px; }
+    .clog-row { font-size:13px;font-weight:600;color:#111827;line-height:1.7;padding:2px 0; }
+    .clog-empty { font-size:13px;color:#9ca3af; }
     .snote-label { font-size:11px;font-weight:800;color:#9ca3af;letter-spacing:.3px;margin-bottom:6px; }
     .snote-area { background:#f9fafb;border-radius:7px;padding:10px 14px;font-size:13px;font-weight:600;color:#374151;line-height:1.6;border:1px solid #f0f0f0;min-height:36px; }
 
@@ -565,10 +566,15 @@
         <!-- 카드 2: 접수내용 -->
         <div class="d-card">
           <div class="d-card-title">접수 내용</div>
-          <ul class="d-bullet" id="dc-request-list"><li style="color:#9ca3af;">내용 없음</li></ul>
-          <div id="dc-store-note-wrap" style="margin-top:11px;padding-top:11px;border-top:1px solid #f0f4fa;display:none;">
-            <div class="dkv-label" style="margin-bottom:5px;">매장 확인사항</div>
-            <p class="d-text" id="dc-storeNote"></p>
+          <div class="req-2col">
+            <div>
+              <div class="req-col-hdr">● 고객 의뢰 내용</div>
+              <ul class="d-bullet" id="dc-request-list"><li style="color:#9ca3af;">내용 없음</li></ul>
+            </div>
+            <div>
+              <div class="req-col-hdr">● 매장 확인사항</div>
+              <ul class="d-bullet" id="dc-storeNote-list"><li style="color:#9ca3af;">내용 없음</li></ul>
+            </div>
           </div>
         </div>
 
@@ -582,7 +588,7 @@
         <div class="d-card">
           <div class="d-card-title">고객 컨택 및 특이사항</div>
           <div class="clog-list" id="dc-contactLog-list">
-            <div style="color:#9ca3af;font-size:13px;">컨택 내역 없음</div>
+            <div class="clog-empty">컨택 내역 없음</div>
           </div>
           <div class="snote-label">특이사항</div>
           <div class="snote-area" id="dc-memo">-</div>
@@ -1075,18 +1081,16 @@ function openDetailModal(r) {
   tv('dc-purchasePlace', r.purchasePlace);
   tv('dc-purchaseDate', r.purchaseDate);
 
-  // 접수내용
+  // 접수내용 — 고객 의뢰 내용
   const reqLines = (r.request || '').split('\n').filter(l => l.trim());
   document.getElementById('dc-request-list').innerHTML = reqLines.length
     ? reqLines.map(l => `<li>${l}</li>`).join('')
     : '<li style="color:#9ca3af;">내용 없음</li>';
-  const snWrap = document.getElementById('dc-store-note-wrap');
-  if (r.storeNote) {
-    snWrap.style.display = 'block';
-    document.getElementById('dc-storeNote').textContent = r.storeNote;
-  } else {
-    snWrap.style.display = 'none';
-  }
+  // 매장 확인사항
+  const snLines = (r.storeNote || '').split('\n').filter(l => l.trim());
+  document.getElementById('dc-storeNote-list').innerHTML = snLines.length
+    ? snLines.map(l => `<li>${l}</li>`).join('')
+    : '<li style="color:#9ca3af;">내용 없음</li>';
 
   // 견적내용 (update 필드)
   const updateEl = document.getElementById('dc-update');
@@ -1096,13 +1100,8 @@ function openDetailModal(r) {
   // 컨택 로그
   const clogLines = (r.contactLog || '').split('\n').filter(l => l.trim());
   document.getElementById('dc-contactLog-list').innerHTML = clogLines.length
-    ? clogLines.map(l => {
-        const m = l.match(/^(\d{4}[-./]\d{1,2}[-./]\d{1,2}\S*)\s+(.+)$/);
-        return m
-          ? `<div class="clog-item"><span class="clog-date">${m[1]}</span><span class="clog-text">${m[2]}</span></div>`
-          : `<div class="clog-item"><span class="clog-text">${l}</span></div>`;
-      }).join('')
-    : '<div style="color:#9ca3af;font-size:13px;">컨택 내역 없음</div>';
+    ? clogLines.map(l => `<div class="clog-row">${l}</div>`).join('')
+    : '<div class="clog-empty">컨택 내역 없음</div>';
 
   tv('dc-memo', r.memo || '특이사항 없음');
 
