@@ -178,11 +178,21 @@
     .dp-textarea::placeholder { color:#9ca3af; }
 
     /* 상세 패널 액션 버튼 */
-    .dp-actions { display:flex;gap:8px;justify-content:flex-end;padding:10px 16px;border-bottom:1px solid #e2e7ef;background:#fafbfc; }
+    .dp-actions { display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid #e2e7ef;background:#fafbfc; }
+    .dp-actions-title { font-size:13px;font-weight:900;color:#374151; }
+    .dp-actions-btns  { display:flex;gap:8px; }
     .dp-edit-btn { height:30px;border:1px solid #d1d5db;border-radius:6px;background:#fff;padding:0 14px;font-size:12.5px;font-weight:700;cursor:pointer;color:#374151; }
     .dp-edit-btn:hover { background:#f3f4f6; }
     .dp-del-btn  { height:30px;border:none;border-radius:6px;background:#ef4444;color:#fff;padding:0 14px;font-size:12.5px;font-weight:700;cursor:pointer; }
     .dp-del-btn:hover { background:#dc2626; }
+
+    /* 인라인 편집 드롭다운 */
+    .inline-dd { position:fixed;background:#fff;border:1px solid #e2e7ef;border-radius:8px;box-shadow:0 8px 24px rgba(15,23,42,.15);z-index:500;overflow:hidden;min-width:110px; }
+    .inline-dd-opt { padding:9px 14px;font-size:13px;font-weight:700;cursor:pointer;color:#374151;transition:background .1s; }
+    .inline-dd-opt:hover { background:#f0f6ff;color:#075bd8; }
+    .inline-dd-opt.active { color:#075bd8;background:#eff6ff; }
+    td.editable-cell { cursor:pointer; }
+    td.editable-cell:hover { background:#f8fafd!important; }
 
     /* 빈 상태 */
     .dp-empty { display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;color:#9ca3af; }
@@ -408,7 +418,7 @@
                 <th>시계 REF.</th>
                 <th>스트랩 REF.</th>
                 <th>금액</th>
-                <th>입고유무</th>
+                <th>입고 유무</th>
                 <th>연락</th>
                 <th>상태</th>
                 <th><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></th>
@@ -428,8 +438,11 @@
         <div id="detailContent" style="display:none">
           <!-- 수정/삭제 버튼 -->
           <div class="dp-actions">
-            <button class="dp-edit-btn" onclick="openEditFromDetail()">수정</button>
-            <button class="dp-del-btn"  onclick="deleteFromDetail()">삭제</button>
+            <span class="dp-actions-title">상세 정보</span>
+            <div class="dp-actions-btns">
+              <button class="dp-edit-btn" onclick="openEditFromDetail()">수정</button>
+              <button class="dp-del-btn"  onclick="deleteFromDetail()">삭제</button>
+            </div>
           </div>
           <!-- 패널 헤더 -->
           <div class="dp-header">
@@ -448,9 +461,9 @@
           </div>
           <!-- 3단 그리드 -->
           <div class="dp-body">
-            <!-- A. 기본 오더 정보 -->
+            <!-- A. 오더 내용 -->
             <div class="dp-section">
-              <div class="dp-section-title">기본 오더 정보</div>
+              <div class="dp-section-title">오더 내용</div>
               <div class="kv-list">
                 <div class="kv-item"><span class="kv-key">시계 REF.</span><span class="kv-val" id="dp-watchRef">—</span></div>
                 <div class="kv-item"><span class="kv-key">알파 코드</span><span class="kv-val" id="dp-alphaCode">—</span></div>
@@ -656,9 +669,25 @@
         <div class="chip-group" id="grp-status">
           <div class="chip" data-group="status" data-val="오더 대기" onclick="selectChip('status','오더 대기')">오더 대기</div>
           <div class="chip" data-group="status" data-val="오더 중" onclick="selectChip('status','오더 중')">오더 중</div>
-          <div class="chip" data-group="status" data-val="입고 완료" onclick="selectChip('status','입고 완료')">입고 완료</div>
+          <div class="chip" data-group="status" data-val="입고 완료" onclick="selectChipLinked('status','입고 완료')">입고 완료</div>
           <div class="chip" data-group="status" data-val="판매 완료" onclick="selectChip('status','판매 완료')">판매 완료</div>
           <div class="chip" data-group="status" data-val="재접수" onclick="selectChip('status','재접수')">재접수</div>
+        </div>
+      </div>
+
+      <div class="chip-row" style="margin-top:14px;">
+        <div class="chip-row-label">입고 유무</div>
+        <div class="chip-group" id="grp-instock">
+          <div class="chip" data-group="instock" data-val="미입고" onclick="selectChipLinked('instock','미입고')">미입고</div>
+          <div class="chip" data-group="instock" data-val="입고" onclick="selectChipLinked('instock','입고')">입고</div>
+        </div>
+      </div>
+
+      <div class="chip-row" style="margin-top:14px;">
+        <div class="chip-row-label">연락</div>
+        <div class="chip-group" id="grp-contact">
+          <div class="chip" data-group="contact" data-val="미완료" onclick="selectChip('contact','미완료')">미완료</div>
+          <div class="chip" data-group="contact" data-val="완료" onclick="selectChip('contact','완료')">완료</div>
         </div>
       </div>
 
@@ -838,9 +867,9 @@ function renderTable(rows) {
       <td>${r.watchRef || '-'}</td>
       <td>${r.strapRef || '-'}</td>
       <td>${fmtAmt(r.amount)}</td>
-      <td>${instockBadge(r.instock)}</td>
-      <td>${contactHtml(r.contact)}</td>
-      <td>${statusBadge(r.status)}</td>
+      <td class="editable-cell" title="클릭하여 변경" onclick="onInstockClick(event,'${r.id}','${r.instock||'미입고'}')">${instockBadge(r.instock)}</td>
+      <td class="editable-cell" title="클릭하여 변경" onclick="onContactClick(event,'${r.id}','${r.contact||'미완료'}')">${contactHtml(r.contact)}</td>
+      <td class="editable-cell" title="클릭하여 변경" onclick="onStatusClick(event,'${r.id}','${r.status||'오더 대기'}')">${statusBadge(r.status)}</td>
       <td title="${r.memo||''}" style="color:${r.memo ? '#6b7280' : '#d1d5db'};">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
       </td>
@@ -930,6 +959,70 @@ window.toggleAll = function(cb) {
   document.querySelectorAll('.row-cb').forEach(c => { c.checked = cb.checked; });
 };
 
+/* ── 인라인 셀 편집 ── */
+let _activeDd = null;
+function showInlineDropdown(e, options, currentVal, onSelect) {
+  e.stopPropagation();
+  if (_activeDd) { _activeDd.remove(); _activeDd = null; }
+  const dd = document.createElement('div');
+  dd.className = 'inline-dd';
+  options.forEach(opt => {
+    const el = document.createElement('div');
+    el.className = 'inline-dd-opt' + (normStatus(opt.val) === normStatus(currentVal) ? ' active' : '');
+    el.textContent = opt.val;
+    el.onclick = async ev => {
+      ev.stopPropagation();
+      dd.remove(); _activeDd = null;
+      await onSelect(opt.val);
+    };
+    dd.appendChild(el);
+  });
+  document.body.appendChild(dd);
+  _activeDd = dd;
+  const td   = e.target.closest('td');
+  const rect = td ? td.getBoundingClientRect() : e.target.getBoundingClientRect();
+  dd.style.top  = Math.min(rect.bottom + 4, window.innerHeight - dd.offsetHeight - 8) + 'px';
+  dd.style.left = rect.left + 'px';
+  setTimeout(() => {
+    document.addEventListener('click', function h() { dd.remove(); _activeDd = null; document.removeEventListener('click', h); }, { once: true });
+  }, 0);
+}
+
+async function quickUpdate(id, data) {
+  try { await updateDoc(doc(db,'sp_orders',id), data); }
+  catch(e) { alert('수정 실패: ' + e.message); }
+}
+
+window.onInstockClick = function(e, id, cur) {
+  showInlineDropdown(e,
+    [{ val:'입고' }, { val:'미입고' }],
+    cur,
+    async newVal => {
+      const d = { instock: newVal };
+      if (newVal === '입고') d.status = '입고 완료';
+      await quickUpdate(id, d);
+    }
+  );
+};
+window.onContactClick = function(e, id, cur) {
+  showInlineDropdown(e,
+    [{ val:'완료' }, { val:'미완료' }],
+    cur,
+    async newVal => quickUpdate(id, { contact: newVal })
+  );
+};
+window.onStatusClick = function(e, id, cur) {
+  showInlineDropdown(e,
+    [{ val:'오더 대기' }, { val:'오더 중' }, { val:'입고 완료' }, { val:'판매 완료' }, { val:'재접수' }],
+    cur,
+    async newVal => {
+      const d = { status: newVal };
+      if (normStatus(newVal) === '입고완료') d.instock = '입고';
+      await quickUpdate(id, d);
+    }
+  );
+};
+
 /* ── 칩 선택 ── */
 const STRAP_SIZE_DATA = {
   '핀':      { XS:'', S:'', STANDARD:'', L:'', XL:'' },
@@ -948,6 +1041,13 @@ window.selectChip = function(group, val) {
   if (group === 'stitchColor') {
     document.getElementById('stitch-input-wrap').style.display = val === '직접 입력' ? 'block' : 'none';
   }
+};
+
+/* 입고↔상태 연동 버전 */
+window.selectChipLinked = function(group, val) {
+  selectChip(group, val);
+  if (group === 'instock' && val === '입고') selectChip('status', '입고 완료');
+  if (group === 'status'  && normStatus(val) === '입고완료') selectChip('instock', '입고');
 };
 
 function updateStrapSizes(buckle) {
@@ -993,7 +1093,9 @@ window.openRegModal = function() {
   editingId = null;
   document.getElementById('regModalTitle').textContent = 'SP 오더 등록';
   resetModal();
-  selectChip('status', '오더 대기');
+  selectChip('status',  '오더 대기');
+  selectChip('instock', '미입고');
+  selectChip('contact', '미완료');
   document.getElementById('regModal').classList.add('open');
 };
 
@@ -1023,8 +1125,10 @@ window.openEditFromDetail = function() {
     selectChip('stitchColor', isCustom ? '직접 입력' : r.stitchColor);
     if (isCustom) sv('f-stitchColor', r.stitchColor);
   }
-  if (r.purpose)     selectChip('purpose',     r.purpose);
-  selectChip('status', r.status || '오더 대기');
+  if (r.purpose)  selectChip('purpose',  r.purpose);
+  selectChip('status',  r.status  || '오더 대기');
+  selectChip('instock', r.instock || '미입고');
+  selectChip('contact', r.contact || '미완료');
   document.getElementById('regModal').classList.add('open');
 };
 
@@ -1079,8 +1183,8 @@ window.saveOrder = async function() {
     orderNum:    g('f-orderNum'),
     strapRef:    g('f-strapRef'),
     status:      chipState['status']      || '오더 대기',
-    instock:     '미입고',
-    contact:     '미완료',
+    instock:     chipState['instock']    || '미입고',
+    contact:     chipState['contact']    || '미완료',
     memo:        '',
   };
   if (!editingId) {
