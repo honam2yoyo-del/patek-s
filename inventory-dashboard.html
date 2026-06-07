@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=1920, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>재고 관리</title>
   <style>
     * { box-sizing:border-box; margin:0; padding:0; font-family:"Malgun Gothic","맑은 고딕",Arial,sans-serif; }
@@ -179,6 +179,20 @@
     .sidebar.collapsed .logout .menu-icon { font-size:16px; }
     .main { transition:margin-left .25s ease; }
     .app.sidebar-collapsed .main { margin-left:52px; }
+
+    /* ── 반응형 CSS (zoom 제거 대체) ── */
+    .title     { font-size: clamp(18px, 2.2vw, 30px); }
+    .kpi-pcs   { font-size: clamp(16px, 1.8vw, 22px); }
+    .kpi-label { font-size: clamp(11px, 1vw, 12px); word-break: keep-all; }
+    @media (max-width: 1400px) {
+      .kpi-grid { gap: 8px; }
+      .kpi-card { padding: 10px 10px; }
+    }
+    @media (max-width: 1100px) {
+      .main { padding: 16px 14px 88px; }
+      .kpi-grid { gap: 6px; }
+      .kpi-card { padding: 8px 8px; }
+    }
   </style>
 </head>
 <body>
@@ -1187,24 +1201,8 @@ window.toggleSidebar=function(){
   if(app)app.classList.toggle('sidebar-collapsed',c);
   if(ba)ba.style.left=(c?52:185)+'px';
   try{localStorage.setItem('_sbc',c);}catch(e){}
-  if(window.applyScale)window.applyScale();
 };
 (function(){try{if(localStorage.getItem('_sbc')==='true'){var sb=document.getElementById('sidebar'),app=document.querySelector('.app'),ba=document.querySelector('.bottom-actions');if(sb)sb.classList.add('collapsed');if(app)app.classList.add('sidebar-collapsed');if(ba)ba.style.left='52px';}}catch(e){}})();
-(function(){
-  var W=1920;
-  function apply(){
-    var sc=Math.min(1,window.innerWidth/W);
-    document.documentElement.style.zoom=sc;
-    var h=Math.ceil(window.innerHeight/sc);
-    var sb=document.getElementById('sidebar');
-    if(sb)sb.style.height=sc<1?h+'px':'';
-    var app=document.querySelector('.app');
-    if(app)app.style.minHeight=sc<1?h+'px':'';
-  }
-  window.applyScale=apply;
-  apply();
-  window.addEventListener('resize',apply);
-})();
 </script>
 </body>
 </html>

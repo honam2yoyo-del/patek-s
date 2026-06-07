@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=1920, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>A/S 현황</title>
   <style>
     * { box-sizing:border-box; margin:0; padding:0; font-family:"Malgun Gothic","맑은 고딕",Arial,sans-serif; }
@@ -149,6 +149,9 @@
     .sidebar.collapsed .logout .menu-icon { font-size:16px; }
     .main { transition:margin-left .25s ease; }
     .app.sidebar-collapsed .main { margin-left:52px; }
+
+    /* ── 반응형 CSS (zoom 제거 대체) ── */
+    .page-title { font-size: clamp(18px, 2.2vw, 30px); }
 
     /* ── 모달 공통 ── */
     .modal-backdrop { display:none;position:fixed;inset:0;background:rgba(15,23,42,.4);z-index:200;justify-content:center;align-items:center; }

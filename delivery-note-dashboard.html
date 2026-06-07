@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=1920, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>전달노트</title>
   <style>
     * { box-sizing:border-box; margin:0; padding:0; font-family:"Malgun Gothic","맑은 고딕",Arial,sans-serif; }
@@ -42,6 +42,9 @@
     html { overflow:hidden; }
     .main { flex:1;margin-left:185px;padding:22px 24px 0;height:100vh;display:flex;flex-direction:column;overflow:hidden;transition:margin-left .25s ease; }
     .app.sidebar-collapsed .main { margin-left:52px; }
+
+    /* ── 반응형 CSS (zoom 제거 대체) ── */
+    .page-title { font-size: clamp(18px, 2.2vw, 28px); }
     .top-section { flex-shrink:0; }
 
     /* ── 탑바 ── */
