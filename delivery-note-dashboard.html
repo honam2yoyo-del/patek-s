@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=1920, initial-scale=1" />
+  <title>전달노트</title>
+  <style>
+    * { box-sizing:border-box; margin:0; padding:0; font-family:"Malgun Gothic","맑은 고딕",Arial,sans-serif; }
+    body { background:#f7f9fc; color:#111827; overflow:hidden; height:100vh; }
+    .app { display:flex; height:100vh; }
+
+    /* ── 로그인 ── */
+    #login-overlay { position:fixed;inset:0;background:rgba(6,27,52,.97);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999; }
+    #login-overlay img { height:52px;margin-bottom:18px;filter:brightness(0) invert(1); }
+    #login-overlay h2 { color:#fff;font-size:22px;font-weight:800;margin-bottom:6px; }
+    #login-overlay p  { color:rgba(255,255,255,.5);font-size:13px;margin-bottom:26px; }
+    .google-btn { display:flex;align-items:center;gap:10px;background:#fff;border:none;border-radius:8px;padding:12px 26px;font-size:14px;font-weight:700;cursor:pointer; }
+
+    /* ── 사이드바 ── */
+    .sidebar { width:185px;background:linear-gradient(180deg,#061b34 0%,#031020 100%);color:#fff;display:flex;flex-direction:column;justify-content:space-between;flex-shrink:0;position:fixed;top:0;left:0;height:100vh;z-index:100;overflow:hidden;transition:width .25s ease; }
+    .sidebar.collapsed { width:52px; }
+    .sidebar-inner { flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column; }
+    .brand { height:78px;display:flex;align-items:center;gap:10px;padding:0 14px;font-size:20px;font-weight:800;border-bottom:1px solid rgba(255,255,255,.08);cursor:pointer;user-select:none; }
+    .brand:hover { background:rgba(255,255,255,.06); }
+    .brand img { height:24px;object-fit:contain;filter:brightness(0) invert(1);opacity:.85;flex-shrink:0;transition:opacity .2s,width .25s,margin .25s; }
+    .brand-name { font-size:19px;font-weight:800;white-space:nowrap;max-width:110px;overflow:hidden;transition:opacity .2s,max-width .25s; }
+    .sidebar-toggle { width:20px;height:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:17px;line-height:1;color:rgba(255,255,255,.75); }
+    .sidebar.collapsed .brand img { opacity:0;width:0;margin:0; }
+    .sidebar.collapsed .brand-name { opacity:0;max-width:0; }
+    .menu { list-style:none;padding:4px 0; }
+    .menu li { height:50px;display:flex;align-items:center;gap:12px;padding:0 16px;color:rgba(255,255,255,.85);font-size:13.5px;font-weight:700;cursor:pointer;white-space:nowrap;overflow:hidden;transition:padding .25s,gap .25s; }
+    .menu li.active { background:#075bc9; }
+    .menu li:hover:not(.active) { background:rgba(255,255,255,.06); }
+    .sidebar.collapsed .menu li { padding:0!important;gap:0!important;justify-content:center;font-size:0; }
+    .sidebar.collapsed .menu li .menu-icon { font-size:16px; }
+    .menu-icon { width:20px;height:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0; }
+    .logout { height:60px;display:flex;align-items:center;gap:12px;padding:0 16px;border-top:1px solid rgba(255,255,255,.08);font-size:13.5px;font-weight:700;cursor:pointer;color:rgba(255,255,255,.7);white-space:nowrap;overflow:hidden;flex-shrink:0;transition:padding .25s,gap .25s; }
+    .logout:hover { color:#fff; }
+    .sidebar.collapsed .logout { padding:0!important;gap:0!important;justify-content:center;font-size:0; }
+
+    /* ── 메인 (full height flex column) ── */
+    html { overflow:hidden; }
+    .main { flex:1;margin-left:185px;padding:22px 24px 0;height:100vh;display:flex;flex-direction:column;overflow:hidden;transition:margin-left .25s ease; }
+    .app.sidebar-collapsed .main { margin-left:52px; }
+    .top-section { flex-shrink:0; }
+
+    /* ── 탑바 ── */
+    .topbar { display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;gap:16px; }
+    .title-block { display:flex;flex-direction:column;gap:3px; }
+    .page-title { font-size:28px;font-weight:900;letter-spacing:-1px; }
+    .page-subtitle { font-size:12.5px;font-weight:600;color:#6b7280; }
+    .toolbar { display:flex;gap:8px;align-items:center; }
+
+    /* ── 검색창 ── */
+    .search-box { position:relative;width:280px; }
+    .search-box input { width:100%;height:38px;border:1px solid #d9e0ea;border-radius:8px;padding:0 40px 0 14px;font-size:13px;font-weight:600;outline:none;color:#111827;background:#fff; }
+    .search-box input::placeholder { color:#9ca3af; }
+    .search-box input:focus { border-color:#075bd8;box-shadow:0 0 0 3px #075bd820; }
+    .search-box .s-icon { position:absolute;right:12px;top:50%;transform:translateY(-50%);color:#9ca3af;pointer-events:none; }
+
+    /* ── 버튼 ── */
+    .btn-primary { height:38px;border:none;border-radius:7px;background:#075bd8;color:#fff;padding:0 16px;font-size:13.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap; }
+    .btn-primary:hover { background:#0550b3; }
+    .icon-btn { width:38px;height:38px;border:1px solid #d9e0ea;border-radius:8px;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#6b7280;flex-shrink:0; }
+    .icon-btn:hover { border-color:#075bd8;color:#075bd8; }
+    .profile-btn { height:38px;border:1px solid #d9e0ea;border-radius:8px;background:#fff;padding:0 12px;display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13.5px;font-weight:700;color:#111827; }
+    .profile-btn:hover { border-color:#075bd8; }
+    .profile-avatar { width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#075bd8,#4f46e5);display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:900; }
+
+    /* ── KPI 카드 6개 ── */
+    .kpi-grid { display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:14px; }
+    .kpi-card { background:#fff;border:1px solid #e2e7ef;border-radius:10px;padding:13px 14px;box-shadow:0 2px 8px rgba(15,23,42,.035);display:flex;align-items:center;gap:11px;cursor:pointer;transition:border-color .15s,box-shadow .15s; }
+    .kpi-card:hover { border-color:#9bbcff; }
+    .kpi-card.active-card { border-color:#075bd8;box-shadow:0 0 0 2px #075bd840; }
+    .kpi-icon { width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0; }
+    .kpi-text { display:flex;flex-direction:column;gap:1px;min-width:0; }
+    .kpi-label { font-size:11px;font-weight:700;color:#6b7280; }
+    .kpi-value { font-size:22px;font-weight:900;letter-spacing:-.5px;line-height:1.2; }
+    .ic-blue{background:#EFF6FF;} .v-blue{color:#2563eb;}
+    .ic-gray{background:#F3F4F6;} .v-gray{color:#4b5563;}
+    .ic-sky{background:#F0F9FF;}  .v-sky{color:#0284c7;}
+    .ic-amber{background:#FFFBEB;} .v-amber{color:#d97706;}
+    .ic-green{background:#F0FDF4;} .v-green{color:#16a34a;}
+    .ic-red{background:#FEF2F2;}  .v-red{color:#dc2626;}
+
+    /* ── 필터 바 ── */
+    .filter-bar { display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap; }
+    .filter-select { height:36px;border:1px solid #d9e0ea;border-radius:7px;background:#fff;padding:0 30px 0 12px;font-size:13px;font-weight:700;color:#374151;cursor:pointer;outline:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%236b7280' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center; }
+    .filter-select:hover { border-color:#075bd8; }
+    .filter-select:focus { border-color:#075bd8;box-shadow:0 0 0 3px #075bd820; }
+    .filter-reset { height:36px;border:1px solid #d9e0ea;border-radius:7px;background:#fff;padding:0 14px;font-size:13px;font-weight:700;color:#6b7280;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap; }
+    .filter-reset:hover { border-color:#ef4444;color:#ef4444; }
+
+    /* ── 콘텐츠 2단 분할 ── */
+    .content-split { flex:1;min-height:0;display:grid;grid-template-columns:5.5fr 4.5fr;gap:16px;padding-bottom:16px; }
+
+    /* ── 좌측 리스트 패널 ── */
+    .list-pane { background:#fff;border:1px solid #e2e7ef;border-radius:10px;box-shadow:0 2px 8px rgba(15,23,42,.035);display:flex;flex-direction:column;overflow:hidden; }
+    .list-header { flex-shrink:0;padding:0 16px;border-bottom:1px solid #e2e7ef; }
+    .list-tabs-row { display:flex;align-items:center;justify-content:space-between;height:46px; }
+    .list-tabs { display:flex;gap:0; }
+    .ltab { padding:0 14px;height:46px;border:none;background:none;font-size:13px;font-weight:700;color:#6b7280;cursor:pointer;border-bottom:2.5px solid transparent;white-space:nowrap;transition:.12s; }
+    .ltab:hover { color:#075bd8; }
+    .ltab.active { color:#075bd8;border-bottom-color:#075bd8; }
+    .sort-select { height:30px;border:1px solid #d9e0ea;border-radius:6px;padding:0 24px 0 10px;font-size:12.5px;font-weight:700;color:#374151;cursor:pointer;outline:none;background:#f9fafb;appearance:none;background-image:url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%236b7280' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center; }
+    .list-body { flex:1;overflow-y:auto;padding:10px 0; }
+    .list-body::-webkit-scrollbar { width:5px; }
+    .list-body::-webkit-scrollbar-thumb { background:#d1d5db;border-radius:4px; }
+
+    /* ── 노트 카드 ── */
+    .note-card { position:relative;background:#fff;border:1px solid #e2e7ef;border-radius:8px;padding:13px 14px 13px 18px;margin:0 12px 8px;cursor:pointer;overflow:hidden;transition:background .12s,box-shadow .12s,border-color .12s; }
+    .note-card::before { content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--cc); }
+    .note-card:hover { background:#fafbfd;box-shadow:0 2px 8px rgba(15,23,42,.06); }
+    .note-card.selected { background:#eff6ff;border-color:#bfdbfe; }
+    .note-card.selected::before { background:var(--cc); }
+    .note-top { display:flex;align-items:center;gap:8px;margin-bottom:7px; }
+    .cat-badge { display:inline-flex;align-items:center;padding:2px 9px;border-radius:12px;font-size:11px;font-weight:800;background:var(--cb);color:var(--cc); }
+    .imp-dot { width:7px;height:7px;border-radius:50%;background:#ef4444;flex-shrink:0; }
+    .note-title { font-size:13.5px;font-weight:800;color:#111827;margin-bottom:5px;line-height:1.35; }
+    .note-meta { font-size:11.5px;font-weight:600;color:#9ca3af; }
+    .note-bottom { display:flex;align-items:center;justify-content:space-between;margin-top:9px; }
+    .note-tags { display:flex;gap:5px;flex-wrap:wrap; }
+    .note-tag { font-size:11px;font-weight:700;color:#6b7280;background:#f3f4f6;padding:2px 7px;border-radius:10px; }
+    .note-actions { display:flex;align-items:center;gap:10px; }
+    .note-stat { display:flex;align-items:center;gap:3px;font-size:11.5px;font-weight:700;color:#9ca3af; }
+    .note-due { font-size:11.5px;font-weight:700; }
+    .note-due.overdue { color:#dc2626; }
+    .note-due.normal { color:#6b7280; }
+    .star-icon { cursor:pointer;color:#d1d5db;transition:color .12s; }
+    .star-icon.starred { color:#f59e0b; }
+
+    /* ── 상태 배지 (리스트) ── */
+    .s-badge { display:inline-flex;align-items:center;padding:2px 9px;border-radius:12px;font-size:11px;font-weight:800;white-space:nowrap; }
+    .s-대기 { background:#f3f4f6;color:#6b7280; }
+    .s-진행중 { background:#eff6ff;color:#2563eb; }
+    .s-보류 { background:#fffbeb;color:#d97706; }
+    .s-완료 { background:#f0fdf4;color:#16a34a; }
+
+    /* ── 우측 상세 패널 ── */
+    .detail-pane { background:#fff;border:1px solid #e2e7ef;border-radius:10px;box-shadow:0 2px 8px rgba(15,23,42,.035);display:flex;flex-direction:column;overflow:hidden; }
+    .dp-empty { flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#9ca3af;gap:12px; }
+    .dp-empty p { font-size:13.5px;font-weight:700; }
+
+    /* 상세 패널 탑 (아이콘 툴바) */
+    .dp-top { flex-shrink:0;display:flex;justify-content:flex-end;align-items:center;gap:6px;padding:12px 16px;border-bottom:1px solid #f0f4fa; }
+    .dp-icon-btn { width:32px;height:32px;border:none;background:none;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#6b7280;transition:background .12s,color .12s; }
+    .dp-icon-btn:hover { background:#f0f4fa;color:#075bd8; }
+    .dp-icon-btn.star-active { color:#f59e0b; }
+
+    /* 상세 스크롤 영역 */
+    .detail-scroll { flex:1;overflow-y:auto;padding:20px 20px 0; }
+    .detail-scroll::-webkit-scrollbar { width:5px; }
+    .detail-scroll::-webkit-scrollbar-thumb { background:#d1d5db;border-radius:4px; }
+
+    /* 제목 & 상태 배지 */
+    .dp-title { font-size:20px;font-weight:900;color:#111827;letter-spacing:-.5px;line-height:1.3;margin-bottom:10px; }
+    .dp-status-row { display:flex;align-items:center;gap:8px;margin-bottom:18px; }
+    .dp-sbadge { display:inline-flex;align-items:center;padding:4px 12px;border-radius:7px;font-size:12.5px;font-weight:800;white-space:nowrap; }
+    .dp-sbadge.s-대기   { border:1.5px solid #d1d5db;color:#6b7280;background:#fff; }
+    .dp-sbadge.s-진행중 { border:1.5px solid #2563eb;color:#2563eb;background:#fff; }
+    .dp-sbadge.s-보류   { border:1.5px solid #d97706;color:#d97706;background:#fff; }
+    .dp-sbadge.s-완료   { border:1.5px solid #16a34a;color:#16a34a;background:#fff; }
+
+    /* 정보 그리드 */
+    .dp-info-grid { display:grid;grid-template-columns:1fr 1fr;gap:12px 20px;margin-bottom:18px;padding:14px 16px;background:#f9fafb;border-radius:8px;border:1px solid #f0f4fa; }
+    .dp-info-item { display:flex;flex-direction:column;gap:2px; }
+    .dp-info-label { font-size:10.5px;font-weight:800;color:#9ca3af;text-transform:uppercase;letter-spacing:.4px; }
+    .dp-info-val { font-size:13px;font-weight:700;color:#111827; }
+    .dp-info-val.red { color:#dc2626; }
+    .dp-info-val.green { color:#16a34a; }
+
+    /* 본문 */
+    .dp-divider { height:1px;background:#f0f4fa;margin-bottom:16px; }
+    .dp-body-title { font-size:12px;font-weight:900;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px; }
+    .dp-body-text { font-size:13.5px;font-weight:600;color:#374151;line-height:1.7;white-space:pre-line;margin-bottom:20px; }
+
+    /* 댓글 */
+    .comments-section { border-top:1px solid #f0f4fa;padding-top:16px;margin-bottom:16px; }
+    .comments-title { font-size:14px;font-weight:900;color:#111827;margin-bottom:12px; }
+    .comment-input-wrap { display:flex;gap:8px;margin-bottom:14px; }
+    .comment-input { flex:1;height:38px;border:1px solid #d9e0ea;border-radius:8px;padding:0 12px;font-size:13px;font-weight:600;outline:none;font-family:inherit; }
+    .comment-input:focus { border-color:#075bd8;box-shadow:0 0 0 3px #075bd820; }
+    .comment-send-btn { width:38px;height:38px;border:none;background:#075bd8;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#fff;flex-shrink:0; }
+    .comment-send-btn:hover { background:#0550b3; }
+    .comment-item { display:flex;gap:10px;margin-bottom:12px; }
+    .comment-avatar { width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#4f46e5,#7c3aed);display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:900;flex-shrink:0; }
+    .comment-avatar.av2 { background:linear-gradient(135deg,#059669,#0891b2); }
+    .comment-body { flex:1; }
+    .comment-meta { display:flex;align-items:center;gap:8px;margin-bottom:3px; }
+    .comment-author { font-size:12.5px;font-weight:800;color:#111827; }
+    .comment-time { font-size:11px;font-weight:600;color:#9ca3af; }
+    .comment-text { font-size:13px;font-weight:600;color:#374151;line-height:1.5; }
+
+    /* 하단 액션 버튼 */
+    .dp-footer-actions { flex-shrink:0;display:flex;justify-content:space-between;align-items:center;padding:13px 18px;border-top:1px solid #e2e7ef;background:#fff; }
+    .dp-fa-left { display:flex;gap:8px; }
+    .btn-hold { height:36px;border:none;background:#f3f4f6;color:#374151;padding:0 16px;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;transition:.12s; }
+    .btn-hold:hover { background:#e5e7eb; }
+    .btn-complete { height:36px;border:none;background:#075bd8;color:#fff;padding:0 16px;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;transition:.12s; }
+    .btn-complete:hover { background:#0550b3; }
+    .btn-del { height:36px;border:1.5px solid #fca5a5;background:#fff;color:#dc2626;padding:0 16px;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;transition:.12s; }
+    .btn-del:hover { background:#fef2f2; }
+
+    /* ── 모달 ── */
+    .modal-backdrop { display:none;position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:200;justify-content:center;align-items:center; }
+    .modal-backdrop.open { display:flex; }
+    .modal { background:#fff;border-radius:12px;box-shadow:0 20px 60px rgba(15,23,42,.25);padding:26px 28px;width:560px;max-width:96vw;max-height:90vh;overflow-y:auto; }
+    .modal-title { font-size:20px;font-weight:900;margin-bottom:18px; }
+    .form-row { margin-bottom:12px; }
+    .form-label { font-size:12.5px;font-weight:800;color:#374151;margin-bottom:5px;display:block; }
+    .form-input { height:38px;border:1px solid #d9e0ea;border-radius:6px;padding:0 12px;font-size:13.5px;font-weight:600;outline:none;width:100%;font-family:inherit; }
+    .form-input:focus { border-color:#075bd8; }
+    .form-select { height:38px;border:1px solid #d9e0ea;border-radius:6px;padding:0 10px;font-size:13.5px;font-weight:600;outline:none;width:100%;background:#fff;font-family:inherit; }
+    .form-textarea { border:1px solid #d9e0ea;border-radius:6px;padding:10px 12px;font-size:13.5px;font-weight:600;outline:none;width:100%;min-height:100px;resize:vertical;font-family:inherit;line-height:1.6; }
+    .form-textarea:focus { border-color:#075bd8; }
+    .form-row-2 { display:grid;grid-template-columns:1fr 1fr;gap:12px; }
+    .modal-actions { display:flex;justify-content:flex-end;gap:10px;margin-top:20px; }
+    .btn-cancel { height:38px;border:1px solid #d9e0ea;border-radius:7px;background:#fff;padding:0 20px;font-size:14px;font-weight:700;cursor:pointer; }
+    .btn-save { height:38px;border:none;border-radius:7px;background:#075bd8;color:#fff;padding:0 20px;font-size:14px;font-weight:700;cursor:pointer; }
+  </style>
+</head>
+<body>
+
+<!-- 로그인 -->
+<div id="login-overlay">
+  <img src="log.png" onerror="this.style.display='none'"/>
+  <h2>전달노트</h2>
+  <p>Patek Philippe Korea — 전달노트 관리 시스템</p>
+  <button class="google-btn" id="login-btn">
+    <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+    Google로 로그인
+  </button>
+</div>
+
+<div class="app">
+  <!-- 사이드바 -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-inner">
+      <div class="brand" onclick="window.toggleSidebar()">
+        <span class="sidebar-toggle">☰</span>
+        <img src="log.png" onerror="this.style.display='none'"/>
+        <span class="brand-name">Sales</span>
+      </div>
+      <ul class="menu">
+        <li onclick="safeNav('sales-plan.html')"><span class="menu-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span>메인</li>
+        <li onclick="safeNav('notice-dashboard.html')"><span class="menu-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span>공지사항</li>
+        <li><span class="menu-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>캘린더</li>
+        <li onclick="safeNav('sales-report-dashboard.html')"><span class="menu-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg></span>매출</li>
+        <li onclick="safeNav('inventory-dashboard.html')"><span class="menu-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></span>재고</li>
+        <li onclick="safeNav('mpds-dashboard.html')"><span class="menu-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg></span>MPDS</li>
+        <li onclick="safeNav('report-dashboard.html')"><span class="menu-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg></span>동향 보고</li>
+        <li onclick="safeNav('as-dashboard.html')"><span class="menu-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></span>AS</li>
+        <li onclick="safeNav('sp-order-dashboard.html')"><span class="menu-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></span>SP 오더</li>
+        <li class="active"><span class="menu-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span>전달노트</li>
+        <li onclick="safeNav('schedule.html')"><span class="menu-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="2" x2="12" y2="4.5"/><line x1="12" y1="19.5" x2="12" y2="22"/><line x1="2" y1="12" x2="4.5" y2="12"/><line x1="19.5" y1="12" x2="22" y2="12"/><polyline points="8 12 11 15 16 9"/></svg></span>스케줄</li>
+      </ul>
+    </div>
+    <div>
+      <ul class="menu" style="border-top:1px solid rgba(255,255,255,.1);padding:0;">
+        <li onclick="safeNav('settings-dashboard.html')"><span class="menu-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>설정</li>
+      </ul>
+      <div class="logout" id="logout-btn">
+        <span class="menu-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span>
+        로그아웃
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="top-section">
+
+      <!-- 1. 헤더 -->
+      <div class="topbar">
+        <div class="title-block">
+          <h1 class="page-title">전달노트</h1>
+          <p class="page-subtitle">마감 업무 전달 및 이슈를 기록하고 관리하세요.</p>
+        </div>
+        <div class="toolbar">
+          <!-- 검색창 -->
+          <div class="search-box">
+            <input type="text" id="searchInput" placeholder="제목, 내용, 고객명, Ref, # 검색" oninput="applyFilter()"/>
+            <span class="s-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
+          </div>
+          <!-- 작성 버튼 -->
+          <button class="btn-primary" onclick="openWriteModal()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            전달노트 작성
+          </button>
+          <!-- 알림 -->
+          <button class="icon-btn" title="알림">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          </button>
+          <!-- 프로필 -->
+          <button class="profile-btn">
+            <div class="profile-avatar">영지</div>
+            영지 ▾
+          </button>
+        </div>
+      </div>
+
+      <!-- 2. KPI 카드 6개 -->
+      <div class="kpi-grid">
+        <div class="kpi-card active-card" data-filter="전체" onclick="setTabFilter('전체')">
+          <div class="kpi-icon ic-blue">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          </div>
+          <div class="kpi-text"><span class="kpi-label">전체 전달사항</span><span class="kpi-value v-blue" id="cnt-전체">42</span></div>
+        </div>
+        <div class="kpi-card" data-filter="대기" onclick="setTabFilter('대기')">
+          <div class="kpi-icon ic-gray">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4b5563" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <div class="kpi-text"><span class="kpi-label">대기</span><span class="kpi-value v-gray" id="cnt-대기">5</span></div>
+        </div>
+        <div class="kpi-card" data-filter="진행중" onclick="setTabFilter('진행중')">
+          <div class="kpi-icon ic-sky">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          </div>
+          <div class="kpi-text"><span class="kpi-label">진행중</span><span class="kpi-value v-sky" id="cnt-진행중">8</span></div>
+        </div>
+        <div class="kpi-card" data-filter="보류" onclick="setTabFilter('보류')">
+          <div class="kpi-icon ic-amber">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          </div>
+          <div class="kpi-text"><span class="kpi-label">보류</span><span class="kpi-value v-amber" id="cnt-보류">3</span></div>
+        </div>
+        <div class="kpi-card" data-filter="완료" onclick="setTabFilter('완료')">
+          <div class="kpi-icon ic-green">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          </div>
+          <div class="kpi-text"><span class="kpi-label">완료</span><span class="kpi-value v-green" id="cnt-완료">26</span></div>
+        </div>
+        <div class="kpi-card" data-filter="중요" onclick="setTabFilter('중요')">
+          <div class="kpi-icon ic-red">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          </div>
+          <div class="kpi-text"><span class="kpi-label">중요</span><span class="kpi-value v-red" id="cnt-중요">7</span></div>
+        </div>
+      </div>
+
+      <!-- 3. 필터 바 -->
+      <div class="filter-bar">
+        <select class="filter-select" id="f-category" onchange="applyFilter()">
+          <option value="">카테고리</option>
+          <option value="PP">PP</option>
+          <option value="고객">고객</option>
+          <option value="본사">본사</option>
+          <option value="재고">재고</option>
+          <option value="AS">AS</option>
+          <option value="기타">기타</option>
+        </select>
+        <select class="filter-select" id="f-status" onchange="applyFilter()">
+          <option value="">상태</option>
+          <option value="대기">대기</option>
+          <option value="진행중">진행중</option>
+          <option value="보류">보류</option>
+          <option value="완료">완료</option>
+        </select>
+        <select class="filter-select" id="f-assignee" onchange="applyFilter()">
+          <option value="">담당자</option>
+          <option value="임지">임지</option>
+          <option value="임영지">임영지</option>
+          <option value="박준혁">박준혁</option>
+        </select>
+        <select class="filter-select" id="f-period" onchange="applyFilter()">
+          <option value="">📅 기간</option>
+          <option value="today">오늘</option>
+          <option value="week">이번 주</option>
+          <option value="month">이번 달</option>
+        </select>
+        <select class="filter-select" id="f-tag" onchange="applyFilter()">
+          <option value="">태그</option>
+          <option value="#신제품">#신제품</option>
+          <option value="#VIP">#VIP</option>
+          <option value="#긴급">#긴급</option>
+          <option value="#마감">#마감</option>
+        </select>
+        <button class="filter-reset" onclick="resetFilters()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          필터 초기화
+        </button>
+      </div>
+
+    </div><!-- /top-section -->
+
+    <!-- 4. 메인 2단 분할 -->
+    <div class="content-split">
+
+      <!-- 5. 좌측: 목록 -->
+      <div class="list-pane">
+        <div class="list-header">
+          <div class="list-tabs-row">
+            <div class="list-tabs">
+              <button class="ltab active" data-filter="전체"  onclick="setTabFilter('전체')">전체</button>
+              <button class="ltab"        data-filter="대기"  onclick="setTabFilter('대기')">대기</button>
+              <button class="ltab"        data-filter="진행중" onclick="setTabFilter('진행중')">진행중</button>
+              <button class="ltab"        data-filter="보류"  onclick="setTabFilter('보류')">보류</button>
+              <button class="ltab"        data-filter="완료"  onclick="setTabFilter('완료')">완료</button>
+            </div>
+            <select class="sort-select" id="sortSelect" onchange="applyFilter()">
+              <option value="newest">최신순 ▾</option>
+              <option value="due">마감일순</option>
+              <option value="comments">댓글순</option>
+              <option value="reads">읽음순</option>
+            </select>
+          </div>
+        </div>
+        <div class="list-body" id="noteList">
+          <!-- JS가 렌더링 -->
+        </div>
+      </div>
+
+      <!-- 6. 우측: 상세 보기 -->
+      <div class="detail-pane" id="detailPane">
+
+        <!-- 빈 상태 -->
+        <div class="dp-empty" id="dpEmpty">
+          <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" style="opacity:.3"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          <p>노트를 선택하면 상세 내용이 표시됩니다</p>
+        </div>
+
+        <!-- 상세 내용 -->
+        <div id="dpContent" style="display:none;display:none;flex:1;min-height:0;flex-direction:column;overflow:hidden">
+
+          <!-- 패널 탑 아이콘 -->
+          <div class="dp-top">
+            <button class="dp-icon-btn" id="dpStarBtn" title="즐겨찾기" onclick="toggleDetailStar()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            </button>
+            <button class="dp-icon-btn" title="수정" onclick="editCurrentNote()">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+            <button class="dp-icon-btn" title="더보기">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+            </button>
+            <button class="dp-icon-btn" title="닫기" onclick="closeDetail()">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+
+          <!-- 스크롤 영역 -->
+          <div class="detail-scroll">
+            <div class="dp-title" id="dpTitle">—</div>
+            <div class="dp-status-row">
+              <span class="dp-sbadge" id="dpStatusBadge">—</span>
+              <span class="cat-badge" id="dpCatBadge" style="--cc:#6b7280;--cb:#f3f4f6;">—</span>
+            </div>
+
+            <!-- 정보 그리드 -->
+            <div class="dp-info-grid">
+              <div class="dp-info-item"><span class="dp-info-label">작성자</span><span class="dp-info-val" id="dpAuthor">—</span></div>
+              <div class="dp-info-item"><span class="dp-info-label">담당자</span><span class="dp-info-val" id="dpAssignee">—</span></div>
+              <div class="dp-info-item"><span class="dp-info-label">완료자</span><span class="dp-info-val" id="dpCompleter">—</span></div>
+              <div class="dp-info-item"><span class="dp-info-label">마감일</span><span class="dp-info-val" id="dpDue">—</span></div>
+              <div class="dp-info-item"><span class="dp-info-label">전달 대상</span><span class="dp-info-val" id="dpTarget">—</span></div>
+              <div class="dp-info-item"><span class="dp-info-label">작성일</span><span class="dp-info-val" id="dpCreated">—</span></div>
+              <div class="dp-info-item"><span class="dp-info-label">읽음 수</span><span class="dp-info-val" id="dpReads">—</span></div>
+            </div>
+
+            <!-- 본문 -->
+            <div class="dp-divider"></div>
+            <div class="dp-body-title">본문</div>
+            <div class="dp-body-text" id="dpBody">—</div>
+
+            <!-- 댓글 -->
+            <div class="comments-section">
+              <div class="comments-title" id="commentsTitle">댓글</div>
+              <div class="comment-input-wrap">
+                <input class="comment-input" id="commentInput" type="text" placeholder="댓글을 입력하세요..."/>
+                <button class="comment-send-btn" onclick="sendComment()">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                </button>
+              </div>
+              <div id="commentList"></div>
+            </div>
+          </div><!-- /detail-scroll -->
+
+          <!-- 하단 액션 버튼 -->
+          <div class="dp-footer-actions">
+            <div class="dp-fa-left">
+              <button class="btn-hold" onclick="setNoteStatus('보류')">보류 처리</button>
+              <button class="btn-complete" onclick="setNoteStatus('완료')">완료 처리</button>
+            </div>
+            <button class="btn-del" onclick="deleteCurrentNote()">삭제</button>
+          </div>
+
+        </div><!-- /dpContent -->
+      </div><!-- /detail-pane -->
+
+    </div><!-- /content-split -->
+  </main>
+</div>
+
+<!-- 전달노트 작성 모달 -->
+<div class="modal-backdrop" id="writeModal">
+  <div class="modal">
+    <div class="modal-title" id="writeModalTitle">전달노트 작성</div>
+    <div class="form-row">
+      <label class="form-label">제목</label>
+      <input class="form-input" id="wf-title" type="text" placeholder="전달 내용을 요약하세요"/>
+    </div>
+    <div class="form-row-2" style="margin-bottom:12px;">
+      <div class="form-row" style="margin-bottom:0">
+        <label class="form-label">카테고리</label>
+        <select class="form-select" id="wf-category">
+          <option value="PP">PP</option>
+          <option value="고객">고객</option>
+          <option value="본사">본사</option>
+          <option value="재고">재고</option>
+          <option value="AS">AS</option>
+          <option value="기타">기타</option>
+        </select>
+      </div>
+      <div class="form-row" style="margin-bottom:0">
+        <label class="form-label">상태</label>
+        <select class="form-select" id="wf-status">
+          <option value="대기">대기</option>
+          <option value="진행중">진행중</option>
+          <option value="보류">보류</option>
+          <option value="완료">완료</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row-2" style="margin-bottom:12px;">
+      <div class="form-row" style="margin-bottom:0">
+        <label class="form-label">담당자</label>
+        <input class="form-input" id="wf-assignee" type="text" placeholder="담당자 이름"/>
+      </div>
+      <div class="form-row" style="margin-bottom:0">
+        <label class="form-label">마감일</label>
+        <input class="form-input" id="wf-due" type="date"/>
+      </div>
+    </div>
+    <div class="form-row">
+      <label class="form-label">전달 대상</label>
+      <input class="form-input" id="wf-target" type="text" placeholder="예: 전체 팀, 임지"/>
+    </div>
+    <div class="form-row">
+      <label class="form-label">태그 (쉼표 구분)</label>
+      <input class="form-input" id="wf-tags" type="text" placeholder="#긴급, #신제품"/>
+    </div>
+    <div class="form-row">
+      <label class="form-label">본문</label>
+      <textarea class="form-textarea" id="wf-body" placeholder="전달 내용을 자세히 입력하세요..."></textarea>
+    </div>
+    <div class="form-row" style="display:flex;align-items:center;gap:10px">
+      <input type="checkbox" id="wf-important" style="width:16px;height:16px;accent-color:#dc2626;cursor:pointer;"/>
+      <label for="wf-important" style="font-size:13px;font-weight:700;color:#374151;cursor:pointer;">중요 표시</label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeWriteModal()">취소</button>
+      <button class="btn-save" onclick="saveNote()">저장</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp }   from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+const FC = { apiKey:"AIzaSyCt7aQXA5eFdnDTMHlRhjPAkyH4b8UB6HY", authDomain:"patek-s.firebaseapp.com", projectId:"patek-s", storageBucket:"patek-s.firebasestorage.app", messagingSenderId:"786016749285", appId:"1:786016749285:web:58538eec1cf7e72068b60c" };
+const app  = initializeApp(FC);
+const auth = getAuth(app);
+const db   = getFirestore(app);
+
+/* ── 네비 & 사이드바 ── */
+window.safeNav = url => { window.location.href = url; };
+window.toggleSidebar = () => {
+  document.querySelector('.app').classList.toggle('sidebar-collapsed');
+  document.getElementById('sidebar').classList.toggle('collapsed');
+};
+
+/* ── 인증 ── */
+document.getElementById('login-btn').onclick = async () => {
+  try { await signInWithPopup(auth, new GoogleAuthProvider()); }
+  catch(e) { alert('로그인 실패: ' + e.message); }
+};
+document.getElementById('logout-btn').onclick = () => signOut(auth);
+
+onAuthStateChanged(auth, user => {
+  document.getElementById('login-overlay').style.display = user ? 'none' : 'flex';
+  if (user) initPage();
+  else loadDemoData();
+});
+
+/* ── 상태 ── */
+let allNotes   = [];
+let activeTab  = '전체';
+let selectedId = null;
+let editingId  = null;
+let unsub      = null;
+
+/* ── 카테고리 색상 맵 ── */
+const CAT_MAP = {
+  'PP':   { cc:'#d97706', cb:'#fffbeb' },
+  '고객': { cc:'#2563eb', cb:'#eff6ff' },
+  '본사': { cc:'#7c3aed', cb:'#f5f3ff' },
+  '재고': { cc:'#16a34a', cb:'#f0fdf4' },
+  'AS':   { cc:'#f97316', cb:'#fff7ed' },
+  '기타': { cc:'#6b7280', cb:'#f9fafb' },
+};
+
+/* ── 초기화 ── */
+function initPage() { loadData(); }
+
+function loadData() {
+  if (unsub) unsub();
+  const col = collection(db, 'delivery_notes');
+  unsub = onSnapshot(query(col, orderBy('createdAt','desc')), snap => {
+    allNotes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    updateKPI();
+    applyFilter();
+    if (selectedId) {
+      const found = allNotes.find(n => n.id === selectedId);
+      if (found) renderDetail(found); else clearDetail();
+    }
+  });
+}
+
+/* ── KPI ── */
+function updateKPI() {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('cnt-전체').textContent   = allNotes.length;
+  document.getElementById('cnt-대기').textContent   = allNotes.filter(n => n.status === '대기').length;
+  document.getElementById('cnt-진행중').textContent = allNotes.filter(n => n.status === '진행중').length;
+  document.getElementById('cnt-보류').textContent   = allNotes.filter(n => n.status === '보류').length;
+  document.getElementById('cnt-완료').textContent   = allNotes.filter(n => n.status === '완료').length;
+  document.getElementById('cnt-중요').textContent   = allNotes.filter(n => n.important).length;
+}
+
+/* ── 탭 필터 ── */
+window.setTabFilter = function(f) {
+  activeTab = f;
+  document.querySelectorAll('.ltab').forEach(b => b.classList.toggle('active', b.dataset.filter === f));
+  document.querySelectorAll('.kpi-card').forEach(c => c.classList.toggle('active-card', c.dataset.filter === f));
+  applyFilter();
+};
+
+/* ── 통합 필터 ── */
+window.applyFilter = function() {
+  const q       = document.getElementById('searchInput').value.toLowerCase();
+  const fCat    = document.getElementById('f-category').value;
+  const fStat   = document.getElementById('f-status').value;
+  const fAssign = document.getElementById('f-assignee').value;
+  const fTag    = document.getElementById('f-tag').value;
+  const sortVal = document.getElementById('sortSelect').value;
+
+  let rows = allNotes.filter(n => {
+    const matchTab  = activeTab === '전체' || (activeTab === '중요' ? n.important : n.status === activeTab);
+    const matchQ    = !q || [n.title||'', n.body||'', n.assignee||'', ...(n.tags||[])].some(v => v.toLowerCase().includes(q));
+    const matchCat  = !fCat   || n.category === fCat;
+    const matchStat = !fStat  || n.status === fStat;
+    const matchAss  = !fAssign|| n.assignee === fAssign;
+    const matchTag  = !fTag   || (n.tags||[]).includes(fTag);
+    return matchTab && matchQ && matchCat && matchStat && matchAss && matchTag;
+  });
+
+  if (sortVal === 'due')      rows.sort((a,b) => (a.dueDate||'').localeCompare(b.dueDate||''));
+  else if (sortVal === 'comments') rows.sort((a,b) => (b.commentList||[]).length - (a.commentList||[]).length);
+  else if (sortVal === 'reads')    rows.sort((a,b) => (b.reads||0) - (a.reads||0));
+
+  renderList(rows);
+};
+
+window.resetFilters = function() {
+  ['f-category','f-status','f-assignee','f-period','f-tag'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('searchInput').value = '';
+  applyFilter();
+};
+
+/* ── 리스트 렌더 ── */
+const TODAY = new Date().toISOString().split('T')[0];
+function renderList(notes) {
+  const wrap = document.getElementById('noteList');
+  if (!notes.length) {
+    wrap.innerHTML = `<div style="padding:40px 20px;text-align:center;color:#9ca3af;font-size:13.5px;font-weight:700;">표시할 전달노트가 없습니다</div>`;
+    return;
+  }
+  wrap.innerHTML = notes.map(n => {
+    const cm = CAT_MAP[n.category] || CAT_MAP['기타'];
+    const dueClass = n.dueDate && n.dueDate <= TODAY ? 'overdue' : 'normal';
+    const dueText  = n.dueDate ? n.dueDate.replace(/-/g, '.') : '';
+    const starClass = n.starred ? 'starred' : '';
+    const tags = (n.tags||[]).map(t => `<span class="note-tag">${t}</span>`).join('');
+    return `
+    <div class="note-card${n.id === selectedId ? ' selected' : ''}"
+         style="--cc:${cm.cc};--cb:${cm.cb};"
+         onclick="selectNote('${n.id}')">
+      <div class="note-top">
+        <span class="cat-badge" style="--cc:${cm.cc};--cb:${cm.cb};">${n.category||'기타'}</span>
+        <span class="s-badge s-${n.status||'대기'}">${n.status||'대기'}</span>
+        ${n.important ? '<span class="imp-dot" title="중요"></span>' : ''}
+      </div>
+      <div class="note-title">${n.title||'(제목 없음)'}</div>
+      <div class="note-meta">작성: ${n.author||'-'} &nbsp;·&nbsp; 담당: ${n.assignee||'-'}${n.completer ? ' &nbsp;·&nbsp; 완료: '+n.completer : ''}</div>
+      <div class="note-bottom">
+        <div class="note-tags">${tags}</div>
+        <div class="note-actions">
+          ${dueText ? `<span class="note-due ${dueClass}">📅 ${dueText}</span>` : ''}
+          <span class="note-stat">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            ${(n.commentList||[]).length}
+          </span>
+          <span class="note-stat">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            ${n.reads||0}
+          </span>
+          <span class="star-icon ${starClass}" onclick="event.stopPropagation();toggleStar('${n.id}',${!n.starred})">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="${n.starred?'#f59e0b':'none'}" stroke="${n.starred?'#f59e0b':'#d1d5db'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          </span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ── 노트 선택 ── */
+window.selectNote = function(id) {
+  selectedId = id;
+  const note = allNotes.find(n => n.id === id);
+  if (note) { renderDetail(note); applyFilter(); }
+};
+
+/* ── 상세 렌더 ── */
+function renderDetail(n) {
+  document.getElementById('dpEmpty').style.display   = 'none';
+  const dc = document.getElementById('dpContent');
+  dc.style.display = 'flex';
+
+  document.getElementById('dpTitle').textContent = n.title || '—';
+
+  const sb = document.getElementById('dpStatusBadge');
+  sb.textContent = n.status || '대기';
+  sb.className   = `dp-sbadge s-${n.status||'대기'}`;
+
+  const cm = CAT_MAP[n.category] || CAT_MAP['기타'];
+  const cb = document.getElementById('dpCatBadge');
+  cb.textContent = n.category || '기타';
+  cb.style.cssText = `--cc:${cm.cc};--cb:${cm.cb};`;
+
+  const starBtn = document.getElementById('dpStarBtn');
+  starBtn.classList.toggle('star-active', !!n.starred);
+
+  document.getElementById('dpAuthor').textContent   = n.author    || '—';
+  document.getElementById('dpAssignee').textContent = n.assignee  || '—';
+  document.getElementById('dpCompleter').textContent= n.completer || '—';
+  document.getElementById('dpTarget').textContent   = n.target    || '—';
+  document.getElementById('dpCreated').textContent  = n.createdAt || '—';
+  document.getElementById('dpReads').textContent    = (n.reads||0) + '회';
+
+  const dueEl = document.getElementById('dpDue');
+  dueEl.textContent = n.dueDate ? n.dueDate.replace(/-/g,'.') : '—';
+  dueEl.className   = 'dp-info-val' + (n.dueDate && n.dueDate <= TODAY ? ' red' : '');
+
+  document.getElementById('dpBody').textContent = n.body || '(본문 없음)';
+
+  renderComments(n.commentList || []);
+}
+
+function clearDetail() {
+  selectedId = null;
+  document.getElementById('dpEmpty').style.display   = 'flex';
+  document.getElementById('dpContent').style.display = 'none';
+  applyFilter();
+}
+
+function renderComments(list) {
+  document.getElementById('commentsTitle').textContent = `댓글 ${list.length}`;
+  const avatarClasses = ['', 'av2'];
+  document.getElementById('commentList').innerHTML = list.map((c, i) => `
+    <div class="comment-item">
+      <div class="comment-avatar ${avatarClasses[i%2]}">${(c.author||'?')[0]}</div>
+      <div class="comment-body">
+        <div class="comment-meta">
+          <span class="comment-author">${c.author||'—'}</span>
+          <span class="comment-time">${c.time||''}</span>
+        </div>
+        <div class="comment-text">${c.text||''}</div>
+      </div>
+    </div>`).join('');
+}
+
+/* ── 별 토글 ── */
+window.toggleStar = async function(id, val) {
+  const note = allNotes.find(n => n.id === id);
+  if (!note) return;
+  note.starred = val;
+  try { await updateDoc(doc(db,'delivery_notes',id), { starred: val }); }
+  catch(e) { /* demo mode */ applyFilter(); }
+};
+window.toggleDetailStar = function() {
+  if (!selectedId) return;
+  const note = allNotes.find(n => n.id === selectedId);
+  if (note) toggleStar(selectedId, !note.starred);
+};
+
+/* ── 상태 변경 ── */
+window.setNoteStatus = async function(newStatus) {
+  if (!selectedId) return;
+  const note = allNotes.find(n => n.id === selectedId);
+  if (!note) return;
+  note.status = newStatus;
+  if (newStatus === '완료') note.completer = '임지';
+  try { await updateDoc(doc(db,'delivery_notes',selectedId), { status: newStatus, completer: note.completer||'' }); }
+  catch(e) { renderDetail(note); applyFilter(); }
+};
+
+/* ── 삭제 ── */
+window.deleteCurrentNote = async function() {
+  if (!selectedId) return;
+  if (!confirm('이 전달노트를 삭제하시겠습니까?')) return;
+  try {
+    await deleteDoc(doc(db,'delivery_notes',selectedId));
+  } catch(e) {
+    allNotes = allNotes.filter(n => n.id !== selectedId);
+    updateKPI(); applyFilter(); clearDetail();
+  }
+};
+
+/* ── 수정 ── */
+window.editCurrentNote = function() {
+  if (!selectedId) return;
+  const note = allNotes.find(n => n.id === selectedId);
+  if (!note) return;
+  editingId = selectedId;
+  document.getElementById('writeModalTitle').textContent = '전달노트 수정';
+  document.getElementById('wf-title').value    = note.title    || '';
+  document.getElementById('wf-category').value = note.category || 'PP';
+  document.getElementById('wf-status').value   = note.status   || '대기';
+  document.getElementById('wf-assignee').value = note.assignee || '';
+  document.getElementById('wf-due').value      = note.dueDate  || '';
+  document.getElementById('wf-target').value   = note.target   || '';
+  document.getElementById('wf-tags').value     = (note.tags||[]).join(', ');
+  document.getElementById('wf-body').value     = note.body     || '';
+  document.getElementById('wf-important').checked = !!note.important;
+  document.getElementById('writeModal').classList.add('open');
+};
+
+/* ── 댓글 전송 ── */
+window.sendComment = async function() {
+  const text = document.getElementById('commentInput').value.trim();
+  if (!text || !selectedId) return;
+  const note = allNotes.find(n => n.id === selectedId);
+  if (!note) return;
+  const newComment = { author:'임영지', time: new Date().toLocaleString('ko-KR',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}), text };
+  const updatedList = [...(note.commentList||[]), newComment];
+  note.commentList = updatedList;
+  document.getElementById('commentInput').value = '';
+  try { await updateDoc(doc(db,'delivery_notes',selectedId), { commentList: updatedList }); }
+  catch(e) { renderComments(updatedList); }
+};
+
+/* ── 닫기 ── */
+window.closeDetail = clearDetail;
+
+/* ── 모달 ── */
+window.openWriteModal = function() {
+  editingId = null;
+  document.getElementById('writeModalTitle').textContent = '전달노트 작성';
+  ['wf-title','wf-assignee','wf-due','wf-target','wf-tags','wf-body'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
+  document.getElementById('wf-category').value = 'PP';
+  document.getElementById('wf-status').value   = '대기';
+  document.getElementById('wf-important').checked = false;
+  document.getElementById('writeModal').classList.add('open');
+};
+window.closeWriteModal = function() { document.getElementById('writeModal').classList.remove('open'); };
+document.getElementById('writeModal').addEventListener('click', e => { if(e.target === e.currentTarget) closeWriteModal(); });
+
+window.saveNote = async function() {
+  const title = document.getElementById('wf-title').value.trim();
+  if (!title) { alert('제목을 입력하세요.'); return; }
+  const tagRaw = document.getElementById('wf-tags').value;
+  const tags = tagRaw ? tagRaw.split(',').map(t => t.trim()).filter(Boolean) : [];
+  const now = new Date();
+  const createdStr = now.toLocaleDateString('ko-KR',{year:'numeric',month:'2-digit',day:'2-digit'}).replace(/\. /g,'.').replace('.','');
+  const data = {
+    title,
+    category: document.getElementById('wf-category').value,
+    status:   document.getElementById('wf-status').value,
+    assignee: document.getElementById('wf-assignee').value.trim(),
+    dueDate:  document.getElementById('wf-due').value,
+    target:   document.getElementById('wf-target').value.trim(),
+    tags,
+    body:     document.getElementById('wf-body').value.trim(),
+    important: document.getElementById('wf-important').checked,
+    author:   '임영지',
+    reads:    0,
+    starred:  false,
+    commentList: [],
+    createdAt: now.toISOString(),
+  };
+  try {
+    if (editingId) { await updateDoc(doc(db,'delivery_notes',editingId), data); }
+    else           { await addDoc(collection(db,'delivery_notes'), data); }
+    closeWriteModal();
+  } catch(e) {
+    if (!editingId) {
+      const newNote = { id: 'demo_' + Date.now(), ...data, createdAt: now.toISOString() };
+      allNotes.unshift(newNote);
+    } else {
+      const idx = allNotes.findIndex(n => n.id === editingId);
+      if (idx >= 0) allNotes[idx] = { ...allNotes[idx], ...data };
+    }
+    updateKPI(); applyFilter(); closeWriteModal();
+  }
+};
+
+/* ── 샘플 데이터 ── */
+function loadDemoData() {
+  allNotes = [
+    { id:'n1', category:'PP', title:'신제품 가이드북 업데이트 확인', status:'진행중', author:'임영지', assignee:'임지', completer:'', dueDate:'2026-06-07', target:'전체 팀', createdAt:'2026-06-05T10:00:00', reads:8, starred:false, important:true, tags:['#신제품','#가이드'], body:'6월 신제품 출시에 맞춰 업데이트된 가이드북을 첨부합니다.\n\n주요 변경사항:\n1. 신규 컬렉션 스펙 추가\n2. 가격표 업데이트\n3. 촬영 가이드 수정\n\n내용 숙지 후 고객 상담 시 활용 바랍니다.', commentList:[{author:'임지',time:'2026.06.06 14:30',text:'확인했습니다. 팀원들에게 공유하겠습니다.'},{author:'박준혁',time:'2026.06.07 09:15',text:'가격표 부분 다시 한번 검토 필요할 것 같습니다.'}] },
+    { id:'n2', category:'고객', title:'VIP 고객 스트랩 교체 요청 처리', status:'대기', author:'임영지', assignee:'임지', completer:'', dueDate:'2026-06-10', target:'임지', createdAt:'2026-06-06T09:00:00', reads:3, starred:true, important:false, tags:['#VIP','#스트랩'], body:'VIP 고객(김민수 님)께서 기존 악어 스트랩을 러버 스트랩으로 교체 요청하셨습니다.\n\n확인 사항:\n- 재고 여부 확인\n- 교체 가능 여부 본사 문의\n- 완료 후 고객 연락 필요', commentList:[] },
+    { id:'n3', category:'본사', title:'6월 입고 예정 시계 수령 완료 보고', status:'완료', author:'임영지', assignee:'임지', completer:'임지', dueDate:'2026-06-05', target:'본사 담당', createdAt:'2026-06-04T15:00:00', reads:12, starred:false, important:false, tags:['#입고','#본사'], body:'6월 입고 예정이었던 시계 12점 수령 완료하였습니다.\n\n수령 내역:\n- 5711/1A-001: 3점\n- 5726A/001A: 2점\n- 기타: 7점\n\n재고 시스템 반영 완료, 매장 진열 완료.', commentList:[{author:'임영지',time:'2026.06.05 17:00',text:'수령 및 검수 완료 확인했습니다.'}] },
+    { id:'n4', category:'AS', title:'AS 접수 고객 연락 누락 건 처리', status:'보류', author:'임영지', assignee:'임지', completer:'', dueDate:'2026-06-08', target:'임지, 팀원', createdAt:'2026-06-06T11:00:00', reads:5, starred:false, important:true, tags:['#AS','#긴급'], body:'AS 접수 후 고객 연락이 누락된 건이 발생하였습니다.\n\n해당 고객:\n- 박준혁 고객 (AS 번호: A2026-0145)\n- 수리 완료 2일 경과, 연락 미완료\n\n즉시 연락 요청드립니다. 본사 지침 확인 후 처리 방법 결정 예정.', commentList:[] },
+    { id:'n5', category:'재고', title:'5월 마감 재고 실사 결과 보고', status:'완료', author:'임영지', assignee:'임지', completer:'임지', dueDate:'2026-06-01', target:'팀 전체', createdAt:'2026-06-01T09:00:00', reads:15, starred:false, important:false, tags:['#재고','#마감'], body:'5월 마감 재고 실사 완료되었습니다.\n\n실사 결과 시스템과 일치, 이상 없음 확인.', commentList:[{author:'임지',time:'2026.06.01 18:00',text:'수고하셨습니다. 보고서 제출 완료.'},{author:'임영지',time:'2026.06.02 09:00',text:'본사 제출 완료되었습니다.'}] },
+    { id:'n6', category:'PP', title:'임원 방문 준비사항 체크리스트', status:'진행중', author:'임영지', assignee:'임지', completer:'', dueDate:'2026-06-09', target:'전체 팀', createdAt:'2026-06-06T14:00:00', reads:9, starred:true, important:true, tags:['#임원','#중요'], body:'6월 9일 임원 방문에 대비하여 아래 사항을 준비해주시기 바랍니다.\n\n체크리스트:\n□ 매장 청소 및 정리정돈\n□ VIP 룸 준비\n□ 최신 판매 실적 보고서 출력\n□ 커피/다과 준비', commentList:[{author:'임지',time:'2026.06.07 10:00',text:'진행 중입니다. VIP 룸 준비 완료.'},{author:'임영지',time:'2026.06.07 11:30',text:'판매 보고서 준비해두겠습니다.'}] },
+    { id:'n7', category:'기타', title:'마감 체크리스트 항목 일부 누락 확인', status:'대기', author:'임영지', assignee:'임지', completer:'', dueDate:'2026-06-07', target:'임지', createdAt:'2026-06-07T08:00:00', reads:2, starred:false, important:false, tags:['#마감','#체크'], body:'오늘 마감 체크리스트에서 항목이 일부 누락된 것을 발견했습니다.\n\n확인 후 보완 바랍니다.', commentList:[] },
+  ];
+  updateKPI();
+  applyFilter();
+}
+</script>
+</body>
+</html>
