@@ -181,13 +181,10 @@
     input[type="date"].form-input { cursor:pointer; }
     input[type="date"].form-input::-webkit-calendar-picker-indicator { cursor:pointer;opacity:.6; }
     input[type="date"].form-input::-webkit-calendar-picker-indicator:hover { opacity:1; }
-    /* 날짜 + 요일 가로 배치 */
-    .date-row { display:flex;align-items:center;gap:6px; }
-    .date-row input[type="date"] { flex:1;min-width:0; }
-    .day-dow { font-size:12px;font-weight:900;white-space:nowrap;flex-shrink:0; }
-    .day-dow.wd  { color:#374151; }
-    .day-dow.sat { color:#2563eb; }
-    .day-dow.sun { color:#dc2626; }
+    /* 날짜 overlay 방식: 텍스트 칸 위에 투명 date picker 덮기 */
+    .date-row { position:relative; }
+    .date-disp { width:100%;background:#fff;cursor:pointer; }
+    .date-native { position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;z-index:2;border:none; }
 
     /* ── 모달 액션 ── */
     .modal-actions { display:flex;justify-content:flex-end;gap:10px;margin-top:22px;padding-top:18px;border-top:1px solid #f0f4fa; }
@@ -445,8 +442,8 @@
         <div class="fg-item">
           <label class="fg-label">접수일</label>
           <div class="date-row">
-            <input type="date" class="form-input" id="f-date" onchange="updateDayOfWeek(this,'dow-f-date')"/>
-            <span class="day-dow" id="dow-f-date"></span>
+            <input type="text" class="form-input date-disp" id="f-date" readonly placeholder="날짜 선택"/>
+            <input type="date" class="date-native" id="dn-f-date" onchange="applyDate('dn-f-date','f-date')"/>
           </div>
         </div>
         <!-- A/S 접수 타입 -->
@@ -513,8 +510,8 @@
         <div class="fg-item">
           <label class="fg-label">구매일</label>
           <div class="date-row">
-            <input type="date" class="form-input" id="f-purchase-date" onchange="updateDayOfWeek(this,'dow-f-purchase-date')"/>
-            <span class="day-dow" id="dow-f-purchase-date"></span>
+            <input type="text" class="form-input date-disp" id="f-purchase-date" readonly placeholder="날짜 선택"/>
+            <input type="date" class="date-native" id="dn-f-purchase-date" onchange="applyDate('dn-f-purchase-date','f-purchase-date')"/>
           </div>
         </div>
       </div>
@@ -546,22 +543,22 @@
         <div class="fg-item">
           <label class="fg-label">스위스 수리 동의일</label>
           <div class="date-row">
-            <input type="date" class="form-input" id="f-swiss-agree" onchange="updateDayOfWeek(this,'dow-f-swiss-agree')"/>
-            <span class="day-dow" id="dow-f-swiss-agree"></span>
+            <input type="text" class="form-input date-disp" id="f-swiss-agree" readonly placeholder="날짜 선택"/>
+            <input type="date" class="date-native" id="dn-f-swiss-agree" onchange="applyDate('dn-f-swiss-agree','f-swiss-agree')"/>
           </div>
         </div>
         <div class="fg-item">
           <label class="fg-label">수리 완료일</label>
           <div class="date-row">
-            <input type="date" class="form-input" id="f-repair-done" onchange="updateDayOfWeek(this,'dow-f-repair-done')"/>
-            <span class="day-dow" id="dow-f-repair-done"></span>
+            <input type="text" class="form-input date-disp" id="f-repair-done" readonly placeholder="날짜 선택"/>
+            <input type="date" class="date-native" id="dn-f-repair-done" onchange="applyDate('dn-f-repair-done','f-repair-done')"/>
           </div>
         </div>
         <div class="fg-item">
           <label class="fg-label">전달 완료일</label>
           <div class="date-row">
-            <input type="date" class="form-input" id="f-pickup" onchange="updateDayOfWeek(this,'dow-f-pickup')"/>
-            <span class="day-dow" id="dow-f-pickup"></span>
+            <input type="text" class="form-input date-disp" id="f-pickup" readonly placeholder="날짜 선택"/>
+            <input type="date" class="date-native" id="dn-f-pickup" onchange="applyDate('dn-f-pickup','f-pickup')"/>
           </div>
         </div>
       </div>
@@ -838,10 +835,14 @@ function openRegModal() {
     }
     el.classList.remove('parsed');
   });
+  // 날짜 native input 초기화
+  ['dn-f-date','dn-f-purchase-date','dn-f-swiss-agree','dn-f-repair-done','dn-f-pickup']
+    .forEach(id => { const e = document.getElementById(id); if (e) e.value = ''; });
+  refreshAllDates();
   const today = new Date();
   const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
-  document.getElementById('f-date').value = todayStr;
-  updateDayOfWeek(document.getElementById('f-date'), 'dow-f-date');
+  document.getElementById('dn-f-date').value = todayStr;
+  applyDate('dn-f-date', 'f-date');
   setStatusUI('접수 완료');
   if (currentUser) {
     const dn = currentUser.displayName || currentUser.email?.split('@')[0] || '';
@@ -869,19 +870,20 @@ function openEditModal(r) {
   set('f-ref',            r.ref);
   set('f-serial',         r.serial);
   set('f-purchase-place', r.purchasePlace);
-  set('f-purchase-date',  r.purchaseDate);
-  set('f-date',           r.date);
+  // 날짜 필드는 native input에 값 설정 후 applyDate로 표시 갱신
+  const setDate = (nId, dId, val) => { const n = document.getElementById(nId); if (n) n.value = val||''; applyDate(nId, dId); };
+  setDate('dn-f-purchase-date', 'f-purchase-date', r.purchaseDate);
+  setDate('dn-f-date',          'f-date',          r.date);
   set('f-request',        r.request);
   set('f-store-note',     r.storeNote);
   const costEl = document.getElementById('f-cost');
   costEl.value = r.cost ? Number(String(r.cost).replace(/,/g,'')).toLocaleString('ko-KR') : '';
-  set('f-swiss-agree',    r.swissAgree);
-  set('f-repair-done',    r.repairDone);
-  set('f-pickup',         r.pickup);
+  setDate('dn-f-swiss-agree',   'f-swiss-agree',   r.swissAgree);
+  setDate('dn-f-repair-done',   'f-repair-done',   r.repairDone);
+  setDate('dn-f-pickup',        'f-pickup',        r.pickup);
   set('f-update',         r.update);
   set('f-contact-log',    r.contactLog);
   set('f-memo',           r.memo);
-  refreshAllDayOfWeek();
   document.getElementById('regModal').classList.add('open');
 }
 
@@ -893,7 +895,9 @@ window.saveRecord = async function() {
   if (!ref)      { alert('Ref.는 필수 항목입니다.'); document.getElementById('f-ref').focus(); return; }
   if (!serial)   { alert('Serial은 필수 항목입니다.'); document.getElementById('f-serial').focus(); return; }
 
-  const dateVal = document.getElementById('f-date').value.trim();
+  // 날짜: dataset.date에 저장된 순수 YYYY-MM-DD 값 사용
+  const gd = id => { const el = document.getElementById(id); return el ? (el.dataset.date || '') : ''; };
+  const dateVal = gd('f-date');
   const ym = dateVal ? dateVal.slice(0,7) : `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}`;
   const costRaw = document.getElementById('f-cost').value.replace(/,/g,'');
 
@@ -908,14 +912,14 @@ window.saveRecord = async function() {
     ref,
     serial,
     purchasePlace: g('f-purchase-place'),
-    purchaseDate:  g('f-purchase-date'),
+    purchaseDate:  gd('f-purchase-date'),
     date:          dateVal,
     request:       g('f-request'),
     storeNote:     g('f-store-note'),
     cost:          costRaw ? Number(costRaw) : null,
-    swissAgree:    g('f-swiss-agree'),
-    repairDone:    g('f-repair-done'),
-    pickup:        g('f-pickup'),
+    swissAgree:    gd('f-swiss-agree'),
+    repairDone:    gd('f-repair-done'),
+    pickup:        gd('f-pickup'),
     update:        g('f-update'),
     contactLog:    g('f-contact-log'),
     memo:          g('f-memo'),
@@ -933,25 +937,21 @@ window.fmtNum = function(el) {
   el.value = raw !== '' ? Number(raw).toLocaleString('ko-KR') : '';
 };
 
-/* ── 요일 표시 ── */
+/* ── 날짜 + 요일 통합 표시 ── */
 const DAYS_KO = ['일','월','화','수','목','금','토'];
-window.updateDayOfWeek = function(inputEl, dowId) {
-  const val = inputEl.value;
-  const el  = document.getElementById(dowId);
+window.applyDate = function(nativeId, dispId) {
+  const val = document.getElementById(nativeId).value;
+  const el  = document.getElementById(dispId);
   if (!el) return;
-  if (!val) { el.textContent = ''; el.className = 'day-dow'; return; }
-  const date = new Date(val + 'T00:00:00');
-  const day  = date.getDay();
-  el.textContent = '(' + DAYS_KO[day] + ')';
-  el.className   = 'day-dow ' + (day === 0 ? 'sun' : day === 6 ? 'sat' : 'wd');
+  if (!val) { el.value = ''; el.dataset.date = ''; return; }
+  const d   = new Date(val + 'T00:00:00');
+  el.value  = val + ' (' + DAYS_KO[d.getDay()] + ')';
+  el.dataset.date = val;
 };
-function refreshAllDayOfWeek() {
-  [['f-date','dow-f-date'],['f-purchase-date','dow-f-purchase-date'],
-   ['f-swiss-agree','dow-f-swiss-agree'],['f-repair-done','dow-f-repair-done'],
-   ['f-pickup','dow-f-pickup']].forEach(([id, dowId]) => {
-    const el = document.getElementById(id);
-    if (el) updateDayOfWeek(el, dowId);
-  });
+function refreshAllDates() {
+  [['dn-f-date','f-date'],['dn-f-purchase-date','f-purchase-date'],
+   ['dn-f-swiss-agree','f-swiss-agree'],['dn-f-repair-done','f-repair-done'],
+   ['dn-f-pickup','f-pickup']].forEach(([n,d]) => applyDate(n,d));
 }
 
 /* ── 커스텀 상태 드롭다운 ── */
