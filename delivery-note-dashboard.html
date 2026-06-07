@@ -88,10 +88,10 @@
 
     /* ── 필터 바 ── */
     .filter-bar { display:flex;align-items:center;gap:8px;margin-bottom:0;flex-wrap:wrap; }
-    .filter-select { height:36px;border:1px solid #d9e0ea;border-radius:7px;background:#fff;padding:0 30px 0 12px;font-size:13px;font-weight:700;color:#374151;cursor:pointer;outline:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%236b7280' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center; }
+    .filter-select { flex:1;min-width:80px;height:36px;border:1px solid #d9e0ea;border-radius:7px;background:#fff;padding:0 30px 0 12px;font-size:13px;font-weight:700;color:#374151;cursor:pointer;outline:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%236b7280' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center; }
     .filter-select:hover { border-color:#075bd8; }
     .filter-select:focus { border-color:#075bd8;box-shadow:0 0 0 3px #075bd820; }
-    .filter-reset { height:36px;border:1px solid #d9e0ea;border-radius:7px;background:#fff;padding:0 14px;font-size:13px;font-weight:700;color:#6b7280;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap; }
+    .filter-reset { flex-shrink:0;height:36px;border:1px solid #d9e0ea;border-radius:7px;background:#fff;padding:0 14px;font-size:13px;font-weight:700;color:#6b7280;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap; }
     .filter-reset:hover { border-color:#ef4444;color:#ef4444; }
 
     /* ── 콘텐츠 2단 분할 ── */
