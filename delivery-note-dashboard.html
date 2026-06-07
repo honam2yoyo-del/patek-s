@@ -126,7 +126,7 @@
     .nc-date-val { color:#dc2626;font-size:11.5px;font-weight:800; }
     .nc-date-val.done { color:#16a34a; }
     .nc-stat { display:flex;align-items:center;gap:3px;font-size:11.5px;font-weight:700;color:#9ca3af;flex-shrink:0;min-width:32px; }
-    .nc-reads { font-size:11.5px;font-weight:700;color:#9ca3af;flex-shrink:0;min-width:30px;text-align:center; }
+    .nc-reads { display:flex;align-items:center;gap:3px;font-size:11.5px;font-weight:700;color:#9ca3af;flex-shrink:0; }
     .nc-star { flex-shrink:0;cursor:pointer;line-height:0;transition:opacity .12s; }
     .nc-star:hover { opacity:.75; }
     /* 하위 호환 */
@@ -197,6 +197,25 @@
     .comment-author { font-size:12.5px;font-weight:800;color:#111827; }
     .comment-time { font-size:11px;font-weight:600;color:#9ca3af; }
     .comment-text { font-size:13px;font-weight:600;color:#374151;line-height:1.5; }
+
+    /* 답글(대댓글) */
+    .reply-btn { background:none;border:none;color:#9ca3af;font-size:12px;font-weight:700;cursor:pointer;padding:3px 0 0;margin-top:2px;display:inline-flex;align-items:center;gap:3px;transition:color .1s; }
+    .reply-btn:hover { color:#075bd8; }
+    .reply-input-wrap { display:none;flex-direction:row;gap:6px;margin:6px 0 8px 44px; }
+    .reply-input-wrap.open { display:flex; }
+    .reply-input { flex:1;height:32px;border:1px solid #d9e0ea;border-radius:7px;padding:0 10px;font-size:12.5px;font-weight:600;outline:none;font-family:inherit; }
+    .reply-input:focus { border-color:#075bd8;box-shadow:0 0 0 2px #075bd818; }
+    .reply-send-btn { width:32px;height:32px;border:none;background:#075bd8;border-radius:7px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#fff;flex-shrink:0; }
+    .reply-send-btn:hover { background:#0550b3; }
+    .reply-wrap { padding-left:44px;margin-bottom:8px;display:flex;flex-direction:column;gap:8px; }
+    .reply-item { display:flex;gap:7px;align-items:flex-start; }
+    .reply-arrow { color:#c0c8d6;font-size:12px;line-height:1.8;flex-shrink:0;font-weight:900;letter-spacing:-1px; }
+    .reply-avatar { width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#4f46e5,#7c3aed);display:flex;align-items:center;justify-content:center;color:#fff;font-size:9px;font-weight:900;flex-shrink:0;margin-top:1px; }
+    .reply-body { flex:1; }
+    .reply-meta { display:flex;align-items:center;gap:6px;margin-bottom:1px; }
+    .reply-author { font-size:12px;font-weight:800;color:#111827; }
+    .reply-time { font-size:10.5px;font-weight:600;color:#9ca3af; }
+    .reply-text { font-size:12.5px;font-weight:600;color:#374151;line-height:1.5; }
 
     /* 하단 액션 버튼 */
     .dp-footer-actions { flex-shrink:0;display:flex;justify-content:space-between;align-items:center;padding:13px 18px;border-top:1px solid #e2e7ef;background:#fff; }
@@ -439,9 +458,6 @@
               <button class="dp-icon-btn" title="수정" onclick="editCurrentNote()">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
               </button>
-              <button class="dp-icon-btn" title="더보기">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
-              </button>
               <button class="dp-icon-btn" title="닫기" onclick="closeDetail()">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
@@ -587,11 +603,16 @@ document.getElementById('login-btn').onclick = async () => {
 };
 document.getElementById('logout-btn').onclick = () => signOut(auth);
 
+let currentUser = null;
 onAuthStateChanged(auth, user => {
   document.getElementById('login-overlay').style.display = user ? 'none' : 'flex';
+  currentUser = user;
   if (user) initPage();
   else loadDemoData();
 });
+
+/* ── 팀 멤버 (읽음 분모 자동 계산 기준) ── */
+const TEAM_MEMBERS = ['임지','임영지','박준혁','JH','용석'];
 
 /* ── 상태 ── */
 let allNotes   = [];
@@ -690,7 +711,7 @@ function renderList(notes) {
     const cm = CAT_MAP[n.category] || CAT_MAP['기타'];
     const isStarred = !!(n.starred || n.important);
     const commentCount = (n.commentList||[]).length;
-    const totalMembers = 5;
+    const totalMembers = TEAM_MEMBERS.length;
 
     // 날짜 컬럼
     let dateHtml = '<span class="nc-date"></span>';
@@ -715,7 +736,10 @@ function renderList(notes) {
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
         ${commentCount}
       </span>
-      <span class="nc-reads" title="읽은 인원/총 인원">${n.reads||0}/${totalMembers}</span>
+      <span class="nc-reads" title="읽은 인원/총 인원">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        ${(n.readBy||[]).length}/${totalMembers}
+      </span>
       <span class="nc-star" title="${isStarred ? '중요 해제' : '중요 표시'}" onclick="event.stopPropagation();toggleStar('${n.id}',${!isStarred})">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="${isStarred?'#f59e0b':'none'}" stroke="${isStarred?'#f59e0b':'#d1d5db'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
       </span>
@@ -723,11 +747,27 @@ function renderList(notes) {
   }).join('');
 }
 
-/* ── 노트 선택 ── */
-window.selectNote = function(id) {
+/* ── 노트 선택 + 읽음 처리 ── */
+window.selectNote = async function(id) {
   selectedId = id;
   const note = allNotes.find(n => n.id === id);
-  if (note) { renderDetail(note); applyFilter(); }
+  if (!note) return;
+
+  // 현재 사용자가 아직 읽지 않았으면 readBy에 추가
+  const userName = currentUser?.displayName || currentUser?.email?.split('@')[0] || null;
+  if (userName) {
+    const readBy = note.readBy || [];
+    if (!readBy.includes(userName)) {
+      const newReadBy = [...readBy, userName];
+      note.readBy = newReadBy;
+      note.reads  = newReadBy.length;
+      try { await updateDoc(doc(db,'delivery_notes',id), { readBy: newReadBy, reads: newReadBy.length }); }
+      catch(e) { /* 오프라인 데모 모드 — 로컬만 업데이트 */ }
+    }
+  }
+
+  renderDetail(note);
+  applyFilter();
 };
 
 /* ── 상세 렌더 ── */
@@ -755,7 +795,7 @@ function renderDetail(n) {
   document.getElementById('dpCompleter').textContent= n.completer || '—';
   document.getElementById('dpTarget').textContent   = n.target    || '—';
   document.getElementById('dpCreated').textContent  = n.createdAt || '—';
-  document.getElementById('dpReads').textContent    = (n.reads||0) + '회';
+  document.getElementById('dpReads').textContent    = `${(n.readBy||[]).length}/${TEAM_MEMBERS.length}명`;
 
   const dueEl = document.getElementById('dpDue');
   dueEl.textContent = n.dueDate ? n.dueDate.replace(/-/g,'.') : '—';
@@ -775,19 +815,80 @@ function clearDetail() {
 
 function renderComments(list) {
   document.getElementById('commentsTitle').textContent = `댓글 ${list.length}`;
-  const avatarClasses = ['', 'av2'];
-  document.getElementById('commentList').innerHTML = list.map((c, i) => `
+  const avatarGradients = [
+    'linear-gradient(135deg,#4f46e5,#7c3aed)',
+    'linear-gradient(135deg,#059669,#0891b2)',
+    'linear-gradient(135deg,#d97706,#dc2626)',
+    'linear-gradient(135deg,#0284c7,#2563eb)',
+    'linear-gradient(135deg,#7c3aed,#db2777)',
+  ];
+  document.getElementById('commentList').innerHTML = list.map((c, i) => {
+    const bg = avatarGradients[i % avatarGradients.length];
+    const repliesHtml = (c.replies||[]).map(r => `
+      <div class="reply-item">
+        <span class="reply-arrow">ㄴ</span>
+        <div class="reply-avatar" style="background:${avatarGradients[(i+1)%avatarGradients.length]};">${(r.author||'?')[0]}</div>
+        <div class="reply-body">
+          <div class="reply-meta">
+            <span class="reply-author">${r.author||'—'}</span>
+            <span class="reply-time">${r.time||''}</span>
+          </div>
+          <div class="reply-text">${r.text||''}</div>
+        </div>
+      </div>`).join('');
+    return `
     <div class="comment-item">
-      <div class="comment-avatar ${avatarClasses[i%2]}">${(c.author||'?')[0]}</div>
+      <div class="comment-avatar" style="background:${bg};">${(c.author||'?')[0]}</div>
       <div class="comment-body">
         <div class="comment-meta">
           <span class="comment-author">${c.author||'—'}</span>
           <span class="comment-time">${c.time||''}</span>
         </div>
         <div class="comment-text">${c.text||''}</div>
+        <button class="reply-btn" onclick="toggleReplyInput(${i})">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>
+          답글 달기
+        </button>
       </div>
-    </div>`).join('');
+    </div>
+    <div class="reply-input-wrap" id="reply-wrap-${i}">
+      <input class="reply-input" id="reply-input-${i}" type="text" placeholder="답글을 입력하세요..." onkeydown="if(event.key==='Enter')sendReply(${i})"/>
+      <button class="reply-send-btn" onclick="sendReply(${i})">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </div>
+    ${repliesHtml ? `<div class="reply-wrap">${repliesHtml}</div>` : ''}`;
+  }).join('');
 }
+
+window.toggleReplyInput = function(idx) {
+  const wrap = document.getElementById(`reply-wrap-${idx}`);
+  if (!wrap) return;
+  wrap.classList.toggle('open');
+  if (wrap.classList.contains('open')) document.getElementById(`reply-input-${idx}`)?.focus();
+};
+
+window.sendReply = async function(idx) {
+  const input = document.getElementById(`reply-input-${idx}`);
+  if (!input) return;
+  const text = input.value.trim();
+  if (!text || !selectedId) return;
+  const note = allNotes.find(n => n.id === selectedId);
+  if (!note || !note.commentList?.[idx]) return;
+  const list = note.commentList.map((c, i) => {
+    if (i !== idx) return c;
+    const replies = [...(c.replies||[])];
+    const userName = currentUser?.displayName || currentUser?.email?.split('@')[0] || '임영지';
+    const time = new Date().toLocaleString('ko-KR',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+    replies.push({ author: userName, time, text });
+    return { ...c, replies };
+  });
+  note.commentList = list;
+  input.value = '';
+  document.getElementById(`reply-wrap-${idx}`)?.classList.remove('open');
+  try { await updateDoc(doc(db,'delivery_notes',selectedId), { commentList: list }); }
+  catch(e) { renderComments(list); }
+};
 
 /* ── 별 토글 (starred + important 동시) ── */
 window.toggleStar = async function(id, val) {
@@ -903,6 +1004,7 @@ window.saveNote = async function() {
     starred:  document.getElementById('wf-important').checked,
     author:   '임영지',
     reads:    0,
+    readBy:   [],
     commentList: [],
     createdAt: now.toISOString(),
   };
