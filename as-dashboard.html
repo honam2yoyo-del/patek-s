@@ -213,6 +213,76 @@
     .date-cal-wrap:hover .date-cal-icon { background:#eff6ff;color:#075bd8;border-color:#9bbcff; }
     .date-picker-overlay { position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;z-index:2;border:none; }
 
+    /* ── 상세 현황 모달 ── */
+    .detail-modal { width:1240px; }
+    .detail-hdr-btns { display:flex;gap:8px; }
+    .btn-d-edit  { height:34px;border:1px solid #d1d5db;border-radius:7px;background:#fff;padding:0 18px;font-size:13px;font-weight:700;cursor:pointer;color:#374151; }
+    .btn-d-edit:hover { background:#f9fafb; }
+    .btn-d-del   { height:34px;border:none;border-radius:7px;background:#ef4444;color:#fff;padding:0 18px;font-size:13px;font-weight:700;cursor:pointer; }
+    .btn-d-del:hover { background:#dc2626; }
+    .btn-d-close { height:34px;border:1px solid #d1d5db;border-radius:7px;background:#fff;padding:0 18px;font-size:13px;font-weight:700;cursor:pointer;color:#374151; }
+    .btn-d-close:hover { background:#f9fafb; }
+
+    /* 상단 요약 바 */
+    .detail-summary { display:grid;grid-template-columns:repeat(7,1fr);border:1.5px solid #e5e7eb;border-radius:10px;overflow:hidden;margin-bottom:20px;background:#fff; }
+    .ds-item { display:flex;flex-direction:column;align-items:center;justify-content:center;padding:13px 8px;border-right:1px solid #e5e7eb;gap:5px;text-align:center; }
+    .ds-item:last-child { border-right:none; }
+    .ds-label { font-size:10.5px;font-weight:800;color:#9ca3af;letter-spacing:.5px;text-transform:uppercase; }
+    .ds-value { font-size:14px;font-weight:700;color:#111827; }
+    .ds-value.ds-big { font-size:17px;font-weight:900;color:#111827; }
+
+    /* 본문 2단 */
+    .detail-body { display:grid;grid-template-columns:6fr 4fr;gap:16px;align-items:start; }
+
+    /* 정보 카드 */
+    .d-card { border:1px solid #e5e7eb;border-radius:10px;padding:16px 18px;margin-bottom:14px; }
+    .d-card:last-child { margin-bottom:0; }
+    .d-card-title { font-size:12.5px;font-weight:900;color:#374151;margin-bottom:13px;padding-bottom:9px;border-bottom:1.5px solid #f0f4fa;display:flex;align-items:center;gap:7px; }
+    .d-card-title::before { content:'';display:inline-block;width:3px;height:13px;background:#075bd8;border-radius:2px;flex-shrink:0; }
+
+    /* 카드 내 2열 그리드 */
+    .dkv-grid { display:grid;grid-template-columns:1fr 1fr;gap:10px 24px; }
+    .dkv-item { display:flex;flex-direction:column;gap:3px; }
+    .dkv-label { font-size:11px;font-weight:700;color:#9ca3af; }
+    .dkv-value { font-size:13.5px;font-weight:700;color:#111827;line-height:1.45; }
+
+    /* 접수내용·견적 */
+    .d-bullet { padding:0;margin:0 0 0 16px;color:#374151;font-size:13.5px;font-weight:600;line-height:1.9; }
+    .d-text { color:#374151;font-size:13.5px;font-weight:600;line-height:1.7;margin:0; }
+
+    /* 컨택 로그 */
+    .clog-list { display:flex;flex-direction:column;gap:9px;margin-bottom:13px; }
+    .clog-item { display:flex;gap:12px; }
+    .clog-date { font-size:11.5px;font-weight:700;color:#6b7280;white-space:nowrap;padding-top:1px; }
+    .clog-text { font-size:13px;font-weight:600;color:#111827;flex:1;line-height:1.55; }
+    .snote-label { font-size:11px;font-weight:800;color:#9ca3af;letter-spacing:.3px;margin-bottom:6px; }
+    .snote-area { background:#f9fafb;border-radius:7px;padding:10px 14px;font-size:13px;font-weight:600;color:#374151;line-height:1.6;border:1px solid #f0f0f0;min-height:36px; }
+
+    /* 타임라인 */
+    .tl-wrap { position:relative;padding-left:26px; }
+    .tl-line { position:absolute;left:6px;top:10px;bottom:10px;width:2px;background:#e5e7eb;border-radius:2px; }
+    .tl-item { position:relative;padding-left:20px;padding-bottom:22px; }
+    .tl-item:last-child { padding-bottom:0; }
+    .tl-dot { position:absolute;left:-26px;top:3px;width:14px;height:14px;border-radius:50%; }
+    .tl-dot.done    { background:#2563eb;border:2px solid #2563eb; }
+    .tl-dot.current { background:#fff;border:2.5px solid #2563eb;box-shadow:0 0 0 3px #dbeafe; }
+    .tl-dot.pending { background:#fff;border:2px solid #d1d5db; }
+    .tl-date { font-size:11px;font-weight:700;margin-bottom:1px; }
+    .tl-date.done    { color:#6b7280; }
+    .tl-date.current { color:#2563eb; }
+    .tl-date.pending { color:#d1d5db; }
+    .tl-label { font-size:13.5px;font-weight:700; }
+    .tl-label.done    { color:#374151; }
+    .tl-label.current { color:#2563eb;font-weight:900; }
+    .tl-label.pending { color:#9ca3af; }
+
+    /* 수리·진행 정보 키값 */
+    .rkv-list { display:flex;flex-direction:column;gap:11px; }
+    .rkv-row { display:flex;justify-content:space-between;align-items:center;font-size:13px; }
+    .rkv-key { color:#6b7280;font-weight:700; }
+    .rkv-val { color:#111827;font-weight:700; }
+    .rkv-val.red { color:#ef4444;font-weight:900;font-size:14px; }
+
     /* ── 커스텀 상태 드롭다운 ── */
     .cs-wrap { position:relative;width:100%; }
     .cs-btn { display:flex;align-items:center;gap:7px;height:38px;border:1px solid #d9e0ea;border-radius:7px;padding:0 10px 0 12px;background:#fff;cursor:pointer;width:100%;font-size:13.5px;font-weight:600;color:#111827;user-select:none; }
@@ -426,6 +496,140 @@
     </div>
 
   </main>
+</div>
+
+<!-- A/S 상세 현황 모달 -->
+<div class="modal-backdrop" id="detailModal">
+  <div class="modal detail-modal">
+
+    <!-- 헤더 -->
+    <div class="modal-header">
+      <span class="modal-title">A/S 상세 현황</span>
+      <div class="detail-hdr-btns">
+        <button class="btn-d-edit"  onclick="openEditFromDetail()">수정</button>
+        <button class="btn-d-del"   onclick="deleteFromDetail()">삭제</button>
+        <button class="btn-d-close" onclick="closeDetailModal()">닫기</button>
+      </div>
+    </div>
+
+    <!-- 상단 요약 바 -->
+    <div class="detail-summary">
+      <div class="ds-item">
+        <div class="ds-label">접수 타입</div>
+        <div class="ds-value" id="ds-type">-</div>
+      </div>
+      <div class="ds-item">
+        <div class="ds-label">접수일</div>
+        <div class="ds-value" id="ds-date">-</div>
+      </div>
+      <div class="ds-item">
+        <div class="ds-label">고객명</div>
+        <div class="ds-value" id="ds-customer">-</div>
+      </div>
+      <div class="ds-item">
+        <div class="ds-label">REF.</div>
+        <div class="ds-value" id="ds-ref">-</div>
+      </div>
+      <div class="ds-item">
+        <div class="ds-label">수리 비용</div>
+        <div class="ds-value ds-big" id="ds-cost">-</div>
+      </div>
+      <div class="ds-item">
+        <div class="ds-label">담당 직원</div>
+        <div class="ds-value" id="ds-staff">-</div>
+      </div>
+      <div class="ds-item">
+        <div class="ds-label">상태</div>
+        <div><span class="badge" id="ds-status">-</span></div>
+      </div>
+    </div>
+
+    <!-- 본문 2단 -->
+    <div class="detail-body">
+
+      <!-- ■ 좌측 -->
+      <div>
+        <!-- 카드 1: 고객/제품 정보 -->
+        <div class="d-card">
+          <div class="d-card-title">고객 / 제품 정보</div>
+          <div class="dkv-grid">
+            <div class="dkv-item"><div class="dkv-label">고객명</div><div class="dkv-value" id="dc-customer">-</div></div>
+            <div class="dkv-item"><div class="dkv-label">영문명</div><div class="dkv-value" id="dc-customerEn">-</div></div>
+            <div class="dkv-item"><div class="dkv-label">Ref.</div><div class="dkv-value" id="dc-ref">-</div></div>
+            <div class="dkv-item"><div class="dkv-label">Serial</div><div class="dkv-value" id="dc-serial">-</div></div>
+            <div class="dkv-item"><div class="dkv-label">구매처</div><div class="dkv-value" id="dc-purchasePlace">-</div></div>
+            <div class="dkv-item"><div class="dkv-label">구매일</div><div class="dkv-value" id="dc-purchaseDate">-</div></div>
+          </div>
+        </div>
+
+        <!-- 카드 2: 접수내용 -->
+        <div class="d-card">
+          <div class="d-card-title">접수 내용</div>
+          <ul class="d-bullet" id="dc-request-list"><li style="color:#9ca3af;">내용 없음</li></ul>
+          <div id="dc-store-note-wrap" style="margin-top:11px;padding-top:11px;border-top:1px solid #f0f4fa;display:none;">
+            <div class="dkv-label" style="margin-bottom:5px;">매장 확인사항</div>
+            <p class="d-text" id="dc-storeNote"></p>
+          </div>
+        </div>
+
+        <!-- 카드 3: 견적내용 -->
+        <div class="d-card">
+          <div class="d-card-title">견적 내용</div>
+          <p class="d-text" id="dc-update" style="color:#9ca3af;">견적 내용이 없습니다.</p>
+        </div>
+
+        <!-- 카드 4: 고객 컨택 및 특이사항 -->
+        <div class="d-card">
+          <div class="d-card-title">고객 컨택 및 특이사항</div>
+          <div class="clog-list" id="dc-contactLog-list">
+            <div style="color:#9ca3af;font-size:13px;">컨택 내역 없음</div>
+          </div>
+          <div class="snote-label">특이사항</div>
+          <div class="snote-area" id="dc-memo">-</div>
+        </div>
+      </div>
+
+      <!-- ■ 우측 -->
+      <div>
+        <!-- 카드 1: 진행 타임라인 -->
+        <div class="d-card">
+          <div class="d-card-title">진행 타임라인</div>
+          <div class="tl-wrap">
+            <div class="tl-line"></div>
+            <div id="dc-timeline"></div>
+          </div>
+        </div>
+
+        <!-- 카드 2: 수리/진행 정보 -->
+        <div class="d-card">
+          <div class="d-card-title">수리 / 진행 정보</div>
+          <div class="rkv-list">
+            <div class="rkv-row">
+              <span class="rkv-key">스위스 수리 동의일</span>
+              <span class="rkv-val" id="dr-swissAgree">-</span>
+            </div>
+            <div class="rkv-row">
+              <span class="rkv-key">수리 완료일</span>
+              <span class="rkv-val" id="dr-repairDone">-</span>
+            </div>
+            <div class="rkv-row">
+              <span class="rkv-key">수리 비용</span>
+              <span class="rkv-val red" id="dr-cost">-</span>
+            </div>
+            <div class="rkv-row">
+              <span class="rkv-key">입고일</span>
+              <span class="rkv-val" id="dr-indate">-</span>
+            </div>
+            <div class="rkv-row">
+              <span class="rkv-key">진행 완료일</span>
+              <span class="rkv-val" id="dr-pickup">-</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /detail-body -->
+  </div>
 </div>
 
 <!-- A/S 등록 모달 -->
@@ -778,7 +982,7 @@ function renderTable(rows) {
         <td>${r.pickup||'-'}</td>
         <td style="text-align:left;max-width:200px;overflow:hidden;text-overflow:ellipsis;">${r.memo||'-'}</td>`;
       tr.style.cursor = 'pointer';
-      tr.onclick = e => { if (e.target.type !== 'checkbox') openEditModal(r); };
+      tr.onclick = e => { if (e.target.type !== 'checkbox') openDetailModal(r); };
       tbody.appendChild(tr);
     });
   }
@@ -814,6 +1018,123 @@ window.changePageSize = function() {
 window.toggleAll = function(cb) {
   document.querySelectorAll('.row-cb').forEach(c => c.checked = cb.checked);
 };
+
+/* ── 상세 현황 모달 ── */
+let detailRecord = null;
+
+window.closeDetailModal = function() {
+  document.getElementById('detailModal').classList.remove('open');
+  detailRecord = null;
+};
+document.getElementById('detailModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('detailModal')) window.closeDetailModal();
+});
+
+window.openEditFromDetail = function() {
+  const r = detailRecord;
+  if (!r) return;
+  window.closeDetailModal();
+  openEditModal(r);
+};
+
+window.deleteFromDetail = async function() {
+  const r = detailRecord;
+  if (!r) return;
+  const name = r.customer ? `'${r.customer}' 고객의 ` : '';
+  if (!confirm(`${name}A/S 기록을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) return;
+  try {
+    await deleteDoc(doc(db, 'as_records', r.id));
+    window.closeDetailModal();
+  } catch(err) { alert('삭제 실패: ' + err.message); }
+};
+
+function openDetailModal(r) {
+  detailRecord = r;
+  const tv = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v || '-'; };
+  const fmtC = v => v ? Number(String(v).replace(/,/g,'')).toLocaleString('ko-KR') + ' 원' : '-';
+
+  // 요약 바
+  tv('ds-type', r.type);
+  tv('ds-date', r.date);
+  tv('ds-customer', r.customer);
+  tv('ds-ref', r.ref);
+  document.getElementById('ds-cost').textContent = fmtC(r.cost);
+  tv('ds-staff', r.staff);
+
+  // 상태 배지
+  const badgeMap = { '접수 완료':'b-접수완료','견적 대기':'b-견적대기','수리 중':'b-수리중','수리 완료':'b-수리완료','전달 완료':'b-전달완료' };
+  const dsStatus = document.getElementById('ds-status');
+  dsStatus.className = 'badge ' + (badgeMap[r.status] || '');
+  dsStatus.textContent = r.status || '-';
+
+  // 고객/제품 정보
+  tv('dc-customer', r.customer);
+  tv('dc-customerEn', r.customerEn);
+  tv('dc-ref', r.ref);
+  tv('dc-serial', r.serial);
+  tv('dc-purchasePlace', r.purchasePlace);
+  tv('dc-purchaseDate', r.purchaseDate);
+
+  // 접수내용
+  const reqLines = (r.request || '').split('\n').filter(l => l.trim());
+  document.getElementById('dc-request-list').innerHTML = reqLines.length
+    ? reqLines.map(l => `<li>${l}</li>`).join('')
+    : '<li style="color:#9ca3af;">내용 없음</li>';
+  const snWrap = document.getElementById('dc-store-note-wrap');
+  if (r.storeNote) {
+    snWrap.style.display = 'block';
+    document.getElementById('dc-storeNote').textContent = r.storeNote;
+  } else {
+    snWrap.style.display = 'none';
+  }
+
+  // 견적내용 (update 필드)
+  const updateEl = document.getElementById('dc-update');
+  if (r.update) { updateEl.textContent = r.update; updateEl.style.color = ''; }
+  else { updateEl.textContent = '견적 내용이 없습니다.'; updateEl.style.color = '#9ca3af'; }
+
+  // 컨택 로그
+  const clogLines = (r.contactLog || '').split('\n').filter(l => l.trim());
+  document.getElementById('dc-contactLog-list').innerHTML = clogLines.length
+    ? clogLines.map(l => {
+        const m = l.match(/^(\d{4}[-./]\d{1,2}[-./]\d{1,2}\S*)\s+(.+)$/);
+        return m
+          ? `<div class="clog-item"><span class="clog-date">${m[1]}</span><span class="clog-text">${m[2]}</span></div>`
+          : `<div class="clog-item"><span class="clog-text">${l}</span></div>`;
+      }).join('')
+    : '<div style="color:#9ca3af;font-size:13px;">컨택 내역 없음</div>';
+
+  tv('dc-memo', r.memo || '특이사항 없음');
+
+  // 타임라인
+  const STEPS = [
+    { key:'접수 완료', label:'접수 완료', dateKey:'date' },
+    { key:'견적 대기', label:'견적 대기', dateKey:null },
+    { key:'수리 중',   label:'수리 중',   dateKey:null },
+    { key:'수리 완료', label:'수리 완료', dateKey:'repairDone' },
+    { key:'전달 완료', label:'전달 완료', dateKey:'pickup' },
+  ];
+  const ORDER = ['접수 완료','견적 대기','수리 중','수리 완료','전달 완료'];
+  const curIdx = ORDER.indexOf(r.status || '접수 완료');
+  document.getElementById('dc-timeline').innerHTML = STEPS.map((step, i) => {
+    const state = i < curIdx ? 'done' : i === curIdx ? 'current' : 'pending';
+    const dateVal = step.dateKey ? (r[step.dateKey] || '') : '';
+    return `<div class="tl-item">
+      <div class="tl-dot ${state}"></div>
+      ${dateVal ? `<div class="tl-date ${state}">${dateVal}</div>` : ''}
+      <div class="tl-label ${state}">${step.label}</div>
+    </div>`;
+  }).join('');
+
+  // 수리/진행 정보
+  tv('dr-swissAgree', r.swissAgree);
+  tv('dr-repairDone', r.repairDone);
+  document.getElementById('dr-cost').textContent = fmtC(r.cost);
+  tv('dr-indate', r.indate);
+  tv('dr-pickup', r.pickup);
+
+  document.getElementById('detailModal').classList.add('open');
+}
 
 /* ── 등록 / 수정 모달 ── */
 document.getElementById('registerBtn').onclick = () => openRegModal();
