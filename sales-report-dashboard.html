@@ -114,14 +114,14 @@
     .inventory-panel { background:#fff;border:1px solid #e2e7ef;border-radius:8px;box-shadow:0 2px 8px rgba(15,23,42,.035);display:grid;grid-template-columns:2.25fr 1fr;overflow:hidden;margin-bottom:0; }
     .inventory-left  { border-right:1px solid #e5eaf2; }
     .inventory-header { padding:18px 24px 10px;font-size:19px;font-weight:900; }
-    .filter-wrap { display:flex;flex-direction:column;gap:12px;padding:12px 16px 14px;border-bottom:1px solid #e5eaf2; }
-    .filter-search-box { position:relative;max-width:600px;width:100%; }
-    .filter-search-box svg { position:absolute;left:13px;top:50%;transform:translateY(-50%);pointer-events:none;color:#9ca3af; }
-    .filter-search-input { width:100%;height:38px;border:1px solid #d9e0ea;border-radius:20px;padding:0 14px 0 40px;font-size:13px;font-weight:600;color:#111827;background:#fff;outline:none;font-family:inherit;transition:border-color .12s; }
+    .filter-wrap { display:flex;flex-direction:column;gap:clamp(8px,1vw,12px);padding:clamp(8px,1vw,12px) clamp(10px,1.2vw,16px) clamp(10px,1.2vw,14px);border-bottom:1px solid #e5eaf2; }
+    .filter-search-box { position:relative;width:100%; }
+    .filter-search-box svg { position:absolute;left:clamp(10px,0.9vw,13px);top:50%;transform:translateY(-50%);pointer-events:none;color:#9ca3af; }
+    .filter-search-input { width:100%;height:clamp(28px,2.6vw,38px);border:1px solid #d9e0ea;border-radius:20px;padding:0 clamp(10px,1vw,14px) 0 clamp(30px,2.8vw,40px);font-size:clamp(11px,1vw,13px);font-weight:600;color:#111827;background:#fff;outline:none;font-family:inherit;transition:border-color .12s; }
     .filter-search-input:focus { border-color:#0067e8; }
-    .filter-bar { display:flex;align-items:center;gap:6px;flex-wrap:nowrap;overflow-x:auto;-ms-overflow-style:none;scrollbar-width:none; }
+    .filter-bar { display:flex;align-items:center;gap:clamp(3px,0.4vw,6px);flex-wrap:nowrap;overflow-x:auto;-ms-overflow-style:none;scrollbar-width:none; }
     .filter-bar::-webkit-scrollbar { display:none; }
-    .filter-pill { display:inline-flex;align-items:center;height:32px;padding:0 14px;border:1px solid #d9e0ea;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;user-select:none;transition:.12s;background:#fff;color:#374151;font-family:inherit; }
+    .filter-pill { display:inline-flex;align-items:center;height:clamp(24px,2.2vw,32px);padding:0 clamp(7px,0.8vw,14px);border:1px solid #d9e0ea;border-radius:20px;font-size:clamp(11px,1vw,13px);font-weight:700;cursor:pointer;user-select:none;transition:.12s;background:#fff;color:#374151;font-family:inherit;white-space:nowrap;flex-shrink:0; }
     .filter-pill:hover { border-color:#9ca3af; }
     .filter-pill.active        { background:#374151;color:#fff;border-color:#374151; }
     .filter-pill.active-green  { background:#009844;color:#fff;border-color:#009844; }
@@ -132,19 +132,19 @@
     .filter-pill.active-purple { background:#7c3aed;color:#fff;border-color:#7c3aed; }
     .filter-pill.active-teal   { background:#d97706;color:#fff;border-color:#d97706; }
     .filter-pill.active-cyan   { background:#0891b2;color:#fff;border-color:#0891b2; }
-    .table-wrap { padding:14px 16px 12px;overflow-x:auto; }
+    .table-wrap { padding:clamp(8px,1vw,14px) clamp(10px,1.2vw,16px) clamp(8px,1vw,12px);overflow-x:auto; }
     table { width:100%;border-collapse:collapse; }
-    .inventory-table { min-width:780px; }
-    th,td { border:1px solid #e2e7ef;padding:10px 12px;font-size:14px;text-align:center;white-space:nowrap; }
+    .inventory-table { table-layout:fixed;width:100%; }
+    th,td { border:1px solid #e2e7ef;padding:clamp(5px,0.6vw,10px) clamp(5px,0.7vw,12px);font-size:clamp(11px,1.1vw,14px);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
     th { background:#f6f8fb;font-weight:900; }
     td { background:#fff;font-weight:700; }
     .inventory-table tfoot td { background:#fbfcfe;font-weight:900; }
-    input[type="checkbox"] { width:16px;height:16px;accent-color:#0067e8;cursor:pointer; }
-    .td-edit { background:transparent;border:none;outline:none;font-family:inherit;font-size:14px;font-weight:700;color:#111827;width:100%;text-align:center; }
+    input[type="checkbox"] { width:clamp(13px,1.2vw,16px);height:clamp(13px,1.2vw,16px);accent-color:#0067e8;cursor:pointer; }
+    .td-edit { background:transparent;border:none;outline:none;font-family:inherit;font-size:clamp(11px,1.1vw,14px);font-weight:700;color:#111827;width:100%;text-align:center; }
     .td-edit.amt { width:auto!important; text-align:center; }
-    .td-del  { background:none;border:none;cursor:pointer;color:#ccc;font-size:14px;padding:2px; }
+    .td-del  { background:none;border:none;cursor:pointer;color:#ccc;font-size:clamp(11px,1vw,14px);padding:2px; }
     .td-del:hover { color:#f00; }
-    .status-sel { -webkit-appearance:none;appearance:none;height:28px;border:none;border-radius:14px;padding:0 10px;font-size:12px;font-weight:900;cursor:pointer;min-width:84px;text-align:center;font-family:inherit;outline:none; }
+    .status-sel { -webkit-appearance:none;appearance:none;height:clamp(22px,2vw,28px);border:none;border-radius:14px;padding:0 clamp(5px,0.6vw,10px);font-size:clamp(10px,0.9vw,12px);font-weight:900;cursor:pointer;min-width:clamp(60px,5.5vw,84px);text-align:center;font-family:inherit;outline:none;width:100%; }
     .status-sel.s-sale    { background:#e6f8ee;color:#009844; }
     .status-sel.s-confirm { background:#fff3e5;color:#ff7a00; }
     .status-sel.s-carry   { background:#eaf3ff;color:#0067e8; }
@@ -473,9 +473,20 @@
         </div>
         <div class="table-wrap">
           <table class="inventory-table" id="inventoryTable">
+            <colgroup>
+              <col style="width:5%"/>
+              <col style="width:13%"/>
+              <col style="width:13%"/>
+              <col style="width:13%"/>
+              <col style="width:14%"/>
+              <col style="width:11%"/>
+              <col style="width:14%"/>
+              <col style="width:14%"/>
+              <col style="width:3%"/>
+            </colgroup>
             <thead>
               <tr>
-                <th style="width:44px;"><input type="checkbox" id="checkAll"/></th>
+                <th><input type="checkbox" id="checkAll"/></th>
                 <th>REF.</th>
                 <th>Serial</th>
                 <th>금액</th>
@@ -483,7 +494,7 @@
                 <th>예상 판매일</th>
                 <th>상태</th>
                 <th>비고</th>
-                <th style="width:28px;"></th>
+                <th></th>
               </tr>
             </thead>
             <tbody id="inventoryTbody"></tbody>
