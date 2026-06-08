@@ -82,10 +82,9 @@
 
     /* ── KPI 카드 6개 ── */
     .kpi-grid { display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-bottom:18px; }
-    .kpi-card { background:#fff;border:1px solid #e2e7ef;border-radius:10px;padding:14px 16px;box-shadow:0 2px 8px rgba(15,23,42,.035);display:flex;align-items:center;gap:12px;cursor:pointer;transition:border-color .15s,box-shadow .15s; }
+    .kpi-card { background:#fff;border:1px solid #e2e7ef;border-radius:10px;padding:16px 16px;box-shadow:0 2px 8px rgba(15,23,42,.035);display:flex;flex-direction:column;gap:4px;cursor:pointer;transition:border-color .15s,box-shadow .15s; }
     .kpi-card:hover { border-color:#9bbcff; }
     .kpi-card.active-card { border-color:#075bd8;box-shadow:0 0 0 2px #075bd840; }
-    .kpi-icon { width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0; }
     .kpi-text { display:flex;flex-direction:column;gap:2px;min-width:0; }
     .kpi-label { font-size:12px;font-weight:700;color:#6b7280; }
     .kpi-value { font-size:24px;font-weight:900;letter-spacing:-.5px;line-height:1.15; }
@@ -350,58 +349,28 @@
     <!-- 2. KPI 카드 6개 -->
     <div class="kpi-grid">
       <div class="kpi-card active-card" data-filter="전체" onclick="setTabFilter('전체')">
-        <div class="kpi-icon ic-blue">
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="12" y2="16"/></svg>
-        </div>
-        <div class="kpi-text">
-          <span class="kpi-label">전체</span>
-          <span class="kpi-value v-blue" id="cnt-전체">24</span>
-        </div>
+        <span class="kpi-label">전체</span>
+        <span class="kpi-value v-blue" id="cnt-전체">24</span>
       </div>
       <div class="kpi-card" data-filter="오더 대기" onclick="setTabFilter('오더 대기')">
-        <div class="kpi-icon ic-orange">
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h14"/><path d="M17 3v6l-5 3-5-3V3"/><path d="M5 21h14"/><path d="M17 21v-6l-5-3-5 3v6"/></svg>
-        </div>
-        <div class="kpi-text">
-          <span class="kpi-label">오더 대기</span>
-          <span class="kpi-value v-orange" id="cnt-오더대기">0</span>
-        </div>
+        <span class="kpi-label">오더 대기</span>
+        <span class="kpi-value v-orange" id="cnt-오더대기">0</span>
       </div>
       <div class="kpi-card" data-filter="오더 중" onclick="setTabFilter('오더 중')">
-        <div class="kpi-icon ic-purple">
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
-        </div>
-        <div class="kpi-text">
-          <span class="kpi-label">오더 중</span>
-          <span class="kpi-value v-purple" id="cnt-오더중">0</span>
-        </div>
+        <span class="kpi-label">오더 중</span>
+        <span class="kpi-value v-purple" id="cnt-오더중">0</span>
       </div>
       <div class="kpi-card" data-filter="입고 완료" onclick="setTabFilter('입고 완료')">
-        <div class="kpi-icon ic-green">
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
-        </div>
-        <div class="kpi-text">
-          <span class="kpi-label">입고 완료</span>
-          <span class="kpi-value v-green" id="cnt-입고완료">0</span>
-        </div>
+        <span class="kpi-label">입고 완료</span>
+        <span class="kpi-value v-green" id="cnt-입고완료">0</span>
       </div>
       <div class="kpi-card" data-filter="판매 완료" onclick="setTabFilter('판매 완료')">
-        <div class="kpi-icon ic-sky">
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        </div>
-        <div class="kpi-text">
-          <span class="kpi-label">판매 완료</span>
-          <span class="kpi-value v-sky" id="cnt-판매완료">0</span>
-        </div>
+        <span class="kpi-label">판매 완료</span>
+        <span class="kpi-value v-sky" id="cnt-판매완료">0</span>
       </div>
       <div class="kpi-card" data-filter="재오더" onclick="setTabFilter('재오더')">
-        <div class="kpi-icon ic-red">
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-        </div>
-        <div class="kpi-text">
-          <span class="kpi-label">재오더</span>
-          <span class="kpi-value v-red" id="cnt-재오더">1</span>
-        </div>
+        <span class="kpi-label">재오더</span>
+        <span class="kpi-value v-red" id="cnt-재오더">1</span>
       </div>
     </div>
 

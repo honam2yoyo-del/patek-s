@@ -58,13 +58,11 @@
 
     /* ── KPI 요약 카드 6개 ── */
     .kpi-grid { display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-bottom:18px; }
-    .kpi-card { background:#fff;border:1px solid #e2e7ef;border-radius:10px;padding:14px 16px;box-shadow:0 2px 8px rgba(15,23,42,.035);display:flex;flex-direction:row;align-items:center;gap:12px;cursor:pointer;transition:border-color .15s; }
+    .kpi-card { background:#fff;border:1px solid #e2e7ef;border-radius:10px;padding:16px 16px;box-shadow:0 2px 8px rgba(15,23,42,.035);display:flex;flex-direction:column;gap:4px;cursor:pointer;transition:border-color .15s; }
     .kpi-card:hover { border-color:#9bbcff; }
     .kpi-card.active-card { border-color:#075bd8;box-shadow:0 0 0 2px #075bd840; }
-    .kpi-icon { width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0; }
-    .kpi-text { display:flex;flex-direction:column;gap:2px;min-width:0; }
     .kpi-label { font-size:12px;font-weight:700;color:#6b7280; }
-    .kpi-value { font-size:24px;font-weight:900;letter-spacing:-.5px;line-height:1.15; }
+    .kpi-value { font-size:22px;font-weight:900;letter-spacing:-.5px;line-height:1.15; }
     .kpi-unit  { font-size:12px;font-weight:700;color:#6b7280; }
 
     .ic-blue   { background:#EFF6FF; }
@@ -381,71 +379,35 @@
 
     <!-- 2. 요약 카드 6개 -->
     <section class="kpi-grid">
-      <!-- 전체 A/S -->
       <div class="kpi-card active-card" data-filter="전체" onclick="setTabFilter('전체')">
-        <div class="kpi-icon ic-blue">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>
-        </div>
-        <div class="kpi-text">
-          <div class="kpi-label">전체 A/S</div>
-          <div class="kpi-value v-blue" id="cnt-total">0</div>
-          <div class="kpi-unit">건</div>
-        </div>
+        <div class="kpi-label">전체 A/S</div>
+        <div class="kpi-value v-blue" id="cnt-total">0</div>
+        <div class="kpi-unit">건</div>
       </div>
-      <!-- 접수 완료 -->
       <div class="kpi-card" data-filter="접수 완료" onclick="setTabFilter('접수 완료')">
-        <div class="kpi-icon ic-gray">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4b5563" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><polyline points="9 13 11 15 15 11"/></svg>
-        </div>
-        <div class="kpi-text">
-          <div class="kpi-label">접수 완료</div>
-          <div class="kpi-value v-gray" id="cnt-접수완료">0</div>
-          <div class="kpi-unit">건</div>
-        </div>
+        <div class="kpi-label">접수 완료</div>
+        <div class="kpi-value v-gray" id="cnt-접수완료">0</div>
+        <div class="kpi-unit">건</div>
       </div>
-      <!-- 견적 대기 -->
       <div class="kpi-card" data-filter="견적 대기" onclick="setTabFilter('견적 대기')">
-        <div class="kpi-icon ic-orange">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"/><path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"/></svg>
-        </div>
-        <div class="kpi-text">
-          <div class="kpi-label">견적 대기</div>
-          <div class="kpi-value v-orange" id="cnt-견적대기">0</div>
-          <div class="kpi-unit">건</div>
-        </div>
+        <div class="kpi-label">견적 대기</div>
+        <div class="kpi-value v-orange" id="cnt-견적대기">0</div>
+        <div class="kpi-unit">건</div>
       </div>
-      <!-- 수리 중 -->
       <div class="kpi-card" data-filter="수리 중" onclick="setTabFilter('수리 중')">
-        <div class="kpi-icon ic-blue">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
-        </div>
-        <div class="kpi-text">
-          <div class="kpi-label">수리 중</div>
-          <div class="kpi-value v-blue" id="cnt-수리중">0</div>
-          <div class="kpi-unit">건</div>
-        </div>
+        <div class="kpi-label">수리 중</div>
+        <div class="kpi-value v-blue" id="cnt-수리중">0</div>
+        <div class="kpi-unit">건</div>
       </div>
-      <!-- 수리 완료 -->
       <div class="kpi-card" data-filter="수리 완료" onclick="setTabFilter('수리 완료')">
-        <div class="kpi-icon ic-green">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-        </div>
-        <div class="kpi-text">
-          <div class="kpi-label">수리 완료</div>
-          <div class="kpi-value v-green" id="cnt-수리완료">0</div>
-          <div class="kpi-unit">건</div>
-        </div>
+        <div class="kpi-label">수리 완료</div>
+        <div class="kpi-value v-green" id="cnt-수리완료">0</div>
+        <div class="kpi-unit">건</div>
       </div>
-      <!-- 전달 완료 -->
       <div class="kpi-card" data-filter="전달 완료" onclick="setTabFilter('전달 완료')">
-        <div class="kpi-icon ic-emerald">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
-        </div>
-        <div class="kpi-text">
-          <div class="kpi-label">전달 완료</div>
-          <div class="kpi-value v-emerald" id="cnt-전달완료">0</div>
-          <div class="kpi-unit">건</div>
-        </div>
+        <div class="kpi-label">전달 완료</div>
+        <div class="kpi-value v-emerald" id="cnt-전달완료">0</div>
+        <div class="kpi-unit">건</div>
       </div>
     </section>
 

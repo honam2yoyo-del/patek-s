@@ -72,10 +72,9 @@
 
     /* ── KPI 카드 6개 ── */
     .kpi-grid { display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:14px; }
-    .kpi-card { background:#fff;border:1px solid #e2e7ef;border-radius:10px;padding:13px 14px;box-shadow:0 2px 8px rgba(15,23,42,.035);display:flex;align-items:center;gap:11px;cursor:pointer;transition:border-color .15s,box-shadow .15s; }
+    .kpi-card { background:#fff;border:1px solid #e2e7ef;border-radius:10px;padding:15px 14px;box-shadow:0 2px 8px rgba(15,23,42,.035);display:flex;flex-direction:column;gap:4px;cursor:pointer;transition:border-color .15s,box-shadow .15s; }
     .kpi-card:hover { border-color:#9bbcff; }
     .kpi-card.active-card { border-color:#075bd8;box-shadow:0 0 0 2px #075bd840; }
-    .kpi-icon { width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0; }
     .kpi-text { display:flex;flex-direction:column;gap:1px;min-width:0; }
     .kpi-label { font-size:11px;font-weight:700;color:#6b7280; }
     .kpi-value { font-size:22px;font-weight:900;letter-spacing:-.5px;line-height:1.2; }
@@ -316,40 +315,22 @@
       <!-- 2. KPI 카드 6개 -->
       <div class="kpi-grid">
         <div class="kpi-card active-card" data-filter="전체" onclick="setTabFilter('전체')">
-          <div class="kpi-icon ic-blue">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-          </div>
-          <div class="kpi-text"><span class="kpi-label">전체</span><span class="kpi-value v-blue" id="cnt-전체">42</span></div>
+          <span class="kpi-label">전체</span><span class="kpi-value v-blue" id="cnt-전체">42</span>
         </div>
         <div class="kpi-card" data-filter="대기" onclick="setTabFilter('대기')">
-          <div class="kpi-icon ic-gray">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4b5563" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          </div>
-          <div class="kpi-text"><span class="kpi-label">대기</span><span class="kpi-value v-gray" id="cnt-대기">5</span></div>
+          <span class="kpi-label">대기</span><span class="kpi-value v-gray" id="cnt-대기">5</span>
         </div>
         <div class="kpi-card" data-filter="진행중" onclick="setTabFilter('진행중')">
-          <div class="kpi-icon ic-sky">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-          </div>
-          <div class="kpi-text"><span class="kpi-label">진행중</span><span class="kpi-value v-sky" id="cnt-진행중">8</span></div>
+          <span class="kpi-label">진행중</span><span class="kpi-value v-sky" id="cnt-진행중">8</span>
         </div>
         <div class="kpi-card" data-filter="보류" onclick="setTabFilter('보류')">
-          <div class="kpi-icon ic-amber">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          </div>
-          <div class="kpi-text"><span class="kpi-label">보류</span><span class="kpi-value v-amber" id="cnt-보류">3</span></div>
+          <span class="kpi-label">보류</span><span class="kpi-value v-amber" id="cnt-보류">3</span>
         </div>
         <div class="kpi-card" data-filter="완료" onclick="setTabFilter('완료')">
-          <div class="kpi-icon ic-green">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-          </div>
-          <div class="kpi-text"><span class="kpi-label">완료</span><span class="kpi-value v-green" id="cnt-완료">26</span></div>
+          <span class="kpi-label">완료</span><span class="kpi-value v-green" id="cnt-완료">26</span>
         </div>
         <div class="kpi-card" data-filter="중요" onclick="setTabFilter('중요')">
-          <div class="kpi-icon ic-red">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-          </div>
-          <div class="kpi-text"><span class="kpi-label">중요</span><span class="kpi-value v-red" id="cnt-중요">7</span></div>
+          <span class="kpi-label">중요</span><span class="kpi-value v-red" id="cnt-중요">7</span>
         </div>
       </div>
 
