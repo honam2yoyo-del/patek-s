@@ -734,7 +734,7 @@ const auth = getAuth(app);
 const db   = getFirestore(app);
 
 /* ── 네비 & 사이드바 ── */
-window.safeNav = url => { window.location.href = url; };
+/* safeNav는 navGuard 스크립트에서 정의됨 */
 window.toggleSidebar = () => {
   const a = document.querySelector('.app');
   const s = document.getElementById('sidebar');
@@ -1357,7 +1357,7 @@ document.getElementById('save-btn').addEventListener('click', async () => {
   window.markDirty=markDirty; window.markClean=markClean; window.isDirty=function(){ return _dirty; };
   window.safeNav=function(url){ if(!_dirty){location.href=url;return;} _url=url; document.getElementById('navGuard').style.display='flex'; };
   document.addEventListener('DOMContentLoaded',function(){
-    document.getElementById('ngSave').addEventListener('click',function(){ document.getElementById('navGuard').style.display='none'; var b=document.getElementById('save-btn'); if(b)b.click(); setTimeout(function(){ if(_url)location.href=_url; },2000); });
+    document.getElementById('ngSave').addEventListener('click',function(){ document.getElementById('navGuard').style.display='none'; var b=document.getElementById('save-btn'); if(b)b.click(); setTimeout(function(){ markClean(); if(_url)location.href=_url; },1500); });
     document.getElementById('ngDiscard').addEventListener('click',function(){ markClean(); document.getElementById('navGuard').style.display='none'; if(_url)location.href=_url; });
     document.getElementById('ngCancel').addEventListener('click',function(){ _url=null; document.getElementById('navGuard').style.display='none'; });
     window.addEventListener('beforeunload',function(e){ if(_dirty){e.preventDefault();e.returnValue='';} });
