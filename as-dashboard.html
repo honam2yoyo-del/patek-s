@@ -94,7 +94,7 @@
     .stab:hover { border-color:#9ca3af; }
     .stab.active { background:#075bd8;color:#fff;border-color:#075bd8; }
     .inline-dd { position:fixed;background:#fff;border:1px solid #e2e7ef;border-radius:8px;box-shadow:0 8px 24px rgba(15,23,42,.15);z-index:600;overflow:hidden;min-width:120px; }
-    .inline-dd-opt { padding:9px 14px;font-size:13px;font-weight:700;cursor:pointer;color:#374151;transition:background .1s; }
+    .inline-dd-opt { padding:9px 14px;font-size:13px;font-weight:700;cursor:pointer;color:#374151;transition:background .1s;text-align:center; }
     .inline-dd-opt:hover { background:#f0f6ff;color:#075bd8; }
     .inline-dd-opt.active { color:#075bd8;background:#eff6ff; }
     td.editable-cell { cursor:pointer; }
@@ -1043,8 +1043,10 @@ window.onAsStatusClick = function(e, id, cur) {
   const rect = e.currentTarget.getBoundingClientRect();
   const dd = document.createElement('div');
   dd.className = 'inline-dd';
-  dd.style.left = rect.left + 'px';
   dd.style.top  = (rect.bottom + window.scrollY + 4) + 'px';
+  document.body.appendChild(dd);
+  const ddW = dd.offsetWidth;
+  dd.style.left = Math.max(4, rect.left + (rect.width - ddW) / 2) + 'px';
   AS_STATUSES.forEach(s => {
     const opt = document.createElement('div');
     opt.className = 'inline-dd-opt' + (s === cur ? ' active' : '');
@@ -1056,7 +1058,6 @@ window.onAsStatusClick = function(e, id, cur) {
     };
     dd.appendChild(opt);
   });
-  document.body.appendChild(dd);
   _asDD = dd;
 };
 document.addEventListener('click', closeAsDD);
