@@ -794,8 +794,7 @@
             <label class="fg-label">중간 업데이트</label>
             <div class="dt-toolbar">
               <button type="button" class="dt-btn" onclick="window.insertDateAt('f-update','date')">오늘 날짜</button>
-              <button type="button" class="dt-btn dt-icon" onclick="window.openPicker('f-update-dpick')">📅</button>
-              <input type="date" id="f-update-dpick" style="position:absolute;left:-9999px;width:0;height:0;opacity:0;" onchange="window.insertPickedDate('f-update',this.value,'date');this.value=''">
+              <label class="dt-btn dt-icon" style="cursor:pointer;">📅<input type="date" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" onchange="window.insertPickedDate('f-update',this.value,'date');this.value=''"></label>
             </div>
           </div>
           <textarea class="form-textarea" id="f-update" placeholder="중간 진행 상황을 입력하세요..."></textarea>
@@ -805,8 +804,7 @@
             <label class="fg-label">고객 컨택 내용</label>
             <div class="dt-toolbar">
               <button type="button" class="dt-btn" onclick="window.insertDateAt('f-contact-log','datetime')">현재 일시</button>
-              <button type="button" class="dt-btn dt-icon" onclick="window.openPicker('f-contact-dtpick')">🕒</button>
-              <input type="datetime-local" id="f-contact-dtpick" style="position:absolute;left:-9999px;width:0;height:0;opacity:0;" onchange="window.insertPickedDate('f-contact-log',this.value,'datetime');this.value=''">
+              <label class="dt-btn dt-icon" style="cursor:pointer;">🕒<input type="datetime-local" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" onchange="window.insertPickedDate('f-contact-log',this.value,'datetime');this.value=''"></label>
             </div>
           </div>
           <textarea class="form-textarea" id="f-contact-log" placeholder="고객과의 연락 내용을 입력하세요..."></textarea>
@@ -857,11 +855,6 @@ window.insertPickedDate = function(taId, value, mode) {
   ta.selectionStart = ta.selectionEnd = s + text.length;
   ta.focus();
 };
-window.openPicker = function(id) {
-  const el = document.getElementById(id);
-  try { el.showPicker(); } catch(_) { el.click(); }
-};
-
 /* ── 네비 ── */
 window.safeNav = url => { window.location.href = url; };
 window.toggleSidebar = () => {
