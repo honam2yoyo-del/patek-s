@@ -858,11 +858,19 @@ window.insertPickedDate = function(taId, value, mode) {
   ta.selectionStart = ta.selectionEnd = s + text.length;
   ta.focus();
 };
-document.getElementById('btn-update-dpick').addEventListener('click', () => {
-  document.getElementById('f-update-dpick').showPicker();
+document.getElementById('btn-update-dpick').addEventListener('click', function() {
+  const inp = document.getElementById('f-update-dpick');
+  const r = this.getBoundingClientRect();
+  inp.style.left = r.left + 'px';
+  inp.style.top  = r.top  + 'px';
+  inp.showPicker();
 });
-document.getElementById('btn-contact-dtpick').addEventListener('click', () => {
-  document.getElementById('f-contact-dtpick').showPicker();
+document.getElementById('btn-contact-dtpick').addEventListener('click', function() {
+  const inp = document.getElementById('f-contact-dtpick');
+  const r = this.getBoundingClientRect();
+  inp.style.left = r.left + 'px';
+  inp.style.top  = r.top  + 'px';
+  inp.showPicker();
 });
 document.getElementById('f-update-dpick').addEventListener('change', function() {
   window.insertPickedDate('f-update', this.value, 'date');
