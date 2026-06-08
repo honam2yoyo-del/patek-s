@@ -60,8 +60,7 @@
 
     /* ── 요약 카드 ── */
     .summary-grid { display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:18px; }
-    .summary-card { background:#fff;border:1px solid #e1e7f0;border-radius:10px;padding:18px 20px;display:flex;align-items:center;gap:16px;min-height:116px;box-shadow:0 2px 8px rgba(15,23,42,.035); }
-    .summary-icon { width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;font-weight:900;flex-shrink:0; }
+    .summary-card { background:#fff;border:1px solid #e1e7f0;border-radius:10px;padding:18px 20px;display:flex;flex-direction:column;gap:5px;box-shadow:0 2px 8px rgba(15,23,42,.035); }
     .icon-blue   { background:linear-gradient(135deg,#1877f2,#0b5ed7); }
     .icon-green  { background:linear-gradient(135deg,#22c55e,#079247); }
     .icon-orange { background:linear-gradient(135deg,#fb923c,#f97316); }
@@ -219,12 +218,12 @@
     .section-title { font-size: clamp(14px, 1.4vw, 18px); }
     @media (max-width: 1400px) {
       .summary-grid { gap: 10px; }
-      .summary-card { padding: 14px 14px; gap: 12px; }
+      .summary-card { padding: 14px 14px; }
     }
     @media (max-width: 1200px) {
       .main { padding: 16px 18px 34px; }
       .summary-grid { gap: 8px; }
-      .summary-card { padding: 12px 10px; gap: 10px; min-height: 96px; }
+      .summary-card { padding: 12px 10px; }
     }
   </style>
 </head>
@@ -315,44 +314,29 @@
       <!-- 요약 카드 -->
       <section class="summary-grid">
         <div class="summary-card">
-          <img src="./total_sales_coin.svg" width="52" height="52" style="flex-shrink:0;" />
-          <div>
-            <div class="summary-label">총 매출</div>
-            <div class="summary-value" id="sum-total">-</div>
-            <div class="summary-sub">전년 대비 <span id="sum-yoy" class="up">-</span></div>
-          </div>
+          <div class="summary-label">총 매출</div>
+          <div class="summary-value" id="sum-total">-</div>
+          <div class="summary-sub">전년 대비 <span id="sum-yoy" class="up">-</span></div>
         </div>
         <div class="summary-card">
-          <img src="./total_qty_cart.svg" width="52" height="52" style="flex-shrink:0;" />
-          <div>
-            <div class="summary-label">총 판매 수량</div>
-            <div class="summary-value" id="sum-qty">-</div>
-            <div class="summary-sub" id="sum-qty-sub">-</div>
-          </div>
+          <div class="summary-label">총 판매 수량</div>
+          <div class="summary-value" id="sum-qty">-</div>
+          <div class="summary-sub" id="sum-qty-sub">-</div>
         </div>
         <div class="summary-card">
-          <img src="./monthly_growth_arrow.svg" width="52" height="52" style="flex-shrink:0;" />
-          <div>
-            <div class="summary-label">전년 대비</div>
-            <div class="summary-value" id="sum-yoy2">-</div>
-            <div class="summary-sub" id="sum-prev">-</div>
-          </div>
+          <div class="summary-label">전년 대비</div>
+          <div class="summary-value" id="sum-yoy2">-</div>
+          <div class="summary-sub" id="sum-prev">-</div>
         </div>
         <div class="summary-card">
-          <img src="./top_line_crown.svg" width="52" height="52" style="flex-shrink:0;" />
-          <div>
-            <div class="summary-label">최다 판매 라인</div>
-            <div class="summary-value" id="sum-top-line">-</div>
-            <div class="summary-sub" id="sum-top-line-sub">-</div>
-          </div>
+          <div class="summary-label">최다 판매 라인</div>
+          <div class="summary-value" id="sum-top-line">-</div>
+          <div class="summary-sub" id="sum-top-line-sub">-</div>
         </div>
         <div class="summary-card">
-          <img src="./top_region_pin.svg" width="52" height="52" style="flex-shrink:0;" />
-          <div>
-            <div class="summary-label">최다 판매 지역</div>
-            <div class="summary-value" id="sum-top-region">-</div>
-            <div class="summary-sub" id="sum-top-region-sub">-</div>
-          </div>
+          <div class="summary-label">최다 판매 지역</div>
+          <div class="summary-value" id="sum-top-region">-</div>
+          <div class="summary-sub" id="sum-top-region-sub">-</div>
         </div>
       </section>
 
