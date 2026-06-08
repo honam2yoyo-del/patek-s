@@ -99,7 +99,7 @@
     .mini-title { font-size:11px;color:#64748b;font-weight:900;text-align:center;margin-bottom:3px; }
     .mini-main { text-align:center;color:#003b8e;font-size:16px;font-weight:900;margin-bottom:8px; }
     .mini-row { display:flex;justify-content:space-between;gap:8px;font-size:12px;font-weight:800;border-top:1px solid #e5eaf2;padding-top:6px;margin-top:4px; }
-    .donut-wrap { position:relative;width:220px;height:220px;display:flex;align-items:center;justify-content:center; }
+    .donut-wrap { position:relative;width:220px;height:220px;display:flex;align-items:center;justify-content:center;flex-shrink:0;aspect-ratio:1/1; }
     .donut { width:220px;height:220px;border-radius:50%;position:absolute;inset:0; }
     .donut-hole { width:90px;height:90px;background:#fff;border-radius:50%;z-index:2;display:flex;align-items:center;justify-content:center;text-align:center;font-size:12px;font-weight:900;line-height:1.5;box-shadow:inset 0 0 0 1px #eef2f7;color:#374151; }
     .chart-label { position:absolute;font-size:11px;font-weight:900;color:#111827;line-height:1.3;text-align:center;pointer-events:none; }
@@ -225,6 +225,20 @@
       .main { padding: 16px 18px 34px; }
       .summary-grid { gap: 8px; }
       .summary-card { padding: 12px 10px; gap: 10px; min-height: 96px; }
+      /* 두 패널을 1단 세로 배치 */
+      .report-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 992px) {
+      /* 패널 내부 표+차트도 세로 배치 */
+      .analysis-panel { grid-template-columns: 1fr; }
+      /* 도넛 차트 영역 중앙 정렬 */
+      .chart-side { align-items: center; }
+      /* 상단 툴바 줄바꿈 대응 */
+      .toolbar { gap: 8px; flex-wrap: wrap; }
+      .summary-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (max-width: 768px) {
+      .summary-grid { grid-template-columns: repeat(2, 1fr); }
     }
   </style>
 </head>
