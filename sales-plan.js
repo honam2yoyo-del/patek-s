@@ -696,10 +696,8 @@ function renderTable() {
       </div></td>
       <td><input class="td-edit" value="${esc(r.customer||'')}" oninput="window.invSet(${ri},'customer',this.value)" placeholder="고객명"/></td>
       <td><input class="td-edit" value="${esc(r.saleDate||'')}" oninput="window.invSet(${ri},'saleDate',this.value)" placeholder="예: 6/28"/></td>
-      <td>
-        <select class="status-sel ${statusSelClass(r.status)}" onchange="window.invChStatus(${ri},this.value,this);">
-          ${STATUSES.map(s=>`<option value="${s}" ${r.status===s?'selected':''}>${STATUS_DISPLAY[s]||s}</option>`).join('')}
-        </select>
+      <td class="editable-cell" onclick="window.invStatusDD(event,${ri})">
+        <span class="status-sel ${statusSelClass(r.status)}" style="pointer-events:none;">${STATUS_DISPLAY[r.status]||r.status||'잔여재고'}</span>
       </td>
       <td><input class="td-edit" value="${esc(r.note||'')}" oninput="window.invSet(${ri},'note',this.value)" placeholder="비고"/></td>
       <td><button class="td-del" onclick="window.invDelRow(${ri});">✕</button></td>`;
@@ -814,10 +812,37 @@ window.invSetAmt = function(ri, el) {
   autoCalcCurrentSales();
   window.markDirty && window.markDirty();
 };
+let _invDD = null;
+function closeInvDD() { if (_invDD) { _invDD.remove(); _invDD = null; } }
+window.invStatusDD = function(e, ri) {
+  e.stopPropagation();
+  closeInvDD();
+  const rect = e.currentTarget.getBoundingClientRect();
+  const dd = document.createElement('div');
+  dd.className = 'inline-dd';
+  STATUSES.forEach(s => {
+    const opt = document.createElement('div');
+    opt.className = 'inline-dd-opt' + (rows[ri] && rows[ri].status === s ? ' active' : '');
+    opt.textContent = STATUS_DISPLAY[s] || s;
+    opt.onclick = ev => {
+      ev.stopPropagation();
+      closeInvDD();
+      if (rows[ri]) { rows[ri].status = s; renderTable(); window.markDirty && window.markDirty(); }
+    };
+    dd.appendChild(opt);
+  });
+  document.body.appendChild(dd);
+  _invDD = dd;
+  dd.style.top  = Math.min(rect.bottom + 4, window.innerHeight - dd.offsetHeight - 8) + 'px';
+  dd.style.left = Math.max(4, rect.left + (rect.width - dd.offsetWidth) / 2) + 'px';
+  setTimeout(() => {
+    document.addEventListener('click', function h() { closeInvDD(); document.removeEventListener('click', h); }, { once: true });
+  }, 0);
+};
 window.invChStatus = function(ri, val, el) {
   if (rows[ri]) rows[ri].status = val;
   el.className = 'status-sel ' + statusSelClass(val);
-  renderTable();  // renderTable이 autoCalcFromInventory + autoCalcCurrentSales 호출함
+  renderTable();
   window.markDirty && window.markDirty();
 };
 window.invDelRow = function(ri) {

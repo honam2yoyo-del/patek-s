@@ -157,6 +157,13 @@
     .status-sel.s-done    { background:#fef3c7;color:#d97706; }
     .status-sel.s-reg     { background:#eaf3ff;color:#0067e8; }
     .status-sel.s-advance { background:#cffafe;color:#0891b2; }
+    .status-sel { display:inline-flex;align-items:center;justify-content:center; }
+    .inline-dd { position:fixed;background:#fff;border:1px solid #e2e7ef;border-radius:8px;box-shadow:0 8px 24px rgba(15,23,42,.15);z-index:600;overflow:hidden;min-width:120px; }
+    .inline-dd-opt { padding:9px 14px;font-size:13px;font-weight:700;cursor:pointer;color:#374151;transition:background .1s;text-align:center; }
+    .inline-dd-opt:hover { background:#f0f6ff;color:#075bd8; }
+    .inline-dd-opt.active { color:#075bd8;background:#eff6ff; }
+    td.editable-cell { cursor:pointer; }
+    td.editable-cell:hover { background:#f0f6ff!important; }
     .badge { display:inline-flex;justify-content:center;align-items:center;min-width:66px;height:26px;padding:0 8px;border-radius:6px;font-size:12px;font-weight:900; }
     .badge-sale    { background:#e6f8ee;color:#009844; }
     .badge-confirm { background:#fff3e5;color:#ff7a00; }

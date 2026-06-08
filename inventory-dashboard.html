@@ -127,6 +127,13 @@
     .status-sel.s-done    { background:#fef3c7;color:#d97706; }
     .status-sel.s-reg     { background:#eaf3ff;color:#0067e8; }
     .status-sel.s-advance { background:#cffafe;color:#0891b2; }
+    .status-sel { display:inline-flex;align-items:center;justify-content:center; }
+    .inline-dd { position:fixed;background:#fff;border:1px solid #e2e7ef;border-radius:8px;box-shadow:0 8px 24px rgba(15,23,42,.15);z-index:600;overflow:hidden;min-width:120px; }
+    .inline-dd-opt { padding:9px 14px;font-size:13px;font-weight:700;cursor:pointer;color:#374151;transition:background .1s;text-align:center; }
+    .inline-dd-opt:hover { background:#f0f6ff;color:#075bd8; }
+    .inline-dd-opt.active { color:#075bd8;background:#eff6ff; }
+    td.editable-cell { cursor:pointer; }
+    td.editable-cell:hover { background:#f0f6ff!important; }
 
     /* ── 삭제 버튼 ── */
     .btn-del-sel { height:36px;padding:0 12px;border:1px solid #fca5a5;border-radius:6px;background:#fff5f5;color:#dc2626;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit; }
@@ -434,6 +441,33 @@ function canonicalStatus(s) {
 const IS_NO_PCS = s => s === '선수금'; // 선수금: 금액만 집계, pcs 제외
 
 // 상태 변경 핸들러 — window 노출로 인라인 핸들러에서 안전하게 호출
+let _invDD2 = null;
+function closeInvDD2() { if (_invDD2) { _invDD2.remove(); _invDD2 = null; } }
+window.chStatusDD = function(e, ri) {
+  e.stopPropagation();
+  closeInvDD2();
+  const rect = e.currentTarget.getBoundingClientRect();
+  const dd = document.createElement('div');
+  dd.className = 'inline-dd';
+  STATUSES.forEach(s => {
+    const opt = document.createElement('div');
+    opt.className = 'inline-dd-opt' + (rows[ri] && rows[ri].status === s ? ' active' : '');
+    opt.textContent = STATUS_DISPLAY[s] || s;
+    opt.onclick = ev => {
+      ev.stopPropagation();
+      closeInvDD2();
+      if (rows[ri]) { rows[ri].status = s; renderKpi(); renderTable(); }
+    };
+    dd.appendChild(opt);
+  });
+  document.body.appendChild(dd);
+  _invDD2 = dd;
+  dd.style.top  = Math.min(rect.bottom + 4, window.innerHeight - dd.offsetHeight - 8) + 'px';
+  dd.style.left = Math.max(4, rect.left + (rect.width - dd.offsetWidth) / 2) + 'px';
+  setTimeout(() => {
+    document.addEventListener('click', function h() { closeInvDD2(); document.removeEventListener('click', h); }, { once: true });
+  }, 0);
+};
 window.chStatus = function(ri, val, el) {
   rows[ri].status = val;
   el.className = 'status-sel ' + statusSelClass(val);
@@ -810,10 +844,8 @@ function renderTable() {
           placeholder="0" style="width:auto;text-align:center;"/><span style="font-weight:700;font-size:14px;">원</span></div></td>
       <td><input class="td-edit" value="${esc(r.customer||'')}" oninput="window.setField(${ri},'customer',this.value)" placeholder="고객명"/></td>
       <td><input class="td-edit" value="${esc(r.saleDate||'')}" oninput="window.setField(${ri},'saleDate',this.value)" onblur="window.applyDateFmt(${ri},this)" placeholder="예: 6/28"/></td>
-      <td>
-        <select class="status-sel ${statusSelClass(r.status)}" onchange="window.chStatus(${ri},this.value,this);">
-          ${STATUSES.map(s=>`<option value="${s}" ${r.status===s?'selected':''}>${STATUS_DISPLAY[s]||s}</option>`).join('')}
-        </select>
+      <td class="editable-cell" onclick="window.chStatusDD(event,${ri})">
+        <span class="status-sel ${statusSelClass(r.status)}" style="pointer-events:none;">${STATUS_DISPLAY[r.status]||r.status||'잔여재고'}</span>
       </td>
       <td><input class="td-edit" value="${esc(r.note||'')}" oninput="window.setField(${ri},'note',this.value)" placeholder="비고"/></td>
       <td><button class="td-del" onclick="window.confirmDelete(${ri})">✕</button></td>`;

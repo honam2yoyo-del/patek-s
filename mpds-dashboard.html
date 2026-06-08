@@ -136,6 +136,13 @@
     .status-sel.s-rest    { background:#e5e7eb;color:#111827; }
     .status-sel.s-done    { background:#fef3c7;color:#d97706; }
     .status-sel.s-advance { background:#cffafe;color:#0891b2; }
+    .status-sel { display:inline-flex;align-items:center;justify-content:center; }
+    .inline-dd { position:fixed;background:#fff;border:1px solid #e2e7ef;border-radius:8px;box-shadow:0 8px 24px rgba(15,23,42,.15);z-index:600;overflow:hidden;min-width:120px; }
+    .inline-dd-opt { padding:9px 14px;font-size:13px;font-weight:700;cursor:pointer;color:#374151;transition:background .1s;text-align:center; }
+    .inline-dd-opt:hover { background:#f0f6ff;color:#075bd8; }
+    .inline-dd-opt.active { color:#075bd8;background:#eff6ff; }
+    td.editable-cell { cursor:pointer; }
+    td.editable-cell:hover { background:#f0f6ff!important; }
     #invTbody td { cursor:text; }
     #invTbody td:first-child, #invTbody td:last-child { cursor:default; }
     .bulk-status-sel { font-size:10px;padding:2px 3px;border-radius:4px;border:1px solid #d9e0ea;background:#f6f8fb;cursor:pointer;width:84px;font-weight:700;font-family:inherit;color:#374151;margin-top:3px; }
@@ -813,6 +820,33 @@ window.mpdsSetAmt = function(ri, el) {
   if (inventory[ri]) inventory[ri].amount = window.parseNum(el.value);
   window.updateSel();
 };
+let _mpdsDD = null;
+function closeMpdsDD() { if (_mpdsDD) { _mpdsDD.remove(); _mpdsDD = null; } }
+window.mpdsStatusDD = function(e, ri) {
+  e.stopPropagation();
+  closeMpdsDD();
+  const rect = e.currentTarget.getBoundingClientRect();
+  const dd = document.createElement('div');
+  dd.className = 'inline-dd';
+  STATUS_OPTIONS.forEach(s => {
+    const opt = document.createElement('div');
+    opt.className = 'inline-dd-opt' + (inventory[ri] && inventory[ri].status === s ? ' active' : '');
+    opt.textContent = MPDS_STATUS_DISPLAY[s] || s;
+    opt.onclick = ev => {
+      ev.stopPropagation();
+      closeMpdsDD();
+      if (inventory[ri]) { inventory[ri].status = s; renderAll(); }
+    };
+    dd.appendChild(opt);
+  });
+  document.body.appendChild(dd);
+  _mpdsDD = dd;
+  dd.style.top  = Math.min(rect.bottom + 4, window.innerHeight - dd.offsetHeight - 8) + 'px';
+  dd.style.left = Math.max(4, rect.left + (rect.width - dd.offsetWidth) / 2) + 'px';
+  setTimeout(() => {
+    document.addEventListener('click', function h() { closeMpdsDD(); document.removeEventListener('click', h); }, { once: true });
+  }, 0);
+};
 window.mpdsChStatus = function(ri, val, el) {
   if (inventory[ri]) inventory[ri].status = val;
   el.className = 'status-sel ' + statusSelClass(val);
@@ -837,10 +871,8 @@ function renderTable() {
       <td><input class="td-edit" value="${esc(r.date||'')}"   oninput="window.mpdsSet(${ri},'date',this.value)" placeholder="YYYY-MM-DD"/></td>
       <td><input class="td-edit" type="text" inputmode="numeric" value="${fmtInput(r.amount)}"
           oninput="window.mpdsSetAmt(${ri},this)" placeholder="0"/></td>
-      <td>
-        <select class="status-sel ${statusSelClass(r.status)}" onchange="window.mpdsChStatus(${ri},this.value,this);">
-          ${STATUS_OPTIONS.map(s=>`<option value="${s}" ${r.status===s?'selected':''}>${MPDS_STATUS_DISPLAY[s]||s}</option>`).join('')}
-        </select>
+      <td class="editable-cell" onclick="window.mpdsStatusDD(event,${ri})">
+        <span class="status-sel ${statusSelClass(r.status)}" style="pointer-events:none;">${MPDS_STATUS_DISPLAY[r.status]||r.status||'등록'}</span>
       </td>
       <td><input class="td-edit" value="${esc(r.note||'')}" oninput="window.mpdsSet(${ri},'note',this.value)" placeholder="비고"/></td>
       <td><button class="td-del" onclick="window.mpdsDelete(${ri})">✕</button></td>`;
