@@ -178,8 +178,8 @@
     .dt-toolbar { display:flex;align-items:center;gap:4px; }
     .dt-btn { height:20px;padding:0 7px;border:1px solid #e2e7ef;border-radius:5px;background:#f6f8fb;font-size:11px;font-weight:700;color:#374151;cursor:pointer;transition:.1s;white-space:nowrap;line-height:1; }
     .dt-btn:hover { background:#eaf3ff;border-color:#b3d1f7;color:#0067e8; }
-    .dt-btn.dt-icon { padding:0 5px;font-size:12px;position:relative;overflow:hidden; }
-    .dt-overlay-input { position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:0; }
+    .dt-btn.dt-icon { padding:0 5px;font-size:12px; }
+    .dt-ghost-inp { position:fixed;left:-500px;top:-500px;width:1px;height:1px;opacity:0;pointer-events:none;border:none; }
     .req { color:#ef4444;margin-left:1px; }
     .form-input { height:38px;border:1px solid #d9e0ea;border-radius:7px;padding:0 12px;font-size:13.5px;font-weight:600;outline:none;width:100%;font-family:inherit; }
     .form-input:focus { border-color:#075bd8;box-shadow:0 0 0 3px #075bd818; }
@@ -795,7 +795,8 @@
             <label class="fg-label">중간 업데이트</label>
             <div class="dt-toolbar">
               <button type="button" class="dt-btn" onclick="window.insertDateAt('f-update','date')">오늘 날짜</button>
-              <span class="dt-btn dt-icon">📅<input type="date" id="f-update-dpick" class="dt-overlay-input"></span>
+              <button type="button" class="dt-btn dt-icon" id="btn-update-dpick">📅</button>
+              <input type="date" id="f-update-dpick" class="dt-ghost-inp">
             </div>
           </div>
           <textarea class="form-textarea" id="f-update" placeholder="중간 진행 상황을 입력하세요..."></textarea>
@@ -805,7 +806,8 @@
             <label class="fg-label">고객 컨택 내용</label>
             <div class="dt-toolbar">
               <button type="button" class="dt-btn" onclick="window.insertDateAt('f-contact-log','datetime')">현재 일시</button>
-              <span class="dt-btn dt-icon">🕒<input type="datetime-local" id="f-contact-dtpick" class="dt-overlay-input"></span>
+              <button type="button" class="dt-btn dt-icon" id="btn-contact-dtpick">🕒</button>
+              <input type="datetime-local" id="f-contact-dtpick" class="dt-ghost-inp">
             </div>
           </div>
           <textarea class="form-textarea" id="f-contact-log" placeholder="고객과의 연락 내용을 입력하세요..."></textarea>
@@ -856,6 +858,12 @@ window.insertPickedDate = function(taId, value, mode) {
   ta.selectionStart = ta.selectionEnd = s + text.length;
   ta.focus();
 };
+document.getElementById('btn-update-dpick').addEventListener('click', () => {
+  document.getElementById('f-update-dpick').showPicker();
+});
+document.getElementById('btn-contact-dtpick').addEventListener('click', () => {
+  document.getElementById('f-contact-dtpick').showPicker();
+});
 document.getElementById('f-update-dpick').addEventListener('change', function() {
   window.insertPickedDate('f-update', this.value, 'date');
   this.value = '';
