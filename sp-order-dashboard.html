@@ -114,6 +114,14 @@
 
     /* ── 테이블 패널 ── */
     .table-panel { background:#fff;border:1px solid #e2e7ef;border-radius:10px;box-shadow:0 2px 8px rgba(15,23,42,.035);overflow:hidden; }
+    .pagination-bar { display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-top:1px solid #e2e7ef; }
+    .pag-total { font-size:13px;font-weight:700;color:#4b5563; }
+    .pag-pages { display:flex;align-items:center;gap:4px; }
+    .pag-btn { width:32px;height:32px;border:1px solid #d9e0ea;border-radius:6px;background:#fff;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#374151; }
+    .pag-btn:hover:not(.disabled) { border-color:#075bd8;color:#075bd8; }
+    .pag-btn.disabled { color:#ccc;cursor:default;pointer-events:none; }
+    .pag-btn.current { background:#075bd8;color:#fff;border-color:#075bd8;border-radius:50%; }
+    .pag-size { height:32px;border:1px solid #d9e0ea;border-radius:6px;padding:0 10px;font-size:13px;font-weight:700;color:#374151;cursor:pointer;background:#fff;outline:none; }
     .table-panel-header { padding:16px 20px;font-size:16px;font-weight:900;border-bottom:1px solid #e2e7ef; }
     .table-wrap { overflow-x:auto; }
     table { width:100%;border-collapse:collapse;min-width:640px; }
@@ -336,11 +344,6 @@
           </div>
         </div>
         <button class="btn-save" id="save-btn" onclick="window.markClean&&window.markClean();this.textContent='✓ 저장됨';setTimeout(()=>{this.textContent='💾 저장하기';},2000)">💾 저장하기</button>
-        <!-- 등록 버튼 -->
-        <button class="btn-primary" onclick="openRegModal()">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          오더 등록
-        </button>
       </div>
     </div>
 
@@ -420,6 +423,10 @@
       <button class="stab"  data-filter="입고 완료"     onclick="setTabFilter('입고 완료')">입고 완료 (<span id="tab-cnt-입고완료">0</span>)</button>
       <button class="stab"  data-filter="판매 완료"     onclick="setTabFilter('판매 완료')">판매 완료 (<span id="tab-cnt-판매완료">0</span>)</button>
       <button class="stab"  data-filter="재오더"        onclick="setTabFilter('재오더')">재오더 (<span id="tab-cnt-재오더">0</span>)</button>
+      <button class="btn-primary" onclick="openRegModal()" style="margin-left:auto;height:32px;padding:0 14px;font-size:13px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        오더 등록
+      </button>
     </div>
 
     <!-- 4. 테이블 패널 -->
@@ -441,6 +448,15 @@
           </thead>
           <tbody id="spTbody"></tbody>
         </table>
+      </div>
+      <div class="pagination-bar">
+        <span class="pag-total" id="pagTotal">총 0건</span>
+        <div class="pag-pages" id="pagPages"></div>
+        <select class="pag-size" id="pagSize" onchange="changePageSize()">
+          <option value="10">10개씩</option>
+          <option value="20">20개씩</option>
+          <option value="50">50개씩</option>
+        </select>
       </div>
     </div>
 
@@ -742,6 +758,8 @@ onAuthStateChanged(auth, user => {
 let allRecords  = [];
 let activeTab   = '전체';
 let selectedId  = null;
+let curPage     = 1;
+let pageSize    = 10;
 let editingId   = null;
 let unsubSP     = null;
 let curYear     = new Date().getFullYear();
@@ -888,13 +906,42 @@ function fmtAmt(v) {
   return isNaN(n) ? v : n.toLocaleString('ko-KR') + '원';
 }
 
+function renderPagination(total, totalPages) {
+  document.getElementById('pagTotal').textContent = `총 ${total}건`;
+  const bar = document.getElementById('pagPages');
+  bar.innerHTML = '';
+  const mk = (label, page, cls='') => {
+    const b = document.createElement('button');
+    b.className = 'pag-btn ' + cls;
+    b.innerHTML = label;
+    if (cls !== 'disabled') b.onclick = () => { curPage = page; applyFilter(); };
+    bar.appendChild(b);
+  };
+  mk('«', 1, curPage===1?'disabled':'');
+  mk('‹', curPage-1, curPage===1?'disabled':'');
+  const s=Math.max(1,curPage-2), e=Math.min(totalPages,s+4);
+  for(let i=s;i<=e;i++) mk(i,i,i===curPage?'current':'');
+  mk('›', curPage+1, curPage===totalPages?'disabled':'');
+  mk('»', totalPages, curPage===totalPages?'disabled':'');
+}
+window.changePageSize = function() {
+  pageSize = parseInt(document.getElementById('pagSize').value);
+  curPage = 1;
+  applyFilter();
+};
+
 function renderTable(rows) {
+  const total = rows.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  if (curPage > totalPages) curPage = totalPages;
+  const slice = rows.slice((curPage-1)*pageSize, curPage*pageSize);
   const tbody = document.getElementById('spTbody');
-  if (!rows.length) {
+  if (!slice.length) {
     tbody.innerHTML = `<tr><td colspan="9" style="padding:32px;color:#9ca3af;font-weight:700;">데이터가 없습니다</td></tr>`;
+    renderPagination(total, totalPages);
     return;
   }
-  tbody.innerHTML = rows.map(r => `
+  tbody.innerHTML = slice.map(r => `
     <tr class="${r.id === selectedId ? 'selected' : ''}" onclick="selectRow('${r.id}')">
       <td onclick="event.stopPropagation()"><input type="checkbox" class="row-cb" data-id="${r.id}" ${r.id === selectedId ? 'checked' : ''}/></td>
       <td style="font-weight:800;">${r.customer || '-'}</td>
@@ -908,6 +955,7 @@ function renderTable(rows) {
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
       </td>
     </tr>`).join('');
+  renderPagination(total, totalPages);
 }
 
 /* ── 행 선택 ── */
@@ -1009,7 +1057,6 @@ function showInlineDropdown(e, options, currentVal, onSelect) {
       ev.stopPropagation();
       dd.remove(); _activeDd = null;
       await onSelect(opt.val);
-      window.markDirty && window.markDirty();
     };
     dd.appendChild(el);
   });
@@ -1126,6 +1173,7 @@ function resetModal() {
 }
 
 window.openRegModal = function() {
+  window.markDirty && window.markDirty();
   editingId = null;
   document.getElementById('regModalTitle').textContent = '스페셜 오더 등록';
   resetModal();
@@ -1181,6 +1229,7 @@ window.deleteFromDetail = async function() {
 window.closeRegModal = function() {
   document.getElementById('regModal').classList.remove('open');
   editingId = null;
+  window.markClean && window.markClean();
 };
 document.getElementById('regModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeRegModal(); });
 
@@ -1275,10 +1324,9 @@ onAuthStateChanged(auth, user => {
   window.markDirty=markDirty; window.markClean=markClean; window.isDirty=function(){ return _dirty; };
   window.safeNav=function(url){ if(!_dirty){location.href=url;return;} _url=url; document.getElementById('navGuard').style.display='flex'; };
   document.addEventListener('DOMContentLoaded',function(){
-    document.getElementById('ngSave').addEventListener('click',function(){ document.getElementById('navGuard').style.display='none'; var b=document.getElementById('save-btn'); if(b)b.click(); setTimeout(function(){ markClean(); if(_url)location.href=_url; },500); });
+    document.getElementById('ngSave').addEventListener('click',function(){ markClean(); document.getElementById('navGuard').style.display='none'; if(_url)location.href=_url; });
     document.getElementById('ngDiscard').addEventListener('click',function(){ markClean(); document.getElementById('navGuard').style.display='none'; if(_url)location.href=_url; });
     document.getElementById('ngCancel').addEventListener('click',function(){ _url=null; document.getElementById('navGuard').style.display='none'; });
-    document.addEventListener('input',markDirty); document.addEventListener('change',markDirty);
     window.addEventListener('beforeunload',function(e){ if(_dirty){e.preventDefault();e.returnValue='';} });
   });
 })();

@@ -376,10 +376,6 @@
           </div>
         </div>
         <button class="btn-save" id="save-btn" onclick="window.markClean&&window.markClean();this.textContent='✓ 저장됨';setTimeout(()=>{this.textContent='💾 저장하기';},2000)">💾 저장하기</button>
-        <button class="btn-primary" id="registerBtn">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          A/S 등록
-        </button>
       </div>
     </div>
 
@@ -471,11 +467,10 @@
       <button class="stab" data-filter="수리 중" onclick="setTabFilter('수리 중')">수리 중 (<span id="tab-cnt-수리중">0</span>)</button>
       <button class="stab" data-filter="수리 완료" onclick="setTabFilter('수리 완료')">수리 완료 (<span id="tab-cnt-수리완료">0</span>)</button>
       <button class="stab" data-filter="전달 완료" onclick="setTabFilter('전달 완료')">전달 완료 (<span id="tab-cnt-전달완료">0</span>)</button>
-      <select class="pag-size" id="pagSize" onchange="changePageSize()" style="margin-left:auto;">
-        <option value="10">10개씩</option>
-        <option value="20">20개씩</option>
-        <option value="50">50개씩</option>
-      </select>
+      <button class="btn-primary" id="registerBtn" style="margin-left:auto;height:32px;padding:0 14px;font-size:13px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        A/S 등록
+      </button>
     </div>
 
     <!-- 5. 테이블 -->
@@ -504,9 +499,13 @@
 
       <!-- 6. 페이지네이션 -->
       <div class="pagination-bar">
-        <span class="pag-total" id="pagTotal">총 18건</span>
+        <span class="pag-total" id="pagTotal">총 0건</span>
         <div class="pag-pages" id="pagPages"></div>
-        <span></span>
+        <select class="pag-size" id="pagSize" onchange="changePageSize()">
+          <option value="10">10개씩</option>
+          <option value="20">20개씩</option>
+          <option value="50">50개씩</option>
+        </select>
       </div>
     </div>
 
@@ -1056,7 +1055,6 @@ window.onAsStatusClick = function(e, id, cur) {
       ev.stopPropagation();
       closeAsDD();
       updateDoc(doc(db, 'as_records', id), { status: s }).catch(console.error);
-      window.markDirty && window.markDirty();
     };
     dd.appendChild(opt);
   });
@@ -1270,12 +1268,14 @@ document.getElementById('registerBtn').onclick = () => openRegModal();
 window.closeRegModal = () => {
   document.getElementById('regModal').classList.remove('open');
   editingId = null;
+  window.markClean && window.markClean();
 };
 document.getElementById('regModal').addEventListener('click', e => {
   if (e.target === document.getElementById('regModal')) window.closeRegModal();
 });
 
 function openRegModal() {
+  window.markDirty && window.markDirty();
   editingId = null;
   document.getElementById('regModalTitle').textContent = 'A/S 등록';
   const allFields = ['f-type','f-staff','f-status','f-customer','f-customer-en','f-ref','f-serial',
@@ -1541,10 +1541,9 @@ document.getElementById('noticeBtn').onclick = () => alert('A/S 공지 기능은
   window.markDirty=markDirty; window.markClean=markClean; window.isDirty=function(){ return _dirty; };
   window.safeNav=function(url){ if(!_dirty){location.href=url;return;} _url=url; document.getElementById('navGuard').style.display='flex'; };
   document.addEventListener('DOMContentLoaded',function(){
-    document.getElementById('ngSave').addEventListener('click',function(){ document.getElementById('navGuard').style.display='none'; var b=document.getElementById('save-btn'); if(b)b.click(); setTimeout(function(){ markClean(); if(_url)location.href=_url; },500); });
+    document.getElementById('ngSave').addEventListener('click',function(){ markClean(); document.getElementById('navGuard').style.display='none'; if(_url)location.href=_url; });
     document.getElementById('ngDiscard').addEventListener('click',function(){ markClean(); document.getElementById('navGuard').style.display='none'; if(_url)location.href=_url; });
     document.getElementById('ngCancel').addEventListener('click',function(){ _url=null; document.getElementById('navGuard').style.display='none'; });
-    document.addEventListener('input',markDirty); document.addEventListener('change',markDirty);
     window.addEventListener('beforeunload',function(e){ if(_dirty){e.preventDefault();e.returnValue='';} });
   });
 })();
