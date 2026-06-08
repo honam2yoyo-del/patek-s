@@ -174,6 +174,11 @@
     .fg3 { display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px 18px; }
     .fg-item { display:flex;flex-direction:column;gap:5px; }
     .fg-label { font-size:12px;font-weight:800;color:#374151; }
+    .fg-label-row { display:flex;justify-content:space-between;align-items:center; }
+    .dt-toolbar { display:flex;align-items:center;gap:4px; }
+    .dt-btn { height:20px;padding:0 7px;border:1px solid #e2e7ef;border-radius:5px;background:#f6f8fb;font-size:11px;font-weight:700;color:#374151;cursor:pointer;transition:.1s;white-space:nowrap;line-height:1; }
+    .dt-btn:hover { background:#eaf3ff;border-color:#b3d1f7;color:#0067e8; }
+    .dt-btn.dt-icon { padding:0 5px;font-size:12px; }
     .req { color:#ef4444;margin-left:1px; }
     .form-input { height:38px;border:1px solid #d9e0ea;border-radius:7px;padding:0 12px;font-size:13.5px;font-weight:600;outline:none;width:100%;font-family:inherit; }
     .form-input:focus { border-color:#075bd8;box-shadow:0 0 0 3px #075bd818; }
@@ -785,11 +790,25 @@
       <div class="fs-title"><span class="fs-num">5</span> 업데이트 / 메모</div>
       <div class="fg3">
         <div class="fg-item">
-          <label class="fg-label">중간 업데이트</label>
+          <div class="fg-label-row">
+            <label class="fg-label">중간 업데이트</label>
+            <div class="dt-toolbar">
+              <button type="button" class="dt-btn" onclick="window.insertDateAt('f-update','date')">오늘 날짜</button>
+              <button type="button" class="dt-btn dt-icon" onclick="window.openPicker('f-update-dpick')">📅</button>
+              <input type="date" id="f-update-dpick" style="position:absolute;left:-9999px;width:0;height:0;opacity:0;" onchange="window.insertPickedDate('f-update',this.value,'date');this.value=''">
+            </div>
+          </div>
           <textarea class="form-textarea" id="f-update" placeholder="중간 진행 상황을 입력하세요..."></textarea>
         </div>
         <div class="fg-item">
-          <label class="fg-label">고객 컨택 내용</label>
+          <div class="fg-label-row">
+            <label class="fg-label">고객 컨택 내용</label>
+            <div class="dt-toolbar">
+              <button type="button" class="dt-btn" onclick="window.insertDateAt('f-contact-log','datetime')">현재 일시</button>
+              <button type="button" class="dt-btn dt-icon" onclick="window.openPicker('f-contact-dtpick')">🕒</button>
+              <input type="datetime-local" id="f-contact-dtpick" style="position:absolute;left:-9999px;width:0;height:0;opacity:0;" onchange="window.insertPickedDate('f-contact-log',this.value,'datetime');this.value=''">
+            </div>
+          </div>
           <textarea class="form-textarea" id="f-contact-log" placeholder="고객과의 연락 내용을 입력하세요..."></textarea>
         </div>
         <div class="fg-item">
@@ -815,6 +834,33 @@ const FC = { apiKey:"AIzaSyCt7aQXA5eFdnDTMHlRhjPAkyH4b8UB6HY", authDomain:"patek
 const app  = initializeApp(FC);
 const auth = getAuth(app);
 const db   = getFirestore(app);
+
+/* ── 날짜 빠른 입력 ── */
+window.insertDateAt = function(taId, mode) {
+  const ta  = document.getElementById(taId);
+  const now = new Date();
+  const p   = n => String(n).padStart(2,'0');
+  const text = mode === 'datetime'
+    ? `${now.getFullYear()}-${p(now.getMonth()+1)}-${p(now.getDate())} ${p(now.getHours())}:${p(now.getMinutes())} `
+    : `${now.getFullYear()}-${p(now.getMonth()+1)}-${p(now.getDate())} `;
+  const s = ta.selectionStart, e = ta.selectionEnd;
+  ta.value = ta.value.slice(0,s) + text + ta.value.slice(e);
+  ta.selectionStart = ta.selectionEnd = s + text.length;
+  ta.focus();
+};
+window.insertPickedDate = function(taId, value, mode) {
+  if (!value) return;
+  const text = (mode === 'datetime' ? value.replace('T',' ').slice(0,16) : value) + ' ';
+  const ta   = document.getElementById(taId);
+  const s    = ta.selectionStart, e = ta.selectionEnd;
+  ta.value = ta.value.slice(0,s) + text + ta.value.slice(e);
+  ta.selectionStart = ta.selectionEnd = s + text.length;
+  ta.focus();
+};
+window.openPicker = function(id) {
+  const el = document.getElementById(id);
+  try { el.showPicker(); } catch(_) { el.click(); }
+};
 
 /* ── 네비 ── */
 window.safeNav = url => { window.location.href = url; };
