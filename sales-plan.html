@@ -39,12 +39,12 @@
     /* ── KPI 카드 5개 ── */
     .kpi-grid { display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-bottom:20px; }
     .kpi-card { background:#fff;border:1px solid #e2e7ef;border-radius:10px;padding:16px 18px;box-shadow:0 2px 8px rgba(15,23,42,.035);display:flex;flex-direction:row;align-items:center;gap:14px; }
-    .kpi-icon { width:72px;height:72px;border-radius:50%;background:#EEF2FF;display:flex;align-items:center;justify-content:center;flex-shrink:0; }
-    .kpi-icon img { width:52px;height:52px;object-fit:contain;display:block; }
+    .kpi-icon { width:56px;height:56px;border-radius:50%;background:#EEF2FF;display:flex;align-items:center;justify-content:center;flex-shrink:0; }
+    .kpi-icon img { width:38px;height:38px;object-fit:contain;display:block; }
     .kpi-text { display:flex;flex-direction:column;gap:3px;min-width:0; }
-    .kpi-label { font-size:13px;font-weight:700;color:#6b7280; }
-    .kpi-value { font-size:26px;font-weight:900;letter-spacing:-.5px;line-height:1.1; }
-    .kpi-sub { font-size:13px;font-weight:700;color:#6b7280; }
+    .kpi-label { font-size:13px;font-weight:500;color:#6b7280; }
+    .kpi-value { font-size:26px;font-weight:700;letter-spacing:-.5px;line-height:1.1; }
+    .kpi-sub { font-size:13px;font-weight:500;color:#6b7280; }
     .kpi-value.blue { color:#0067e8; }
     .kpi-value.red  { color:#ff0000; }
 
@@ -166,8 +166,8 @@
     @media (max-width: 1400px) {
       .kpi-grid     { gap: 10px; }
       .kpi-card     { padding: 12px 12px; }
-      .kpi-icon     { width: 56px; height: 56px; }
-      .kpi-icon img { width: 40px; height: 40px; }
+      .kpi-icon     { width: 44px; height: 44px; }
+      .kpi-icon img { width: 30px; height: 30px; }
       .summary-col  { padding: 16px 14px; }
       .panel-header { padding: 14px 16px 10px; }
       .panel-body   { padding: 14px 16px; }
@@ -322,7 +322,7 @@
 
         <!-- 고객 섹션 -->
         <div>
-          <div class="bot-section-label">고객</div>
+          <div class="bot-section-label">AS & S/O 현황</div>
           <div class="bot-cards">
 
             <!-- AS 현황 (파란 테두리) -->
@@ -347,14 +347,14 @@
 
             <!-- SP오더 현황 (오렌지 테두리) -->
             <div class="bot-card orange">
-              <div class="bot-card-title">SP오더 현황</div>
+              <div class="bot-card-title">SP 오더 현황</div>
               <div class="bot-stat-row">
                 <div class="bot-stat-col">
-                  <div class="bot-stat-label">SP오더 진행중</div>
+                  <div class="bot-stat-label">SP 오더 진행 중</div>
                   <div class="bot-stat-value"><span>0</span><span class="bot-stat-unit">건</span></div>
                 </div>
                 <div class="bot-stat-col">
-                  <div class="bot-stat-label">SP오더 입고</div>
+                  <div class="bot-stat-label">SP 오더 입고</div>
                   <div class="bot-stat-value"><span>0</span><span class="bot-stat-unit">건</span></div>
                 </div>
               </div>
