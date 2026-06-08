@@ -496,9 +496,9 @@
         <div class="kv-list">
           <div class="kv-item"><span class="kv-key">시계 REF.</span><span class="kv-val" id="dp-watchRef">—</span></div>
           <div class="kv-item"><span class="kv-key">알파 코드</span><span class="kv-val" id="dp-alphaCode">—</span></div>
-          <div class="kv-item"><span class="kv-key">링크 사이즈</span><span class="kv-val" id="dp-linkSize">—</span></div>
-          <div class="kv-item"><span class="kv-key">스트랩 길이</span><span class="kv-val" id="dp-strapLen">—</span></div>
           <div class="kv-item"><span class="kv-key">버클 형태</span><span class="kv-val" id="dp-buckle">—</span></div>
+          <div class="kv-item"><span class="kv-key">스트랩 길이</span><span class="kv-val" id="dp-strapLen">—</span></div>
+          <div class="kv-item"><span class="kv-key">링크 사이즈</span><span class="kv-val" id="dp-linkSize">—</span></div>
           <div class="kv-item"><span class="kv-key">걸쇠 유무</span><span class="kv-val" id="dp-clasp">—</span></div>
           <div class="kv-item"><span class="kv-key">스티치 컬러</span><span class="kv-val" id="dp-stitchColor">—</span></div>
           <div class="kv-item"><span class="kv-key">판매용/증정용</span><span class="kv-val" id="dp-purpose">—</span></div>
@@ -596,9 +596,12 @@
         </div>
       </div>
 
-      <div class="fg-item" style="margin-top:10px;">
-        <div class="fg-label">링크 사이즈</div>
-        <input class="form-input" id="f-linkSize" type="text" placeholder=""/>
+      <div class="chip-row" style="margin-top:14px;">
+        <div class="chip-row-label">성별</div>
+        <div class="chip-group" id="grp-gender">
+          <div class="chip" data-group="gender" data-val="남성용" onclick="selectChip('gender','남성용')">남성용</div>
+          <div class="chip" data-group="gender" data-val="여성용" onclick="selectChip('gender','여성용')">여성용</div>
+        </div>
       </div>
 
       <div class="chip-row" style="margin-top:14px;">
@@ -630,6 +633,11 @@
             <span class="chip-main">XL</span><span class="chip-sub" id="sz-XL"></span>
           </div>
         </div>
+      </div>
+
+      <div class="fg-item" style="margin-top:10px;">
+        <div class="fg-label">링크 사이즈</div>
+        <input class="form-input" id="f-linkSize" type="text" placeholder="성별·버클·스트랩 길이 선택 시 자동 입력"/>
       </div>
 
       <div class="chip-row" style="margin-top:14px;">
@@ -1111,11 +1119,17 @@ window.onStatusClick = function(e, id, cur) {
 };
 
 /* ── 칩 선택 ── */
-const STRAP_SIZE_DATA = {
-  '핀':      { XS:'', S:'', STANDARD:'', L:'', XL:'' },
-  '폴딩':    { XS:'', S:'', STANDARD:'', L:'', XL:'' },
-  '노틸러스': { XS:'', S:'', STANDARD:'', L:'', XL:'' },
-  '큐비투스': { XS:'', S:'', STANDARD:'', L:'', XL:'' },
+const LINK_SIZE_DATA = {
+  '남성용': {
+    '핀':       { XS:'60×100', S:'65×105', STANDARD:'75×115', L:'85×125', XL:'90×130' },
+    '폴딩':     { XS:'50×110', S:'55×115', STANDARD:'65×125', L:'75×135', XL:'80×140' },
+    '노틸러스': { XS:'60×100', S:'65×105', STANDARD:'75×115', L:'85×125', XL:'90×130' },
+  },
+  '여성용': {
+    '핀':       { XS:'50×90',  S:'55×95',  STANDARD:'65×105', L:'75×115', XL:'80×120' },
+    '폴딩':     { XS:'40×100', S:'45×105', STANDARD:'55×115', L:'65×125', XL:'70×130' },
+    '노틸러스': { XS:'35×90',  S:'45×100', STANDARD:'55×110', L:'65×120', XL:'75×130' },
+  },
 };
 const chipState = {};
 
@@ -1124,7 +1138,7 @@ window.selectChip = function(group, val) {
   document.querySelectorAll(`.chip[data-group="${group}"]`).forEach(el => {
     el.classList.toggle('selected', el.dataset.val === val);
   });
-  if (group === 'buckle') updateStrapSizes(val);
+  if (group === 'gender' || group === 'buckle' || group === 'strapLen') updateLinkSizes();
   if (group === 'stitchColor') {
     document.getElementById('stitch-input-wrap').style.display = val === '직접 입력' ? 'block' : 'none';
   }
@@ -1137,13 +1151,21 @@ window.selectChipLinked = function(group, val) {
   if (group === 'status'  && normStatus(val) === '입고완료') selectChip('instock', '입고');
 };
 
-function updateStrapSizes(buckle) {
-  const sizes = STRAP_SIZE_DATA[buckle] || {};
+function updateLinkSizes() {
+  const gender = chipState['gender'] || '';
+  const buckle = chipState['buckle'] || '';
+  const sizes  = (LINK_SIZE_DATA[gender] && LINK_SIZE_DATA[gender][buckle]) || {};
   ['XS','S','STANDARD','L','XL'].forEach(sz => {
     const el = document.getElementById(`sz-${sz}`);
     if (el) el.textContent = sizes[sz] || '';
   });
+  const strapLen  = chipState['strapLen'];
+  const linkInput = document.getElementById('f-linkSize');
+  if (linkInput && strapLen && sizes[strapLen]) {
+    linkInput.value = sizes[strapLen] + ' cm';
+  }
 }
+function updateStrapSizes(b) { updateLinkSizes(); } // 하위 호환
 
 /* ── 날짜 picker ── */
 const DAYS_KO_SP = ['일','월','화','수','목','금','토'];
@@ -1173,7 +1195,8 @@ function resetModal() {
   document.querySelectorAll('.chip').forEach(el => el.classList.remove('selected'));
   Object.keys(chipState).forEach(k => delete chipState[k]);
   document.getElementById('stitch-input-wrap').style.display = 'none';
-  updateStrapSizes('');
+  const lk = document.getElementById('f-linkSize'); if (lk) lk.value = '';
+  updateLinkSizes();
 }
 
 window.openRegModal = function() {
@@ -1204,6 +1227,7 @@ window.openEditFromDetail = function() {
   if (r.date) { document.getElementById('dn-f-date').value = r.date; applyDate('dn-f-date','f-date'); }
   document.getElementById('f-orderType').value = r.orderType || '스트랩';
   document.getElementById('f-manager').value   = r.manager || '임영지';
+  if (r.gender)      selectChip('gender',      r.gender);
   if (r.buckle)      selectChip('buckle',      r.buckle);
   if (r.strapLen)    selectChip('strapLen',    r.strapLen);
   if (r.clasp)       selectChip('clasp',       r.clasp);
@@ -1272,6 +1296,7 @@ window.saveOrder = async function() {
     amount:      g('f-amount').replace(/,/g,''),
     orderNum:    g('f-orderNum'),
     strapRef:    g('f-strapRef'),
+    gender:      chipState['gender']      || '',
     status:      chipState['status']      || '오더 대기',
     instock:     chipState['instock']    || '미입고',
     contact:     chipState['contact']    || '미완료',
