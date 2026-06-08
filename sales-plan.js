@@ -60,6 +60,7 @@ let curYear  = new Date().getFullYear();
 let curMonth = new Date().getMonth() + 1;
 let rows     = [];
 let activeFilters = new Set(['전체']);
+let searchQuery   = '';
 let unsubPlan = null;
 let unsubInventory = null;
 
@@ -641,7 +642,13 @@ document.getElementById('goalRateApply').addEventListener('click', () => {
 function renderTable() {
   updateTabCounts();
   const tbody    = document.getElementById('inventoryTbody');
-  const filtered = activeFilters.has('전체') ? rows : rows.filter(r => activeFilters.has(r.status));
+  const q = searchQuery.trim().toLowerCase();
+  let filtered = activeFilters.has('전체') ? rows : rows.filter(r => activeFilters.has(r.status));
+  if (q) filtered = filtered.filter(r =>
+    (r.customer||'').toLowerCase().includes(q) ||
+    (r.ref||'').toLowerCase().includes(q) ||
+    (r.serial||'').toLowerCase().includes(q)
+  );
   tbody.innerHTML = '';
 
   filtered.forEach((r) => {
@@ -800,6 +807,11 @@ function applySalesPillClasses() {
     p.className = 'filter-pill' + (on ? ' ' + (SALES_PILL_CLASS[f] || 'active') : '');
   });
 }
+window.invSearch = function(val) {
+  searchQuery = val;
+  renderTable();
+};
+
 document.getElementById('tabsBar').addEventListener('click', e => {
   const pill = e.target.closest('.filter-pill');
   if (!pill) return;
