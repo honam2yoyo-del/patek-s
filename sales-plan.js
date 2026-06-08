@@ -660,12 +660,11 @@ function renderTable() {
       <td><input type="checkbox" class="row-check" data-amount="${r.amount||0}" data-status="${r.status||''}"/></td>
       <td><input class="td-edit" value="${esc(r.ref||'')}" oninput="window.invSet(${ri},'ref',this.value)" placeholder="REF."/></td>
       <td><input class="td-edit" value="${esc(r.serial||'')}" oninput="window.invSet(${ri},'serial',this.value)" placeholder="Serial"/></td>
-      <td style="padding:0;"><div style="display:flex;align-items:center;justify-content:center;padding:10px 12px;gap:0;">
+      <td><div class="amt-cell">
         <input class="td-edit amt" type="text" inputmode="numeric" value="${amtFmt}"
-          size="${Math.max(3, amtFmt.length) + 1}"
           oninput="window.invSetAmt(${ri},this)"
           placeholder="0"/>
-        <span style="font-weight:700;font-size:14px;">원</span>
+        <span class="amt-unit">원</span>
       </div></td>
       <td><input class="td-edit" value="${esc(r.customer||'')}" oninput="window.invSet(${ri},'customer',this.value)" placeholder="고객명"/></td>
       <td><input class="td-edit" value="${esc(r.saleDate||'')}" oninput="window.invSet(${ri},'saleDate',this.value)" placeholder="예: 6/28"/></td>

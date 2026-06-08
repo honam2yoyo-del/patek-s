@@ -135,13 +135,15 @@
     .table-wrap { padding:clamp(8px,1vw,14px) clamp(10px,1.2vw,16px) clamp(8px,1vw,12px);overflow-x:auto; }
     table { width:100%;border-collapse:collapse; }
     .inventory-table { table-layout:fixed;width:100%; }
-    th,td { border:1px solid #e2e7ef;padding:clamp(5px,0.6vw,10px) clamp(5px,0.7vw,12px);font-size:clamp(11px,1.1vw,14px);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+    th,td { border:1px solid #e2e7ef;padding:clamp(4px,0.5vw,10px) clamp(4px,0.6vw,12px);font-size:clamp(11px,1.2vw,14px);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
     th { background:#f6f8fb;font-weight:900; }
     td { background:#fff;font-weight:700; }
     .inventory-table tfoot td { background:#fbfcfe;font-weight:900; }
     input[type="checkbox"] { width:clamp(13px,1.2vw,16px);height:clamp(13px,1.2vw,16px);accent-color:#0067e8;cursor:pointer; }
-    .td-edit { background:transparent;border:none;outline:none;font-family:inherit;font-size:clamp(11px,1.1vw,14px);font-weight:700;color:#111827;width:100%;text-align:center; }
-    .td-edit.amt { width:auto!important; text-align:center; }
+    .td-edit { background:transparent;border:none;outline:none;font-family:inherit;font-size:clamp(11px,1.2vw,14px);font-weight:700;color:#111827;width:100%;min-width:0;text-align:center;overflow:hidden;text-overflow:ellipsis; }
+    .amt-cell { display:flex;align-items:center;justify-content:center;gap:3px; }
+    .amt-cell .td-edit { flex:1;min-width:0;max-width:90px;width:auto; }
+    .amt-unit { font-weight:700;font-size:clamp(11px,1.2vw,14px);flex-shrink:0; }
     .td-del  { background:none;border:none;cursor:pointer;color:#ccc;font-size:clamp(11px,1vw,14px);padding:2px; }
     .td-del:hover { color:#f00; }
     .status-sel { -webkit-appearance:none;appearance:none;height:clamp(22px,2vw,28px);border:none;border-radius:14px;padding:0 clamp(5px,0.6vw,10px);font-size:clamp(10px,0.9vw,12px);font-weight:900;cursor:pointer;min-width:clamp(60px,5.5vw,84px);text-align:center;font-family:inherit;outline:none;width:100%; }
