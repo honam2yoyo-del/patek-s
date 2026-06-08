@@ -205,6 +205,14 @@
     .modal-backdrop.open { display:flex; }
     .modal { background:#fff;border-radius:14px;box-shadow:0 24px 64px rgba(15,23,42,.28);padding:28px 32px;width:800px;max-width:97vw;max-height:92vh;overflow-y:auto; }
     .modal-header { display:flex;justify-content:space-between;align-items:center;margin-bottom:22px; }
+    .detail-sp-modal { width:900px;padding:0;overflow:hidden; }
+    .detail-sp-modal .modal-header { padding:16px 20px;margin-bottom:0;border-bottom:1px solid #e2e7ef;background:#fafbfc; }
+    .btn-d-edit  { height:34px;border:1px solid #d1d5db;border-radius:7px;background:#fff;padding:0 18px;font-size:13px;font-weight:700;cursor:pointer;color:#374151; }
+    .btn-d-edit:hover { background:#f9fafb; }
+    .btn-d-del   { height:34px;border:none;border-radius:7px;background:#ef4444;color:#fff;padding:0 18px;font-size:13px;font-weight:700;cursor:pointer; }
+    .btn-d-del:hover { background:#dc2626; }
+    .btn-d-close { height:34px;border:1px solid #d1d5db;border-radius:7px;background:#fff;padding:0 18px;font-size:13px;font-weight:700;cursor:pointer;color:#374151; }
+    .btn-d-close:hover { background:#f9fafb; }
     .modal-title { font-size:20px;font-weight:900;color:#111827; }
     .modal-close-btn { width:30px;height:30px;border:none;background:none;cursor:pointer;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#6b7280;font-size:18px;line-height:1; }
     .modal-close-btn:hover { background:#f3f4f6;color:#111827; }
@@ -404,108 +412,95 @@
       <button class="stab"  data-filter="재접수"        onclick="setTabFilter('재접수')">재접수 <span id="tab-cnt-재접수">0</span></button>
     </div>
 
-    <!-- 4. 메인 2단 분할 -->
-    <div class="content-split">
-
-      <!-- 5. 좌측: SP 오더 목록 -->
-      <div class="table-panel">
-        <div class="table-panel-header">SP 오더 목록</div>
-        <div class="table-wrap">
-          <table class="sp-table">
-            <thead>
-              <tr>
-                <th style="width:36px"><input type="checkbox" id="checkAll" onclick="toggleAll(this)"/></th>
-                <th>고객명</th>
-                <th>시계 REF.</th>
-                <th>스트랩 REF.</th>
-                <th>금액</th>
-                <th>입고 유무</th>
-                <th>연락</th>
-                <th>상태</th>
-                <th><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></th>
-              </tr>
-            </thead>
-            <tbody id="spTbody"></tbody>
-          </table>
-        </div>
+    <!-- 4. 테이블 패널 -->
+    <div class="table-panel">
+      <div class="table-wrap">
+        <table class="sp-table">
+          <thead>
+            <tr>
+              <th style="width:36px"><input type="checkbox" id="checkAll" onclick="toggleAll(this)"/></th>
+              <th>고객명</th>
+              <th>시계 REF.</th>
+              <th>스트랩 REF.</th>
+              <th>금액</th>
+              <th>입고 유무</th>
+              <th>연락</th>
+              <th>상태</th>
+              <th><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></th>
+            </tr>
+          </thead>
+          <tbody id="spTbody"></tbody>
+        </table>
       </div>
-
-      <!-- 6. 우측: 상세 정보 패널 -->
-      <div class="detail-panel" id="detailPanel">
-        <div id="detailEmpty" class="dp-empty">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-          <p>오더를 선택하면 상세 정보가 표시됩니다</p>
-        </div>
-        <div id="detailContent" style="display:none">
-          <!-- 수정/삭제 버튼 -->
-          <div class="dp-actions">
-            <span class="dp-actions-title">상세 정보</span>
-            <div class="dp-actions-btns">
-              <button class="dp-edit-btn" onclick="openEditFromDetail()">수정</button>
-              <button class="dp-del-btn"  onclick="deleteFromDetail()">삭제</button>
-            </div>
-          </div>
-          <!-- 패널 헤더 -->
-          <div class="dp-header">
-            <div class="dp-header-cell">
-              <div class="dp-h-label">고객명</div>
-              <div class="dp-h-value" id="dp-customer">—</div>
-            </div>
-            <div class="dp-header-cell">
-              <div class="dp-h-label">담당자</div>
-              <div class="dp-h-value" id="dp-manager">—</div>
-            </div>
-            <div class="dp-header-cell">
-              <div class="dp-h-label">상태</div>
-              <div class="dp-h-value" id="dp-status">—</div>
-            </div>
-          </div>
-          <!-- 3단 그리드 -->
-          <div class="dp-body">
-            <!-- A. 오더 내용 -->
-            <div class="dp-section">
-              <div class="dp-section-title">오더 내용</div>
-              <div class="kv-list">
-                <div class="kv-item"><span class="kv-key">시계 REF.</span><span class="kv-val" id="dp-watchRef">—</span></div>
-                <div class="kv-item"><span class="kv-key">알파 코드</span><span class="kv-val" id="dp-alphaCode">—</span></div>
-                <div class="kv-item"><span class="kv-key">링크 사이즈</span><span class="kv-val" id="dp-linkSize">—</span></div>
-                <div class="kv-item"><span class="kv-key">스트랩 길이</span><span class="kv-val" id="dp-strapLen">—</span></div>
-                <div class="kv-item"><span class="kv-key">버클 형태</span><span class="kv-val" id="dp-buckle">—</span></div>
-                <div class="kv-item"><span class="kv-key">걸쇠 유무</span><span class="kv-val" id="dp-clasp">—</span></div>
-                <div class="kv-item"><span class="kv-key">스티치 컬러</span><span class="kv-val" id="dp-stitchColor">—</span></div>
-                <div class="kv-item"><span class="kv-key">판매용/증정용</span><span class="kv-val" id="dp-purpose">—</span></div>
-              </div>
-            </div>
-            <!-- B. 레퍼런스 / 입고 확인 -->
-            <div class="dp-section">
-              <div class="dp-section-title">주문 정보</div>
-              <div class="kv-list">
-                <div class="kv-item"><span class="kv-key">오더 번호</span><span class="kv-val" id="dp-orderNum">—</span></div>
-                <div class="kv-item"><span class="kv-key">스트랩 Ref.</span><span class="kv-val" id="dp-strapRef">—</span></div>
-                <div class="kv-item"><span class="kv-key">컬러 번호</span><span class="kv-val" id="dp-colorNum">—</span></div>
-                <div class="kv-item"><span class="kv-key">금액</span><span class="kv-val" id="dp-amount">—</span></div>
-                <div class="kv-item"><span class="kv-key">입고여부</span><span class="kv-val" id="dp-instock">—</span></div>
-                <div class="kv-item"><span class="kv-key">고객 연락</span><span class="kv-val" id="dp-contact">—</span></div>
-                <div class="kv-item"><span class="kv-key">판매 완료일</span><span class="kv-val" id="dp-saleDate">—</span></div>
-              </div>
-            </div>
-            <!-- C. 업데이트 기록 (타임라인) -->
-            <div class="dp-section">
-              <div class="dp-section-title">업데이트 기록</div>
-              <div class="timeline" id="dp-timeline"></div>
-            </div>
-          </div>
-          <!-- 특이사항 -->
-          <div class="dp-footer">
-            <div class="dp-footer-title">특이사항</div>
-            <textarea class="dp-textarea" id="dp-memo" placeholder="특이사항을 입력하세요..." rows="4"></textarea>
-          </div>
-        </div>
-      </div>
-
-    </div><!-- /content-split -->
+    </div>
 
   </main>
+</div>
+
+<!-- 상세 모달 -->
+<div class="modal-backdrop" id="detailModal">
+  <div class="modal detail-sp-modal">
+    <div class="modal-header">
+      <span style="font-size:17px;font-weight:900;color:#111827;">SP 오더 상세</span>
+      <div style="display:flex;gap:8px;">
+        <button class="btn-d-edit"  onclick="openEditFromDetail()">수정</button>
+        <button class="btn-d-del"   onclick="deleteFromDetail()">삭제</button>
+        <button class="btn-d-close" onclick="closeDetailModal()">닫기</button>
+      </div>
+    </div>
+    <!-- 헤더 3열 -->
+    <div class="dp-header">
+      <div class="dp-header-cell">
+        <div class="dp-h-label">고객명</div>
+        <div class="dp-h-value" id="dp-customer">—</div>
+      </div>
+      <div class="dp-header-cell">
+        <div class="dp-h-label">담당자</div>
+        <div class="dp-h-value" id="dp-manager">—</div>
+      </div>
+      <div class="dp-header-cell">
+        <div class="dp-h-label">상태</div>
+        <div class="dp-h-value" id="dp-status">—</div>
+      </div>
+    </div>
+    <!-- 3단 그리드 -->
+    <div class="dp-body">
+      <div class="dp-section">
+        <div class="dp-section-title">오더 내용</div>
+        <div class="kv-list">
+          <div class="kv-item"><span class="kv-key">시계 REF.</span><span class="kv-val" id="dp-watchRef">—</span></div>
+          <div class="kv-item"><span class="kv-key">알파 코드</span><span class="kv-val" id="dp-alphaCode">—</span></div>
+          <div class="kv-item"><span class="kv-key">링크 사이즈</span><span class="kv-val" id="dp-linkSize">—</span></div>
+          <div class="kv-item"><span class="kv-key">스트랩 길이</span><span class="kv-val" id="dp-strapLen">—</span></div>
+          <div class="kv-item"><span class="kv-key">버클 형태</span><span class="kv-val" id="dp-buckle">—</span></div>
+          <div class="kv-item"><span class="kv-key">걸쇠 유무</span><span class="kv-val" id="dp-clasp">—</span></div>
+          <div class="kv-item"><span class="kv-key">스티치 컬러</span><span class="kv-val" id="dp-stitchColor">—</span></div>
+          <div class="kv-item"><span class="kv-key">판매용/증정용</span><span class="kv-val" id="dp-purpose">—</span></div>
+        </div>
+      </div>
+      <div class="dp-section">
+        <div class="dp-section-title">주문 정보</div>
+        <div class="kv-list">
+          <div class="kv-item"><span class="kv-key">오더 번호</span><span class="kv-val" id="dp-orderNum">—</span></div>
+          <div class="kv-item"><span class="kv-key">스트랩 Ref.</span><span class="kv-val" id="dp-strapRef">—</span></div>
+          <div class="kv-item"><span class="kv-key">컬러 번호</span><span class="kv-val" id="dp-colorNum">—</span></div>
+          <div class="kv-item"><span class="kv-key">금액</span><span class="kv-val" id="dp-amount">—</span></div>
+          <div class="kv-item"><span class="kv-key">입고여부</span><span class="kv-val" id="dp-instock">—</span></div>
+          <div class="kv-item"><span class="kv-key">고객 연락</span><span class="kv-val" id="dp-contact">—</span></div>
+          <div class="kv-item"><span class="kv-key">판매 완료일</span><span class="kv-val" id="dp-saleDate">—</span></div>
+        </div>
+      </div>
+      <div class="dp-section">
+        <div class="dp-section-title">업데이트 기록</div>
+        <div class="timeline" id="dp-timeline"></div>
+      </div>
+    </div>
+    <!-- 특이사항 -->
+    <div class="dp-footer">
+      <div class="dp-footer-title">특이사항</div>
+      <textarea class="dp-textarea" id="dp-memo" placeholder="특이사항을 입력하세요..." rows="4"></textarea>
+    </div>
+  </div>
 </div>
 
 <!-- 오더 등록 모달 -->
@@ -923,9 +918,6 @@ const STATUS_COLOR_MAP = {
   '전달완료':'status-green','오더번호확인':'status-blue'
 };
 function renderDetail(r) {
-  document.getElementById('detailEmpty').style.display = 'none';
-  document.getElementById('detailContent').style.display = 'block';
-
   const tv = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v || '—'; };
 
   tv('dp-customer', r.customer);
@@ -958,12 +950,16 @@ function renderDetail(r) {
 
   renderTimeline(r.timeline || []);
   document.getElementById('dp-memo').value = r.memo || '';
+  document.getElementById('detailModal').classList.add('open');
 }
 function clearDetail() {
   selectedId = null;
-  document.getElementById('detailEmpty').style.display = 'flex';
-  document.getElementById('detailContent').style.display = 'none';
+  document.getElementById('detailModal').classList.remove('open');
 }
+window.closeDetailModal = function() { clearDetail(); };
+document.getElementById('detailModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('detailModal')) clearDetail();
+});
 function renderTimeline(items) {
   const wrap = document.getElementById('dp-timeline');
   if (!items.length) {
