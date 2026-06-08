@@ -136,6 +136,8 @@
     td.editable-cell:hover { background:#f0f6ff!important; }
 
     /* ── 삭제 버튼 ── */
+    .add-row-btn { height:36px;border:1px solid #009844;border-radius:6px;background:#009844;color:#fff;padding:0 14px;font-size:13px;font-weight:700;cursor:pointer; }
+    .add-row-btn:hover { background:#007a35;border-color:#007a35; }
     .btn-del-sel { height:36px;padding:0 12px;border:1px solid #fca5a5;border-radius:6px;background:#fff5f5;color:#dc2626;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit; }
     .btn-del-sel:hover { background:#fee2e2; }
     .btn-del-all { height:36px;padding:0 12px;border:1px solid #dc2626;border-radius:6px;background:#dc2626;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit; }
@@ -270,12 +272,6 @@
           </span>
           <span>엑셀 업로드</span>
         </button>
-        <button class="action-btn add-row-btn" id="addRowBtn">
-          <span class="btn-icon add-row-icon">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16"/><path d="M4 12h16"/><path d="M4 19h16"/><path d="M12 8v8"/><path d="M8 12h8"/></svg>
-          </span>
-          <span>행 추가</span>
-        </button>
         <button class="btn btn-primary" id="save-btn">💾 저장하기</button>
       </div>
     </div>
@@ -314,17 +310,20 @@
 
       <!-- 테이블 컨트롤 -->
       <div class="table-ctrl">
-        <div class="tbl-search-wrap">
-          <input id="tblSearch" class="tbl-search" type="text" placeholder="REF., Serial, 고객명 검색"/>
-          <span class="tbl-search-ico">🔍</span>
-        </div>
-        <div style="display:flex;gap:8px;align-items:center;">
+        <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
+          <div class="tbl-search-wrap" style="flex:1;">
+            <input id="tblSearch" class="tbl-search" type="text" placeholder="REF., Serial, 고객명 검색"/>
+            <span class="tbl-search-ico">🔍</span>
+          </div>
           <select id="sortSelect" class="sort-select">
             <option value="date">날짜순</option>
             <option value="ref">REF순</option>
             <option value="amount">금액순</option>
             <option value="status">상태순</option>
           </select>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button class="add-row-btn" id="addRowBtn">+ 행 추가</button>
           <button class="btn-del-sel" id="delSelBtn">선택 삭제</button>
           <button class="btn-del-all" id="delAllBtn">전체 삭제</button>
         </div>
@@ -456,7 +455,7 @@ window.chStatusDD = function(e, ri) {
     opt.onclick = ev => {
       ev.stopPropagation();
       closeInvDD2();
-      if (rows[ri]) { rows[ri].status = s; renderKpi(); renderTable(); }
+      if (rows[ri]) { rows[ri].status = s; renderKpi(); renderTable(); window.markDirty && window.markDirty(); }
     };
     dd.appendChild(opt);
   });

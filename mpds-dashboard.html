@@ -835,7 +835,7 @@ window.mpdsStatusDD = function(e, ri) {
     opt.onclick = ev => {
       ev.stopPropagation();
       closeMpdsDD();
-      if (inventory[ri]) { inventory[ri].status = s; renderAll(); }
+      if (inventory[ri]) { inventory[ri].status = s; renderAll(); window.markDirty && window.markDirty(); }
     };
     dd.appendChild(opt);
   });
