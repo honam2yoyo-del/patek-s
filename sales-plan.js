@@ -75,7 +75,9 @@ let showPrevYear = false;    // 전년 비교 토글 상태
 let goalRateData = { total: 0, centum: 0, avenue: 0 };
 
 /* ────────── 달력 월 피커 ────────── */
-let pickerYear = curYear;
+let pickerYear      = curYear;
+let pickerMode      = 'month';
+let pickerYearStart = Math.floor(curYear / 10) * 10;
 
 function getQuarterNum(month) { return Math.ceil(month / 3); }
 function curQuarter() { return getQuarterNum(curMonth); }
@@ -87,15 +89,27 @@ function updateQuarterBadge() {
 }
 
 function renderPickerGrid() {
-  document.getElementById('pickerYearLabel').textContent = `${pickerYear}년`;
-  const grid = document.getElementById('pickerMonthGrid');
+  const label = document.getElementById('pickerYearLabel');
+  const grid  = document.getElementById('pickerMonthGrid');
   grid.innerHTML = '';
-  for (let m = 1; m <= 12; m++) {
-    const btn = document.createElement('button');
-    btn.className = 'mpp-month' + (pickerYear === curYear && m === curMonth ? ' sel' : '');
-    btn.textContent = `${m}월`;
-    btn.onclick = () => selectMonth(pickerYear, m);
-    grid.appendChild(btn);
+  if (pickerMode === 'year') {
+    label.textContent = `${pickerYearStart} ~ ${pickerYearStart + 11}`;
+    for (let y = pickerYearStart; y < pickerYearStart + 12; y++) {
+      const btn = document.createElement('button');
+      btn.className = 'mpp-month' + (y === pickerYear ? ' sel' : '');
+      btn.textContent = `${y}년`;
+      btn.onclick = () => { pickerYear = y; pickerMode = 'month'; renderPickerGrid(); };
+      grid.appendChild(btn);
+    }
+  } else {
+    label.textContent = `${pickerYear}년`;
+    for (let m = 1; m <= 12; m++) {
+      const btn = document.createElement('button');
+      btn.className = 'mpp-month' + (pickerYear === curYear && m === curMonth ? ' sel' : '');
+      btn.textContent = `${m}월`;
+      btn.onclick = () => selectMonth(pickerYear, m);
+      grid.appendChild(btn);
+    }
   }
 }
 
@@ -114,13 +128,27 @@ function initMonthPicker() {
   updateQuarterBadge();
   document.getElementById('monthPickerBtn').addEventListener('click', e => {
     e.stopPropagation();
-    pickerYear = curYear;
+    pickerYear = curYear; pickerMode = 'month';
     renderPickerGrid();
     const popup = document.getElementById('monthPickerPopup');
     popup.style.display = popup.style.display === 'none' ? 'block' : 'none';
   });
-  document.getElementById('prevYearBtn').addEventListener('click', e => { e.stopPropagation(); pickerYear--; renderPickerGrid(); });
-  document.getElementById('nextYearBtn').addEventListener('click', e => { e.stopPropagation(); pickerYear++; renderPickerGrid(); });
+  document.getElementById('pickerYearLabel').addEventListener('click', e => {
+    e.stopPropagation();
+    if (pickerMode === 'month') { pickerMode = 'year'; pickerYearStart = Math.floor(pickerYear / 10) * 10; }
+    else { pickerMode = 'month'; }
+    renderPickerGrid();
+  });
+  document.getElementById('prevYearBtn').addEventListener('click', e => {
+    e.stopPropagation();
+    if (pickerMode === 'year') { pickerYearStart -= 12; } else { pickerYear--; }
+    renderPickerGrid();
+  });
+  document.getElementById('nextYearBtn').addEventListener('click', e => {
+    e.stopPropagation();
+    if (pickerMode === 'year') { pickerYearStart += 12; } else { pickerYear++; }
+    renderPickerGrid();
+  });
   document.addEventListener('click', () => {
     const p = document.getElementById('monthPickerPopup');
     if (p) p.style.display = 'none';

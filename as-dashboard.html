@@ -42,7 +42,8 @@
     .mpp-btn:hover { border-color:#075bd8; }
     .mpp-popup { position:absolute;top:calc(100%+6px);right:0;z-index:999;background:#fff;border:1px solid #d9e0ea;border-radius:10px;padding:14px;box-shadow:0 6px 24px rgba(15,23,42,.14);width:230px; }
     .mpp-header { display:flex;justify-content:space-between;align-items:center;margin-bottom:12px; }
-    .mpp-year { font-size:16px;font-weight:900;color:#111827; }
+    .mpp-year { font-size:16px;font-weight:900;color:#111827;cursor:pointer;padding:4px 10px;border-radius:6px;transition:.12s; }
+    .mpp-year:hover { background:#eaf3ff; }
     .mpp-nav { background:none;border:none;cursor:pointer;font-size:20px;color:#0067e8;padding:2px 8px;border-radius:5px;line-height:1; }
     .mpp-nav:hover { background:#eaf3ff; }
     .mpp-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:6px; }
@@ -852,32 +853,60 @@ let unsubAS    = null;
 
 let curYear  = new Date().getFullYear();
 let curMonth = new Date().getMonth() + 1;
-let pickerYear = curYear;
+let pickerYear      = curYear;
+let pickerMode      = 'month';
+let pickerYearStart = Math.floor(curYear / 10) * 10;
 
 /* ── 월 피커 ── */
 function renderPickerGrid() {
-  document.getElementById('pickerYearLabel').textContent = `${pickerYear}년`;
-  const grid = document.getElementById('pickerMonthGrid');
+  const label = document.getElementById('pickerYearLabel');
+  const grid  = document.getElementById('pickerMonthGrid');
   grid.innerHTML = '';
-  for (let m = 1; m <= 12; m++) {
-    const btn = document.createElement('button');
-    btn.className = 'mpp-month' + (pickerYear === curYear && m === curMonth ? ' sel' : '');
-    btn.textContent = `${m}월`;
-    btn.onclick = () => { curYear = pickerYear; curMonth = m;
-      document.getElementById('monthPickerLabel').textContent = `${curYear}년 ${curMonth}월`;
-      document.getElementById('monthPickerPopup').style.display = 'none';
-      loadData();
-    };
-    grid.appendChild(btn);
+  if (pickerMode === 'year') {
+    label.textContent = `${pickerYearStart} ~ ${pickerYearStart + 11}`;
+    for (let y = pickerYearStart; y < pickerYearStart + 12; y++) {
+      const btn = document.createElement('button');
+      btn.className = 'mpp-month' + (y === pickerYear ? ' sel' : '');
+      btn.textContent = `${y}년`;
+      btn.onclick = () => { pickerYear = y; pickerMode = 'month'; renderPickerGrid(); };
+      grid.appendChild(btn);
+    }
+  } else {
+    label.textContent = `${pickerYear}년`;
+    for (let m = 1; m <= 12; m++) {
+      const btn = document.createElement('button');
+      btn.className = 'mpp-month' + (pickerYear === curYear && m === curMonth ? ' sel' : '');
+      btn.textContent = `${m}월`;
+      btn.onclick = () => { curYear = pickerYear; curMonth = m;
+        document.getElementById('monthPickerLabel').textContent = `${curYear}년 ${curMonth}월`;
+        document.getElementById('monthPickerPopup').style.display = 'none';
+        loadData();
+      };
+      grid.appendChild(btn);
+    }
   }
 }
 document.getElementById('monthPickerBtn').addEventListener('click', e => {
-  e.stopPropagation(); pickerYear = curYear; renderPickerGrid();
+  e.stopPropagation(); pickerYear = curYear; pickerMode = 'month'; renderPickerGrid();
   const p = document.getElementById('monthPickerPopup');
   p.style.display = p.style.display === 'none' ? 'block' : 'none';
 });
-document.getElementById('prevYearBtn').addEventListener('click', e => { e.stopPropagation(); pickerYear--; renderPickerGrid(); });
-document.getElementById('nextYearBtn').addEventListener('click', e => { e.stopPropagation(); pickerYear++; renderPickerGrid(); });
+document.getElementById('pickerYearLabel').addEventListener('click', e => {
+  e.stopPropagation();
+  if (pickerMode === 'month') { pickerMode = 'year'; pickerYearStart = Math.floor(pickerYear / 10) * 10; }
+  else { pickerMode = 'month'; }
+  renderPickerGrid();
+});
+document.getElementById('prevYearBtn').addEventListener('click', e => {
+  e.stopPropagation();
+  if (pickerMode === 'year') { pickerYearStart -= 12; } else { pickerYear--; }
+  renderPickerGrid();
+});
+document.getElementById('nextYearBtn').addEventListener('click', e => {
+  e.stopPropagation();
+  if (pickerMode === 'year') { pickerYearStart += 12; } else { pickerYear++; }
+  renderPickerGrid();
+});
 document.addEventListener('click', () => {
   const p = document.getElementById('monthPickerPopup'); if(p) p.style.display='none';
 });
