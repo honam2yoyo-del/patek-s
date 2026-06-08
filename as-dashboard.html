@@ -863,6 +863,7 @@ document.getElementById('btn-update-dpick').addEventListener('click', function()
   const r = this.getBoundingClientRect();
   inp.style.left = r.left + 'px';
   inp.style.top  = r.top  + 'px';
+  inp.getBoundingClientRect(); // 강제 reflow — 위치 변경을 즉시 반영
   inp.showPicker();
 });
 document.getElementById('btn-contact-dtpick').addEventListener('click', function() {
@@ -870,6 +871,7 @@ document.getElementById('btn-contact-dtpick').addEventListener('click', function
   const r = this.getBoundingClientRect();
   inp.style.left = r.left + 'px';
   inp.style.top  = r.top  + 'px';
+  inp.getBoundingClientRect(); // 강제 reflow
   inp.showPicker();
 });
 document.getElementById('f-update-dpick').addEventListener('change', function() {
