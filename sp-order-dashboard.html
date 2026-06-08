@@ -343,7 +343,7 @@
             <div class="mpp-grid" id="pickerMonthGrid"></div>
           </div>
         </div>
-        <button class="btn-save" id="save-btn" onclick="window.markClean&&window.markClean();this.textContent='✓ 저장됨';setTimeout(()=>{this.textContent='💾 저장하기';},2000)">💾 저장하기</button>
+        <button class="btn-save" id="save-btn">💾 저장하기</button>
       </div>
     </div>
 
@@ -834,6 +834,7 @@ function loadData() {
   const col = collection(db, 'sp_orders');
   const ym  = `${curYear}-${String(curMonth).padStart(2,'0')}`;
   unsubSP = onSnapshot(query(col, where('yearMonth','==', ym)), snap => {
+    if (window.isDirty && window.isDirty()) return;
     allRecords = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     allRecords.sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
     updateKPI();
@@ -876,7 +877,7 @@ window.setTabFilter = function(f) {
 /* ── 검색 & 렌더 ── */
 window.applyFilter = function() {
   const q = document.getElementById('searchInput').value.toLowerCase();
-  let rows = allRecords.filter(r => {
+  let rows = allRecords.filter(r => !r._deleted).filter(r => {
     const matchTab = activeTab === '전체' || normStatus(r.status) === normStatus(activeTab);
     const matchQ   = !q || [r.customer||'', r.orderNum||'', r.watchRef||'', r.strapRef||'', r.manager||''].some(v => v.toLowerCase().includes(q));
     return matchTab && matchQ;
@@ -1071,9 +1072,12 @@ function showInlineDropdown(e, options, currentVal, onSelect) {
   }, 0);
 }
 
-async function quickUpdate(id, data) {
-  try { await updateDoc(doc(db,'sp_orders',id), data); }
-  catch(e) { alert('수정 실패: ' + e.message); }
+function quickUpdate(id, data) {
+  const r = allRecords.find(rec => rec.id === id);
+  if (r) { Object.assign(r, data); r._modified = true; }
+  window.markDirty && window.markDirty();
+  updateKPI();
+  applyFilter();
 }
 
 window.onInstockClick = function(e, id, cur) {
@@ -1173,7 +1177,6 @@ function resetModal() {
 }
 
 window.openRegModal = function() {
-  window.markDirty && window.markDirty();
   editingId = null;
   document.getElementById('regModalTitle').textContent = '스페셜 오더 등록';
   resetModal();
@@ -1220,10 +1223,12 @@ window.deleteFromDetail = async function() {
   const r = allRecords.find(rec => rec.id === selectedId);
   if (!r) return;
   if (!confirm(`'${r.customer}' 고객의 스페셜 오더를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) return;
-  try {
-    await deleteDoc(doc(db, 'sp_orders', r.id));
-    clearDetail();
-  } catch(e) { alert('삭제 실패: ' + e.message); }
+  const _idx = allRecords.findIndex(rec => rec.id === r.id);
+  if (_idx >= 0) allRecords[_idx]._deleted = true;
+  window.markDirty && window.markDirty();
+  clearDetail();
+  updateKPI();
+  applyFilter();
 };
 
 window.closeRegModal = function() {
@@ -1276,11 +1281,16 @@ window.saveOrder = async function() {
     data.timeline  = [{ date: new Date().toLocaleDateString('ko-KR'), text: '오더 등록' }];
     data.createdAt = new Date().toISOString();
   }
-  try {
-    if (editingId) { await updateDoc(doc(db,'sp_orders',editingId), data); }
-    else           { await addDoc(collection(db,'sp_orders'), data); }
-    closeRegModal();
-  } catch(e) { alert('저장 실패: ' + e.message); }
+  if (editingId) {
+    const idx = allRecords.findIndex(r => r.id === editingId);
+    if (idx >= 0) allRecords[idx] = { ...allRecords[idx], ...data, _modified: true };
+  } else {
+    allRecords.unshift({ ...data, id: '_new_' + Date.now(), _new: true });
+  }
+  window.markDirty && window.markDirty();
+  updateKPI();
+  applyFilter();
+  closeRegModal();
 };
 
 /* ── 샘플 데이터 (Firestore 없을 때 데모용) ── */
@@ -1303,6 +1313,29 @@ function loadDemoData() {
 onAuthStateChanged(auth, user => {
   if (!user) loadDemoData();
 });
+
+/* ── 저장하기 ── */
+document.getElementById('save-btn').addEventListener('click', async () => {
+  const btn = document.getElementById('save-btn');
+  btn.textContent = '저장 중...'; btn.disabled = true;
+  try {
+    const toDelete = allRecords.filter(r => r._deleted && !r._new);
+    const toAdd    = allRecords.filter(r => r._new    && !r._deleted);
+    const toModify = allRecords.filter(r => r._modified && !r._new && !r._deleted);
+    await Promise.all([
+      ...toDelete.map(r => deleteDoc(doc(db,'sp_orders',r.id))),
+      ...toAdd.map(r => { const {_new,_modified,_deleted,id,...d}=r; return addDoc(collection(db,'sp_orders'),d); }),
+      ...toModify.map(r => { const {_new,_modified,_deleted,...d}=r; return updateDoc(doc(db,'sp_orders',r.id),d); }),
+    ]);
+    window.markClean && window.markClean();
+    btn.textContent = '✔ 저장됨';
+    loadData();
+    setTimeout(() => { btn.textContent = '💾 저장하기'; btn.disabled = false; }, 2000);
+  } catch(e) {
+    alert('저장 실패: ' + e.message);
+    btn.textContent = '💾 저장하기'; btn.disabled = false;
+  }
+});
 </script>
 
 <div id="navGuard" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.52);z-index:9500;align-items:center;justify-content:center;">
@@ -1324,7 +1357,7 @@ onAuthStateChanged(auth, user => {
   window.markDirty=markDirty; window.markClean=markClean; window.isDirty=function(){ return _dirty; };
   window.safeNav=function(url){ if(!_dirty){location.href=url;return;} _url=url; document.getElementById('navGuard').style.display='flex'; };
   document.addEventListener('DOMContentLoaded',function(){
-    document.getElementById('ngSave').addEventListener('click',function(){ markClean(); document.getElementById('navGuard').style.display='none'; if(_url)location.href=_url; });
+    document.getElementById('ngSave').addEventListener('click',function(){ document.getElementById('navGuard').style.display='none'; var b=document.getElementById('save-btn'); if(b)b.click(); setTimeout(function(){ if(_url)location.href=_url; },2000); });
     document.getElementById('ngDiscard').addEventListener('click',function(){ markClean(); document.getElementById('navGuard').style.display='none'; if(_url)location.href=_url; });
     document.getElementById('ngCancel').addEventListener('click',function(){ _url=null; document.getElementById('navGuard').style.display='none'; });
     window.addEventListener('beforeunload',function(e){ if(_dirty){e.preventDefault();e.returnValue='';} });

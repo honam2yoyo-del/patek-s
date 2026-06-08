@@ -375,7 +375,7 @@
             <div class="mpp-grid" id="pickerMonthGrid"></div>
           </div>
         </div>
-        <button class="btn-save" id="save-btn" onclick="window.markClean&&window.markClean();this.textContent='✓ 저장됨';setTimeout(()=>{this.textContent='💾 저장하기';},2000)">💾 저장하기</button>
+        <button class="btn-save" id="save-btn">💾 저장하기</button>
       </div>
     </div>
 
@@ -995,6 +995,7 @@ function loadData() {
   const col = collection(db, 'as_records');
   const ym  = `${curYear}-${String(curMonth).padStart(2,'0')}`;
   unsubAS = onSnapshot(query(col, where('yearMonth','==', ym)), snap => {
+    if (window.isDirty && window.isDirty()) return;
     allRecords = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     allRecords.sort((a,b) => (b.date||'').localeCompare(a.date||''));
     updateKPI();
@@ -1054,7 +1055,10 @@ window.onAsStatusClick = function(e, id, cur) {
     opt.onclick = ev => {
       ev.stopPropagation();
       closeAsDD();
-      updateDoc(doc(db, 'as_records', id), { status: s }).catch(console.error);
+      const _r = allRecords.find(rec => rec.id === id);
+      if (_r) { _r.status = s; _r._modified = true; }
+      window.markDirty && window.markDirty();
+      applyFilter();
     };
     dd.appendChild(opt);
   });
@@ -1064,7 +1068,7 @@ document.addEventListener('click', closeAsDD);
 
 window.applyFilter = function() {
   const q = document.getElementById('searchInput').value.toLowerCase();
-  let rows = allRecords.filter(r => {
+  let rows = allRecords.filter(r => !r._deleted).filter(r => {
     const matchTab = activeTab === '전체' || r.status === activeTab;
     const matchQ   = !q || [r.customer||'', r.ref||'', r.serial||'', r.type||''].some(v => v.toLowerCase().includes(q));
     return matchTab && matchQ;
@@ -1176,10 +1180,12 @@ window.deleteFromDetail = async function() {
   if (!r) return;
   const name = r.customer ? `'${r.customer}' 고객의 ` : '';
   if (!confirm(`${name}A/S 기록을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) return;
-  try {
-    await deleteDoc(doc(db, 'as_records', r.id));
-    window.closeDetailModal();
-  } catch(err) { alert('삭제 실패: ' + err.message); }
+  const _idx = allRecords.findIndex(rec => rec.id === r.id);
+  if (_idx >= 0) allRecords[_idx]._deleted = true;
+  window.markDirty && window.markDirty();
+  window.closeDetailModal();
+  updateKPI();
+  applyFilter();
 };
 
 function openDetailModal(r) {
@@ -1275,7 +1281,6 @@ document.getElementById('regModal').addEventListener('click', e => {
 });
 
 function openRegModal() {
-  window.markDirty && window.markDirty();
   editingId = null;
   document.getElementById('regModalTitle').textContent = 'A/S 등록';
   const allFields = ['f-type','f-staff','f-status','f-customer','f-customer-en','f-ref','f-serial',
@@ -1381,11 +1386,16 @@ window.saveRecord = async function() {
     contactLog:    g('f-contact-log'),
     memo:          g('f-memo'),
   };
-  try {
-    if (editingId) { await updateDoc(doc(db, 'as_records', editingId), data); }
-    else           { await addDoc(collection(db, 'as_records'), data); }
-    window.closeRegModal();
-  } catch(e) { alert('저장 실패: ' + e.message); }
+  if (editingId) {
+    const idx = allRecords.findIndex(r => r.id === editingId);
+    if (idx >= 0) allRecords[idx] = { ...allRecords[idx], ...data, _modified: true };
+  } else {
+    allRecords.unshift({ ...data, id: '_new_' + Date.now(), _new: true });
+  }
+  window.markDirty && window.markDirty();
+  updateKPI();
+  applyFilter();
+  window.closeRegModal();
 };
 
 /* ── 숫자 포맷 ── */
@@ -1520,6 +1530,29 @@ populateStaffSelect(null);
 
 /* ── 공지 버튼 (placeholder) ── */
 document.getElementById('noticeBtn').onclick = () => alert('A/S 공지 기능은 준비 중입니다.');
+
+/* ── 저장하기 ── */
+document.getElementById('save-btn').addEventListener('click', async () => {
+  const btn = document.getElementById('save-btn');
+  btn.textContent = '저장 중...'; btn.disabled = true;
+  try {
+    const toDelete = allRecords.filter(r => r._deleted && !r._new);
+    const toAdd    = allRecords.filter(r => r._new    && !r._deleted);
+    const toModify = allRecords.filter(r => r._modified && !r._new && !r._deleted);
+    await Promise.all([
+      ...toDelete.map(r => deleteDoc(doc(db,'as_records',r.id))),
+      ...toAdd.map(r => { const {_new,_modified,_deleted,id,...d}=r; return addDoc(collection(db,'as_records'),d); }),
+      ...toModify.map(r => { const {_new,_modified,_deleted,...d}=r; return updateDoc(doc(db,'as_records',r.id),d); }),
+    ]);
+    window.markClean && window.markClean();
+    btn.textContent = '✔ 저장됨';
+    loadData();
+    setTimeout(() => { btn.textContent = '💾 저장하기'; btn.disabled = false; }, 2000);
+  } catch(e) {
+    alert('저장 실패: ' + e.message);
+    btn.textContent = '💾 저장하기'; btn.disabled = false;
+  }
+});
 </script>
 
 <div id="navGuard" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.52);z-index:9500;align-items:center;justify-content:center;">
@@ -1541,7 +1574,7 @@ document.getElementById('noticeBtn').onclick = () => alert('A/S 공지 기능은
   window.markDirty=markDirty; window.markClean=markClean; window.isDirty=function(){ return _dirty; };
   window.safeNav=function(url){ if(!_dirty){location.href=url;return;} _url=url; document.getElementById('navGuard').style.display='flex'; };
   document.addEventListener('DOMContentLoaded',function(){
-    document.getElementById('ngSave').addEventListener('click',function(){ markClean(); document.getElementById('navGuard').style.display='none'; if(_url)location.href=_url; });
+    document.getElementById('ngSave').addEventListener('click',function(){ document.getElementById('navGuard').style.display='none'; var b=document.getElementById('save-btn'); if(b)b.click(); setTimeout(function(){ if(_url)location.href=_url; },2000); });
     document.getElementById('ngDiscard').addEventListener('click',function(){ markClean(); document.getElementById('navGuard').style.display='none'; if(_url)location.href=_url; });
     document.getElementById('ngCancel').addEventListener('click',function(){ _url=null; document.getElementById('navGuard').style.display='none'; });
     window.addEventListener('beforeunload',function(e){ if(_dirty){e.preventDefault();e.returnValue='';} });
