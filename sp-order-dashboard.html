@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>SP 오더</title>
+  <title>스페셜 오더</title>
   <style>
     * { box-sizing:border-box; margin:0; padding:0; font-family:"Malgun Gothic","맑은 고딕",Arial,sans-serif; }
     body { background:#f7f9fc; color:#111827; }
@@ -99,9 +99,15 @@
 
     /* ── 상태 탭 ── */
     .status-tabs { display:flex;align-items:center;gap:6px;margin-bottom:16px;flex-wrap:wrap; }
-    .stab { padding:8px 16px;border-radius:7px;background:#fff;border:1.5px solid #e2e7ef;font-size:13px;font-weight:700;color:#374151;cursor:pointer;white-space:nowrap;transition:.12s; }
-    .stab:hover { border-color:#9bbcff;color:#075bd8; }
-    .stab.active { border-color:#075bd8;color:#075bd8;background:#eff6ff; }
+    .stab { display:inline-flex;align-items:center;height:32px;padding:0 14px;border:1px solid #d9e0ea;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;user-select:none;transition:.12s;background:#fff;color:#374151;white-space:nowrap; }
+    .stab:hover { border-color:#9ca3af; }
+    .stab.active { background:#075bd8;color:#fff;border-color:#075bd8; }
+    .search-filter-bar { display:flex;align-items:flex-start;gap:10px;margin-bottom:14px; }
+    .search-wrap { flex:1;position:relative; }
+    .search-input { width:100%;height:42px;border:1px solid #d9e0ea;border-radius:8px;padding:0 42px 0 16px;font-size:14px;font-weight:600;outline:none;color:#111827; }
+    .search-input::placeholder { color:#9ca3af; }
+    .search-input:focus { border-color:#075bd8;box-shadow:0 0 0 3px #075bd820; }
+    .search-icon { position:absolute;right:14px;top:50%;transform:translateY(-50%);color:#9ca3af;pointer-events:none; }
 
     /* ── 메인 2단 분할 ── */
     .content-split { display:grid;grid-template-columns:5.5fr 4.5fr;gap:16px;align-items:start; }
@@ -123,7 +129,7 @@
     .b-오더중   { color:#7c3aed;border-color:#c4b5fd;background:#f5f3ff; }
     .b-입고완료 { color:#16a34a;border-color:#86efac;background:#f0fdf4; }
     .b-판매완료 { color:#0284c7;border-color:#7dd3fc;background:#f0f9ff; }
-    .b-재접수   { color:#dc2626;border-color:#fca5a5;background:#fef2f2; }
+    .b-재오더   { color:#dc2626;border-color:#fca5a5;background:#fef2f2; }
     .b-재오더   { color:#dc2626;border-color:#fca5a5;background:#fef2f2; }
     .b-전달완료 { color:#059669;border-color:#6ee7b7;background:#ecfdf5; }
     .b-입고 { color:#16a34a;border-color:#86efac;background:#f0fdf4; }
@@ -267,8 +273,8 @@
 <!-- 로그인 -->
 <div id="login-overlay">
   <img src="log.png" onerror="this.style.display='none'"/>
-  <h2>SP 오더</h2>
-  <p>Patek Philippe Korea — SP 오더 관리 시스템</p>
+  <h2>스페셜 오더</h2>
+  <p>Patek Philippe Korea — 스페셜 오더 관리 시스템</p>
   <button class="google-btn" id="login-btn">
     <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
     Google로 로그인
@@ -293,7 +299,7 @@
         <li onclick="safeNav('mpds-dashboard.html')"><span class="menu-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg></span>MPDS</li>
         <li onclick="safeNav('report-dashboard.html')"><span class="menu-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg></span>동향 보고</li>
         <li onclick="safeNav('as-dashboard.html')"><span class="menu-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></span>AS</li>
-        <li class="active"><span class="menu-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></span>SP 오더</li>
+        <li class="active"><span class="menu-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></span>스페셜 오더</li>
         <li onclick="safeNav('delivery-note-dashboard.html')"><span class="menu-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span>전달노트</li>
         <li onclick="safeNav('schedule.html')"><span class="menu-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="2" x2="12" y2="4.5"/><line x1="12" y1="19.5" x2="12" y2="22"/><line x1="2" y1="12" x2="4.5" y2="12"/><line x1="19.5" y1="12" x2="22" y2="12"/><polyline points="8 12 11 15 16 9"/></svg></span>스케줄</li>
       </ul>
@@ -313,15 +319,8 @@
 
     <!-- 1. 헤더 -->
     <div class="topbar">
-      <h1 class="page-title">SP 오더</h1>
+      <h1 class="page-title">스페셜 오더</h1>
       <div class="toolbar">
-        <!-- 검색창 -->
-        <div class="search-box">
-          <input type="text" id="searchInput" placeholder="고객명, 오더번호, REF. 검색" oninput="applyFilter()"/>
-          <span class="s-icon">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          </span>
-        </div>
         <!-- 월 선택 -->
         <div class="month-picker-wrap" id="monthPickerWrap">
           <button class="mpp-btn" id="monthPickerBtn">
@@ -391,25 +390,35 @@
           <span class="kpi-value v-sky" id="cnt-판매완료">0</span>
         </div>
       </div>
-      <div class="kpi-card" data-filter="재접수" onclick="setTabFilter('재접수')">
+      <div class="kpi-card" data-filter="재오더" onclick="setTabFilter('재오더')">
         <div class="kpi-icon ic-red">
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
         </div>
         <div class="kpi-text">
-          <span class="kpi-label">재접수</span>
-          <span class="kpi-value v-red" id="cnt-재접수">1</span>
+          <span class="kpi-label">재오더</span>
+          <span class="kpi-value v-red" id="cnt-재오더">1</span>
         </div>
       </div>
     </div>
 
-    <!-- 3. 상태 탭 -->
+    <!-- 3. 검색 -->
+    <div class="search-filter-bar">
+      <div class="search-wrap">
+        <input class="search-input" id="searchInput" type="text" placeholder="고객명, 오더번호, REF. 검색" oninput="applyFilter()"/>
+        <span class="search-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </span>
+      </div>
+    </div>
+
+    <!-- 상태 탭 -->
     <div class="status-tabs">
       <button class="stab active" data-filter="전체"    onclick="setTabFilter('전체')">전체 <span id="tab-cnt-전체">0</span></button>
       <button class="stab"  data-filter="오더 대기"     onclick="setTabFilter('오더 대기')">오더 대기 <span id="tab-cnt-오더대기">0</span></button>
       <button class="stab"  data-filter="오더 중"       onclick="setTabFilter('오더 중')">오더 중 <span id="tab-cnt-오더중">0</span></button>
       <button class="stab"  data-filter="입고 완료"     onclick="setTabFilter('입고 완료')">입고 완료 <span id="tab-cnt-입고완료">0</span></button>
       <button class="stab"  data-filter="판매 완료"     onclick="setTabFilter('판매 완료')">판매 완료 <span id="tab-cnt-판매완료">0</span></button>
-      <button class="stab"  data-filter="재접수"        onclick="setTabFilter('재접수')">재접수 <span id="tab-cnt-재접수">0</span></button>
+      <button class="stab"  data-filter="재오더"        onclick="setTabFilter('재오더')">재오더 <span id="tab-cnt-재오더">0</span></button>
     </div>
 
     <!-- 4. 테이블 패널 -->
@@ -441,7 +450,7 @@
 <div class="modal-backdrop" id="detailModal">
   <div class="modal detail-sp-modal">
     <div class="modal-header">
-      <span style="font-size:17px;font-weight:900;color:#111827;">SP 오더 상세</span>
+      <span style="font-size:17px;font-weight:900;color:#111827;">스페셜 오더 상세</span>
       <div style="display:flex;gap:8px;">
         <button class="btn-d-edit"  onclick="openEditFromDetail()">수정</button>
         <button class="btn-d-del"   onclick="deleteFromDetail()">삭제</button>
@@ -509,7 +518,7 @@
 
     <!-- 헤더 -->
     <div class="modal-header">
-      <span class="modal-title" id="regModalTitle">SP 오더 등록</span>
+      <span class="modal-title" id="regModalTitle">스페셜 오더 등록</span>
       <button class="modal-close-btn" onclick="closeRegModal()">✕</button>
     </div>
 
@@ -667,7 +676,7 @@
           <div class="chip" data-group="status" data-val="오더 중" onclick="selectChip('status','오더 중')">오더 중</div>
           <div class="chip" data-group="status" data-val="입고 완료" onclick="selectChipLinked('status','입고 완료')">입고 완료</div>
           <div class="chip" data-group="status" data-val="판매 완료" onclick="selectChip('status','판매 완료')">판매 완료</div>
-          <div class="chip" data-group="status" data-val="재접수" onclick="selectChip('status','재접수')">재접수</div>
+          <div class="chip" data-group="status" data-val="재오더" onclick="selectChip('status','재오더')">재오더</div>
         </div>
       </div>
 
@@ -822,13 +831,13 @@ const normStatus = s => (s || '').replace(/ /g, '');
 
 /* ── KPI ── */
 function updateKPI() {
-  const counts = { '전체':0, '오더대기':0, '오더중':0, '입고완료':0, '판매완료':0, '재접수':0 };
+  const counts = { '전체':0, '오더대기':0, '오더중':0, '입고완료':0, '판매완료':0, '재오더':0 };
   counts['전체'] = allRecords.length;
   allRecords.forEach(r => {
     const n = normStatus(r.status);
     if (counts[n] !== undefined) counts[n]++;
   });
-  const idMap = { '전체':'전체', '오더대기':'오더대기', '오더중':'오더중', '입고완료':'입고완료', '판매완료':'판매완료', '재접수':'재접수' };
+  const idMap = { '전체':'전체', '오더대기':'오더대기', '오더중':'오더중', '입고완료':'입고완료', '판매완료':'판매완료', '재오더':'재오더' };
   Object.entries(idMap).forEach(([key, id]) => {
     const el  = document.getElementById('cnt-'     + key);
     const tel = document.getElementById('tab-cnt-' + id);
@@ -862,7 +871,7 @@ function badgeHtml(cls, text) {
 }
 function statusBadge(s) {
   const n = normStatus(s);
-  const map = { '오더대기':'오더대기','오더중':'오더중','입고완료':'입고완료','판매완료':'판매완료','재접수':'재접수','재오더':'재오더','전달완료':'전달완료','오더번호확인':'오더중' };
+  const map = { '오더대기':'오더대기','오더중':'오더중','입고완료':'입고완료','판매완료':'판매완료','재오더':'재오더','재오더':'재오더','전달완료':'전달완료','오더번호확인':'오더중' };
   return badgeHtml(map[n] || 'oorder', s || '-');
 }
 function instockBadge(v) {
@@ -914,7 +923,7 @@ window.selectRow = function(id) {
 /* ── 상세 패널 렌더 ── */
 const STATUS_COLOR_MAP = {
   '오더대기':'status-orange','오더중':'status-purple','입고완료':'status-green',
-  '판매완료':'status-sky','재접수':'status-red','재오더':'status-red',
+  '판매완료':'status-sky','재오더':'status-red','재오더':'status-red',
   '전달완료':'status-green','오더번호확인':'status-blue'
 };
 function renderDetail(r) {
@@ -1038,7 +1047,7 @@ window.onContactClick = function(e, id, cur) {
 };
 window.onStatusClick = function(e, id, cur) {
   showInlineDropdown(e,
-    [{ val:'오더 대기' }, { val:'오더 중' }, { val:'입고 완료' }, { val:'판매 완료' }, { val:'재접수' }],
+    [{ val:'오더 대기' }, { val:'오더 중' }, { val:'입고 완료' }, { val:'판매 완료' }, { val:'재오더' }],
     cur,
     async newVal => {
       const d = { status: newVal };
@@ -1116,7 +1125,7 @@ function resetModal() {
 
 window.openRegModal = function() {
   editingId = null;
-  document.getElementById('regModalTitle').textContent = 'SP 오더 등록';
+  document.getElementById('regModalTitle').textContent = '스페셜 오더 등록';
   resetModal();
   selectChip('status',  '오더 대기');
   selectChip('instock', '미입고');
@@ -1128,7 +1137,7 @@ window.openEditFromDetail = function() {
   const r = allRecords.find(rec => rec.id === selectedId);
   if (!r) return;
   editingId = r.id;
-  document.getElementById('regModalTitle').textContent = 'SP 오더 수정';
+  document.getElementById('regModalTitle').textContent = '스페셜 오더 수정';
   resetModal();
   const sv = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
   sv('f-customer',  r.customer);
@@ -1160,7 +1169,7 @@ window.openEditFromDetail = function() {
 window.deleteFromDetail = async function() {
   const r = allRecords.find(rec => rec.id === selectedId);
   if (!r) return;
-  if (!confirm(`'${r.customer}' 고객의 SP 오더를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) return;
+  if (!confirm(`'${r.customer}' 고객의 스페셜 오더를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) return;
   try {
     await deleteDoc(doc(db, 'sp_orders', r.id));
     clearDetail();
@@ -1231,7 +1240,7 @@ function loadDemoData() {
     { id:'3', customer:'박준혁', manager:'임지', watchRef:'5167A/001A-001', strapRef:'98210-001', amount:'290000', instock:'입고', contact:'완료', status:'입고완료', memo:'내일 수령 예정', yearMonth:'2026-06', lugSize:'20mm', colorNum:'N-401', strapLen:'115/75', buckle:'핀버클', timeline:[{date:'2026.06.01',text:'오더 등록'},{date:'2026.06.04',text:'입고 완료'},{date:'2026.06.05',text:'고객 연락 완료'}] },
     { id:'4', customer:'최혜린', manager:'임지', watchRef:'5980/1A-001', strapRef:'98211-001', amount:'550000', instock:'미입고', contact:'미완료', status:'오더대기', memo:'', yearMonth:'2026-06', lugSize:'21mm', colorNum:'N-901', strapLen:'120/80', buckle:'핀버클', timeline:[{date:'2026.06.02',text:'오더 등록'}] },
     { id:'5', customer:'정우성', manager:'임지', watchRef:'5711/1A-011', strapRef:'98215-001', amount:'480000', instock:'입고', contact:'완료', status:'판매완료', memo:'', yearMonth:'2026-06', lugSize:'21mm', colorNum:'N-102', strapLen:'115/75', buckle:'폴딩버클', timeline:[{date:'2026.05.28',text:'오더 등록'},{date:'2026.06.01',text:'입고'},{date:'2026.06.03',text:'판매 완료'}] },
-    { id:'6', customer:'한소희', manager:'임지', watchRef:'5726A/011G-001', strapRef:'98218-001', amount:'410000', instock:'미입고', contact:'미완료', status:'재접수', memo:'이전 오더 취소 후 재접수', yearMonth:'2026-06', lugSize:'19mm', colorNum:'N-301', strapLen:'110/70', buckle:'핀버클', timeline:[{date:'2026.05.20',text:'최초 등록'},{date:'2026.05.30',text:'취소'},{date:'2026.06.04',text:'재접수'}] },
+    { id:'6', customer:'한소희', manager:'임지', watchRef:'5726A/011G-001', strapRef:'98218-001', amount:'410000', instock:'미입고', contact:'미완료', status:'재오더', memo:'이전 오더 취소 후 재오더', yearMonth:'2026-06', lugSize:'19mm', colorNum:'N-301', strapLen:'110/70', buckle:'핀버클', timeline:[{date:'2026.05.20',text:'최초 등록'},{date:'2026.05.30',text:'취소'},{date:'2026.06.04',text:'재오더'}] },
     { id:'7', customer:'오세훈', manager:'임지', watchRef:'5172G/001G-001', strapRef:'98220-001', amount:'370000', instock:'미입고', contact:'미완료', status:'오더대기', memo:'', yearMonth:'2026-06', lugSize:'20mm', colorNum:'N-501', strapLen:'115/75', buckle:'핀버클', timeline:[{date:'2026.06.05',text:'오더 등록'}] },
     { id:'8', customer:'강다은', manager:'임지', watchRef:'5980/1A-014', strapRef:'98225-001', amount:'520000', instock:'입고', contact:'완료', status:'오더중', memo:'', yearMonth:'2026-06', lugSize:'21mm', colorNum:'N-701', strapLen:'120/80', buckle:'폴딩버클', timeline:[{date:'2026.06.01',text:'오더 등록'},{date:'2026.06.04',text:'오더 진행 중'}] },
   ];
