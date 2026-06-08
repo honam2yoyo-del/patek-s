@@ -76,21 +76,25 @@
     .note-line { font-size:12px;color:#64748b;margin:4px 0 14px 4px;font-weight:700; }
 
     /* ── 패널 ── */
-    .report-grid { display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px; }
+    .report-grid { display:flex;flex-wrap:nowrap;gap:14px;margin-bottom:14px; }
+    .report-grid > .panel { flex:1;min-width:0; }
     .panel { background:#fff;border:1px solid #e1e7f0;border-radius:10px;box-shadow:0 2px 8px rgba(15,23,42,.035);overflow:hidden; }
-    .panel-header { display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 18px 10px;flex-wrap:wrap; }
+    .panel-header { display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 18px 10px;flex-wrap:nowrap;overflow:hidden; }
     .section-title { font-size:18px;font-weight:900;display:flex;align-items:center;gap:9px; }
     .section-title::before { content:"";width:5px;height:22px;background:#5aa1ff;border-radius:2px;display:inline-block; }
     .unit { font-size:12px;color:#64748b;font-weight:800; }
 
     /* ── 테이블 ── */
-    .analysis-panel { display:grid;grid-template-columns:1.1fr 1fr;gap:14px;padding:0 14px 18px; }
+    .analysis-panel { display:flex;flex-wrap:nowrap;gap:14px;padding:0 14px 18px;align-items:flex-start; }
+    .analysis-panel > * { min-width:0; }
+    .analysis-panel > :first-child { flex:1.1;min-width:0;overflow-x:auto; }
+    .analysis-panel > :last-child  { flex:1;min-width:0; }
     table { width:100%;border-collapse:collapse; }
-    th,td { border:1px solid #dfe6f0;padding:8px 10px;text-align:center;font-size:13px;white-space:nowrap; }
+    th,td { border:1px solid #dfe6f0;padding:clamp(4px,0.5vw,8px) clamp(4px,0.6vw,10px);text-align:center;font-size:clamp(9px,0.8vw,13px);white-space:nowrap; }
     th { background:#f3f6fa;font-weight:900;color:#003b8e; }
     td { background:#fff;font-weight:700; }
     tfoot td { background:#f8fafc;font-weight:900;color:#003b8e; }
-    .td-inp { background:transparent;border:none;outline:none;font-family:inherit;font-size:13px;font-weight:700;text-align:center;width:100%;color:#111827; }
+    .td-inp { background:transparent;border:none;outline:none;font-family:inherit;font-size:clamp(9px,0.8vw,13px);font-weight:700;text-align:center;width:100%;color:#111827; }
     .highlight-month { color:#0067e8;font-weight:900;background:#eef6ff; }
 
     /* ── 도넛 차트 ── */
@@ -99,8 +103,8 @@
     .mini-title { font-size:11px;color:#64748b;font-weight:900;text-align:center;margin-bottom:3px; }
     .mini-main { text-align:center;color:#003b8e;font-size:16px;font-weight:900;margin-bottom:8px; }
     .mini-row { display:flex;justify-content:space-between;gap:8px;font-size:12px;font-weight:800;border-top:1px solid #e5eaf2;padding-top:6px;margin-top:4px; }
-    .donut-wrap { position:relative;width:220px;height:220px;display:flex;align-items:center;justify-content:center;flex-shrink:0;aspect-ratio:1/1; }
-    .donut { width:220px;height:220px;border-radius:50%;position:absolute;inset:0; }
+    .donut-wrap { position:relative;width:clamp(120px,11vw,220px);aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;flex-shrink:0; }
+    .donut { width:100%;height:100%;border-radius:50%;position:absolute;inset:0; }
     .donut-hole { width:90px;height:90px;background:#fff;border-radius:50%;z-index:2;display:flex;align-items:center;justify-content:center;text-align:center;font-size:12px;font-weight:900;line-height:1.5;box-shadow:inset 0 0 0 1px #eef2f7;color:#374151; }
     .chart-label { position:absolute;font-size:11px;font-weight:900;color:#111827;line-height:1.3;text-align:center;pointer-events:none; }
     /* Line labels */
@@ -225,20 +229,6 @@
       .main { padding: 16px 18px 34px; }
       .summary-grid { gap: 8px; }
       .summary-card { padding: 12px 10px; gap: 10px; min-height: 96px; }
-      /* 두 패널을 1단 세로 배치 */
-      .report-grid { grid-template-columns: 1fr; }
-    }
-    @media (max-width: 992px) {
-      /* 패널 내부 표+차트도 세로 배치 */
-      .analysis-panel { grid-template-columns: 1fr; }
-      /* 도넛 차트 영역 중앙 정렬 */
-      .chart-side { align-items: center; }
-      /* 상단 툴바 줄바꿈 대응 */
-      .toolbar { gap: 8px; flex-wrap: wrap; }
-      .summary-grid { grid-template-columns: repeat(3, 1fr); }
-    }
-    @media (max-width: 768px) {
-      .summary-grid { grid-template-columns: repeat(2, 1fr); }
     }
   </style>
 </head>
