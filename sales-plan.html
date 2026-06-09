@@ -329,11 +329,11 @@
               <div class="bot-stat-row">
                 <div class="bot-stat-col">
                   <div class="bot-stat-label">스페셜 오더 진행 중</div>
-                  <div class="bot-stat-value"><span>0</span><span class="bot-stat-unit">건</span></div>
+                  <div class="bot-stat-value"><span id="sp-active-cnt">-</span><span class="bot-stat-unit">건</span></div>
                 </div>
                 <div class="bot-stat-col">
                   <div class="bot-stat-label">스페셜 오더 입고</div>
-                  <div class="bot-stat-value"><span>0</span><span class="bot-stat-unit">건</span></div>
+                  <div class="bot-stat-value"><span id="sp-instock-cnt">-</span><span class="bot-stat-unit">건</span></div>
                 </div>
               </div>
             </div>
@@ -656,6 +656,17 @@ function startListeners(){
   onSnapshot(collection(db, 'notices'), snap => {
     noticesData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     renderTodoList();
+  });
+
+  // 스페셜 오더 현황
+  onSnapshot(collection(db, 'sp_orders'), snap => {
+    const orders = snap.docs.map(d => d.data());
+    const active  = orders.filter(o => o.status && o.status !== '판매 완료').length;
+    const instock = orders.filter(o => o.status === '입고 완료').length;
+    const activeEl  = document.getElementById('sp-active-cnt');
+    const instockEl = document.getElementById('sp-instock-cnt');
+    if (activeEl)  activeEl.textContent  = active;
+    if (instockEl) instockEl.textContent = instock;
   });
 }
 
