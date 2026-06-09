@@ -409,7 +409,6 @@
               <th>시계 REF.</th>
               <th>스트랩 REF.</th>
               <th>금액</th>
-              <th>입고 유무</th>
               <th>연락</th>
               <th>상태</th>
               <th><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></th>
@@ -606,7 +605,7 @@
 
       <div class="fg-item" style="margin-top:10px;">
         <div class="fg-label">러그 사이즈</div>
-        <input class="form-input" id="f-linkSize" type="text" placeholder="성별·버클·스트랩 길이 선택 시 자동 입력"/>
+        <input class="form-input" id="f-linkSize" type="text" placeholder="직접 입력"/>
       </div>
 
       <div class="chip-row" style="margin-top:14px;">
@@ -796,13 +795,7 @@
         </div>
       </div>
 
-      <div class="chip-row" style="margin-top:14px;">
-        <div class="chip-row-label">입고 유무</div>
-        <div class="chip-group" id="grp-instock">
-          <div class="chip" data-group="instock" data-val="미입고" onclick="selectChipLinked('instock','미입고')">미입고</div>
-          <div class="chip" data-group="instock" data-val="입고" onclick="selectChipLinked('instock','입고')">입고</div>
-        </div>
-      </div>
+
 
       <div class="chip-row" style="margin-top:14px;">
         <div class="chip-row-label">연락</div>
@@ -1048,7 +1041,6 @@ function renderTable(rows) {
       <td>${r.watchRef || '-'}</td>
       <td>${r.strapRef || '-'}</td>
       <td>${fmtAmt(r.amount)}</td>
-      <td class="editable-cell" title="클릭하여 변경" onclick="onInstockClick(event,'${r.id}','${r.instock||'미입고'}')">${instockBadge(r.instock)}</td>
       <td class="editable-cell" title="클릭하여 변경" onclick="onContactClick(event,'${r.id}','${r.contact||'미완료'}')">${contactHtml(r.contact)}</td>
       <td class="editable-cell" title="클릭하여 변경" onclick="onStatusClick(event,'${r.id}','${r.status||'오더 대기'}')">${statusBadge(r.status)}</td>
       <td title="${r.memo||''}" style="color:${r.memo ? '#6b7280' : '#d1d5db'};">
@@ -1235,8 +1227,6 @@ window.selectChip = function(group, val) {
 /* 입고↔상태 연동 버전 */
 window.selectChipLinked = function(group, val) {
   selectChip(group, val);
-  if (group === 'instock' && val === '입고') selectChip('status', '입고 완료');
-  if (group === 'status'  && normStatus(val) === '입고완료') selectChip('instock', '입고');
 };
 
 function updateLinkSizes() {
@@ -1309,7 +1299,6 @@ window.openRegModal = function() {
   document.getElementById('regModalTitle').textContent = '스페셜 오더 등록';
   resetModal();
   selectChip('status',  '오더 대기');
-  selectChip('instock', '미입고');
   selectChip('contact', '미완료');
   document.getElementById('regModal').classList.add('open');
 };
@@ -1354,7 +1343,6 @@ window.openEditFromDetail = function() {
   }
   if (r.purpose) selectChip('purpose', r.purpose);
   selectChip('status',  r.status  || '오더 대기');
-  selectChip('instock', r.instock || '미입고');
   selectChip('contact', r.contact || '미완료');
   document.getElementById('regModal').classList.add('open');
 };
@@ -1420,7 +1408,7 @@ window.saveOrder = async function() {
     amount:   g('f-amount').replace(/,/g,''),
     orderNum: g('f-orderNum'),
     status:   chipState['status']  || '오더 대기',
-    instock:  chipState['instock'] || '미입고',
+    instock:  (chipState['status'] === '입고 완료' || chipState['status'] === '판매 완료') ? '입고' : '미입고',
     contact:  chipState['contact'] || '미완료',
     memo: '',
     ...typeData,

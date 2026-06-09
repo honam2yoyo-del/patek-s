@@ -199,6 +199,10 @@
     .comment-author { font-size:12.5px;font-weight:800;color:#111827; }
     .comment-time { font-size:11px;font-weight:600;color:#9ca3af; }
     .comment-text { font-size:13px;font-weight:600;color:#374151;line-height:1.5; }
+    .comment-action-btn { background:none;border:none;cursor:pointer;font-size:11px;font-weight:700;padding:0 3px;color:#d1d5db;transition:color .1s; }
+    .comment-action-btn:hover { color:#075bd8; }
+    .comment-action-btn.del:hover { color:#ef4444; }
+    .comment-edit-wrap { display:none;flex-direction:row;gap:6px;margin:4px 0 4px; }
 
     /* 답글(대댓글) */
     .reply-btn { background:none;border:none;color:#9ca3af;font-size:12px;font-weight:700;cursor:pointer;padding:3px 0 0;margin-top:2px;display:inline-flex;align-items:center;gap:3px;transition:color .1s; }
@@ -454,12 +458,12 @@
 
             <!-- 정보 그리드 -->
             <div class="dp-info-grid">
+              <div class="dp-info-item"><span class="dp-info-label">작성일</span><span class="dp-info-val" id="dpCreated">—</span></div>
+              <div class="dp-info-item"><span class="dp-info-label">마감일</span><span class="dp-info-val" id="dpDue">—</span></div>
               <div class="dp-info-item"><span class="dp-info-label">작성자</span><span class="dp-info-val" id="dpAuthor">—</span></div>
               <div class="dp-info-item"><span class="dp-info-label">전달 대상</span><span class="dp-info-val" id="dpTarget">—</span></div>
-              <div class="dp-info-item"><span class="dp-info-label">완료자</span><span class="dp-info-val" id="dpCompleter">—</span></div>
-              <div class="dp-info-item"><span class="dp-info-label">마감일</span><span class="dp-info-val" id="dpDue">—</span></div>
               <div class="dp-info-item"><span class="dp-info-label">담당자</span><span class="dp-info-val" id="dpAssignee">—</span></div>
-              <div class="dp-info-item"><span class="dp-info-label">작성일</span><span class="dp-info-val" id="dpCreated">—</span></div>
+              <div class="dp-info-item"><span class="dp-info-label">완료자</span><span class="dp-info-val" id="dpCompleter">—</span></div>
               <div class="dp-info-item"><span class="dp-info-label">읽음 수</span><span class="dp-info-val" id="dpReads">—</span></div>
             </div>
 
@@ -834,8 +838,16 @@ function renderComments(list) {
         <div class="comment-meta">
           <span class="comment-author">${c.author||'—'}</span>
           <span class="comment-time">${c.time||''}</span>
+          <button class="comment-action-btn" onclick="editComment(${i})">수정</button>
+          <button class="comment-action-btn del" onclick="deleteComment(${i})">삭제</button>
         </div>
-        <div class="comment-text">${c.text||''}</div>
+        <div class="comment-text" id="cmt-text-${i}">${c.text||''}</div>
+        <div class="comment-edit-wrap" id="cmt-edit-${i}">
+          <input class="comment-input" id="cmt-input-${i}" type="text" value="${(c.text||'').replace(/"/g,'&quot;')}" onkeydown="if(event.key==='Enter')saveCommentEdit(${i})"/>
+          <button class="comment-send-btn" onclick="saveCommentEdit(${i})">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </div>
         <button class="reply-btn" onclick="toggleReplyInput(${i})">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>
           답글 달기
@@ -879,6 +891,34 @@ window.sendReply = async function(idx) {
   document.getElementById(`reply-wrap-${idx}`)?.classList.remove('open');
   try { await updateDoc(doc(db,'delivery_notes',selectedId), { commentList: list }); }
   catch(e) { renderComments(list); }
+};
+
+window.editComment = function(i) {
+  document.getElementById(`cmt-text-${i}`).style.display = 'none';
+  const wrap = document.getElementById(`cmt-edit-${i}`);
+  if (wrap) { wrap.style.display = 'flex'; document.getElementById(`cmt-input-${i}`)?.focus(); }
+};
+
+window.saveCommentEdit = async function(i) {
+  const note = allNotes.find(n => n.id === selectedId);
+  if (!note) return;
+  const newText = document.getElementById(`cmt-input-${i}`)?.value.trim();
+  if (!newText) return;
+  const newList = (note.commentList||[]).map((c, idx) => idx === i ? {...c, text: newText} : c);
+  note.commentList = newList;
+  try { await updateDoc(doc(db,'delivery_notes',selectedId), { commentList: newList }); }
+  catch(e) { renderComments(newList); }
+};
+
+window.deleteComment = async function(i) {
+  if (!selectedId) return;
+  const note = allNotes.find(n => n.id === selectedId);
+  if (!note) return;
+  if (!confirm('댓글을 삭제하시겠습니까?')) return;
+  const newList = (note.commentList||[]).filter((_, idx) => idx !== i);
+  note.commentList = newList;
+  try { await updateDoc(doc(db,'delivery_notes',selectedId), { commentList: newList }); }
+  catch(e) { renderComments(newList); }
 };
 
 /* ── 별 토글 (starred + important 동시) ── */
