@@ -52,17 +52,17 @@
     .btn-new:hover { background:#0055c8; }
 
     /* ── 필터 바 ── */
-    .filter-bar { background:#fff;border:1px solid #e2e7ef;border-radius:10px;padding:14px 18px;margin-bottom:16px;display:flex;flex-direction:column;gap:16px;box-shadow:0 2px 6px rgba(15,23,42,.03); }
-    .filter-row-top { display:flex;align-items:center;justify-content:space-between;gap:14px; }
-    .search-wrap { position:relative;flex:1; }
+    .filter-bar { background:#fff;border:1px solid #e2e7ef;border-radius:10px;padding:14px 18px;margin-bottom:16px;display:flex;box-shadow:0 2px 6px rgba(15,23,42,.03); }
+    .filter-inline { display:inline-flex;flex-direction:column;gap:16px; }
+    .search-wrap { position:relative; }
     .search-wrap svg { position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#9ca3af; }
     .search-input { width:100%;height:36px;border:1px solid #e2e7ef;border-radius:7px;padding:0 10px 0 34px;font-size:13px;font-weight:600;color:#111827;outline:none;background:#f8fafc; }
     .search-input:focus { border-color:#0067e8;background:#fff; }
-    .cat-filters { display:flex;gap:6px;flex-wrap:wrap; }
+    .cat-filters { display:flex;gap:6px;flex-wrap:nowrap; }
     .cf-btn { height:30px;padding:0 12px;border-radius:20px;border:1px solid #e2e7ef;background:#fff;font-size:12px;font-weight:700;cursor:pointer;transition:all .12s;color:#6b7280;white-space:nowrap; }
     .cf-btn.active { background:#f0f4f8;color:#1e3a5f;font-weight:900; }
-    .sort-wrap { flex-shrink:0; }
-    .sort-sel { height:34px;border:1px solid #e2e7ef;border-radius:7px;background:#fff;padding:0 28px 0 10px;font-size:13px;font-weight:600;color:#374151;cursor:pointer;outline:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center; }
+    .th-sortable { display:inline-flex;align-items:center;gap:4px;cursor:pointer;user-select:none; }
+    .th-sortable:hover { color:#374151; }
 
     /* ── 공지 리스트 패널 ── */
     .notice-panel { background:#fff;border:1px solid #e2e7ef;border-radius:10px;box-shadow:0 2px 6px rgba(15,23,42,.03);overflow:hidden; }
@@ -212,25 +212,19 @@
 
     <!-- 필터 바 -->
     <div class="filter-bar">
-      <div class="filter-row-top">
+      <div class="filter-inline">
         <div class="search-wrap">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           <input id="search-input" class="search-input" type="text" placeholder="제목 또는 내용 검색" oninput="onSearch(this.value)"/>
         </div>
-        <div class="sort-wrap">
-          <select class="sort-sel" onchange="setSort(this.value)">
-            <option value="registerDesc">등록순</option>
-            <option value="deadlineAsc">마감순</option>
-          </select>
+        <div class="cat-filters" id="cat-filters">
+          <button class="cf-btn active" data-cat="전체" onclick="setCat('전체')">전체</button>
+          <button class="cf-btn" data-cat="매장" onclick="setCat('매장')">매장</button>
+          <button class="cf-btn" data-cat="본사" onclick="setCat('본사')">본사</button>
+          <button class="cf-btn" data-cat="PP" onclick="setCat('PP')">PP</button>
+          <button class="cf-btn" data-cat="백화점" onclick="setCat('백화점')">백화점</button>
+          <button class="cf-btn" data-cat="행사" onclick="setCat('행사')">행사</button>
         </div>
-      </div>
-      <div class="cat-filters" id="cat-filters">
-        <button class="cf-btn active" data-cat="전체" onclick="setCat('전체')">전체</button>
-        <button class="cf-btn" data-cat="매장" onclick="setCat('매장')">매장</button>
-        <button class="cf-btn" data-cat="본사" onclick="setCat('본사')">본사</button>
-        <button class="cf-btn" data-cat="PP" onclick="setCat('PP')">PP</button>
-        <button class="cf-btn" data-cat="백화점" onclick="setCat('백화점')">백화점</button>
-        <button class="cf-btn" data-cat="행사" onclick="setCat('행사')">행사</button>
       </div>
     </div>
 
@@ -239,8 +233,8 @@
       <div class="notice-list-head">
         <span>카테고리</span>
         <span>제목</span>
-        <span>등록일</span>
-        <span>마감일</span>
+        <span class="th-sortable" id="th-registerDate" onclick="sortBy('registerDate')">등록일<svg width="10" height="12" viewBox="0 0 10 12" fill="none"><path class="arr-up" d="M5 1L9 5H1L5 1Z" fill="#d1d5db"/><path class="arr-down" d="M5 11L9 7H1L5 11Z" fill="#374151"/></svg></span>
+        <span class="th-sortable" id="th-deadlineDate" onclick="sortBy('deadlineDate')">마감일<svg width="10" height="12" viewBox="0 0 10 12" fill="none"><path class="arr-up" d="M5 1L9 5H1L5 1Z" fill="#d1d5db"/><path class="arr-down" d="M5 11L9 7H1L5 11Z" fill="#d1d5db"/></svg></span>
         <span>상태</span>
         <span>열람</span>
         <span></span>
@@ -415,7 +409,8 @@ let allNotices = [];
 let currentUser = null;
 let filterCat = '전체';
 let filterQuery = '';
-let sortType = 'registerDesc';
+let sortField = 'registerDate';
+let sortDir = 'desc';
 let currentDetailId = null;
 let createCat = '';
 let editCat = '';
@@ -434,15 +429,16 @@ function render(){
   // 카테고리
   if(filterCat !== '전체') list = list.filter(n => n.category === filterCat);
 
-  // 정렬: 미완료 → 완료, 안에서 날짜순
+  // 정렬: 미완료 → 완료, 안에서 선택된 컬럼 기준
   list.sort((a,b) => {
     if(!!a.completed !== !!b.completed) return a.completed ? 1 : -1;
-    if(sortType === 'deadlineAsc'){
-      const da = a.deadlineDate || '9999-12-31', db2 = b.deadlineDate || '9999-12-31';
-      return da < db2 ? -1 : da > db2 ? 1 : 0;
-    }
-    const da = a.registerDate || a.createdAt || '', db2 = b.registerDate || b.createdAt || '';
-    return da < db2 ? 1 : da > db2 ? -1 : 0;
+    const getVal = item => sortField === 'deadlineDate'
+      ? (item.deadlineDate || '9999-12-31')
+      : (item.registerDate || item.createdAt || '');
+    const da = getVal(a), db2 = getVal(b);
+    if(da < db2) return sortDir === 'desc' ? 1 : -1;
+    if(da > db2) return sortDir === 'desc' ? -1 : 1;
+    return 0;
   });
 
 
@@ -522,7 +518,27 @@ window.setCat = cat => {
   });
   render();
 };
-window.setSort = v => { sortType = v; render(); };
+window.sortBy = function(field) {
+  if(sortField === field){ sortDir = sortDir === 'desc' ? 'asc' : 'desc'; }
+  else { sortField = field; sortDir = 'desc'; }
+  updateSortIcons();
+  render();
+};
+function updateSortIcons(){
+  ['registerDate','deadlineDate'].forEach(f => {
+    const th = document.getElementById('th-' + f);
+    if(!th) return;
+    const upEl = th.querySelector('.arr-up');
+    const dnEl = th.querySelector('.arr-down');
+    if(sortField === f){
+      upEl.setAttribute('fill', sortDir === 'asc' ? '#374151' : '#d1d5db');
+      dnEl.setAttribute('fill', sortDir === 'desc' ? '#374151' : '#d1d5db');
+    } else {
+      upEl.setAttribute('fill','#d1d5db');
+      dnEl.setAttribute('fill','#d1d5db');
+    }
+  });
+}
 
 // ── 별표 토글 ──
 window.toggleStar = async (id, cur) => {

@@ -276,18 +276,6 @@
       <div class="topbar">
         <h1 class="page-title">매출 현황 보고서</h1>
         <div class="toolbar">
-          <span class="toolbar-label">보고 기간</span>
-          <div class="month-picker-wrap" id="monthPickerWrap">
-            <button class="mpp-btn" id="monthPickerBtn">📅 <span id="monthPickerLabel">2026년 6월</span></button>
-            <div class="mpp-popup" id="monthPickerPopup" style="display:none;">
-              <div class="mpp-header">
-                <button class="mpp-nav" id="prevYearBtn">‹</button>
-                <span class="mpp-year" id="pickerYearLabel">2026년</span>
-                <button class="mpp-nav" id="nextYearBtn">›</button>
-              </div>
-              <div class="mpp-grid" id="pickerMonthGrid"></div>
-            </div>
-          </div>
           <button class="action-btn excel-btn" onclick="downloadExcel()">
             <span class="btn-icon excel-icon">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h9l5 5v13H5V3z"/><path d="M14 3v5h5"/><path d="M8 10l3 4-3 4"/><path d="M14 10l-3 4 3 4"/></svg>
@@ -520,9 +508,6 @@ const DEFAULT_NOTES = [
 
 let curYear  = new Date().getFullYear();
 let curMonth = new Date().getMonth() + 1;
-let pickerYear      = curYear;
-let pickerMode      = 'month';
-let pickerYearStart = Math.floor(curYear / 10) * 10;
 let unsubReport = null;
 
 let lineData    = JSON.parse(JSON.stringify(DEFAULT_LINES));
@@ -530,62 +515,6 @@ let regionData  = JSON.parse(JSON.stringify(DEFAULT_REGIONS));
 let monthlyData = JSON.parse(JSON.stringify(DEFAULT_MONTHLY));
 let notes       = [...DEFAULT_NOTES];
 
-/* ── 월 피커 ── */
-function renderPickerGrid() {
-  const label = document.getElementById('pickerYearLabel');
-  const grid  = document.getElementById('pickerMonthGrid');
-  grid.innerHTML = '';
-  if (pickerMode === 'year') {
-    label.textContent = `${pickerYearStart} ~ ${pickerYearStart + 11}`;
-    for (let y = pickerYearStart; y < pickerYearStart + 12; y++) {
-      const btn = document.createElement('button');
-      btn.className = 'mpp-month' + (y === pickerYear ? ' sel' : '');
-      btn.textContent = `${y}년`;
-      btn.onclick = () => { pickerYear = y; pickerMode = 'month'; renderPickerGrid(); };
-      grid.appendChild(btn);
-    }
-  } else {
-    label.textContent = `${pickerYear}년`;
-    for (let m = 1; m <= 12; m++) {
-      const btn = document.createElement('button');
-      btn.className = 'mpp-month' + (pickerYear === curYear && m === curMonth ? ' sel' : '');
-      btn.textContent = `${m}월`;
-      btn.onclick = () => selectMonth(pickerYear, m);
-      grid.appendChild(btn);
-    }
-  }
-}
-
-function selectMonth(year, month) {
-  curYear = year; curMonth = month;
-  document.getElementById('monthPickerLabel').textContent = `${year}년 ${month}월`;
-  document.getElementById('monthPickerPopup').style.display = 'none';
-  loadMonth();
-}
-
-document.getElementById('monthPickerBtn').addEventListener('click', e => {
-  e.stopPropagation(); pickerYear = curYear; pickerMode = 'month'; renderPickerGrid();
-  const p = document.getElementById('monthPickerPopup');
-  p.style.display = p.style.display === 'none' ? 'block' : 'none';
-});
-document.getElementById('pickerYearLabel').addEventListener('click', e => {
-  e.stopPropagation();
-  if (pickerMode === 'month') { pickerMode = 'year'; pickerYearStart = Math.floor(pickerYear / 10) * 10; }
-  else { pickerMode = 'month'; }
-  renderPickerGrid();
-});
-document.getElementById('prevYearBtn').addEventListener('click', e => {
-  e.stopPropagation();
-  if (pickerMode === 'year') { pickerYearStart -= 12; } else { pickerYear--; }
-  renderPickerGrid();
-});
-document.getElementById('nextYearBtn').addEventListener('click', e => {
-  e.stopPropagation();
-  if (pickerMode === 'year') { pickerYearStart += 12; } else { pickerYear++; }
-  renderPickerGrid();
-});
-document.addEventListener('click', () => { const p = document.getElementById('monthPickerPopup'); if(p) p.style.display='none'; });
-document.getElementById('monthPickerWrap').addEventListener('click', e => e.stopPropagation());
 
 /* ── Auth ── */
 document.getElementById('login-btn').addEventListener('click', async () => {
@@ -595,7 +524,6 @@ document.getElementById('logout-btn').addEventListener('click', () => signOut(au
 onAuthStateChanged(auth, user => {
   document.getElementById('login-overlay').style.display = user ? 'none' : 'flex';
   if (user) {
-    document.getElementById('monthPickerLabel').textContent = `${curYear}년 ${curMonth}월`;
     loadMonth();
   }
 });
