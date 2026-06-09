@@ -526,7 +526,7 @@
         </div>
         <div class="fg-item">
           <div class="fg-label">타입</div>
-          <select class="form-select" id="f-orderType">
+          <select class="form-select" id="f-orderType" onchange="updateFormByType(this.value)">
             <option value="스트랩">스트랩</option>
             <option value="버클">버클</option>
             <option value="링크">링크</option>
@@ -550,8 +550,8 @@
       </div>
     </div>
 
-    <!-- ② 오더 내용 -->
-    <div class="form-section">
+    <!-- ② 오더 내용 - 스트랩 -->
+    <div class="form-section" id="fs-order-strap">
       <div class="fs-title"><span class="fs-num">2</span> 오더 내용</div>
 
       <div class="fg2">
@@ -635,7 +635,129 @@
           <div class="chip" data-group="purpose" data-val="증정용" onclick="selectChip('purpose','증정용')">증정용</div>
         </div>
       </div>
+    </div>
 
+    <!-- ② 오더 내용 - 버클 -->
+    <div class="form-section" id="fs-order-buckle" style="display:none">
+      <div class="fs-title"><span class="fs-num">2</span> 오더 내용</div>
+
+      <div class="fg2">
+        <div class="fg-item">
+          <div class="fg-label">시계 Ref.</div>
+          <input class="form-input" id="f-watchRef-b" type="text" placeholder="시계 Ref.를 입력하세요."/>
+        </div>
+        <div class="fg-item">
+          <div class="fg-label">알파 코드</div>
+          <input class="form-input" id="f-alphaCode-b" type="text" placeholder="알파 코드를 입력하세요."/>
+        </div>
+      </div>
+
+      <div class="chip-row" style="margin-top:14px;">
+        <div class="chip-row-label">성별</div>
+        <div class="chip-group">
+          <div class="chip" data-group="gender" data-val="남성용" onclick="selectChip('gender','남성용')">남성용</div>
+          <div class="chip" data-group="gender" data-val="여성용" onclick="selectChip('gender','여성용')">여성용</div>
+        </div>
+      </div>
+
+      <div class="chip-row" style="margin-top:14px;">
+        <div class="chip-row-label">버클 형태</div>
+        <div class="chip-group">
+          <div class="chip" data-group="buckle" data-val="핀" onclick="selectChip('buckle','핀')">핀</div>
+          <div class="chip" data-group="buckle" data-val="폴딩" onclick="selectChip('buckle','폴딩')">폴딩</div>
+          <div class="chip" data-group="buckle" data-val="노틸러스" onclick="selectChip('buckle','노틸러스')">노틸러스</div>
+          <div class="chip" data-group="buckle" data-val="큐비투스" onclick="selectChip('buckle','큐비투스')">큐비투스</div>
+        </div>
+      </div>
+
+      <div class="chip-row" style="margin-top:14px;">
+        <div class="chip-row-label">소재</div>
+        <div class="chip-group">
+          <div class="chip" data-group="material" data-val="스틸" onclick="selectChip('material','스틸')">스틸</div>
+          <div class="chip" data-group="material" data-val="화이트골드" onclick="selectChip('material','화이트골드')">화이트골드</div>
+          <div class="chip" data-group="material" data-val="로즈골드" onclick="selectChip('material','로즈골드')">로즈골드</div>
+          <div class="chip" data-group="material" data-val="플래티넘" onclick="selectChip('material','플래티넘')">플래티넘</div>
+        </div>
+      </div>
+
+      <div class="fg-item" style="margin-top:10px;">
+        <div class="fg-label">러그 사이즈</div>
+        <input class="form-input" id="f-lugSize-b" type="text" placeholder="러그 사이즈를 입력하세요."/>
+      </div>
+
+      <div class="chip-row" style="margin-top:14px;">
+        <div class="chip-row-label">판매용 / 증정용</div>
+        <div class="chip-group">
+          <div class="chip" data-group="purpose" data-val="판매용" onclick="selectChip('purpose','판매용')">판매용</div>
+          <div class="chip" data-group="purpose" data-val="증정용" onclick="selectChip('purpose','증정용')">증정용</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ② 오더 내용 - 링크 -->
+    <div class="form-section" id="fs-order-link" style="display:none">
+      <div class="fs-title"><span class="fs-num">2</span> 오더 내용</div>
+
+      <div class="fg2">
+        <div class="fg-item">
+          <div class="fg-label">시계 Ref.</div>
+          <input class="form-input" id="f-watchRef-l" type="text" placeholder="시계 Ref.를 입력하세요."/>
+        </div>
+        <div class="fg-item">
+          <div class="fg-label">알파 코드</div>
+          <input class="form-input" id="f-alphaCode-l" type="text" placeholder="알파 코드를 입력하세요."/>
+        </div>
+      </div>
+
+      <div class="chip-row" style="margin-top:14px;">
+        <div class="chip-row-label">성별</div>
+        <div class="chip-group">
+          <div class="chip" data-group="gender" data-val="남성용" onclick="selectChip('gender','남성용')">남성용</div>
+          <div class="chip" data-group="gender" data-val="여성용" onclick="selectChip('gender','여성용')">여성용</div>
+        </div>
+      </div>
+
+      <div class="fg2" style="margin-top:10px;">
+        <div class="fg-item">
+          <div class="fg-label">링크 사이즈</div>
+          <input class="form-input" id="f-linkSizeInput" type="text" placeholder="링크 사이즈를 입력하세요."/>
+        </div>
+        <div class="fg-item">
+          <div class="fg-label">오더 수량</div>
+          <input class="form-input" id="f-orderQty" type="text" placeholder="수량을 입력하세요."/>
+        </div>
+      </div>
+
+      <div class="chip-row" style="margin-top:14px;">
+        <div class="chip-row-label">판매용 / 증정용</div>
+        <div class="chip-group">
+          <div class="chip" data-group="purpose" data-val="판매용" onclick="selectChip('purpose','판매용')">판매용</div>
+          <div class="chip" data-group="purpose" data-val="증정용" onclick="selectChip('purpose','증정용')">증정용</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ② 오더 내용 - 스페어 -->
+    <div class="form-section" id="fs-order-spare" style="display:none">
+      <div class="fs-title"><span class="fs-num">2</span> 오더 내용</div>
+
+      <div class="fg-item">
+        <div class="fg-label">시계 Ref.</div>
+        <input class="form-input" id="f-watchRef-s" type="text" placeholder="시계 Ref.를 입력하세요."/>
+      </div>
+
+      <div class="fg-item" style="margin-top:10px;">
+        <div class="fg-label">부품 오더 내용</div>
+        <textarea class="form-textarea" id="f-spareContent" placeholder="부품 오더 내용을 입력하세요." style="min-height:72px;resize:vertical;"></textarea>
+      </div>
+
+      <div class="chip-row" style="margin-top:14px;">
+        <div class="chip-row-label">판매용 / 증정용</div>
+        <div class="chip-group">
+          <div class="chip" data-group="purpose" data-val="판매용" onclick="selectChip('purpose','판매용')">판매용</div>
+          <div class="chip" data-group="purpose" data-val="증정용" onclick="selectChip('purpose','증정용')">증정용</div>
+        </div>
+      </div>
     </div>
 
     <!-- ③ 주문 정보 -->
@@ -643,7 +765,7 @@
       <div class="fs-title"><span class="fs-num">3</span> 주문 정보</div>
 
       <div class="fg2">
-        <div class="fg-item">
+        <div class="fg-item" id="sec3-colornum-item">
           <div class="fg-label">컬러 번호</div>
           <input class="form-input" id="f-colorNum" type="text" placeholder="컬러 번호 입력"/>
         </div>
@@ -658,7 +780,7 @@
           <input class="form-input" id="f-orderNum" type="text" placeholder="오더 번호 입력"/>
         </div>
         <div class="fg-item">
-          <div class="fg-label">스트랩 Ref.</div>
+          <div class="fg-label" id="sec3-strapref-label">스트랩 Ref.</div>
           <input class="form-input" id="f-strapRef" type="text" placeholder="스트랩 Ref. 입력"/>
         </div>
       </div>
@@ -1136,6 +1258,20 @@ function updateLinkSizes() {
 }
 function updateStrapSizes(b) { updateLinkSizes(); } // 하위 호환
 
+/* ── 타입별 폼 전환 ── */
+window.updateFormByType = function(type) {
+  ['strap','buckle','link','spare'].forEach(t => {
+    const el = document.getElementById('fs-order-' + t);
+    if (el) el.style.display = t === type ? '' : 'none';
+  });
+  const colorItem = document.getElementById('sec3-colornum-item');
+  const strapLabel = document.getElementById('sec3-strapref-label');
+  if (colorItem) colorItem.style.display = type === 'strap' ? '' : 'none';
+  if (strapLabel) strapLabel.textContent = type === 'link' ? '제품 Ref.' : '스트랩 Ref.';
+  const strapInput = document.getElementById('f-strapRef');
+  if (strapInput) strapInput.placeholder = type === 'link' ? '제품 Ref. 입력' : '스트랩 Ref. 입력';
+};
+
 /* ── 날짜 picker ── */
 const DAYS_KO_SP = ['일','월','화','수','목','금','토'];
 window.openDatePicker = function(nativeId) {
@@ -1154,9 +1290,12 @@ window.applyDate = function(nativeId, dispId) {
 
 /* ── 모달 ── */
 function resetModal() {
-  ['f-customer','f-watchRef','f-alphaCode','f-linkSize','f-stitchColor','f-colorNum','f-amount','f-orderNum','f-strapRef'].forEach(id => {
-    const el = document.getElementById(id); if (el) el.value = '';
-  });
+  ['f-customer','f-watchRef','f-alphaCode','f-linkSize','f-stitchColor','f-colorNum','f-amount','f-orderNum','f-strapRef',
+   'f-watchRef-b','f-alphaCode-b','f-lugSize-b',
+   'f-watchRef-l','f-alphaCode-l','f-linkSizeInput','f-orderQty',
+   'f-watchRef-s'
+  ].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  const spEl = document.getElementById('f-spareContent'); if (spEl) spEl.value = '';
   const dn = document.getElementById('dn-f-date'); if (dn) dn.value = '';
   const fd = document.getElementById('f-date');    if (fd) fd.value = '';
   document.getElementById('f-orderType').value = '스트랩';
@@ -1164,8 +1303,8 @@ function resetModal() {
   document.querySelectorAll('.chip').forEach(el => el.classList.remove('selected'));
   Object.keys(chipState).forEach(k => delete chipState[k]);
   document.getElementById('stitch-input-wrap').style.display = 'none';
-  const lk = document.getElementById('f-linkSize'); if (lk) lk.value = '';
   updateLinkSizes();
+  updateFormByType('스트랩');
 }
 
 window.openRegModal = function() {
@@ -1185,27 +1324,38 @@ window.openEditFromDetail = function() {
   document.getElementById('regModalTitle').textContent = '스페셜 오더 수정';
   resetModal();
   const sv = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
-  sv('f-customer',  r.customer);
-  sv('f-watchRef',  r.watchRef);
-  sv('f-alphaCode', r.alphaCode);
-  sv('f-linkSize',  r.linkSize);
-  sv('f-colorNum',  r.colorNum);
-  sv('f-amount',    r.amount ? Number(String(r.amount).replace(/,/g,'')).toLocaleString('ko-KR') : '');
-  sv('f-orderNum',  r.orderNum);
-  sv('f-strapRef',  r.strapRef);
+  const orderType = r.orderType || '스트랩';
+  document.getElementById('f-orderType').value = orderType;
+  updateFormByType(orderType);
+  sv('f-customer', r.customer);
   if (r.date) { document.getElementById('dn-f-date').value = r.date; applyDate('dn-f-date','f-date'); }
-  document.getElementById('f-orderType').value = r.orderType || '스트랩';
-  document.getElementById('f-manager').value   = r.manager || '임영지';
-  if (r.gender)      selectChip('gender',      r.gender);
-  if (r.buckle)      selectChip('buckle',      r.buckle);
-  if (r.strapLen)    selectChip('strapLen',    r.strapLen);
-  if (r.clasp)       selectChip('clasp',       r.clasp);
-  if (r.stitchColor) {
-    const isCustom = !['톤온톤'].includes(r.stitchColor);
-    selectChip('stitchColor', isCustom ? '직접 입력' : r.stitchColor);
-    if (isCustom) sv('f-stitchColor', r.stitchColor);
+  document.getElementById('f-manager').value = r.manager || '임영지';
+  const amtFmt = v => v ? Number(String(v).replace(/,/g,'')).toLocaleString('ko-KR') : '';
+  if (orderType === '스트랩') {
+    sv('f-watchRef', r.watchRef); sv('f-alphaCode', r.alphaCode); sv('f-linkSize', r.linkSize);
+    sv('f-colorNum', r.colorNum); sv('f-amount', amtFmt(r.amount)); sv('f-orderNum', r.orderNum); sv('f-strapRef', r.strapRef);
+    if (r.gender) selectChip('gender', r.gender);
+    if (r.buckle) selectChip('buckle', r.buckle);
+    if (r.strapLen) selectChip('strapLen', r.strapLen);
+    if (r.clasp) selectChip('clasp', r.clasp);
+    if (r.stitchColor) { const isCustom = !['톤온톤'].includes(r.stitchColor); selectChip('stitchColor', isCustom ? '직접 입력' : r.stitchColor); if (isCustom) sv('f-stitchColor', r.stitchColor); }
+  } else if (orderType === '버클') {
+    sv('f-watchRef-b', r.watchRef); sv('f-alphaCode-b', r.alphaCode); sv('f-lugSize-b', r.linkSize);
+    sv('f-amount', amtFmt(r.amount)); sv('f-orderNum', r.orderNum); sv('f-strapRef', r.strapRef);
+    if (r.gender) selectChip('gender', r.gender);
+    if (r.buckle) selectChip('buckle', r.buckle);
+    if (r.material) selectChip('material', r.material);
+  } else if (orderType === '링크') {
+    sv('f-watchRef-l', r.watchRef); sv('f-alphaCode-l', r.alphaCode);
+    sv('f-linkSizeInput', r.linkSizeInput || ''); sv('f-orderQty', r.orderQty || '');
+    sv('f-amount', amtFmt(r.amount)); sv('f-orderNum', r.orderNum); sv('f-strapRef', r.strapRef);
+    if (r.gender) selectChip('gender', r.gender);
+  } else if (orderType === '스페어') {
+    sv('f-watchRef-s', r.watchRef);
+    const spEl = document.getElementById('f-spareContent'); if (spEl) spEl.value = r.spareContent || '';
+    sv('f-amount', amtFmt(r.amount)); sv('f-orderNum', r.orderNum); sv('f-strapRef', r.strapRef);
   }
-  if (r.purpose)  selectChip('purpose',  r.purpose);
+  if (r.purpose) selectChip('purpose', r.purpose);
   selectChip('status',  r.status  || '오더 대기');
   selectChip('instock', r.instock || '미입고');
   selectChip('contact', r.contact || '미완료');
@@ -1238,37 +1388,45 @@ window.fmtNum = function(el) {
 window.saveOrder = async function() {
   const customer = document.getElementById('f-customer').value.trim();
   if (!customer) { alert('고객명을 입력하세요.'); return; }
+  const orderType = document.getElementById('f-orderType').value;
   const dateNative = document.getElementById('dn-f-date');
   const dateVal    = dateNative ? dateNative.value : '';
   const ym = dateVal ? dateVal.slice(0,7) : `${curYear}-${String(curMonth).padStart(2,'0')}`;
-  const stitchSel = chipState['stitchColor'] || '';
-  const stitchVal = stitchSel === '직접 입력'
-    ? (document.getElementById('f-stitchColor').value.trim() || '직접 입력')
-    : stitchSel;
   const g = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+
+  let typeData = {};
+  if (orderType === '스트랩') {
+    const stitchSel = chipState['stitchColor'] || '';
+    const stitchVal = stitchSel === '직접 입력' ? (document.getElementById('f-stitchColor').value.trim() || '직접 입력') : stitchSel;
+    typeData = { watchRef:g('f-watchRef'), alphaCode:g('f-alphaCode'), linkSize:g('f-linkSize'),
+      buckle:chipState['buckle']||'', strapLen:chipState['strapLen']||'', clasp:chipState['clasp']||'',
+      stitchColor:stitchVal, colorNum:g('f-colorNum'), strapRef:g('f-strapRef') };
+  } else if (orderType === '버클') {
+    typeData = { watchRef:g('f-watchRef-b'), alphaCode:g('f-alphaCode-b'), linkSize:g('f-lugSize-b'),
+      buckle:chipState['buckle']||'', material:chipState['material']||'',
+      colorNum:'', strapRef:g('f-strapRef') };
+  } else if (orderType === '링크') {
+    typeData = { watchRef:g('f-watchRef-l'), alphaCode:g('f-alphaCode-l'),
+      linkSizeInput:g('f-linkSizeInput'), orderQty:g('f-orderQty'),
+      colorNum:'', strapRef:g('f-strapRef') };
+  } else if (orderType === '스페어') {
+    const spEl = document.getElementById('f-spareContent');
+    typeData = { watchRef:g('f-watchRef-s'), spareContent:spEl ? spEl.value.trim() : '',
+      colorNum:'', strapRef:g('f-strapRef') };
+  }
+
   const data = {
-    yearMonth:   ym,
-    date:        dateVal,
-    orderType:   g('f-orderType'),
-    customer,
-    manager:     g('f-manager'),
-    watchRef:    g('f-watchRef'),
-    alphaCode:   g('f-alphaCode'),
-    linkSize:    g('f-linkSize'),
-    buckle:      chipState['buckle']      || '',
-    strapLen:    chipState['strapLen']    || '',
-    clasp:       chipState['clasp']       || '',
-    stitchColor: stitchVal,
-    purpose:     chipState['purpose']     || '',
-    colorNum:    g('f-colorNum'),
-    amount:      g('f-amount').replace(/,/g,''),
-    orderNum:    g('f-orderNum'),
-    strapRef:    g('f-strapRef'),
-    gender:      chipState['gender']      || '',
-    status:      chipState['status']      || '오더 대기',
-    instock:     chipState['instock']    || '미입고',
-    contact:     chipState['contact']    || '미완료',
-    memo:        '',
+    yearMonth: ym, date: dateVal, orderType,
+    customer, manager: g('f-manager'),
+    gender:   chipState['gender']  || '',
+    purpose:  chipState['purpose'] || '',
+    amount:   g('f-amount').replace(/,/g,''),
+    orderNum: g('f-orderNum'),
+    status:   chipState['status']  || '오더 대기',
+    instock:  chipState['instock'] || '미입고',
+    contact:  chipState['contact'] || '미완료',
+    memo: '',
+    ...typeData,
   };
   if (!editingId) {
     data.timeline  = [{ date: new Date().toLocaleDateString('ko-KR'), text: '오더 등록' }];
