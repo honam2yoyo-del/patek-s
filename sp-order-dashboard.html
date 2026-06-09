@@ -467,7 +467,7 @@
           <div class="kv-item"><span class="kv-key">알파 코드</span><span class="kv-val" id="dp-alphaCode">—</span></div>
           <div class="kv-item"><span class="kv-key">버클 형태</span><span class="kv-val" id="dp-buckle">—</span></div>
           <div class="kv-item"><span class="kv-key">스트랩 길이</span><span class="kv-val" id="dp-strapLen">—</span></div>
-          <div class="kv-item"><span class="kv-key">링크 사이즈</span><span class="kv-val" id="dp-linkSize">—</span></div>
+          <div class="kv-item"><span class="kv-key">러그 사이즈</span><span class="kv-val" id="dp-linkSize">—</span></div>
           <div class="kv-item"><span class="kv-key">걸쇠 유무</span><span class="kv-val" id="dp-clasp">—</span></div>
           <div class="kv-item"><span class="kv-key">스티치 컬러</span><span class="kv-val" id="dp-stitchColor">—</span></div>
           <div class="kv-item"><span class="kv-key">판매용/증정용</span><span class="kv-val" id="dp-purpose">—</span></div>
@@ -605,7 +605,7 @@
       </div>
 
       <div class="fg-item" style="margin-top:10px;">
-        <div class="fg-label">링크 사이즈</div>
+        <div class="fg-label">러그 사이즈</div>
         <input class="form-input" id="f-linkSize" type="text" placeholder="성별·버클·스트랩 길이 선택 시 자동 입력"/>
       </div>
 
@@ -1131,7 +1131,7 @@ function updateLinkSizes() {
   const strapLen  = chipState['strapLen'];
   const linkInput = document.getElementById('f-linkSize');
   if (linkInput && strapLen && sizes[strapLen]) {
-    linkInput.value = sizes[strapLen] + ' cm';
+    linkInput.value = sizes[strapLen];
   }
 }
 function updateStrapSizes(b) { updateLinkSizes(); } // 하위 호환
@@ -1229,7 +1229,6 @@ window.closeRegModal = function() {
   editingId = null;
   window.markClean && window.markClean();
 };
-document.getElementById('regModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeRegModal(); });
 
 window.fmtNum = function(el) {
   const raw = el.value.replace(/[^\d]/g,'');
