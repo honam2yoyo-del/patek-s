@@ -1001,15 +1001,17 @@ async function saveData() {
     // 차트용 centum_annual 자동 동기화 (현재 월 실적 → 그래프 연동)
     const cSales = data.currentSales, cPcs = data.currentPcs;
     if (cSales !== null || cPcs !== null) {
+      // centumData 메모리 즉시 업데이트 (센텀 모달이 바로 열려도 최신값 반영)
+      if (cSales !== null) centumData[`m${curMonth}`]     = cSales;
+      if (cPcs   !== null) centumData[`m${curMonth}_pcs`] = cPcs;
+      renderChart();
+      updateGoalDisplay();
+      recalcQuarter();
+      // Firebase 백그라운드 저장
       const sync = { updatedAt: new Date().toISOString() };
       if (cSales !== null) sync[`m${curMonth}`]     = cSales;
       if (cPcs   !== null) sync[`m${curMonth}_pcs`] = cPcs;
       setDoc(doc(db,'artifacts','patek-s','public','data','centum_annual',String(curYear)), sync, {merge:true})
-        .then(() => {
-          if (cSales !== null) centumData[`m${curMonth}`]     = cSales;
-          if (cPcs   !== null) centumData[`m${curMonth}_pcs`] = cPcs;
-          renderChart();
-        })
         .catch(e => console.error('centum-sync:', e));
     }
 
