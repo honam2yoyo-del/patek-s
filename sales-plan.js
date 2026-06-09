@@ -73,6 +73,8 @@ let showPrevYear = false;    // 전년 비교 토글 상태
 
 // 목표 달성률 데이터
 let goalRateData = { total: 0, centum: 0, avenue: 0 };
+// 수동 입력 저장값 우선 유지 플래그
+let _manualSalesLock = { expectedSales: false, currentSales: false };
 
 /* ────────── 달력 월 피커 ────────── */
 let pickerYear      = curYear;
@@ -314,6 +316,22 @@ function applyData(d) {
   sv('f-mpdsCurrent',   d?.mpdsCurrent);
   sv('f-mpdsIncoming',  d?.mpdsIncoming);
 
+  // 직접 수정 후 저장된 예상 매출 복원 (저장값 있으면 자동계산 잠금)
+  if (d?.expectedSales != null) {
+    sv('f-expectedSales', d.expectedSales);
+    sv('f-expectedPcs',   d.expectedPcs);
+    _manualSalesLock.expectedSales = true;
+  } else {
+    _manualSalesLock.expectedSales = false;
+  }
+  // 직접 수정 후 저장된 현재 매출 복원
+  if (d?.currentSales != null) {
+    sv('f-currentSales', d.currentSales);
+    sv('f-currentPcs',   d.currentPcs);
+    _manualSalesLock.currentSales = true;
+  } else {
+    _manualSalesLock.currentSales = false;
+  }
 
   // goalRateData는 loadQuarterGoalData()에서 별도 로드 (분기 공유)
   // rows는 inventory onSnapshot에서 별도 관리 (재고 목록 양방향 연동)
@@ -762,6 +780,7 @@ function renderSummary() {
 
 /* ── 판매예정·판매완료 합산 → 예상 매출 자동 반영 ── */
 function autoCalcFromInventory() {
+  if (_manualSalesLock.expectedSales) { recalcRemain(); return; }
   const targets = ['판매예정', '판매완료'];
   const filtered = rows.filter(r => targets.includes(r.status));
   const totalAmt = filtered.reduce((s, r) => s + (Number(r.amount)||0), 0);
@@ -780,6 +799,7 @@ function autoCalcFromInventory() {
 
 /* ── 판매완료 합산 → 현재 매출 자동 반영 ── */
 function autoCalcCurrentSales() {
+  if (_manualSalesLock.currentSales) { recalcRemain(); return; }
   const completed = rows.filter(r => r.status === '판매완료');
   const totalAmt = completed.reduce((s, r) => s + (Number(r.amount)||0), 0);
   const totalPcs = completed.length;
@@ -942,6 +962,8 @@ async function saveData() {
   const gnv = id => { const v=gv(id).replace(/,/g,''); return v!==''?Number(v):null; };
 
   const data = {
+    expectedSales:   gnv('f-expectedSales'),
+    expectedPcs:     gnv('f-expectedPcs'),
     lastYearSales:   gnv('f-lastYearSales'),
     lastYearPcs:     gnv('f-lastYearPcs'),
     currentSales:    gnv('f-currentSales'),
