@@ -52,17 +52,17 @@
     .btn-new:hover { background:#0055c8; }
 
     /* ── 필터 바 ── */
-    .filter-bar { background:#fff;border:1px solid #e2e7ef;border-radius:10px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;box-shadow:0 2px 6px rgba(15,23,42,.03); }
-    .search-wrap { position:relative;flex:1;min-width:180px;max-width:300px; }
+    .filter-bar { background:#fff;border:1px solid #e2e7ef;border-radius:10px;padding:14px 18px;margin-bottom:16px;display:flex;flex-direction:column;gap:16px;box-shadow:0 2px 6px rgba(15,23,42,.03); }
+    .filter-row-top { display:flex;align-items:center;justify-content:space-between;gap:14px; }
+    .search-wrap { position:relative;flex:1; }
     .search-wrap svg { position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#9ca3af; }
     .search-input { width:100%;height:36px;border:1px solid #e2e7ef;border-radius:7px;padding:0 10px 0 34px;font-size:13px;font-weight:600;color:#111827;outline:none;background:#f8fafc; }
     .search-input:focus { border-color:#0067e8;background:#fff; }
     .cat-filters { display:flex;gap:6px;flex-wrap:wrap; }
     .cf-btn { height:30px;padding:0 12px;border-radius:20px;border:1px solid #e2e7ef;background:#fff;font-size:12px;font-weight:700;cursor:pointer;transition:all .12s;color:#6b7280;white-space:nowrap; }
-    .cf-btn.active { border-color:transparent; }
-    .sort-wrap { margin-left:auto; }
+    .cf-btn.active { background:#f0f4f8;color:#1e3a5f;font-weight:900; }
+    .sort-wrap { flex-shrink:0; }
     .sort-sel { height:34px;border:1px solid #e2e7ef;border-radius:7px;background:#fff;padding:0 28px 0 10px;font-size:13px;font-weight:600;color:#374151;cursor:pointer;outline:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center; }
-    .result-count { font-size:13px;font-weight:700;color:#6b7280;white-space:nowrap; }
 
     /* ── 공지 리스트 패널 ── */
     .notice-panel { background:#fff;border:1px solid #e2e7ef;border-radius:10px;box-shadow:0 2px 6px rgba(15,23,42,.03);overflow:hidden; }
@@ -212,9 +212,17 @@
 
     <!-- 필터 바 -->
     <div class="filter-bar">
-      <div class="search-wrap">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input id="search-input" class="search-input" type="text" placeholder="제목 또는 내용 검색" oninput="onSearch(this.value)"/>
+      <div class="filter-row-top">
+        <div class="search-wrap">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input id="search-input" class="search-input" type="text" placeholder="제목 또는 내용 검색" oninput="onSearch(this.value)"/>
+        </div>
+        <div class="sort-wrap">
+          <select class="sort-sel" onchange="setSort(this.value)">
+            <option value="registerDesc">등록순</option>
+            <option value="deadlineAsc">마감순</option>
+          </select>
+        </div>
       </div>
       <div class="cat-filters" id="cat-filters">
         <button class="cf-btn active" data-cat="전체" onclick="setCat('전체')">전체</button>
@@ -223,13 +231,6 @@
         <button class="cf-btn" data-cat="PP" onclick="setCat('PP')">PP</button>
         <button class="cf-btn" data-cat="백화점" onclick="setCat('백화점')">백화점</button>
         <button class="cf-btn" data-cat="행사" onclick="setCat('행사')">행사</button>
-      </div>
-      <span class="result-count" id="result-count">전체 0</span>
-      <div class="sort-wrap">
-        <select class="sort-sel" onchange="setSort(this.value)">
-          <option value="registerDesc">등록순</option>
-          <option value="deadlineAsc">마감순</option>
-        </select>
       </div>
     </div>
 
@@ -444,7 +445,6 @@ function render(){
     return da < db2 ? 1 : da > db2 ? -1 : 0;
   });
 
-  document.getElementById('result-count').textContent = `${filterCat === '전체' ? '전체' : filterCat} ${list.length}`;
 
   const el = document.getElementById('notice-list');
   if(list.length === 0){ el.innerHTML = '<div class="empty-row">공지사항이 없습니다.</div>'; return; }
@@ -513,11 +513,11 @@ window.setCat = cat => {
     const isMine = b.dataset.cat === cat;
     if(isMine){
       b.classList.add('active');
-      if(cat === '전체'){ b.style.background='#1e3a5f'; b.style.color='#fff'; b.style.borderColor='transparent'; }
-      else{ const s=CATS[cat]; b.style.background=s.bg; b.style.color=s.text; b.style.borderColor='transparent'; }
+      if(cat === '전체'){ b.style.background='#f0f4f8'; b.style.color='#1e3a5f'; b.style.borderColor='#c7d4e8'; b.style.fontWeight='900'; }
+      else{ const s=CATS[cat]; b.style.background=s.bg; b.style.color=s.text; b.style.borderColor=s.text; b.style.fontWeight='900'; }
     } else {
       b.classList.remove('active');
-      b.style.background='#fff'; b.style.color='#6b7280'; b.style.borderColor='#e2e7ef';
+      b.style.background='#fff'; b.style.color='#6b7280'; b.style.borderColor='#e2e7ef'; b.style.fontWeight='700';
     }
   });
   render();
