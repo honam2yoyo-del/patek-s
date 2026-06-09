@@ -1260,16 +1260,16 @@ function updateStrapSizes(b) { updateLinkSizes(); } // 하위 호환
 
 /* ── 타입별 폼 전환 ── */
 window.updateFormByType = function(type) {
-  ['strap','buckle','link','spare'].forEach(t => {
-    const el = document.getElementById('fs-order-' + t);
-    if (el) el.style.display = t === type ? '' : 'none';
-  });
-  const colorItem = document.getElementById('sec3-colornum-item');
+  document.getElementById('fs-order-strap').style.display  = type === '스트랩' ? '' : 'none';
+  document.getElementById('fs-order-buckle').style.display = type === '버클'   ? '' : 'none';
+  document.getElementById('fs-order-link').style.display   = type === '링크'   ? '' : 'none';
+  document.getElementById('fs-order-spare').style.display  = type === '스페어' ? '' : 'none';
+  const colorItem  = document.getElementById('sec3-colornum-item');
   const strapLabel = document.getElementById('sec3-strapref-label');
-  if (colorItem) colorItem.style.display = type === 'strap' ? '' : 'none';
-  if (strapLabel) strapLabel.textContent = type === 'link' ? '제품 Ref.' : '스트랩 Ref.';
   const strapInput = document.getElementById('f-strapRef');
-  if (strapInput) strapInput.placeholder = type === 'link' ? '제품 Ref. 입력' : '스트랩 Ref. 입력';
+  if (colorItem)  colorItem.style.display = type === '스트랩' ? '' : 'none';
+  if (strapLabel) strapLabel.textContent  = type === '링크'   ? '제품 Ref.' : '스트랩 Ref.';
+  if (strapInput) strapInput.placeholder  = type === '링크'   ? '제품 Ref. 입력' : '스트랩 Ref. 입력';
 };
 
 /* ── 날짜 picker ── */
