@@ -973,7 +973,6 @@ window.openWriteModal = function() {
   document.getElementById('writeModal').classList.add('open');
 };
 window.closeWriteModal = function() { document.getElementById('writeModal').classList.remove('open'); };
-document.getElementById('writeModal').addEventListener('click', e => { if(e.target === e.currentTarget) closeWriteModal(); });
 
 window.saveNote = async function() {
   const title = document.getElementById('wf-title').value.trim();

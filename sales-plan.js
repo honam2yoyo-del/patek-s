@@ -559,10 +559,6 @@ document.getElementById('avenueOpen').addEventListener('click', () => {
 
 document.getElementById('avenueClose').addEventListener('click', () =>
   document.getElementById('avenueModal').classList.remove('show'));
-document.getElementById('avenueModal').addEventListener('click', e => {
-  if (e.target === document.getElementById('avenueModal'))
-    document.getElementById('avenueModal').classList.remove('show');
-});
 
 document.getElementById('avenueApply').addEventListener('click', () => {
   const yr = curYear;
@@ -606,10 +602,6 @@ document.getElementById('centumOpen').addEventListener('click', () => {
 
 document.getElementById('centumClose').addEventListener('click', () =>
   document.getElementById('centumModal').classList.remove('show'));
-document.getElementById('centumModal').addEventListener('click', e => {
-  if (e.target === document.getElementById('centumModal'))
-    document.getElementById('centumModal').classList.remove('show');
-});
 
 document.getElementById('centumApply').addEventListener('click', () => {
   const yr = curYear;
@@ -665,10 +657,6 @@ document.getElementById('goalRateOpen').addEventListener('click', () => {
 
 document.getElementById('goalRateClose').addEventListener('click', () =>
   document.getElementById('goalRateModal').classList.remove('show'));
-document.getElementById('goalRateModal').addEventListener('click', e => {
-  if (e.target === document.getElementById('goalRateModal'))
-    document.getElementById('goalRateModal').classList.remove('show');
-});
 
 document.getElementById('goalRateApply').addEventListener('click', () => {
   const total  = parseNum(document.getElementById('gm-total')?.value)  || 0;

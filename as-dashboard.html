@@ -1126,9 +1126,6 @@ window.closeDetailModal = function() {
   document.getElementById('detailModal').classList.remove('open');
   detailRecord = null;
 };
-document.getElementById('detailModal').addEventListener('click', e => {
-  if (e.target === document.getElementById('detailModal')) window.closeDetailModal();
-});
 
 window.openEditFromDetail = function() {
   const r = detailRecord;
@@ -1238,9 +1235,6 @@ window.closeRegModal = () => {
   editingId = null;
   window.markClean && window.markClean();
 };
-document.getElementById('regModal').addEventListener('click', e => {
-  if (e.target === document.getElementById('regModal')) window.closeRegModal();
-});
 
 function openRegModal() {
   editingId = null;

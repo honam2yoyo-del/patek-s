@@ -1115,9 +1115,6 @@ function clearDetail() {
   document.getElementById('detailModal').classList.remove('open');
 }
 window.closeDetailModal = function() { clearDetail(); };
-document.getElementById('detailModal').addEventListener('click', e => {
-  if (e.target === document.getElementById('detailModal')) clearDetail();
-});
 function renderTimeline(items) {
   const wrap = document.getElementById('dp-timeline');
   if (!items.length) {
