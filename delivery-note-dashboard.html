@@ -455,10 +455,10 @@
             <!-- 정보 그리드 -->
             <div class="dp-info-grid">
               <div class="dp-info-item"><span class="dp-info-label">작성자</span><span class="dp-info-val" id="dpAuthor">—</span></div>
-              <div class="dp-info-item"><span class="dp-info-label">담당자</span><span class="dp-info-val" id="dpAssignee">—</span></div>
+              <div class="dp-info-item"><span class="dp-info-label">전달 대상</span><span class="dp-info-val" id="dpTarget">—</span></div>
               <div class="dp-info-item"><span class="dp-info-label">완료자</span><span class="dp-info-val" id="dpCompleter">—</span></div>
               <div class="dp-info-item"><span class="dp-info-label">마감일</span><span class="dp-info-val" id="dpDue">—</span></div>
-              <div class="dp-info-item"><span class="dp-info-label">전달 대상</span><span class="dp-info-val" id="dpTarget">—</span></div>
+              <div class="dp-info-item"><span class="dp-info-label">담당자</span><span class="dp-info-val" id="dpAssignee">—</span></div>
               <div class="dp-info-item"><span class="dp-info-label">작성일</span><span class="dp-info-val" id="dpCreated">—</span></div>
               <div class="dp-info-item"><span class="dp-info-label">읽음 수</span><span class="dp-info-val" id="dpReads">—</span></div>
             </div>
@@ -751,6 +751,16 @@ window.selectNote = async function(id) {
   applyFilter();
 };
 
+/* ── 날짜/시간 포맷 ── */
+function fmtDatetime(iso) {
+  if (!iso) return '—';
+  try {
+    const d = new Date(iso);
+    const pad = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}.${pad(d.getMonth()+1)}.${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  } catch(e) { return '—'; }
+}
+
 /* ── 상세 렌더 ── */
 function renderDetail(n) {
   document.getElementById('dpEmpty').style.display   = 'none';
@@ -775,7 +785,7 @@ function renderDetail(n) {
   document.getElementById('dpAssignee').textContent = n.assignee  || '—';
   document.getElementById('dpCompleter').textContent= n.completer || '—';
   document.getElementById('dpTarget').textContent   = n.target    || '—';
-  document.getElementById('dpCreated').textContent  = n.createdAt || '—';
+  document.getElementById('dpCreated').textContent  = fmtDatetime(n.createdAt);
   document.getElementById('dpReads').textContent    = `${(n.readBy||[]).length}/${TEAM_MEMBERS.length}명`;
 
   const dueEl = document.getElementById('dpDue');
