@@ -350,13 +350,14 @@
         </div>
         <div class="kpi-pcs-row">(<input class="kpi-pcs-num" id="f-lastYearPcs" type="text" inputmode="numeric" placeholder="0" oninput="window.fmtNum(this)"/> pcs)</div>
       </div>
-      <div class="kpi-card">
-        <div class="kpi-title">현재 매출</div>
+      <div class="kpi-card" id="currentSalesCard" style="cursor:pointer;" onclick="window.openSalesList()" title="클릭하면 판매 내역을 봅니다">
+        <div class="kpi-title">현재 매출 <span style="font-size:11px;color:#0067e8;font-weight:700;">▶ 내역</span></div>
         <div class="kpi-amount-row blue">
           <input class="kpi-num blue" id="f-currentSales" type="text" inputmode="numeric" placeholder="0" oninput="window.fmtNum(this);recalcRemain()"/>
           <span class="kpi-unit blue">원</span>
         </div>
-        <div class="kpi-pcs-row">(<input class="kpi-pcs-num" id="f-currentPcs" type="text" inputmode="numeric" placeholder="0" oninput="window.fmtNum(this);recalcRemain()"/> pcs)</div>
+        <div class="kpi-pcs-row"><span id="currentPcsDisplay">(-)</span></div>
+        <input type="hidden" id="f-currentPcs" value=""/>
       </div>
       <div class="kpi-card">
         <div class="kpi-title">남은 매출</div>
@@ -470,12 +471,12 @@
           </div>
           <div class="filter-bar" id="tabsBar">
             <button class="filter-pill active" data-filter="전체">전체</button>
-            <button class="filter-pill" data-filter="등록">등록</button>
+            <button class="filter-pill" data-filter="등록">MPDS 등록 중</button>
             <button class="filter-pill" data-filter="판매예정">판매 예정</button>
             <button class="filter-pill" data-filter="컨펌예정">컨펌 예정</button>
             <button class="filter-pill" data-filter="이월예정">이월 예정</button>
             <button class="filter-pill" data-filter="AS">AS</button>
-            <button class="filter-pill" data-filter="기타">기타</button>
+            <button class="filter-pill" data-filter="기타">기타(이동)</button>
             <button class="filter-pill" data-filter="잔여재고">잔여 재고</button>
             <button class="filter-pill" data-filter="판매완료">판매 완료</button>
             <button class="filter-pill" data-filter="선수금">선수금</button>
@@ -617,6 +618,113 @@
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script type="module" src="sales-plan.js"></script>
+
+<!-- ══ 현재 매출 리스트 패널 ══ -->
+<div id="salesListPanel" style="display:none;position:fixed;inset:0;background:#f7f9fc;z-index:9100;overflow-y:auto;font-family:'Malgun Gothic','맑은 고딕',Arial,sans-serif;">
+  <div style="max-width:1200px;margin:0 auto;padding:28px 24px 80px;">
+    <!-- 상단 헤더 -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;gap:16px;flex-wrap:wrap;">
+      <h1 style="font-size:26px;font-weight:900;letter-spacing:-1px;">월 판매 내역</h1>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <span id="slpMonthLabel" style="font-size:14px;font-weight:700;color:#374151;"></span>
+        <button onclick="window.exportSalesListExcel()" style="height:38px;padding:0 16px;border:1px solid #d9e0ea;border-radius:7px;background:#fff;font-size:13px;font-weight:700;cursor:pointer;">📊 엑셀 다운로드</button>
+        <button onclick="window.closeSalesList()" style="height:38px;padding:0 16px;border:none;border-radius:7px;background:#111827;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">✕ 닫기</button>
+      </div>
+    </div>
+    <!-- KPI 요약 -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+      <div style="background:#fff;border:1px solid #e2e7ef;border-radius:8px;padding:18px 22px;box-shadow:0 2px 6px rgba(15,23,42,.04);">
+        <div style="font-size:13px;font-weight:900;color:#6b7280;margin-bottom:6px;">총 판매수량</div>
+        <div style="font-size:26px;font-weight:900;color:#111827;" id="slpTotalQty">- pc</div>
+      </div>
+      <div style="background:#fff;border:1px solid #e2e7ef;border-radius:8px;padding:18px 22px;box-shadow:0 2px 6px rgba(15,23,42,.04);">
+        <div style="font-size:13px;font-weight:900;color:#6b7280;margin-bottom:6px;">총 판매금액</div>
+        <div style="font-size:26px;font-weight:900;color:#0067e8;" id="slpTotalAmt">- 원</div>
+      </div>
+    </div>
+    <!-- 필터 바 -->
+    <div style="background:#fff;border:1px solid #e2e7ef;border-radius:8px;padding:14px 18px;margin-bottom:16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+      <div style="position:relative;flex:1;min-width:180px;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="slpSearch" type="text" placeholder="고객명, REF., Serial 검색" oninput="window.renderSalesList()" style="width:100%;height:36px;border:1px solid #d9e0ea;border-radius:20px;padding:0 12px 0 32px;font-size:13px;font-family:inherit;outline:none;"/>
+      </div>
+      <select id="slpRegionFilter" onchange="window.renderSalesList()" style="height:36px;border:1px solid #d9e0ea;border-radius:20px;padding:0 14px;font-size:13px;font-weight:700;cursor:pointer;min-width:100px;"></select>
+      <select id="slpLineFilter" onchange="window.renderSalesList()" style="height:36px;border:1px solid #d9e0ea;border-radius:20px;padding:0 14px;font-size:13px;font-weight:700;cursor:pointer;min-width:110px;"></select>
+      <select id="slpStaffFilter" onchange="window.renderSalesList()" style="height:36px;border:1px solid #d9e0ea;border-radius:20px;padding:0 14px;font-size:13px;font-weight:700;cursor:pointer;min-width:110px;"></select>
+      <button onclick="window.resetSlpFilters()" style="height:36px;padding:0 14px;border:1px solid #d9e0ea;border-radius:20px;background:#fff;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">↺ 초기화</button>
+    </div>
+    <!-- 판매 리스트 테이블 -->
+    <div style="background:#fff;border:1px solid #e2e7ef;border-radius:8px;overflow:hidden;margin-bottom:20px;">
+      <div style="padding:16px 20px 12px;font-size:17px;font-weight:900;border-bottom:1px solid #e5eaf2;">판매 리스트</div>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;min-width:900px;">
+          <thead>
+            <tr style="background:#f6f8fb;">
+              <th style="padding:10px 14px;font-size:13px;font-weight:900;border-bottom:1px solid #e5eaf2;white-space:nowrap;">No</th>
+              <th style="padding:10px 14px;font-size:13px;font-weight:900;border-bottom:1px solid #e5eaf2;white-space:nowrap;">판매일</th>
+              <th style="padding:10px 14px;font-size:13px;font-weight:900;border-bottom:1px solid #e5eaf2;white-space:nowrap;">REF.</th>
+              <th style="padding:10px 14px;font-size:13px;font-weight:900;border-bottom:1px solid #e5eaf2;white-space:nowrap;">Serial</th>
+              <th style="padding:10px 14px;font-size:13px;font-weight:900;border-bottom:1px solid #e5eaf2;white-space:nowrap;">금액</th>
+              <th style="padding:10px 14px;font-size:13px;font-weight:900;border-bottom:1px solid #e5eaf2;white-space:nowrap;">고객명</th>
+              <th style="padding:10px 14px;font-size:13px;font-weight:900;border-bottom:1px solid #e5eaf2;white-space:nowrap;">지역</th>
+              <th style="padding:10px 14px;font-size:13px;font-weight:900;border-bottom:1px solid #e5eaf2;white-space:nowrap;">Collection</th>
+              <th style="padding:10px 14px;font-size:13px;font-weight:900;border-bottom:1px solid #e5eaf2;white-space:nowrap;">비고</th>
+              <th style="padding:10px 14px;font-size:13px;font-weight:900;border-bottom:1px solid #e5eaf2;white-space:nowrap;">판매직원</th>
+            </tr>
+          </thead>
+          <tbody id="slpTbody"></tbody>
+        </table>
+      </div>
+    </div>
+    <!-- 요약 2열 -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      <div style="background:#fff;border:1px solid #e2e7ef;border-radius:8px;overflow:hidden;">
+        <div style="padding:14px 18px 10px;font-size:15px;font-weight:900;border-bottom:1px solid #e5eaf2;">Collection별 요약</div>
+        <table style="width:100%;border-collapse:collapse;" id="slpLineSummary">
+          <thead><tr style="background:#f6f8fb;"><th style="padding:9px 14px;font-size:13px;font-weight:900;text-align:left;">Collection</th><th style="padding:9px 14px;font-size:13px;font-weight:900;text-align:right;">판매수량</th><th style="padding:9px 14px;font-size:13px;font-weight:900;text-align:right;">판매금액</th></tr></thead>
+          <tbody id="slpLineSummaryBody"></tbody>
+        </table>
+      </div>
+      <div style="background:#fff;border:1px solid #e2e7ef;border-radius:8px;overflow:hidden;">
+        <div style="padding:14px 18px 10px;font-size:15px;font-weight:900;border-bottom:1px solid #e5eaf2;">지역별 요약</div>
+        <table style="width:100%;border-collapse:collapse;">
+          <thead><tr style="background:#f6f8fb;"><th style="padding:9px 14px;font-size:13px;font-weight:900;text-align:left;">지역</th><th style="padding:9px 14px;font-size:13px;font-weight:900;text-align:right;">판매수량</th><th style="padding:9px 14px;font-size:13px;font-weight:900;text-align:right;">판매금액</th></tr></thead>
+          <tbody id="slpRegionSummaryBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 판매 완료 입력 모달 ── -->
+<div id="saleCompleteModal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:9200;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:12px;padding:28px 32px;width:420px;box-shadow:0 16px 48px rgba(15,23,42,.25);font-family:'Malgun Gothic','맑은 고딕',Arial,sans-serif;">
+    <div style="font-size:18px;font-weight:900;color:#d97706;margin-bottom:4px;">✔ 판매 완료 등록</div>
+    <div style="font-size:13px;color:#6b7280;font-weight:700;margin-bottom:20px;">판매 정보를 입력해 주세요. (선택사항)</div>
+    <div style="display:grid;gap:14px;">
+      <div style="display:grid;grid-template-columns:80px 1fr;align-items:center;gap:10px;">
+        <label style="font-size:14px;font-weight:900;color:#374151;">판매일</label>
+        <input id="scDate" type="text" placeholder="예: 2026.6.15" style="height:38px;border:1px solid #d9e0ea;border-radius:7px;padding:0 12px;font-size:14px;font-family:inherit;outline:none;"/>
+      </div>
+      <div style="display:grid;grid-template-columns:80px 1fr;align-items:center;gap:10px;">
+        <label style="font-size:14px;font-weight:900;color:#374151;">지역</label>
+        <input id="scRegion" type="text" placeholder="예: 서울, 부산, 대구" style="height:38px;border:1px solid #d9e0ea;border-radius:7px;padding:0 12px;font-size:14px;font-family:inherit;outline:none;"/>
+      </div>
+      <div style="display:grid;grid-template-columns:80px 1fr;align-items:center;gap:10px;">
+        <label style="font-size:14px;font-weight:900;color:#374151;">판매 직원</label>
+        <select id="scSalesperson" style="height:38px;border:1px solid #d9e0ea;border-radius:7px;padding:0 12px;font-size:14px;font-family:inherit;outline:none;cursor:pointer;"></select>
+      </div>
+      <div style="display:grid;grid-template-columns:80px 1fr;align-items:center;gap:10px;">
+        <label style="font-size:14px;font-weight:900;color:#374151;">라인</label>
+        <input id="scLine" type="text" placeholder="자동 매칭" readonly style="height:38px;border:1px solid #e2e7ef;border-radius:7px;padding:0 12px;font-size:14px;font-family:inherit;background:#f6f8fb;color:#374151;"/>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:22px;">
+      <button id="scCancel" style="height:40px;padding:0 18px;border:1px solid #e2e7ef;border-radius:7px;background:#fff;font-size:14px;font-weight:700;cursor:pointer;color:#6b7280;font-family:inherit;">취소</button>
+      <button id="scConfirm" style="height:40px;padding:0 22px;border:none;border-radius:7px;background:#d97706;color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">저장</button>
+    </div>
+  </div>
+</div>
 
 <!-- ── 이탈 방지 다이얼로그 ── -->
 <div id="navGuard" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.52);z-index:9500;align-items:center;justify-content:center;">

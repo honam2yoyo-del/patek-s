@@ -302,9 +302,9 @@
         <button class="filter-pill"          data-val="이월예정">이월 예정</button>
         <button class="filter-pill"          data-val="잔여재고">잔여 재고</button>
         <button class="filter-pill"          data-val="AS">AS</button>
-        <button class="filter-pill"          data-val="기타">기타</button>
+        <button class="filter-pill"          data-val="기타">기타(이동)</button>
         <button class="filter-pill"          data-val="판매완료">판매 완료</button>
-        <button class="filter-pill"          data-val="등록">등록</button>
+        <button class="filter-pill"          data-val="등록">MPDS 등록 중</button>
         <button class="filter-pill"          data-val="선수금">선수금</button>
       </div>
 
@@ -349,9 +349,9 @@
                   <option value="이월예정">이월 예정</option>
                   <option value="잔여재고">잔여 재고</option>
                   <option value="AS">AS</option>
-                  <option value="기타">기타</option>
+                  <option value="기타">기타(이동)</option>
                   <option value="판매완료">판매 완료</option>
-                  <option value="등록">등록</option>
+                  <option value="등록">MPDS 등록 중</option>
                   <option value="선수금">선수금</option>
                 </select>
               </th>
@@ -379,11 +379,41 @@
   </div>
 </div>
 
+<!-- ── 판매 완료 입력 모달 (재고 페이지) ── -->
+<div id="invSaleModal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:9200;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:12px;padding:28px 32px;width:420px;box-shadow:0 16px 48px rgba(15,23,42,.25);font-family:'Malgun Gothic','맑은 고딕',Arial,sans-serif;">
+    <div style="font-size:18px;font-weight:900;color:#d97706;margin-bottom:4px;">✔ 판매 완료 등록</div>
+    <div style="font-size:13px;color:#6b7280;font-weight:700;margin-bottom:20px;">판매 정보를 입력해 주세요. (선택사항)</div>
+    <div style="display:grid;gap:14px;">
+      <div style="display:grid;grid-template-columns:80px 1fr;align-items:center;gap:10px;">
+        <label style="font-size:14px;font-weight:900;color:#374151;">판매일</label>
+        <input id="invScDate" type="text" placeholder="예: 2026.6.15" style="height:38px;border:1px solid #d9e0ea;border-radius:7px;padding:0 12px;font-size:14px;font-family:inherit;outline:none;"/>
+      </div>
+      <div style="display:grid;grid-template-columns:80px 1fr;align-items:center;gap:10px;">
+        <label style="font-size:14px;font-weight:900;color:#374151;">지역</label>
+        <input id="invScRegion" type="text" placeholder="예: 서울, 부산, 대구" style="height:38px;border:1px solid #d9e0ea;border-radius:7px;padding:0 12px;font-size:14px;font-family:inherit;outline:none;"/>
+      </div>
+      <div style="display:grid;grid-template-columns:80px 1fr;align-items:center;gap:10px;">
+        <label style="font-size:14px;font-weight:900;color:#374151;">판매 직원</label>
+        <select id="invScSalesperson" style="height:38px;border:1px solid #d9e0ea;border-radius:7px;padding:0 12px;font-size:14px;font-family:inherit;outline:none;cursor:pointer;"></select>
+      </div>
+      <div style="display:grid;grid-template-columns:80px 1fr;align-items:center;gap:10px;">
+        <label style="font-size:14px;font-weight:900;color:#374151;">라인</label>
+        <input id="invScLine" type="text" placeholder="자동 매칭" readonly style="height:38px;border:1px solid #e2e7ef;border-radius:7px;padding:0 12px;font-size:14px;font-family:inherit;background:#f6f8fb;color:#374151;"/>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:22px;">
+      <button id="invScCancel" style="height:40px;padding:0 18px;border:1px solid #e2e7ef;border-radius:7px;background:#fff;font-size:14px;font-weight:700;cursor:pointer;color:#6b7280;font-family:inherit;">취소</button>
+      <button id="invScConfirm" style="height:40px;padding:0 22px;border:none;border-radius:7px;background:#d97706;color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">저장</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script type="module">
 import { initializeApp }   from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, onSnapshot, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, onSnapshot, setDoc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const FC = { apiKey:"AIzaSyCt7aQXA5eFdnDTMHlRhjPAkyH4b8UB6HY", authDomain:"patek-s.firebaseapp.com", projectId:"patek-s", storageBucket:"patek-s.firebasestorage.app", messagingSenderId:"786016749285", appId:"1:786016749285:web:58538eec1cf7e72068b60c" };
 const app  = initializeApp(FC);
@@ -412,7 +442,7 @@ window.parseNum = parseNum;
 
 // 상태 목록 (기타, 판매완료 포함)
 const STATUSES = ['판매예정','컨펌예정','이월예정','잔여재고','AS','기타','판매완료','등록','선수금'];
-const STATUS_DISPLAY = {'판매예정':'판매 예정','컨펌예정':'컨펌 예정','이월예정':'이월 예정','잔여재고':'잔여 재고','판매완료':'판매 완료','등록':'등록','선수금':'선수금'};
+const STATUS_DISPLAY = {'판매예정':'판매 예정','컨펌예정':'컨펌 예정','이월예정':'이월 예정','잔여재고':'잔여 재고','판매완료':'판매 완료','등록':'MPDS 등록 중','선수금':'선수금','기타':'기타(이동)','AS':'AS'};
 const BADGE_MAP = {
   '판매예정':'badge-sale','컨펌예정':'badge-confirm','이월예정':'badge-carry',
   '잔여재고':'badge-rest','AS':'badge-as','기타':'badge-etc','판매완료':'badge-done',
@@ -455,7 +485,16 @@ window.chStatusDD = function(e, ri) {
     opt.onclick = ev => {
       ev.stopPropagation();
       closeInvDD2();
-      if (rows[ri]) { rows[ri].status = s; renderKpi(); renderTable(); window.markDirty && window.markDirty(); }
+      if (!rows[ri]) return;
+      if (s === '판매완료') {
+        invShowSaleDialog(ri);
+      } else {
+        rows[ri].status = s;
+        renderKpi();
+        renderTable();
+        syncStatusToMpds(rows[ri]?.ref, rows[ri]?.serial, s);
+        window.markDirty && window.markDirty();
+      }
     };
     dd.appendChild(opt);
   });
@@ -727,6 +766,7 @@ onAuthStateChanged(auth, user => {
   if (user) {
     document.getElementById('monthPickerLabel').textContent = `${curYear}년 ${curMonth}월`;
     loadLineConfig();
+    loadStaffForInv();
     loadMonth();
   }
 });
@@ -744,33 +784,41 @@ function loadMonth() {
 
 /* ────────── KPI 카드 ────────── */
 function renderKpi() {
+  const KEYS = ['전체','판매예정','컨펌예정','이월예정','잔여재고','AS','기타','판매완료','등록','선수금'];
   const stat = {};
-  ['전체','판매예정','컨펌예정','이월예정','잔여재고','AS','기타','판매완료','등록','선수금'].forEach(s => { stat[s]={qty:0,amt:0}; });
+  KEYS.forEach(s => { stat[s] = {qty:0, amt:0}; });
+
   rows.forEach(r => {
-    const s = r.status || '잔여재고';
+    const s   = r.status || '잔여재고';
     const pcs = IS_NO_PCS(s) ? 0 : 1;
-    const amt = Number(r.amount)||0;
-    if (stat[s]) { stat[s].qty += pcs; stat[s].amt += amt; }
-    else         { stat['기타'].qty += pcs; stat['기타'].amt += amt; }
-    stat['전체'].qty += pcs; stat['전체'].amt += amt;
+    const amt = Number(String(r.amount).replace(/,/g,'')) || 0;
+    const bucket = stat[s] ? s : '기타';
+    stat[bucket].qty += pcs;
+    stat[bucket].amt += amt;
+    stat['전체'].qty  += pcs;
+    stat['전체'].amt  += amt;
   });
-  const set = (id, s) => {
-    const ep = document.getElementById(id+'-pcs'); if(ep) ep.innerHTML=`${stat[s].qty} <small>pcs</small>`;
-    const ea = document.getElementById(id+'-amt'); if(ea) ea.textContent=fmtW(stat[s].amt);
+
+  const set = (id, key) => {
+    const ep = document.getElementById(id + '-pcs');
+    const ea = document.getElementById(id + '-amt');
+    if (ep) ep.innerHTML  = `${stat[key].qty} <small>pcs</small>`;
+    if (ea) ea.textContent = fmtW(stat[key].amt);
   };
-  set('kpi-all','전체');
-  set('kpi-sale','판매예정');
-  set('kpi-confirm','컨펌예정');
-  set('kpi-as','AS');
-  set('kpi-etc','기타');
-  set('kpi-carry','이월예정');
-  set('kpi-done','판매완료');
-  set('kpi-rest','잔여재고');
-  set('kpi-reg','등록');
-  // 선수금: pcs는 "-"로 표시, 금액만 표시
-  const advEl = document.getElementById('kpi-adv-pcs');
-  if (advEl) advEl.innerHTML = `- <small>pcs</small>`;
+  set('kpi-all',     '전체');
+  set('kpi-sale',    '판매예정');
+  set('kpi-confirm', '컨펌예정');
+  set('kpi-as',      'AS');
+  set('kpi-etc',     '기타');
+  set('kpi-carry',   '이월예정');
+  set('kpi-done',    '판매완료');
+  set('kpi-rest',    '잔여재고');
+  set('kpi-reg',     '등록');
+
+  // 선수금: pcs는 "-"로, 금액만 표시
+  const advPcs = document.getElementById('kpi-adv-pcs');
   const advAmt = document.getElementById('kpi-adv-amt');
+  if (advPcs) advPcs.innerHTML  = `- <small>pcs</small>`;
   if (advAmt) advAmt.textContent = fmtW(stat['선수금'].amt);
 }
 
@@ -864,7 +912,7 @@ function renderTfoot(filtered) {
   document.getElementById('invTfoot').innerHTML = `<tr>
     <td colspan="3" style="font-weight:900;">${label} 합계</td>
     <td style="font-weight:900;">${fmtW(total)}</td>
-    <td colspan="5" style="font-weight:900;">${pcs} pcs</td>
+    <td colspan="5" style="font-weight:900;">${pcs === 1 ? '1 pc' : pcs + ' pcs'}</td>
   </tr>`;
 }
 
@@ -1118,6 +1166,57 @@ window.updateSel = function() {
   if (checks.length>0) ca.checked = [...checks].every(c=>c.checked);
 };
 
+/* ── 직원 로드 + 판매완료 다이얼로그 ── */
+let _invStaff = [];
+async function loadStaffForInv() {
+  try {
+    const snap = await getDocs(collection(db,'users'));
+    _invStaff = snap.docs.map(d=>({id:d.id,...d.data()})).filter(u=>u.approved);
+  } catch(e) { _invStaff = []; }
+}
+
+function invGetLineForRef(ref) {
+  if (!ref || !lineConfig) return '';
+  const lc = lineConfig.lines || lineConfig;
+  const r  = ref.toLowerCase();
+  for (const l of lc) {
+    if ((l.refs||[]).some(x=>x.toLowerCase()===r)) return l.name;
+  }
+  return '';
+}
+
+function invShowSaleDialog(ri) {
+  const r     = rows[ri];
+  if (!r) return;
+  const autoLine = invGetLineForRef(r.ref) || r.line || '';
+  const modal = document.getElementById('invSaleModal');
+  if (!modal) return;
+  const sel = document.getElementById('invScSalesperson');
+  if (sel) {
+    sel.innerHTML = '<option value="">선택 안 함</option>' +
+      _invStaff.map(u=>{const n=u.name||u.displayName||u.email||u.id;return`<option value="${n}">${n}</option>`;}).join('');
+    sel.value = r.salesperson||'';
+  }
+  const today = new Date();
+  document.getElementById('invScDate').value   = r.saleCompletedDate || `${today.getFullYear()}.${today.getMonth()+1}.${today.getDate()}`;
+  document.getElementById('invScRegion').value = r.region||'';
+  document.getElementById('invScLine').value   = autoLine;
+  modal.style.display = 'flex';
+  document.getElementById('invScCancel').onclick  = () => { modal.style.display='none'; };
+  document.getElementById('invScConfirm').onclick = () => {
+    r.status            = '판매완료';
+    r.region            = (document.getElementById('invScRegion')?.value||'').trim();
+    r.salesperson       = document.getElementById('invScSalesperson')?.value||'';
+    r.line              = document.getElementById('invScLine')?.value||autoLine;
+    r.saleCompletedDate = document.getElementById('invScDate')?.value||'';
+    modal.style.display = 'none';
+    renderKpi();
+    renderTable();
+    syncStatusToMpds(r.ref, r.serial, '판매완료');
+    window.markDirty && window.markDirty();
+  };
+}
+
 /* ────────── 저장 ────────── */
 async function saveData() {
   const btn = document.getElementById('save-btn');
@@ -1125,13 +1224,17 @@ async function saveData() {
   try {
     const data = {
       rows: rows.map(r=>({
-        ref:      r.ref||'',
-        serial:   r.serial||'',
-        amount:   r.amount!=null ? Number(r.amount) : null,
-        customer: r.customer||'',
-        saleDate: r.saleDate||'',
-        status:   r.status||'잔여재고',
-        note:     r.note||''
+        ref:               r.ref||'',
+        serial:            r.serial||'',
+        amount:            r.amount!=null ? Number(r.amount) : null,
+        customer:          r.customer||'',
+        saleDate:          r.saleDate||'',
+        status:            r.status||'잔여재고',
+        note:              r.note||'',
+        region:            r.region||'',
+        salesperson:       r.salesperson||'',
+        line:              r.line||'',
+        saleCompletedDate: r.saleCompletedDate||''
       })),
       updatedAt: new Date().toISOString()
     };

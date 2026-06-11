@@ -535,8 +535,17 @@ function loadMonth() {
   unsubReport = onSnapshot(doc(db,'artifacts','patek-s','public','data','sales_reports',docId), snap => {
     if (snap.exists()) {
       const d = snap.data();
-      lineData    = d.lineData    ? JSON.parse(JSON.stringify(d.lineData))    : JSON.parse(JSON.stringify(DEFAULT_LINES));
-      regionData  = d.regionData  ? JSON.parse(JSON.stringify(d.regionData))  : JSON.parse(JSON.stringify(DEFAULT_REGIONS));
+      // salesListData가 있으면 현재 매출(판매 완료) 데이터로 자동 채움
+      if (d.salesListData) {
+        const sl = d.salesListData;
+        lineData   = sl.lineData?.length   ? sl.lineData.map(r=>({line:r.line||r.name||'',qty:r.qty||0,amount:r.amount||0,yoy:r.yoy||0}))
+                                           : (d.lineData ? JSON.parse(JSON.stringify(d.lineData)) : JSON.parse(JSON.stringify(DEFAULT_LINES)));
+        regionData = sl.regionData?.length ? sl.regionData.map(r=>({region:r.region||r.name||'',qty:r.qty||0,amount:r.amount||0}))
+                                           : (d.regionData ? JSON.parse(JSON.stringify(d.regionData)) : JSON.parse(JSON.stringify(DEFAULT_REGIONS)));
+      } else {
+        lineData   = d.lineData   ? JSON.parse(JSON.stringify(d.lineData))   : JSON.parse(JSON.stringify(DEFAULT_LINES));
+        regionData = d.regionData ? JSON.parse(JSON.stringify(d.regionData)) : JSON.parse(JSON.stringify(DEFAULT_REGIONS));
+      }
       monthlyData = d.monthlyData ? JSON.parse(JSON.stringify(d.monthlyData)) : JSON.parse(JSON.stringify(DEFAULT_MONTHLY));
       notes       = d.notes       ? [...d.notes]                               : [...DEFAULT_NOTES];
     } else {

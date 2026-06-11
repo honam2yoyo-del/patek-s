@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, onSnapshot, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, onSnapshot, setDoc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 
 const FC = { apiKey:"AIzaSyCt7aQXA5eFdnDTMHlRhjPAkyH4b8UB6HY", authDomain:"patek-s.firebaseapp.com", projectId:"patek-s", storageBucket:"patek-s.firebasestorage.app", messagingSenderId:"786016749285", appId:"1:786016749285:web:58538eec1cf7e72068b60c" };
@@ -37,7 +37,7 @@ window.fmtNum = function(el) {
 const STATUSES  = ['판매예정','컨펌예정','이월예정','AS','잔여재고','기타','판매완료','등록','선수금'];
 const STATUS_DISPLAY = {
   '판매예정':'판매 예정','컨펌예정':'컨펌 예정','이월예정':'이월 예정',
-  '잔여재고':'잔여 재고','AS':'AS','기타':'기타','판매완료':'판매 완료','등록':'등록','선수금':'선수금'
+  '잔여재고':'잔여 재고','AS':'AS','기타':'기타(이동)','판매완료':'판매 완료','등록':'MPDS 등록 중','선수금':'선수금'
 };
 const BADGE_MAP = {
   '판매예정':'badge-sale','컨펌예정':'badge-confirm','이월예정':'badge-carry',
@@ -45,6 +45,7 @@ const BADGE_MAP = {
   '등록':'badge-reg','선수금':'badge-advance'
 };
 const IS_NO_PCS = s => s === '선수금'; // 선수금: 금액만 집계, pcs 제외
+const pcsLabel  = n => (n === 1 ? '1 pc' : (n || 0) + ' pcs');
 
 function canonicalStatus(s) {
   const m = {'판매 예정':'판매예정','컨펌 예정':'컨펌예정','이월 예정':'이월예정','잔여 재고':'잔여재고','판매 완료':'판매완료'};
@@ -73,6 +74,31 @@ let showPrevYear = false;    // 전년 비교 토글 상태
 
 // 목표 달성률 데이터
 let goalRateData = { total: 0, centum: 0, avenue: 0 };
+
+// 라인 설정 + 직원 목록 캐시
+let _lineConfig = [];
+let _staffList  = [];
+
+async function loadLineConfig() {
+  try {
+    const snap = await getDoc(doc(db,'artifacts','patek-s','public','data','lineConfig'));
+    _lineConfig = snap.exists() ? (snap.data().lines || []) : [];
+  } catch(e) { _lineConfig = []; }
+}
+async function loadStaffList() {
+  try {
+    const snap = await getDocs(collection(db,'users'));
+    _staffList = snap.docs.map(d=>({id:d.id,...d.data()})).filter(u=>u.approved);
+  } catch(e) { _staffList = []; }
+}
+function getLineForRef(ref) {
+  if (!ref) return '';
+  const r = ref.toLowerCase();
+  for (const l of _lineConfig) {
+    if ((l.refs||[]).some(x => x.toLowerCase() === r)) return l.name;
+  }
+  return '';
+}
 // 수동 입력 저장값 우선 유지 플래그
 let _manualSalesLock = { expectedSales: false, currentSales: false };
 
@@ -178,7 +204,7 @@ document.getElementById('login-btn').addEventListener('click', async () => {
 document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
 onAuthStateChanged(auth, user => {
   document.getElementById('login-overlay').style.display = user ? 'none' : 'flex';
-  if (user) { initMonthPicker(); updateMonthLabels(); loadMonth(); }
+  if (user) { initMonthPicker(); updateMonthLabels(); loadMonth(); loadLineConfig(); loadStaffList(); }
 });
 
 /* ────────── 지점 모달 초기화 ────────── */
@@ -726,7 +752,7 @@ function renderTfoot(filtered) {
     <td colspan="2">${filterLabel} 합계</td>
     <td></td>
     <td>${fmtW(total)}</td>
-    <td colspan="5">${pcs} pcs</td>
+    <td colspan="5">${pcsLabel(pcs)}</td>
   </tr>`;
 }
 
@@ -747,7 +773,7 @@ function updateTabCounts() {
 
 function renderSummary() {
   const ORDER  = ['전체','판매예정','컨펌예정','이월예정','AS','잔여재고','기타','판매완료','등록','선수금'];
-  const LABELS = { '전체':'전체 재고','판매예정':'판매 예정','컨펌예정':'컨펌 예정','이월예정':'이월 예정','잔여재고':'잔여 재고','AS':'AS','기타':'기타','판매완료':'판매 완료','등록':'등록','선수금':'선수금' };
+  const LABELS = { '전체':'전체 재고','판매예정':'판매 예정','컨펌예정':'컨펌 예정','이월예정':'이월 예정','잔여재고':'잔여 재고','AS':'AS','기타':'기타(이동)','판매완료':'판매 완료','등록':'MPDS 등록 중','선수금':'선수금' };
   const COLORS = { '전체':'black','판매예정':'green','컨펌예정':'orange','이월예정':'blue','잔여재고':'black','AS':'red','기타':'black','판매완료':'blue','등록':'blue','선수금':'black' };
 
   const summary = {};
@@ -785,20 +811,31 @@ function autoCalcFromInventory() {
   recalcRemain();
 }
 
-/* ── 판매완료 합산 → 현재 매출 자동 반영 ── */
+/* ── 판매완료 + 선수금 합산 → 현재 매출 자동 반영 ── */
 function autoCalcCurrentSales() {
   if (_manualSalesLock.currentSales) { recalcRemain(); return; }
   const completed = rows.filter(r => r.status === '판매완료');
-  const totalAmt = completed.reduce((s, r) => s + (Number(r.amount)||0), 0);
-  const totalPcs = completed.length;
-  const salesEl = document.getElementById('f-currentSales');
-  const pcsEl   = document.getElementById('f-currentPcs');
+  const advances  = rows.filter(r => r.status === '선수금');
+  const totalAmt  = [...completed, ...advances].reduce((s, r) => s + (Number(r.amount)||0), 0);
+  const donePcs   = completed.length;
+  const advPcs    = advances.length;
+  const salesEl   = document.getElementById('f-currentSales');
+  const pcsEl     = document.getElementById('f-currentPcs');   // hidden input for save
+  const pcsDisp   = document.getElementById('currentPcsDisplay'); // display span
   if (salesEl && document.activeElement !== salesEl) {
     salesEl.value = totalAmt > 0 ? totalAmt.toLocaleString('ko-KR') : '';
   }
-  if (pcsEl && document.activeElement !== pcsEl) {
-    pcsEl.value = totalPcs > 0 ? String(totalPcs) : '';
-    pcsEl.style.width = Math.max(2, pcsEl.value.length || 1) + 'ch';
+  if (pcsEl) {
+    pcsEl.value = donePcs > 0 ? String(donePcs) : '';
+  }
+  if (pcsDisp) {
+    if (donePcs === 0 && advPcs === 0) {
+      pcsDisp.textContent = '(-)';
+    } else if (advPcs === 0) {
+      pcsDisp.textContent = `(${pcsLabel(donePcs)})`;
+    } else {
+      pcsDisp.textContent = `(${pcsLabel(donePcs)} / 선수금 ${pcsLabel(advPcs)})`;
+    }
   }
   recalcRemain();
 }
@@ -835,7 +872,14 @@ window.invStatusDD = function(e, ri) {
     opt.onclick = ev => {
       ev.stopPropagation();
       closeInvDD();
-      if (rows[ri]) { rows[ri].status = s; renderTable(); window.markDirty && window.markDirty(); }
+      if (!rows[ri]) return;
+      if (s === '판매완료') {
+        showSaleCompleteDialog(ri);
+      } else {
+        rows[ri].status = s;
+        renderTable();
+        window.markDirty && window.markDirty();
+      }
     };
     dd.appendChild(opt);
   });
@@ -852,6 +896,199 @@ window.invChStatus = function(ri, val, el) {
   el.className = 'status-sel ' + statusSelClass(val);
   renderTable();
   window.markDirty && window.markDirty();
+};
+
+/* ── 판매 완료 입력 다이얼로그 ── */
+function showSaleCompleteDialog(ri) {
+  const r    = rows[ri];
+  if (!r) return;
+  const autoLine = getLineForRef(r.ref) || r.line || '';
+  const modal = document.getElementById('saleCompleteModal');
+  if (!modal) return;
+
+  // 직원 select 채우기
+  const selEl = document.getElementById('scSalesperson');
+  if (selEl) {
+    selEl.innerHTML = '<option value="">선택 안 함</option>' +
+      _staffList.map(u => {
+        const name = u.name || u.displayName || u.email || u.id;
+        return `<option value="${name}">${name}</option>`;
+      }).join('');
+    selEl.value = r.salesperson || '';
+  }
+  const regionEl = document.getElementById('scRegion');
+  if (regionEl) regionEl.value = r.region || '';
+  const lineEl = document.getElementById('scLine');
+  if (lineEl) lineEl.value = autoLine;
+  const dateEl = document.getElementById('scDate');
+  if (dateEl) {
+    const today = new Date();
+    dateEl.value = r.saleCompletedDate || `${today.getFullYear()}.${today.getMonth()+1}.${today.getDate()}`;
+  }
+
+  modal.style.display = 'flex';
+
+  document.getElementById('scCancel').onclick = () => { modal.style.display = 'none'; };
+  document.getElementById('scConfirm').onclick = () => {
+    r.status             = '판매완료';
+    r.region             = (document.getElementById('scRegion')?.value || '').trim();
+    r.salesperson        = document.getElementById('scSalesperson')?.value || '';
+    r.line               = document.getElementById('scLine')?.value || autoLine;
+    r.saleCompletedDate  = document.getElementById('scDate')?.value || '';
+    modal.style.display  = 'none';
+    renderTable();
+    window.markDirty && window.markDirty();
+  };
+}
+window.showSaleCompleteDialog = showSaleCompleteDialog;
+
+/* ── 현재 매출 리스트 패널 ── */
+window.openSalesList = function() {
+  const panel = document.getElementById('salesListPanel');
+  if (!panel) return;
+  const lbl = document.getElementById('slpMonthLabel');
+  if (lbl) lbl.textContent = `${curYear}년 ${curMonth}월`;
+  panel.style.display = 'block';
+  buildSlpFilters();
+  window.renderSalesList();
+};
+window.closeSalesList = function() {
+  const panel = document.getElementById('salesListPanel');
+  if (panel) panel.style.display = 'none';
+};
+
+function getSlpRows() {
+  return rows.filter(r => r.status === '판매완료' || r.status === '선수금');
+}
+
+function buildSlpFilters() {
+  const slpRows = getSlpRows();
+  const regions   = ['전체', ...new Set(slpRows.map(r => r.region||'미입력').filter(Boolean))];
+  const lines     = ['전체', ...new Set(slpRows.map(r => r.line||'미분류').filter(Boolean))];
+  const staffList = ['전체', ...new Set(slpRows.map(r => r.salesperson||'미입력').filter(Boolean))];
+
+  const buildOpts = (arr, el) => {
+    const s = document.getElementById(el);
+    if (!s) return;
+    const cur = s.value || '전체';
+    s.innerHTML = arr.map(v => `<option value="${v}">${v}</option>`).join('');
+    s.value = arr.includes(cur) ? cur : '전체';
+  };
+  buildOpts(regions,   'slpRegionFilter');
+  buildOpts(lines,     'slpLineFilter');
+  buildOpts(staffList, 'slpStaffFilter');
+}
+
+window.resetSlpFilters = function() {
+  ['slpSearch','slpRegionFilter','slpLineFilter','slpStaffFilter'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (el.tagName === 'INPUT') el.value = '';
+    else el.value = '전체';
+  });
+  window.renderSalesList();
+};
+
+window.renderSalesList = function() {
+  const kw     = (document.getElementById('slpSearch')?.value||'').toLowerCase().trim();
+  const region = document.getElementById('slpRegionFilter')?.value || '전체';
+  const line   = document.getElementById('slpLineFilter')?.value   || '전체';
+  const staff  = document.getElementById('slpStaffFilter')?.value  || '전체';
+
+  let list = getSlpRows();
+  if (kw)           list = list.filter(r => [(r.customer||''),(r.ref||''),(r.serial||'')].some(v=>v.toLowerCase().includes(kw)));
+  if (region !== '전체') list = list.filter(r => (r.region||'미입력') === region);
+  if (line   !== '전체') list = list.filter(r => (r.line||'미분류')   === line);
+  if (staff  !== '전체') list = list.filter(r => (r.salesperson||'미입력') === staff);
+
+  const doneList = list.filter(r => r.status === '판매완료');
+  const advList  = list.filter(r => r.status === '선수금');
+  const totalAmt = list.reduce((s,r)=>s+(Number(r.amount)||0), 0);
+
+  const qtyEl = document.getElementById('slpTotalQty');
+  if (qtyEl) {
+    const doneN = doneList.length;
+    const advN  = advList.length;
+    if (advN === 0) qtyEl.textContent = pcsLabel(doneN);
+    else qtyEl.textContent = `${pcsLabel(doneN)} (선수금 ${pcsLabel(advN)})`;
+  }
+  const amtEl = document.getElementById('slpTotalAmt');
+  if (amtEl) amtEl.textContent = fmtW(totalAmt);
+
+  const tbody = document.getElementById('slpTbody');
+  if (tbody) {
+    tbody.innerHTML = list.map((r, i) => {
+      const isAdv   = r.status === '선수금';
+      const dateStr = r.saleCompletedDate || r.saleDate || '-';
+      return `<tr style="border-bottom:1px solid #f0f2f6;${isAdv?'background:#f0fdff;':''}">
+        <td style="padding:9px 14px;font-size:13px;text-align:center;color:#6b7280;">${i+1}</td>
+        <td style="padding:9px 14px;font-size:13px;text-align:center;">${esc(dateStr)}</td>
+        <td style="padding:9px 14px;font-size:13px;font-weight:700;">${esc(r.ref||'-')}</td>
+        <td style="padding:9px 14px;font-size:13px;color:#6b7280;">${esc(r.serial||'-')}</td>
+        <td style="padding:9px 14px;font-size:13px;text-align:right;font-weight:700;">${fmtW(r.amount)}</td>
+        <td style="padding:9px 14px;font-size:13px;">${esc(r.customer||'-')}</td>
+        <td style="padding:9px 14px;font-size:13px;">${esc(r.region||'-')}</td>
+        <td style="padding:9px 14px;font-size:13px;">${esc(r.line||'-')}</td>
+        <td style="padding:9px 14px;font-size:13px;color:#6b7280;">${esc(r.note||'-')}</td>
+        <td style="padding:9px 14px;font-size:13px;">${esc(r.salesperson||'-')}${isAdv?'<span style="margin-left:6px;background:#cffafe;color:#0891b2;font-size:11px;font-weight:900;padding:1px 6px;border-radius:10px;">선수금</span>':''}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  // 라인별 요약
+  const lineStat = {};
+  doneList.forEach(r => {
+    const k = r.line || '미분류';
+    if (!lineStat[k]) lineStat[k] = {qty:0,amt:0};
+    lineStat[k].qty++; lineStat[k].amt += Number(r.amount)||0;
+  });
+  const lsBody = document.getElementById('slpLineSummaryBody');
+  if (lsBody) {
+    lsBody.innerHTML = Object.entries(lineStat).sort((a,b)=>b[1].qty-a[1].qty).map(([k,v]) =>
+      `<tr style="border-bottom:1px solid #f0f2f6;">
+        <td style="padding:8px 14px;font-size:13px;font-weight:700;">${esc(k)}</td>
+        <td style="padding:8px 14px;font-size:13px;text-align:right;">${pcsLabel(v.qty)}</td>
+        <td style="padding:8px 14px;font-size:13px;text-align:right;font-weight:700;">${fmtW(v.amt)}</td>
+      </tr>`
+    ).join('') || '<tr><td colspan="3" style="padding:12px 14px;text-align:center;color:#9ca3af;font-size:13px;">데이터 없음</td></tr>';
+  }
+
+  // 지역별 요약
+  const regionStat = {};
+  doneList.forEach(r => {
+    const k = r.region || '미입력';
+    if (!regionStat[k]) regionStat[k] = {qty:0,amt:0};
+    regionStat[k].qty++; regionStat[k].amt += Number(r.amount)||0;
+  });
+  const rsBody = document.getElementById('slpRegionSummaryBody');
+  if (rsBody) {
+    rsBody.innerHTML = Object.entries(regionStat).sort((a,b)=>b[1].qty-a[1].qty).map(([k,v]) =>
+      `<tr style="border-bottom:1px solid #f0f2f6;">
+        <td style="padding:8px 14px;font-size:13px;font-weight:700;">${esc(k)}</td>
+        <td style="padding:8px 14px;font-size:13px;text-align:right;">${pcsLabel(v.qty)}</td>
+        <td style="padding:8px 14px;font-size:13px;text-align:right;font-weight:700;">${fmtW(v.amt)}</td>
+      </tr>`
+    ).join('') || '<tr><td colspan="3" style="padding:12px 14px;text-align:center;color:#9ca3af;font-size:13px;">데이터 없음</td></tr>';
+  }
+};
+
+window.exportSalesListExcel = function() {
+  if (!window.XLSX) { alert('XLSX 라이브러리 로딩 중입니다.'); return; }
+  const list = getSlpRows();
+  const headers = ['No','판매일','REF.','Serial','금액','고객명','지역','Collection','비고','판매직원','구분'];
+  const data = list.map((r,i) => [
+    i+1,
+    r.saleCompletedDate||r.saleDate||'',
+    r.ref||'', r.serial||'',
+    r.amount||0, r.customer||'',
+    r.region||'', r.line||'',
+    r.note||'', r.salesperson||'',
+    r.status === '선수금' ? '선수금' : '판매 완료'
+  ]);
+  const ws = window.XLSX.utils.aoa_to_sheet([headers,...data]);
+  const wb = window.XLSX.utils.book_new();
+  window.XLSX.utils.book_append_sheet(wb, ws, `판매내역_${curYear}년${curMonth}월`);
+  window.XLSX.writeFile(wb, `판매내역_${curYear}년${curMonth}월.xlsx`);
 };
 window.invDelRow = function(ri) {
   rows.splice(ri, 1);
@@ -902,7 +1139,7 @@ function updateSelectedTotal() {
     if (!IS_NO_PCS(cb.dataset.status)) qty++;
     amount += Number(cb.dataset.amount)||0;
   });
-  document.getElementById('selectedQty').textContent    = qty + ' pcs';
+  document.getElementById('selectedQty').textContent    = pcsLabel(qty);
   document.getElementById('selectedAmount').textContent = fmtW(amount);
 }
 
@@ -944,6 +1181,43 @@ async function syncSalesToMpds(invRows) {
   } catch(e) { console.error('syncSalesToMpds:', e); }
 }
 
+/* ── 판매 완료 → 동향 보고(sales_reports) 자동 연동 ── */
+async function syncSalesToReport(invRows) {
+  const docId   = `${curYear}-${pad(curMonth)}`;
+  const done    = invRows.filter(r => r.status === '판매완료' || r.status === '판매 완료');
+
+  // 라인별 집계
+  const lineMap = {};
+  done.forEach(r => {
+    const k = r.line || '미분류';
+    if (!lineMap[k]) lineMap[k] = { line:k, qty:0, amount:0, yoy:0 };
+    lineMap[k].qty++;
+    lineMap[k].amount += Number(r.amount)||0;
+  });
+
+  // 지역별 집계
+  const regionMap = {};
+  done.forEach(r => {
+    const k = r.region || '미입력';
+    if (!regionMap[k]) regionMap[k] = { region:k, qty:0, amount:0 };
+    regionMap[k].qty++;
+    regionMap[k].amount += Number(r.amount)||0;
+  });
+
+  const salesListData = {
+    lineData:   Object.values(lineMap).sort((a,b) => b.qty - a.qty),
+    regionData: Object.values(regionMap).sort((a,b) => b.qty - a.qty),
+    totalQty:   done.length,
+    totalAmount: done.reduce((s,r)=>s+(Number(r.amount)||0),0),
+    updatedAt:  new Date().toISOString()
+  };
+
+  try {
+    await setDoc(doc(db,'artifacts','patek-s','public','data','sales_reports',docId),
+      { salesListData }, {merge:true});
+  } catch(e) { console.error('syncSalesToReport:', e); }
+}
+
 /* ────────── 저장 ────────── */
 async function saveData() {
   const gv  = id => { const el=document.getElementById(id); return el?el.value.trim():''; };
@@ -966,13 +1240,17 @@ async function saveData() {
   // 재고 목록과 공유: rows는 inventory 컬렉션에 별도 저장
   const invData = {
     rows: rows.map(r => ({
-      ref:      r.ref||'',
-      serial:   r.serial||'',
-      amount:   r.amount != null ? Number(r.amount) : null,
-      customer: r.customer||'',
-      saleDate: r.saleDate||'',
-      status:   r.status||'판매예정',
-      note:     r.note||''
+      ref:               r.ref||'',
+      serial:            r.serial||'',
+      amount:            r.amount != null ? Number(r.amount) : null,
+      customer:          r.customer||'',
+      saleDate:          r.saleDate||'',
+      status:            r.status||'판매예정',
+      note:              r.note||'',
+      region:            r.region||'',
+      salesperson:       r.salesperson||'',
+      line:              r.line||'',
+      saleCompletedDate: r.saleCompletedDate||''
     })),
     updatedAt: new Date().toISOString()
   };
@@ -985,6 +1263,7 @@ async function saveData() {
       setDoc(doc(db,'artifacts','patek-s','public','data','inventory',`${curYear}-${pad(curMonth)}`), invData, {merge:true})
     ]);
     syncSalesToMpds(invData.rows); // REF. 기준으로 MPDS에도 반영
+    syncSalesToReport(invData.rows);  // 판매 완료 → 동향 보고 자동 연동
 
     // 차트용 centum_annual 자동 동기화 (현재 월 실적 → 그래프 연동)
     const cSales = data.currentSales, cPcs = data.currentPcs;
