@@ -285,7 +285,7 @@
       <div class="kpi-card"><div class="kpi-label">선수금</div><div class="kpi-pcs" style="color:#0891b2;" id="kpi-adv-pcs">- <small>pcs</small></div><div class="kpi-amt" id="kpi-adv-amt">0 원</div></div>
       <div class="kpi-card"><div class="kpi-label">AS</div><div class="kpi-pcs red" id="kpi-as-pcs">0 <small>pcs</small></div><div class="kpi-amt" id="kpi-as-amt">0 원</div></div>
       <div class="kpi-card"><div class="kpi-label">기타</div><div class="kpi-pcs purple" id="kpi-etc-pcs">0 <small>pcs</small></div><div class="kpi-amt" id="kpi-etc-amt">0 원</div></div>
-      <div class="kpi-card"><div class="kpi-label">등록</div><div class="kpi-pcs blue" id="kpi-reg-pcs">0 <small>pcs</small></div><div class="kpi-amt" id="kpi-reg-amt">0 원</div></div>
+      <div class="kpi-card"><div class="kpi-label">MPDS 등록 중</div><div class="kpi-pcs blue" id="kpi-reg-pcs">0 <small>pcs</small></div><div class="kpi-amt" id="kpi-reg-amt">0 원</div></div>
       <div class="kpi-card"><div class="kpi-label">판매 완료</div><div class="kpi-pcs amber" id="kpi-done-pcs">0 <small>pcs</small></div><div class="kpi-amt" id="kpi-done-amt">0 원</div></div>
       <div class="kpi-card"><div class="kpi-label">잔여 재고</div><div class="kpi-pcs black" id="kpi-rest-pcs">0 <small>pcs</small></div><div class="kpi-amt" id="kpi-rest-amt">0 원</div></div>
     </section>
@@ -304,8 +304,8 @@
         <button class="filter-pill"          data-val="AS">AS</button>
         <button class="filter-pill"          data-val="기타">기타(이동)</button>
         <button class="filter-pill"          data-val="판매완료">판매 완료</button>
-        <button class="filter-pill"          data-val="등록">MPDS 등록 중</button>
         <button class="filter-pill"          data-val="선수금">선수금</button>
+        <button class="filter-pill"          data-val="등록">MPDS 등록 중</button>
       </div>
 
       <!-- 테이블 컨트롤 -->
@@ -315,12 +315,6 @@
             <input id="tblSearch" class="tbl-search" type="text" placeholder="REF., Serial, 고객명 검색"/>
             <span class="tbl-search-ico">🔍</span>
           </div>
-          <select id="sortSelect" class="sort-select">
-            <option value="date">날짜순</option>
-            <option value="ref">REF순</option>
-            <option value="amount">금액순</option>
-            <option value="status">상태순</option>
-          </select>
         </div>
         <div style="display:flex;gap:8px;align-items:center;">
           <button class="add-row-btn" id="addRowBtn">+ 행 추가</button>
@@ -335,11 +329,11 @@
           <thead>
             <tr>
               <th style="width:44px;"><input type="checkbox" id="checkAll"/></th>
-              <th style="width:130px;">REF.</th>
-              <th style="width:165px;">Serial</th>
-              <th style="width:160px;">금액</th>
-              <th style="width:110px;">고객명</th>
-              <th style="width:150px;">예상 판매일</th>
+              <th style="width:130px;cursor:pointer;user-select:none;" onclick="window.invSortBy('ref')" id="th-ref">REF. <span id="si-ref"></span></th>
+              <th style="width:165px;cursor:pointer;user-select:none;" onclick="window.invSortBy('serial')" id="th-serial">Serial <span id="si-serial"></span></th>
+              <th style="width:160px;cursor:pointer;user-select:none;" onclick="window.invSortBy('amount')" id="th-amount">금액 <span id="si-amount"></span></th>
+              <th style="width:110px;cursor:pointer;user-select:none;" onclick="window.invSortBy('customer')" id="th-customer">고객명 <span id="si-customer"></span></th>
+              <th style="width:150px;cursor:pointer;user-select:none;" onclick="window.invSortBy('saleDate')" id="th-saleDate">예상 판매일 <span id="si-saleDate"></span></th>
               <th style="width:108px;padding:6px 4px;">
                 <div>상태</div>
                 <select class="bulk-status-sel" id="bulkStatusSel">
@@ -865,9 +859,27 @@ function applyFilterStyles() {
   });
 }
 
+/* ────────── 테이블 정렬 상태 ────────── */
+let invSortKey = '';
+let invSortDir = 1; // 1=오름차순, -1=내림차순
+
+window.invSortBy = function(key) {
+  if (invSortKey === key) {
+    invSortDir = -invSortDir;
+  } else {
+    invSortKey = key;
+    invSortDir = 1;
+  }
+  // 정렬 인디케이터 업데이트
+  ['ref','serial','amount','customer','saleDate'].forEach(k => {
+    const el = document.getElementById('si-' + k);
+    if (el) el.textContent = k === invSortKey ? (invSortDir === 1 ? ' ▲' : ' ▼') : '';
+  });
+  renderTable();
+};
+
 /* ────────── 테이블 렌더 ────────── */
-const tblSearch  = document.getElementById('tblSearch');
-const sortSelect = document.getElementById('sortSelect');
+const tblSearch = document.getElementById('tblSearch');
 
 function getFiltered() {
   const kw = tblSearch.value.trim().toLowerCase();
@@ -879,11 +891,17 @@ function getFiltered() {
       (r.customer||'').toLowerCase().includes(kw);
     return matchF && matchK;
   });
-  const sv = sortSelect.value;
-  if (sv==='date')   list.sort((a,b)=>dateSort(a.saleDate)-dateSort(b.saleDate));
-  if (sv==='ref')    list.sort((a,b)=>(a.ref||'').localeCompare(b.ref||'','ko-KR',{numeric:true}));
-  if (sv==='amount') list.sort((a,b)=>(Number(b.amount)||0)-(Number(a.amount)||0));
-  if (sv==='status') list.sort((a,b)=>STATUSES.indexOf(a.status)-STATUSES.indexOf(b.status));
+  if (invSortKey) {
+    const dir = invSortDir;
+    list.sort((a, b) => {
+      let va, vb;
+      if (invSortKey === 'amount')   { va = Number(a.amount)||0;           vb = Number(b.amount)||0;           return (va - vb) * dir; }
+      if (invSortKey === 'saleDate') { va = dateSort(a.saleDate);           vb = dateSort(b.saleDate);           return (va - vb) * dir; }
+      va = (a[invSortKey]||'').toString().toLowerCase();
+      vb = (b[invSortKey]||'').toString().toLowerCase();
+      return va.localeCompare(vb, 'ko-KR', {numeric:true}) * dir;
+    });
+  }
   return list;
 }
 
@@ -958,7 +976,6 @@ document.getElementById('delAllBtn').addEventListener('click', () => {
 });
 
 tblSearch.addEventListener('input', renderTable);
-sortSelect.addEventListener('change', renderTable);
 
 /* ────────── 키보드 셀 탐색 (엑셀 스타일) ────────── */
 (function() {
