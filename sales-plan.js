@@ -1334,6 +1334,12 @@ async function syncSalesToReport(invRows) {
   const salesListData = {
     lineData:   Object.values(lineMap).sort((a,b) => b.qty - a.qty),
     regionData: Object.values(regionMap).sort((a,b) => b.qty - a.qty),
+    salesRaw: done.map(r => {
+      let m = curMonth;
+      const d = r.saleCompletedDate || r.saleDate || '';
+      if (d) { const p = new Date(d); if (!isNaN(p.getTime())) m = p.getMonth() + 1; }
+      return { line: r.line || '기타', region: r.region || '기타', amount: Number(r.amount) || 0, month: m };
+    }),
     totalQty:   done.length,
     totalAmount: done.reduce((s,r)=>s+(Number(r.amount)||0),0),
     updatedAt:  new Date().toISOString()

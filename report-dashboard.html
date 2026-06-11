@@ -120,6 +120,15 @@
     .wide-panel-body { padding:0 14px 16px;overflow-x:auto; }
     .wide-table th, .wide-table td { padding:7px 7px;font-size:12px; }
 
+    /* ── 월별 필터 ── */
+    .filter-row { display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:8px 14px 4px; }
+    .filter-row + .filter-row { padding-top:2px;padding-bottom:10px; }
+    .filter-group-label { font-size:11.5px;font-weight:900;color:#374151;white-space:nowrap;min-width:62px; }
+    .filter-btns { display:flex;flex-wrap:wrap;gap:4px; }
+    .filter-btn { height:25px;padding:0 9px;border:1px solid #d9e0ea;border-radius:12px;background:#fff;font-size:11px;font-weight:800;color:#374151;cursor:pointer;white-space:nowrap;transition:all .12s; }
+    .filter-btn:hover { border-color:#075bd8;color:#075bd8; }
+    .filter-btn.active { background:#075bd8;color:#fff;border-color:#075bd8; }
+
     /* ── 특이사항 ── */
     .special-box { padding:0 14px 14px; }
     .special-list { border:1px solid #dfe6f0;background:#fbfdff;border-radius:10px;padding:16px 20px;min-height:230px; }
@@ -421,6 +430,38 @@
             <div class="section-title">연도별 월단위 지역별 판매 현황</div>
             <span class="unit">* 단위 : KRW</span>
           </div>
+          <div class="filter-row">
+            <span class="filter-group-label">지역</span>
+            <div class="filter-btns" id="regionFilterBtns">
+              <button class="filter-btn active" onclick="setRegionFilter(null,this)">전체</button>
+              <button class="filter-btn" onclick="setRegionFilter('부산',this)">부산</button>
+              <button class="filter-btn" onclick="setRegionFilter('서울',this)">서울</button>
+              <button class="filter-btn" onclick="setRegionFilter('대구',this)">대구</button>
+              <button class="filter-btn" onclick="setRegionFilter('경남',this)">경남</button>
+              <button class="filter-btn" onclick="setRegionFilter('울산,경북',this)">울산,경북</button>
+              <button class="filter-btn" onclick="setRegionFilter('광주,전라',this)">광주,전라</button>
+              <button class="filter-btn" onclick="setRegionFilter('경기',this)">경기</button>
+              <button class="filter-btn" onclick="setRegionFilter('세종',this)">세종</button>
+              <button class="filter-btn" onclick="setRegionFilter('강원,충청,제주',this)">강원,충청,제주</button>
+              <button class="filter-btn" onclick="setRegionFilter('기타',this)">기타</button>
+            </div>
+          </div>
+          <div class="filter-row">
+            <span class="filter-group-label">Collection</span>
+            <div class="filter-btns" id="collectionFilterBtns">
+              <button class="filter-btn active" onclick="setCollectionFilter(null,this)">전체</button>
+              <button class="filter-btn" onclick="setCollectionFilter('Grand Complications',this)">Grand Complications</button>
+              <button class="filter-btn" onclick="setCollectionFilter('Complications',this)">Complications</button>
+              <button class="filter-btn" onclick="setCollectionFilter('Calatrava',this)">Calatrava</button>
+              <button class="filter-btn" onclick="setCollectionFilter('Nautilus',this)">Nautilus</button>
+              <button class="filter-btn" onclick="setCollectionFilter('Aquanaut',this)">Aquanaut</button>
+              <button class="filter-btn" onclick="setCollectionFilter('Cubitus',this)">Cubitus</button>
+              <button class="filter-btn" onclick="setCollectionFilter('Twenty~4',this)">Twenty~4</button>
+              <button class="filter-btn" onclick="setCollectionFilter('Gondolo',this)">Gondolo</button>
+              <button class="filter-btn" onclick="setCollectionFilter('Golden Ellipse',this)">Golden Ellipse</button>
+              <button class="filter-btn" onclick="setCollectionFilter('기타',this)">기타</button>
+            </div>
+          </div>
           <div class="wide-panel-body">
             <table class="wide-table" id="monthlyTable">
               <thead>
@@ -461,7 +502,7 @@
 <script type="module">
 import { initializeApp }   from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, onSnapshot, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const FC = { apiKey:"AIzaSyCt7aQXA5eFdnDTMHlRhjPAkyH4b8UB6HY", authDomain:"patek-s.firebaseapp.com", projectId:"patek-s", storageBucket:"patek-s.firebasestorage.app", messagingSenderId:"786016749285", appId:"1:786016749285:web:58538eec1cf7e72068b60c" };
 const app  = initializeApp(FC);
@@ -514,6 +555,35 @@ let lineData    = JSON.parse(JSON.stringify(DEFAULT_LINES));
 let regionData  = JSON.parse(JSON.stringify(DEFAULT_REGIONS));
 let monthlyData = JSON.parse(JSON.stringify(DEFAULT_MONTHLY));
 let notes       = [...DEFAULT_NOTES];
+let salesRaw    = [];
+let selectedRegion     = null;
+let selectedCollection = null;
+
+const REGION_CANONICAL = ['부산','서울','대구','경남','울산,경북','광주,전라','경기','세종','강원,충청,제주'];
+const COL_CANONICAL    = ['Grand Complications','Complications','Calatrava','Nautilus','Aquanaut','Cubitus','Twenty~4','Gondolo','Golden Ellipse'];
+
+function normReg(r) {
+  const c = (r||'').trim();
+  return REGION_CANONICAL.includes(c) ? c : '기타';
+}
+function normCol(c) {
+  const v = (c||'').trim();
+  if (v === 'Grand Complication') return 'Grand Complications';
+  return COL_CANONICAL.includes(v) ? v : '기타';
+}
+
+window.setRegionFilter = function(region, btn) {
+  selectedRegion = region;
+  document.querySelectorAll('#regionFilterBtns .filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderMonthlyTable();
+};
+window.setCollectionFilter = function(col, btn) {
+  selectedCollection = col;
+  document.querySelectorAll('#collectionFilterBtns .filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderMonthlyTable();
+};
 
 
 /* ── Auth ── */
@@ -522,10 +592,16 @@ document.getElementById('login-btn').addEventListener('click', async () => {
 });
 document.getElementById('logout-btn').addEventListener('click', () => signOut(auth).then(() => location.replace(location.href)));
 onAuthStateChanged(auth, user => {
-  document.getElementById('login-overlay').style.display = user ? 'none' : 'flex';
-  if (user) {
-    loadMonth();
-  }
+  if (!user) { document.getElementById('login-overlay').style.display = 'flex'; return; }
+  getDoc(doc(db, 'users', user.uid)).then(snap => {
+    if (snap.exists() && snap.data().approved === true) {
+      document.getElementById('login-overlay').style.display = 'none';
+      loadMonth();
+    } else {
+      document.getElementById('login-overlay').style.display = 'flex';
+      signOut(auth);
+    }
+  }).catch(() => { document.getElementById('login-overlay').style.display = 'flex'; signOut(auth); });
 });
 
 /* ── 데이터 로드 ── */
@@ -542,9 +618,11 @@ function loadMonth() {
                                            : (d.lineData ? JSON.parse(JSON.stringify(d.lineData)) : JSON.parse(JSON.stringify(DEFAULT_LINES)));
         regionData = sl.regionData?.length ? sl.regionData.map(r=>({region:r.region||r.name||'',qty:r.qty||0,amount:r.amount||0}))
                                            : (d.regionData ? JSON.parse(JSON.stringify(d.regionData)) : JSON.parse(JSON.stringify(DEFAULT_REGIONS)));
+        salesRaw   = sl.salesRaw || [];
       } else {
         lineData   = d.lineData   ? JSON.parse(JSON.stringify(d.lineData))   : JSON.parse(JSON.stringify(DEFAULT_LINES));
         regionData = d.regionData ? JSON.parse(JSON.stringify(d.regionData)) : JSON.parse(JSON.stringify(DEFAULT_REGIONS));
+        salesRaw   = [];
       }
       monthlyData = d.monthlyData ? JSON.parse(JSON.stringify(d.monthlyData)) : JSON.parse(JSON.stringify(DEFAULT_MONTHLY));
       notes       = d.notes       ? [...d.notes]                               : [...DEFAULT_NOTES];
@@ -553,6 +631,7 @@ function loadMonth() {
       regionData  = JSON.parse(JSON.stringify(DEFAULT_REGIONS));
       monthlyData = JSON.parse(JSON.stringify(DEFAULT_MONTHLY));
       notes       = [...DEFAULT_NOTES];
+      salesRaw    = [];
     }
     renderAll();
   });
@@ -667,32 +746,82 @@ function renderMonthlyTable() {
   const tbody = document.getElementById('monthlyTbody');
   const MONTHS = [1,2,3,4,5,6,7,8,9,10,11,12];
   const curM = curMonth;
+  const useRaw = selectedCollection && salesRaw.length > 0;
 
-  tbody.innerHTML = regionData.map((r, ri) => {
+  let displayRows; // [{ region, ri, monthly:[12] }]
+
+  if (useRaw) {
+    const filteredRaw = salesRaw.filter(s => {
+      const colOk = normCol(s.line) === selectedCollection;
+      const regOk = !selectedRegion || normReg(s.region) === selectedRegion;
+      return colOk && regOk;
+    });
+    const regOrder = [...REGION_CANONICAL, '기타'];
+    const usedRegs = selectedRegion
+      ? (regOrder.includes(selectedRegion) ? [selectedRegion] : ['기타'])
+      : regOrder.filter(reg => filteredRaw.some(s => normReg(s.region) === reg));
+    displayRows = usedRegs.map(reg => ({
+      region: reg,
+      ri: -1,
+      monthly: MONTHS.map(m => filteredRaw
+        .filter(s => normReg(s.region) === reg && s.month === m)
+        .reduce((sum, s) => sum + (Number(s.amount) || 0), 0))
+    }));
+  } else {
+    let rows = regionData.map((r, ri) => ({ region: r.region, ri, monthly: monthlyData[ri] || new Array(12).fill(0) }));
+    if (selectedRegion) rows = rows.filter(r => normReg(r.region) === selectedRegion);
+    displayRows = rows;
+  }
+
+  tbody.innerHTML = displayRows.map(row => {
+    const { ri } = row;
     const mCells = MONTHS.map(m => {
-      const val = monthlyData[ri] ? (monthlyData[ri][m-1] || 0) : 0;
+      const val = row.monthly[m-1] || 0;
       const cls = m === curM ? ' class="highlight-month"' : '';
-      return `<td${cls}><input class="td-inp" type="text" value="${val > 0 ? fmtN(val) : ''}" oninput="if(!monthlyData[${ri}])monthlyData[${ri}]=new Array(12).fill(0);monthlyData[${ri}][${m-1}]=Number(this.value.replace(/,/g,''))||0;renderMonthlyTfoot();" style="${m===curM?'color:#0067e8;font-weight:900;':''}" placeholder="0"/></td>`;
+      const style = m === curM ? 'color:#0067e8;font-weight:900;' : '';
+      if (useRaw) {
+        return `<td${cls} style="${style}">${val > 0 ? fmtN(val) : '-'}</td>`;
+      }
+      return `<td${cls}><input class="td-inp" type="text" value="${val > 0 ? fmtN(val) : ''}" oninput="if(!monthlyData[${ri}])monthlyData[${ri}]=new Array(12).fill(0);monthlyData[${ri}][${m-1}]=Number(this.value.replace(/,/g,''))||0;renderMonthlyTfoot();" style="${style}" placeholder="0"/></td>`;
     }).join('');
-    const rowSum = (monthlyData[ri]||[]).reduce((s,v)=>s+(Number(v)||0),0);
-    return `<tr><td>${esc(r.region)}</td>${mCells}<td style="font-weight:900;">${fmtN(rowSum)||'-'}</td></tr>`;
+    const rowSum = row.monthly.reduce((s, v) => s + (Number(v) || 0), 0);
+    return `<tr><td>${esc(row.region)}</td>${mCells}<td style="font-weight:900;">${rowSum > 0 ? fmtN(rowSum) : '-'}</td></tr>`;
   }).join('');
 
-  renderMonthlyTfoot();
+  _updateMonthlyTfoot(displayRows);
+}
+
+function _updateMonthlyTfoot(displayRows) {
+  const MONTHS = [1,2,3,4,5,6,7,8,9,10,11,12];
+  const curM = curMonth;
+  const mSums = MONTHS.map((_, mi) => displayRows.reduce((s, r) => s + (Number(r.monthly[mi]) || 0), 0));
+  const total = mSums.reduce((s, v) => s + v, 0);
+  const tCells = mSums.map((v, mi) => {
+    const cls = (mi+1) === curM ? ' class="highlight-month"' : '';
+    return `<td${cls}>${v > 0 ? fmtN(v) : '-'}</td>`;
+  }).join('');
+  document.getElementById('monthlyTfoot').innerHTML = `<tr><td>합계</td>${tCells}<td>${total > 0 ? fmtN(total) : '-'}</td></tr>`;
 }
 
 window.renderMonthlyTfoot = function() {
+  // 편집 모드(Collection 필터 없음)에서 셀 입력시 호출 — monthlyData 기준으로 재계산
   const MONTHS = [1,2,3,4,5,6,7,8,9,10,11,12];
   const curM = curMonth;
-  const mSums = MONTHS.map((m, mi) =>
-    regionData.reduce((s, r, ri) => s + (Number((monthlyData[ri]||[])[mi])||0), 0)
+  const filteredRegs = selectedRegion
+    ? regionData.filter(r => normReg(r.region) === selectedRegion)
+    : regionData;
+  const mSums = MONTHS.map((_, mi) =>
+    filteredRegs.reduce((s, r) => {
+      const ri = regionData.indexOf(r);
+      return s + (Number((monthlyData[ri]||[])[mi])||0);
+    }, 0)
   );
   const total = mSums.reduce((s,v)=>s+v,0);
   const tCells = mSums.map((v, mi) => {
     const cls = (mi+1) === curM ? ' class="highlight-month"' : '';
     return `<td${cls}>${v > 0 ? fmtN(v) : '-'}</td>`;
   }).join('');
-  document.getElementById('monthlyTfoot').innerHTML = `<tr><td>합계</td>${tCells}<td>${fmtN(total)||'-'}</td></tr>`;
+  document.getElementById('monthlyTfoot').innerHTML = `<tr><td>합계</td>${tCells}<td>${total > 0 ? fmtN(total) : '-'}</td></tr>`;
 };
 
 /* ── 요약 카드 업데이트 ── */
