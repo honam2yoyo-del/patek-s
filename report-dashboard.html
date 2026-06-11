@@ -297,12 +297,15 @@
       <div class="topbar">
         <h1 class="page-title">매출 현황 보고서</h1>
         <div class="toolbar">
-          <div class="tab-group" id="periodGroup">
-            <button class="tab-btn active" onclick="setPeriod('monthly',this)">월별</button>
-            <button class="tab-btn" onclick="setPeriod('quarterly',this)">분기별</button>
-            <button class="tab-btn" onclick="setPeriod('yearly',this)">연도별</button>
+          <div id="periodPickerWrap" style="position:relative;">
+            <div class="tab-group" id="periodGroup">
+              <button class="tab-btn active" onclick="togglePicker('monthly',this)">월별</button>
+              <button class="tab-btn" onclick="togglePicker('quarterly',this)">분기별</button>
+              <button class="tab-btn" onclick="togglePicker('yearly',this)">연도별</button>
+            </div>
+            <div id="periodPickerPopup" class="mpp-popup" style="display:none;min-width:220px;"></div>
           </div>
-          <span id="period-label" style="font-size:12px;font-weight:800;color:#64748b;white-space:nowrap;"></span>
+          <span id="period-label" style="font-size:12px;font-weight:800;color:#075bd8;white-space:nowrap;border:1px solid #c7deff;border-radius:6px;padding:4px 10px;background:#eef6ff;"></span>
           <button class="action-btn excel-btn" onclick="downloadExcel()">
             <span class="btn-icon excel-icon">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h9l5 5v13H5V3z"/><path d="M14 3v5h5"/><path d="M8 10l3 4-3 4"/><path d="M14 10l-3 4 3 4"/></svg>
@@ -555,23 +558,113 @@ function updatePeriodLabel() {
   const el = document.getElementById('period-label');
   if (!el) return;
   if (reportPeriod === 'monthly') {
-    el.textContent = `${curMonth}월 기준`;
+    el.textContent = `${curYear}년 ${curMonth}월`;
   } else if (reportPeriod === 'quarterly') {
     const q = Math.ceil(curMonth / 3);
-    const start = (q-1)*3+1, end = q*3;
-    el.textContent = `${q}분기(${start}~${end}월) 기준`;
+    const s = (q-1)*3+1, e = q*3;
+    el.textContent = `${curYear}년 ${q}분기 (${s}~${e}월)`;
   } else {
-    el.textContent = `${curYear}년 기준`;
+    el.textContent = `${curYear}년`;
   }
 }
 
-window.setPeriod = function(period, btn) {
+/* ── 기간 피커 ── */
+let pickerOpen    = false;
+let pickerNavYear = curYear;
+
+window.togglePicker = function(period, btn) {
+  const popup = document.getElementById('periodPickerPopup');
+  const isSame = reportPeriod === period && pickerOpen;
+
   reportPeriod = period;
   document.querySelectorAll('#periodGroup .tab-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  updatePeriodLabel();
-  renderAll();
+
+  if (isSame) { popup.style.display = 'none'; pickerOpen = false; return; }
+
+  pickerNavYear = curYear;
+  renderPickerPopup();
+  popup.style.display = 'block';
+  pickerOpen = true;
 };
+
+function renderPickerPopup() {
+  const popup = document.getElementById('periodPickerPopup');
+
+  // 연도 탐색이 필요 없는 연도별 모드는 연도 그리드를 헤더로 대체
+  let header = '';
+  if (reportPeriod !== 'yearly') {
+    header = `<div class="mpp-header">
+      <button class="mpp-nav" onclick="navPY(-1)">◀</button>
+      <span class="mpp-year">${pickerNavYear}년</span>
+      <button class="mpp-nav" onclick="navPY(1)">▶</button>
+    </div>`;
+  }
+
+  let grid = '';
+  if (reportPeriod === 'monthly') {
+    const labels = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+    grid = `<div class="mpp-grid">${labels.map((lbl, i) => {
+      const m = i + 1;
+      const sel = pickerNavYear === curYear && m === curMonth ? ' sel' : '';
+      return `<button class="mpp-month${sel}" onclick="selectPicked(${m})">${lbl}</button>`;
+    }).join('')}</div>`;
+  } else if (reportPeriod === 'quarterly') {
+    const curQ = Math.ceil(curMonth / 3);
+    const qs = ['1분기','2분기','3분기','4분기'];
+    grid = `<div class="mpp-grid" style="grid-template-columns:repeat(2,1fr);">${qs.map((lbl, i) => {
+      const q = i + 1;
+      const sel = pickerNavYear === curYear && q === curQ ? ' sel' : '';
+      return `<button class="mpp-month${sel}" onclick="selectPicked(${q})" style="padding:11px 0;">${lbl}</button>`;
+    }).join('')}</div>`;
+  } else {
+    // 연도별: 중앙 연도 기준 ±3 범위 표시
+    const years = [];
+    for (let y = pickerNavYear - 3; y <= pickerNavYear + 3; y++) years.push(y);
+    header = `<div class="mpp-header">
+      <button class="mpp-nav" onclick="navPY(-1)">◀</button>
+      <span class="mpp-year" style="font-size:13px;">${pickerNavYear-3} ~ ${pickerNavYear+3}</span>
+      <button class="mpp-nav" onclick="navPY(1)">▶</button>
+    </div>`;
+    grid = `<div class="mpp-grid">${years.map(y => {
+      const sel = y === curYear ? ' sel' : '';
+      return `<button class="mpp-month${sel}" onclick="selectPicked(${y})">${y}년</button>`;
+    }).join('')}</div>`;
+  }
+
+  popup.innerHTML = header + grid;
+}
+
+window.navPY = function(delta) {
+  pickerNavYear += delta;
+  renderPickerPopup();
+};
+
+window.selectPicked = function(val) {
+  if (reportPeriod === 'monthly') {
+    curYear = pickerNavYear;
+    curMonth = val;
+  } else if (reportPeriod === 'quarterly') {
+    curYear  = pickerNavYear;
+    curMonth = val * 3; // 분기 마지막 달 (Q1→3, Q2→6, Q3→9, Q4→12)
+  } else {
+    curYear = val;
+    // 연도별: curMonth 유지 (해당 연도 curMonth 문서 로드)
+  }
+  document.getElementById('periodPickerPopup').style.display = 'none';
+  pickerOpen = false;
+  updatePeriodLabel();
+  loadMonth();
+};
+
+// 피커 외부 클릭 시 닫기
+document.addEventListener('click', function(e) {
+  const wrap = document.getElementById('periodPickerWrap');
+  if (wrap && !wrap.contains(e.target)) {
+    document.getElementById('periodPickerPopup').style.display = 'none';
+    pickerOpen = false;
+  }
+});
 
 
 /* ── Auth ── */
@@ -584,6 +677,7 @@ onAuthStateChanged(auth, user => {
   getDoc(doc(db, 'users', user.uid)).then(snap => {
     if (snap.exists() && snap.data().approved === true) {
       document.getElementById('login-overlay').style.display = 'none';
+      updatePeriodLabel();
       loadMonth();
     } else {
       document.getElementById('login-overlay').style.display = 'flex';
