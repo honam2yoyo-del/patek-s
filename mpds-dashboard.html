@@ -340,10 +340,10 @@
             <button class="filter-pill" data-filter="판매예정">판매 예정</button>
             <button class="filter-pill" data-filter="컨펌예정">컨펌 예정</button>
             <button class="filter-pill" data-filter="이월예정">이월 예정</button>
-            <button class="filter-pill" data-filter="잔여 재고">잔여 재고</button>
+            <button class="filter-pill" data-filter="잔여재고">잔여 재고</button>
             <button class="filter-pill" data-filter="AS">AS</button>
             <button class="filter-pill" data-filter="기타">기타(이동)</button>
-            <button class="filter-pill" data-filter="판매 완료">판매 완료</button>
+            <button class="filter-pill" data-filter="판매완료">판매 완료</button>
             <button class="filter-pill" data-filter="선수금">선수금</button>
           </div>
 
@@ -355,7 +355,7 @@
                   <th style="width:130px;cursor:pointer;user-select:none;" onclick="window.mpdsSortBy('ref')">REF.<span id="mpsi-ref"><span style="font-size:13px;color:#9ca3af;margin-left:3px;line-height:1;">↕</span></span></th>
                   <th style="width:160px;cursor:pointer;user-select:none;" onclick="window.mpdsSortBy('serial')">SERIAL<span id="mpsi-serial"><span style="font-size:13px;color:#9ca3af;margin-left:3px;line-height:1;">↕</span></span></th>
                   <th id="lineFilterTh" style="width:130px;" onclick="window.toggleLineFilter(this)">Collection <span id="lineFilterIndicator" style="font-size:10px;color:#075bd8;"></span></th>
-                  <th id="dateSortTh" style="width:110px;cursor:pointer;user-select:none;" onclick="window.mpdsSortBy('date')">입고일<span id="mpsi-date"><span style="font-size:13px;color:#9ca3af;margin-left:3px;line-height:1;">↕</span></span></th>
+                  <th id="dateSortTh" style="width:110px;cursor:pointer;user-select:none;" onclick="window.mpdsSortBy('saleDate')">예상 판매일<span id="mpsi-saleDate"><span style="font-size:13px;color:#9ca3af;margin-left:3px;line-height:1;">↕</span></span></th>
                   <th style="width:130px;cursor:pointer;user-select:none;" onclick="window.mpdsSortBy('amount')">금액(KRW)<span id="mpsi-amount"><span style="font-size:13px;color:#9ca3af;margin-left:3px;line-height:1;">↕</span></span></th>
                   <th style="width:104px;">상태</th>
                   <th>비고</th>
@@ -460,8 +460,8 @@
       <option value="이월예정">이월 예정</option>
       <option value="AS">AS</option>
       <option value="기타">기타(이동)</option>
-      <option value="잔여 재고">잔여 재고</option>
-      <option value="판매 완료">판매 완료</option>
+      <option value="잔여재고">잔여 재고</option>
+      <option value="판매완료">판매 완료</option>
       <option value="선수금">선수금</option>
     </select>
   </div>
@@ -529,11 +529,11 @@ window.fmtNum = function(el) {
   el.value = raw !== '' ? Number(raw).toLocaleString('ko-KR') : '';
 };
 
-const STATUS_OPTIONS = ['등록','판매예정','컨펌예정','이월예정','AS','기타','잔여 재고','판매 완료','선수금'];
-const MPDS_STATUS_DISPLAY = {'판매예정':'판매 예정','컨펌예정':'컨펌 예정','이월예정':'이월 예정','판매 완료':'판매 완료','선수금':'선수금','등록':'MPDS 등록 중','기타':'기타(이동)','AS':'AS','잔여 재고':'잔여 재고'};
+const STATUS_OPTIONS = ['등록','판매예정','컨펌예정','이월예정','AS','기타','잔여재고','판매완료','선수금'];
+const MPDS_STATUS_DISPLAY = {'판매예정':'판매 예정','컨펌예정':'컨펌 예정','이월예정':'이월 예정','판매완료':'판매 완료','선수금':'선수금','등록':'MPDS 등록 중','기타':'기타(이동)','AS':'AS','잔여재고':'잔여 재고'};
 const IS_NO_PCS = () => false; // 선수금 포함 모든 상태 pcs 집계
 function statusSelClass(s) {
-  return {'등록':'s-reg','판매예정':'s-sale','컨펌예정':'s-confirm','이월예정':'s-carry','AS':'s-as','기타':'s-etc','잔여 재고':'s-rest','보류':'s-rest','판매 완료':'s-done','선수금':'s-advance'}[s]||'s-rest';
+  return {'등록':'s-reg','판매예정':'s-sale','컨펌예정':'s-confirm','이월예정':'s-carry','AS':'s-as','기타':'s-etc','잔여재고':'s-rest','보류':'s-rest','판매완료':'s-done','선수금':'s-advance'}[s]||'s-rest';
 }
 window.statusSelClass = statusSelClass;
 const LINE_COLORS = ['#3b82f6','#22c55e','#f97316','#8b5cf6','#d28c45','#0ea5a4','#2d9cdb','#9ca3af','#9bc4a6','#e11d48'];
@@ -552,7 +552,7 @@ let activeFilters = new Set(['전체']);
 const MPDS_PILL_CLASS = {
   '전체':'active','등록':'active-blue','판매예정':'active-green','컨펌예정':'active-orange',
   '이월예정':'active-blue','AS':'active-red','기타':'active-purple',
-  '잔여 재고':'active-black','판매 완료':'active-teal','선수금':'active-cyan'
+  '잔여재고':'active-black','판매완료':'active-teal','선수금':'active-cyan'
 };
 let lineFilter   = '';
 let dateSortDir  = null;
@@ -699,7 +699,7 @@ function mpdsGetLine(inv) {
 function mpdsShowSaleDialog(ri, targetStatus) {
   const item   = inventory[ri];
   if (!item) return;
-  const status = targetStatus || '판매 완료';
+  const status = targetStatus || '판매완료';
   const modal  = document.getElementById('mpdsSaleModal');
   if (!modal) return;
 
@@ -744,15 +744,22 @@ function mpdsShowSaleDialog(ri, targetStatus) {
 }
 
 /* ── 데이터 로드 ── */
-function loadMonth() {
+async function loadMonth() {
   if (unsubMpds) unsubMpds();
   const docId = `${curYear}-${pad(curMonth)}`;
-  unsubMpds = onSnapshot(doc(db,'artifacts','patek-s','public','data','mpds',docId), snap => {
-    if (snap.exists()) {
-      const d = snap.data();
-      inventory = (d.inventory || DEFAULT_INV).map(r => ({...r, status: r.status === '보류' ? '잔여 재고' : r.status}));
+  // MPDS 전용 설정(minQty, incomingQty)은 mpds 컬렉션에서 별도 로드
+  try {
+    const mpdsSnap = await getDoc(doc(db,'artifacts','patek-s','public','data','mpds',docId));
+    if (mpdsSnap.exists()) {
+      const d = mpdsSnap.data();
       if (d.minQty) document.getElementById('minQtyInput').value = d.minQty;
       if (d.incomingQty != null) document.getElementById('incomingQtyInput').value = d.incomingQty;
+    }
+  } catch(e) { console.error('mpds settings load:', e); }
+  // 행 데이터는 재고/매출과 공유하는 inventory 컬렉션에서 실시간 연동
+  unsubMpds = onSnapshot(doc(db,'artifacts','patek-s','public','data','inventory',docId), snap => {
+    if (snap.exists()) {
+      inventory = (snap.data().rows || DEFAULT_INV).map(r => ({...r, status: r.status === '보류' ? '잔여재고' : r.status}));
     } else {
       inventory = JSON.parse(JSON.stringify(DEFAULT_INV));
     }
@@ -778,7 +785,7 @@ function renderKpi() {
   const reg   = inventory.filter(r => r.status === '등록').length;
   const sale  = inventory.filter(r => r.status === '판매예정').length;
   const as    = inventory.filter(r => r.status === 'AS').length;
-  const rest  = inventory.filter(r => r.status === '잔여 재고').length;
+  const rest  = inventory.filter(r => r.status === '잔여재고').length;
   const setKpi = (id, v) => { const el = document.getElementById(id); if(el) el.innerHTML = `${v} <small>pcs</small>`; };
   setKpi('kpi-total',   total);
   setKpi('kpi-sale',    sale);
@@ -791,7 +798,7 @@ function renderKpi() {
 window.recalcStatus = function() {
   const minQty   = Number(document.getElementById('minQtyInput').value) || 0;
   const reg      = inventory.filter(r => r.status === '등록').length;
-  const rest     = inventory.filter(r => r.status === '잔여 재고').length;
+  const rest     = inventory.filter(r => r.status === '잔여재고').length;
   const possible = rest + reg;
   const incoming = Number(document.getElementById('incomingQtyInput')?.value) || 0;
   const expected = possible + incoming;
@@ -876,7 +883,7 @@ const tblSearch = document.getElementById('tableSearch');
 /* ── MPDS 정렬 상태 (0=기본, 1=오름차순, -1=내림차순) ── */
 let mpdsSortKey = '';
 let mpdsSortDir = 0;
-const MPDS_SORT_COLS = ['ref','serial','date','amount'];
+const MPDS_SORT_COLS = ['ref','serial','saleDate','amount'];
 
 function mpdsUpdateSortIcons() {
   MPDS_SORT_COLS.forEach(k => {
@@ -897,8 +904,7 @@ window.mpdsSortBy = function(key) {
   renderTable();
 };
 
-// 기존 toggleDateSort는 mpdsSortBy로 위임 (하위호환)
-window.toggleDateSort = function() { window.mpdsSortBy('date'); };
+window.toggleDateSort = function() { window.mpdsSortBy('saleDate'); };
 
 function getFiltered() {
   const kw = tblSearch.value.trim().toLowerCase();
@@ -918,14 +924,52 @@ function getFiltered() {
   return list;
 }
 
+/* ── 날짜 자동완성: 260601→2026-06-01(월), 20260601→2026-06-01(월), 0601→해당년도-06-01(월) ── */
+function parseMpdsDate(raw) {
+  if (!raw) return raw;
+  const s = raw.trim();
+  if (!s) return s;
+  if (/^\d{4}-\d{2}-\d{2}[（(][일월화수목금토][）)]$/.test(s)) return s;
+  const days = '일월화수목금토';
+  let year = curYear, month, day, matched = false;
+  const d = s.replace(/\D/g, '');
+  if (d.length === 8) {
+    year = +d.slice(0,4); month = +d.slice(4,6); day = +d.slice(6,8); matched = true;
+  } else if (d.length === 6) {
+    year = 2000 + +d.slice(0,2); month = +d.slice(2,4); day = +d.slice(4,6); matched = true;
+  } else if (d.length === 4) {
+    month = +d.slice(0,2); day = +d.slice(2,4); matched = true;
+  } else {
+    let m = s.match(/^(\d{4})[.\/-](\d{1,2})[.\/-](\d{1,2})$/);
+    if (m) { year = +m[1]; month = +m[2]; day = +m[3]; matched = true; }
+    if (!matched) { m = s.match(/^(\d{1,2})[\/\-\.](\d{1,2})$/); if (m) { month = +m[1]; day = +m[2]; matched = true; } }
+  }
+  if (!matched || !month || !day || month < 1 || month > 12 || day < 1 || day > 31) return s;
+  const dt = new Date(year, month - 1, day);
+  if (dt.getFullYear() !== year || dt.getMonth() !== month - 1 || dt.getDate() !== day) return s;
+  return `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}(${days[dt.getDay()]})`;
+}
+window.mpdsApplyDate = function(ri, el) {
+  const v = parseMpdsDate(el.value);
+  if (v !== el.value) el.value = v;
+  if (inventory[ri]) inventory[ri].saleDate = el.value;
+};
+
 // window 노출 핸들러 (module scope → inline handler 안전 접근)
 window.mpdsSet = function(ri, key, val) {
   if (!inventory[ri]) return;
   inventory[ri][key] = val;
-  // REF 입력 시 Collection 자동 매칭
+  // REF 입력 시 Collection 자동 매칭 + DOM 즉시 반영
   if (key === 'ref' && val) {
     const matched = mpdsGetLine({ ref: val });
-    if (matched) inventory[ri].line = matched;
+    if (matched) {
+      inventory[ri].line = matched;
+      const cb = document.querySelector(`input.row-check[data-idx="${ri}"]`);
+      if (cb) {
+        const inputs = cb.closest('tr')?.querySelectorAll('input.td-edit');
+        if (inputs?.[2]) inputs[2].value = matched;
+      }
+    }
   }
 };
 window.mpdsSetAmt = function(ri, el) {
@@ -949,7 +993,7 @@ window.mpdsStatusDD = function(e, ri) {
       ev.stopPropagation();
       closeMpdsDD();
       if (!inventory[ri]) return;
-      if (s === '판매 완료' || s === '선수금') {
+      if (s === '판매완료' || s === '선수금') {
         mpdsShowSaleDialog(ri, s);
       } else {
         inventory[ri].status = s;
@@ -988,7 +1032,7 @@ function renderTable() {
       <td><input class="td-edit" value="${esc(r.ref||'')}"    oninput="window.mpdsSet(${ri},'ref',this.value)"/></td>
       <td><input class="td-edit" value="${esc(r.serial||'')}" oninput="window.mpdsSet(${ri},'serial',this.value)"/></td>
       <td><input class="td-edit" value="${esc(r.line||'')}"   oninput="window.mpdsSet(${ri},'line',this.value);renderDonut();"/></td>
-      <td><input class="td-edit" value="${esc(r.date||'')}"   oninput="window.mpdsSet(${ri},'date',this.value)" placeholder="YYYY-MM-DD"/></td>
+      <td><input class="td-edit" value="${esc(r.saleDate||'')}" oninput="window.mpdsSet(${ri},'saleDate',this.value)" onblur="window.mpdsApplyDate(${ri},this)" placeholder="예: 260601"/></td>
       <td><input class="td-edit" type="text" inputmode="numeric" value="${fmtInput(r.amount)}"
           oninput="window.mpdsSetAmt(${ri},this)" placeholder="0"/></td>
       <td class="editable-cell" onclick="window.mpdsStatusDD(event,${ri})">
@@ -1052,7 +1096,7 @@ document.getElementById('delAllBtn').addEventListener('click', () => {
 });
 
 document.getElementById('addRowBtn').addEventListener('click', () => {
-  inventory.push({ ref:'', serial:'', line:'', date:'', amount:null, status:'잔여 재고', note:'' });
+  inventory.push({ ref:'', serial:'', line:'', saleDate:'', amount:null, status:'잔여재고', note:'' });
   window.markDirty && window.markDirty();
   renderAll();
   const last = document.getElementById('invTbody').lastElementChild;
@@ -1112,46 +1156,22 @@ window.copyList = function() {
 
 window.printFinalList = function() { window.print(); };
 
-/* ── MPDS→재고 동기화 ── */
-const MPDS_TO_INV_STATUS = {
-  '판매예정':'판매예정','컨펌예정':'컨펌예정','이월예정':'이월예정',
-  '판매 완료':'판매완료','잔여 재고':'잔여재고',
-  'AS':'AS','기타':'기타','등록':'등록','선수금':'선수금'
-};
-async function syncAllToInventory(mpdsRows) {
-  const docId = `${curYear}-${pad(curMonth)}`;
-  try {
-    const snap = await getDoc(doc(db,'artifacts','patek-s','public','data','inventory',docId));
-    const invRows = snap.exists() ? (snap.data().rows||[]).map(r=>({...r})) : [];
-    let changed = false;
-    mpdsRows.forEach(mpds => {
-      if (!mpds.ref) return;
-      const idx = invRows.findIndex(r=>(r.ref||'').toLowerCase()===(mpds.ref||'').toLowerCase());
-      if (idx < 0) return;
-      const ns = MPDS_TO_INV_STATUS[mpds.status];
-      if (ns && invRows[idx].status !== ns) { invRows[idx].status = ns; changed = true; }
-      if (mpds.serial !== undefined && invRows[idx].serial !== mpds.serial) { invRows[idx].serial = mpds.serial||''; changed = true; }
-      if (mpds.amount != null && invRows[idx].amount !== Number(mpds.amount)) { invRows[idx].amount = Number(mpds.amount); changed = true; }
-      if (mpds.note !== undefined && invRows[idx].note !== mpds.note) { invRows[idx].note = mpds.note||''; changed = true; }
-    });
-    if (changed) await setDoc(doc(db,'artifacts','patek-s','public','data','inventory',docId),
-      { rows:invRows, updatedAt:new Date().toISOString() }, {merge:true});
-  } catch(e) { console.error('syncAllToInventory:', e); }
-}
-
-/* ── 저장 ── */
+/* ── 저장 (재고/매출과 공유하는 inventory 컬렉션에 직접 저장) ── */
 document.getElementById('save-btn').addEventListener('click', async () => {
   const btn = document.getElementById('save-btn');
   btn.textContent = '저장 중...';
   try {
-    const mpdsData = inventory.map(r => ({...r, amount: r.amount != null ? Number(r.amount) : null}));
+    const rows = inventory.map(r => ({...r, amount: r.amount != null ? Number(r.amount) : null}));
+    await setDoc(doc(db,'artifacts','patek-s','public','data','inventory',`${curYear}-${pad(curMonth)}`), {
+      rows,
+      updatedAt: new Date().toISOString()
+    }, {merge:true});
+    // MPDS 전용 설정(minQty, incomingQty) 별도 저장
     await setDoc(doc(db,'artifacts','patek-s','public','data','mpds',`${curYear}-${pad(curMonth)}`), {
-      inventory: mpdsData,
       minQty: Number(document.getElementById('minQtyInput').value) || 30,
       incomingQty: Number(document.getElementById('incomingQtyInput')?.value) || 0,
       updatedAt: new Date().toISOString()
     }, {merge:true});
-    syncAllToInventory(mpdsData); // REF. 기준으로 재고 목록에도 반영
     btn.textContent = '✔ 저장됨';
     window.markClean && window.markClean();
     setTimeout(() => { btn.textContent = '💾 저장하기'; }, 2000);
@@ -1164,8 +1184,8 @@ document.getElementById('save-btn').addEventListener('click', async () => {
 /* ── 엑셀 ── */
 document.getElementById('excelBtn').addEventListener('click', () => {
   if (!window.XLSX) { alert('라이브러리 로딩 중'); return; }
-  const header = ['REF.','SERIAL','Collection','입고일','금액(KRW)','상태','등록 여부','비고'];
-  const data   = inventory.map(r => [r.ref, r.serial, r.line, r.date, r.amount, r.status, r.registered, r.note]);
+  const header = ['REF.','SERIAL','Collection','예상 판매일','금액(KRW)','상태','비고'];
+  const data   = inventory.map(r => [r.ref, r.serial, r.line, r.saleDate, r.amount, r.status, r.note]);
   const ws = window.XLSX.utils.aoa_to_sheet([header,...data]);
   const wb = window.XLSX.utils.book_new();
   window.XLSX.utils.book_append_sheet(wb, ws, `MPDS_${curYear}년${curMonth}월`);
