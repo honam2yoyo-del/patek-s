@@ -761,7 +761,7 @@ document.getElementById('monthPickerWrap').addEventListener('click', e => e.stop
 document.getElementById('login-btn').addEventListener('click', async () => {
   try { await signInWithPopup(auth, new GoogleAuthProvider()); } catch(e) { alert('로그인 실패: '+e.message); }
 });
-document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
+document.getElementById('logout-btn').addEventListener('click', () => signOut(auth).then(() => location.replace(location.href)));
 onAuthStateChanged(auth, user => {
   document.getElementById('login-overlay').style.display = user ? 'none' : 'flex';
   if (user) {

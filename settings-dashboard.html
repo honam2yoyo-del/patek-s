@@ -214,7 +214,7 @@ let lines = [];
 document.getElementById('login-btn').addEventListener('click', async () => {
   try { await signInWithPopup(auth, new GoogleAuthProvider()); } catch(e) { alert('로그인 실패: '+e.message); }
 });
-document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
+document.getElementById('logout-btn').addEventListener('click', () => signOut(auth).then(() => location.replace(location.href)));
 onAuthStateChanged(auth, user => {
   document.getElementById('login-overlay').style.display = user ? 'none' : 'flex';
   if (user) loadConfig();
@@ -335,6 +335,7 @@ document.getElementById('resetConfirm').addEventListener('click', async () => {
     document.getElementById('resetConfirmModal').style.display = 'none';
     alert('초기화가 완료되었습니다.\n로그아웃 후 다시 로그인해 주세요.');
     await signOut(auth);
+    location.replace(location.href);
   } catch(e) {
     alert('초기화 실패: ' + e.message);
     btn.textContent = '초기화';

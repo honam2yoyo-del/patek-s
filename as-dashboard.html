@@ -864,7 +864,7 @@ document.getElementById('login-btn').onclick = async () => {
   try { await signInWithPopup(auth, new GoogleAuthProvider()); }
   catch(e) { alert('로그인 실패: ' + e.message); }
 };
-document.getElementById('logout-btn').onclick = () => signOut(auth);
+document.getElementById('logout-btn').onclick = () => signOut(auth).then(() => location.replace(location.href));
 
 let currentUser = null;
 onAuthStateChanged(auth, user => {

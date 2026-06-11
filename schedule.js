@@ -571,4 +571,4 @@ function startListeners() {
 /* ── 인증 ── */
 onAuthStateChanged(auth,user=>{ if(user){document.getElementById('login-overlay').style.display='none';startListeners();}else{document.getElementById('login-overlay').style.display='flex';}});
 document.getElementById('login-btn').addEventListener('click',async()=>{try{await signInWithPopup(auth,gp);}catch(e){if(e.code!=='auth/popup-closed-by-user')alert('로그인 오류: '+e.message);}});
-document.getElementById('logout-btn').addEventListener('click',()=>signOut(auth));
+document.getElementById('logout-btn').addEventListener('click',()=>signOut(auth).then(()=>location.replace(location.href)));

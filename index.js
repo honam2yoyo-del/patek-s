@@ -372,7 +372,7 @@
         }
     };
 
-    window.logout = function() { window.showCustomConfirm("로그아웃 하시겠습니까?", () => { signOut(auth); }); };
+    window.logout = function() { window.showCustomConfirm("로그아웃 하시겠습니까?", () => { signOut(auth).then(() => location.replace(location.href)); }); };
 
     window.openStaffList = function() { window.renderStaffList(); document.getElementById('page-staff-modal').style.display = 'flex'; };
     window.closeStaffList = function() { document.getElementById('page-staff-modal').style.display = 'none'; };
