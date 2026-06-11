@@ -511,6 +511,7 @@ const DEFAULT_NOTES = [];
 let curYear  = new Date().getFullYear();
 let curMonth = new Date().getMonth() + 1;
 let unsubReport = null;
+let lastYearRaw = []; // 작년 같은 달 판매완료 데이터 (yoy 계산용)
 
 let lineData    = JSON.parse(JSON.stringify(DEFAULT_LINES));
 let regionData  = JSON.parse(JSON.stringify(DEFAULT_REGIONS));
@@ -545,6 +546,24 @@ function computeFromSalesRaw(raw) {
     rm[rk].qty++;
     rm[rk].amount += s.amount;
   });
+  // 작년 데이터로 yoy(전년 대비 %) 자동 계산
+  if (lastYearRaw.length > 0) {
+    const lyLine = {}, lyRegion = {};
+    lastYearRaw.forEach(s => {
+      const lk = s.line || '기타';
+      lyLine[lk] = (lyLine[lk] || 0) + s.amount;
+      const rk = s.region || '기타';
+      lyRegion[rk] = (lyRegion[rk] || 0) + s.amount;
+    });
+    Object.values(lm).forEach(r => {
+      const ly = lyLine[r.line] || 0;
+      r.yoy = ly > 0 ? Math.round((r.amount - ly) / ly * 100) : 0;
+    });
+    Object.values(rm).forEach(r => {
+      const ly = lyRegion[r.region] || 0;
+      r.yoy = ly > 0 ? Math.round((r.amount - ly) / ly * 100) : 0;
+    });
+  }
   return {
     ld: Object.values(lm).sort((a,b) => b.amount - a.amount),
     rd: Object.values(rm).sort((a,b) => b.amount - a.amount)
@@ -684,6 +703,7 @@ function loadMonth() {
   if (unsubReport)    unsubReport();
   if (unsubInventory) unsubInventory();
   salesRaw = [];
+  lastYearRaw = [];
 
   const docId = `${curYear}-${pad(curMonth)}`;
 
@@ -730,6 +750,21 @@ function loadMonth() {
     }
     renderAll();
   });
+
+  // 작년 같은 달 inventory 로드 → yoy 계산용
+  const prevDocId = `${curYear - 1}-${pad(curMonth)}`;
+  getDoc(doc(db,'artifacts','patek-s','public','data','inventory', prevDocId)).then(snap => {
+    if (snap.exists()) {
+      const prevRows = snap.data().rows || [];
+      const done = prevRows.filter(r => r.status === '판매완료' || r.status === '판매 완료');
+      lastYearRaw = done.map(r => ({
+        line: r.line || '기타', region: r.region || '기타', amount: Number(r.amount) || 0
+      }));
+    } else {
+      lastYearRaw = [];
+    }
+    renderAll();
+  }).catch(() => { lastYearRaw = []; });
 }
 
 function renderAll() {

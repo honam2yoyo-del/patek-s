@@ -334,15 +334,31 @@ function loadMonth() {
     renderTable();
   });
   // 작년 같은 달 현재 매출 → 작년 월 매출 필드에 자동 반영
+  // inventory에서 직접 계산(판매완료+선수금), fallback으로 sales_dashboard.currentSales 사용
   const prevDocId = `${curYear - 1}-${pad(curMonth)}`;
-  getDoc(doc(db,'artifacts','patek-s','public','data','sales_dashboard', prevDocId)).then(snap => {
-    const d = snap.exists() ? snap.data() : null;
+  Promise.all([
+    getDoc(doc(db,'artifacts','patek-s','public','data','inventory', prevDocId)),
+    getDoc(doc(db,'artifacts','patek-s','public','data','sales_dashboard', prevDocId))
+  ]).then(([invSnap, dashSnap]) => {
     const lyEl    = document.getElementById('f-lastYearSales');
     const lyPcsEl = document.getElementById('f-lastYearPcs');
-    if (lyEl)    lyEl.value    = d?.currentSales != null ? fmtInput(d.currentSales) : '';
-    if (lyPcsEl) {
-      lyPcsEl.value = d?.currentPcs != null ? String(d.currentPcs) : '';
-      lyPcsEl.style.width = Math.max(2, lyPcsEl.value.length || 1) + 'ch';
+    let filled = false;
+    if (invSnap.exists()) {
+      const prevRows  = invSnap.data().rows || [];
+      const completed = prevRows.filter(r => r.status === '판매완료' || r.status === '판매 완료');
+      const advances  = prevRows.filter(r => r.status === '선수금');
+      const totalAmt  = [...completed, ...advances].reduce((s,r) => s+(Number(r.amount)||0), 0);
+      const donePcs   = completed.length;
+      if (totalAmt > 0 || donePcs > 0) {
+        if (lyEl)    lyEl.value    = totalAmt > 0 ? fmtInput(totalAmt) : '';
+        if (lyPcsEl) { lyPcsEl.value = donePcs > 0 ? String(donePcs) : ''; lyPcsEl.style.width = Math.max(2, lyPcsEl.value.length||1)+'ch'; }
+        filled = true;
+      }
+    }
+    if (!filled) {
+      const d = dashSnap.exists() ? dashSnap.data() : null;
+      if (lyEl)    lyEl.value    = d?.currentSales != null ? fmtInput(d.currentSales) : '';
+      if (lyPcsEl) { lyPcsEl.value = d?.currentPcs != null ? String(d.currentPcs) : ''; lyPcsEl.style.width = Math.max(2, lyPcsEl.value.length||1)+'ch'; }
     }
     recalcRemain();
   }).catch(() => {});
