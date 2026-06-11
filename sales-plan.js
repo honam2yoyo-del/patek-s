@@ -773,9 +773,9 @@ function saleUpdateSortIcons() {
   SALE_SORT_COLS.forEach(k => {
     const el = document.getElementById('ssi-' + k);
     if (!el) return;
-    if (k !== saleSortKey || saleSortDir === 0) el.innerHTML = '<span style="font-size:9px;color:#ccc;margin-left:2px;">↕</span>';
-    else if (saleSortDir === 1)                 el.innerHTML = '<span style="font-size:9px;color:#075bd8;margin-left:2px;">▲</span>';
-    else                                        el.innerHTML = '<span style="font-size:9px;color:#075bd8;margin-left:2px;">▼</span>';
+    if (k !== saleSortKey || saleSortDir === 0) el.innerHTML = '<span style="font-size:13px;color:#9ca3af;margin-left:3px;line-height:1;">↕</span>';
+    else if (saleSortDir === 1)                 el.innerHTML = '<span style="font-size:13px;color:#075bd8;margin-left:3px;line-height:1;font-weight:700;">▲</span>';
+    else                                        el.innerHTML = '<span style="font-size:13px;color:#075bd8;margin-left:3px;line-height:1;font-weight:700;">▼</span>';
   });
 }
 window.saleSortBy = function(key) {

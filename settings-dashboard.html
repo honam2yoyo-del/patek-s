@@ -333,10 +333,10 @@ document.getElementById('resetConfirm').addEventListener('click', async () => {
   try {
     await resetAllData();
     document.getElementById('resetConfirmModal').style.display = 'none';
-    alert('초기화가 완료되었습니다.');
+    alert('초기화가 완료되었습니다.\n로그아웃 후 다시 로그인해 주세요.');
+    await signOut(auth);
   } catch(e) {
     alert('초기화 실패: ' + e.message);
-  } finally {
     btn.textContent = '초기화';
     btn.disabled = false;
   }

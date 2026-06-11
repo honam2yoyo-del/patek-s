@@ -352,11 +352,11 @@
               <thead>
                 <tr>
                   <th style="width:40px;"><input type="checkbox" id="checkAll"/></th>
-                  <th style="width:130px;cursor:pointer;user-select:none;" onclick="window.mpdsSortBy('ref')">REF.<span id="mpsi-ref"><span style="font-size:9px;color:#ccc;margin-left:2px;">↕</span></span></th>
-                  <th style="width:160px;cursor:pointer;user-select:none;" onclick="window.mpdsSortBy('serial')">SERIAL<span id="mpsi-serial"><span style="font-size:9px;color:#ccc;margin-left:2px;">↕</span></span></th>
+                  <th style="width:130px;cursor:pointer;user-select:none;" onclick="window.mpdsSortBy('ref')">REF.<span id="mpsi-ref"><span style="font-size:13px;color:#9ca3af;margin-left:3px;line-height:1;">↕</span></span></th>
+                  <th style="width:160px;cursor:pointer;user-select:none;" onclick="window.mpdsSortBy('serial')">SERIAL<span id="mpsi-serial"><span style="font-size:13px;color:#9ca3af;margin-left:3px;line-height:1;">↕</span></span></th>
                   <th id="lineFilterTh" style="width:130px;" onclick="window.toggleLineFilter(this)">Collection <span id="lineFilterIndicator" style="font-size:10px;color:#075bd8;"></span></th>
-                  <th id="dateSortTh" style="width:110px;cursor:pointer;user-select:none;" onclick="window.mpdsSortBy('date')">입고일<span id="mpsi-date"><span style="font-size:9px;color:#ccc;margin-left:2px;">↕</span></span></th>
-                  <th style="width:130px;cursor:pointer;user-select:none;" onclick="window.mpdsSortBy('amount')">금액(KRW)<span id="mpsi-amount"><span style="font-size:9px;color:#ccc;margin-left:2px;">↕</span></span></th>
+                  <th id="dateSortTh" style="width:110px;cursor:pointer;user-select:none;" onclick="window.mpdsSortBy('date')">입고일<span id="mpsi-date"><span style="font-size:13px;color:#9ca3af;margin-left:3px;line-height:1;">↕</span></span></th>
+                  <th style="width:130px;cursor:pointer;user-select:none;" onclick="window.mpdsSortBy('amount')">금액(KRW)<span id="mpsi-amount"><span style="font-size:13px;color:#9ca3af;margin-left:3px;line-height:1;">↕</span></span></th>
                   <th style="width:104px;">상태</th>
                   <th>비고</th>
                   <th style="width:26px;"></th>
@@ -882,9 +882,9 @@ function mpdsUpdateSortIcons() {
   MPDS_SORT_COLS.forEach(k => {
     const el = document.getElementById('mpsi-' + k);
     if (!el) return;
-    if (k !== mpdsSortKey || mpdsSortDir === 0) el.innerHTML = '<span style="font-size:9px;color:#ccc;margin-left:2px;">↕</span>';
-    else if (mpdsSortDir === 1)                 el.innerHTML = '<span style="font-size:9px;color:#075bd8;margin-left:2px;">▲</span>';
-    else                                        el.innerHTML = '<span style="font-size:9px;color:#075bd8;margin-left:2px;">▼</span>';
+    if (k !== mpdsSortKey || mpdsSortDir === 0) el.innerHTML = '<span style="font-size:13px;color:#9ca3af;margin-left:3px;line-height:1;">↕</span>';
+    else if (mpdsSortDir === 1)                 el.innerHTML = '<span style="font-size:13px;color:#075bd8;margin-left:3px;line-height:1;font-weight:700;">▲</span>';
+    else                                        el.innerHTML = '<span style="font-size:13px;color:#075bd8;margin-left:3px;line-height:1;font-weight:700;">▼</span>';
   });
 }
 
