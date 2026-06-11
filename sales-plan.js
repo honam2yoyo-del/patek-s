@@ -224,8 +224,16 @@ document.getElementById('login-btn').addEventListener('click', async () => {
 });
 document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
 onAuthStateChanged(auth, user => {
-  document.getElementById('login-overlay').style.display = user ? 'none' : 'flex';
-  if (user) { initMonthPicker(); updateMonthLabels(); loadMonth(); loadLineConfig(); loadStaffList(); }
+  if (!user) { document.getElementById('login-overlay').style.display = 'flex'; return; }
+  getDoc(doc(db, 'users', user.uid)).then(snap => {
+    if (snap.exists() && snap.data().approved === true) {
+      document.getElementById('login-overlay').style.display = 'none';
+      initMonthPicker(); updateMonthLabels(); loadMonth(); loadLineConfig(); loadStaffList();
+    } else {
+      document.getElementById('login-overlay').style.display = 'flex';
+      signOut(auth);
+    }
+  }).catch(() => { document.getElementById('login-overlay').style.display = 'flex'; signOut(auth); });
 });
 
 /* ────────── 지점 모달 초기화 ────────── */

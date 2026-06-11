@@ -1,6 +1,6 @@
 ﻿import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, collection, onSnapshot, doc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, collection, onSnapshot, doc, setDoc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const FC = { apiKey:"AIzaSyCt7aQXA5eFdnDTMHlRhjPAkyH4b8UB6HY", authDomain:"patek-s.firebaseapp.com", projectId:"patek-s", storageBucket:"patek-s.firebasestorage.app", messagingSenderId:"786016749285", appId:"1:786016749285:web:58538eec1cf7e72068b60c" };
 const app = initializeApp(FC);
@@ -569,6 +569,17 @@ function startListeners() {
 }
 
 /* ── 인증 ── */
-onAuthStateChanged(auth,user=>{ if(user){document.getElementById('login-overlay').style.display='none';startListeners();}else{document.getElementById('login-overlay').style.display='flex';}});
+onAuthStateChanged(auth, user => {
+  if (!user) { document.getElementById('login-overlay').style.display = 'flex'; return; }
+  getDoc(doc(db, 'users', user.uid)).then(snap => {
+    if (snap.exists() && snap.data().approved === true) {
+      document.getElementById('login-overlay').style.display = 'none';
+      startListeners();
+    } else {
+      document.getElementById('login-overlay').style.display = 'flex';
+      signOut(auth);
+    }
+  }).catch(() => { document.getElementById('login-overlay').style.display = 'flex'; signOut(auth); });
+});
 document.getElementById('login-btn').addEventListener('click',async()=>{try{await signInWithPopup(auth,gp);}catch(e){if(e.code!=='auth/popup-closed-by-user')alert('로그인 오류: '+e.message);}});
 document.getElementById('logout-btn').addEventListener('click',()=>signOut(auth).then(()=>location.replace(location.href)));
