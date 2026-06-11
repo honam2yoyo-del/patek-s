@@ -521,7 +521,7 @@
       <aside class="summary-panel">
         <div class="summary-title">재고 상태별 합계</div>
         <table class="summary-table">
-          <thead><tr><th>상태</th><th>수량(PCS)</th><th>총 금액</th></tr></thead>
+          <thead><tr><th style="text-align:center;">상태</th><th style="text-align:center;">수량</th><th style="text-align:center;">총 금액</th></tr></thead>
           <tbody id="summaryTbody"></tbody>
         </table>
       </aside>
@@ -537,7 +537,14 @@
 <!-- ══ 에비뉴엘 연간 모달 ══ -->
 <div class="modal-backdrop" id="avenueModal">
   <div class="modal av-modal">
-    <div class="modal-title">에비뉴엘 월별 매출 입력 (<span id="avenueYearLabel">2026</span>년)</div>
+    <div class="modal-title" style="display:flex;justify-content:space-between;align-items:center;">
+      <span>에비뉴엘 월별 매출 입력</span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <button onclick="window.changeAvYear(-1)" style="width:28px;height:28px;border:1px solid #d9e0ea;border-radius:6px;background:#fff;font-size:16px;cursor:pointer;line-height:1;">‹</button>
+        <span id="avenueYearLabel" style="font-size:18px;font-weight:900;min-width:50px;text-align:center;">2026</span>년
+        <button onclick="window.changeAvYear(1)" style="width:28px;height:28px;border:1px solid #d9e0ea;border-radius:6px;background:#fff;font-size:16px;cursor:pointer;line-height:1;">›</button>
+      </div>
+    </div>
     <div class="av-qtr-grid">
       <div class="av-qtr" id="av-qtr-1">
         <div class="av-qtr-hdr" id="av-qtr-hdr-1">1분기 (1~3월)</div>
@@ -571,7 +578,14 @@
 <!-- ══ 센텀 연간 모달 ══ -->
 <div class="modal-backdrop" id="centumModal">
   <div class="modal av-modal">
-    <div class="modal-title">센텀 월별 매출 입력 (<span id="centumYearLabel">2026</span>년)</div>
+    <div class="modal-title" style="display:flex;justify-content:space-between;align-items:center;">
+      <span>센텀 월별 매출 입력</span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <button onclick="window.changeCtYear(-1)" style="width:28px;height:28px;border:1px solid #d9e0ea;border-radius:6px;background:#fff;font-size:16px;cursor:pointer;line-height:1;">‹</button>
+        <span id="centumYearLabel" style="font-size:18px;font-weight:900;min-width:50px;text-align:center;">2026</span>년
+        <button onclick="window.changeCtYear(1)" style="width:28px;height:28px;border:1px solid #d9e0ea;border-radius:6px;background:#fff;font-size:16px;cursor:pointer;line-height:1;">›</button>
+      </div>
+    </div>
     <div class="av-qtr-grid">
       <div class="av-qtr" id="ct-qtr-1">
         <div class="av-qtr-hdr" id="ct-qtr-hdr-1">1분기 (1~3월)</div>

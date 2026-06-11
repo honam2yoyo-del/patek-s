@@ -492,6 +492,7 @@ window.chStatusDD = function(e, ri) {
         rows[ri].status = s;
         renderKpi();
         renderTable();
+        forceAdvKpi();   // 선수금 KPI 직접 강제 업데이트
         syncStatusToMpds(rows[ri]?.ref, rows[ri]?.serial, s);
         window.markDirty && window.markDirty();
       }
@@ -779,6 +780,7 @@ function loadMonth() {
     rows = snap.exists() ? (snap.data().rows || []).map(r => ({...r, status:canonicalStatus(r.status)})) : [];
     renderTable();
     renderKpi();
+    forceAdvKpi();
   });
 }
 
@@ -820,6 +822,13 @@ function renderKpi() {
   const advAmt = document.getElementById('kpi-adv-amt');
   if (advPcs) advPcs.innerHTML  = `- <small>pcs</small>`;
   if (advAmt) advAmt.textContent = fmtW(stat['선수금'].amt);
+}
+
+function forceAdvKpi() {
+  let advAmt = 0;
+  rows.forEach(r => { if ((r.status||'') === '선수금') advAmt += (typeof r.amount==='number' ? r.amount : (Number(r.amount)||0)); });
+  const el = document.getElementById('kpi-adv-amt');
+  if (el) el.textContent = fmtW(advAmt);
 }
 
 /* ────────── 필터 (복수 선택) ────────── */
@@ -1016,6 +1025,7 @@ document.getElementById('bulkStatusSel').addEventListener('change', function() {
   this.value = '';
   renderTable();
   renderKpi();
+  forceAdvKpi();
 });
 
 /* ────────── 행 추가 ────────── */

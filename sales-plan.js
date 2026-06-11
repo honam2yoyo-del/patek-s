@@ -581,29 +581,82 @@ function renderChart() {
   }
 }
 
-/* ────────── 에비뉴엘 모달 ────────── */
-document.getElementById('avenueOpen').addEventListener('click', () => {
-  const yr = curYear;
-  document.getElementById('avenueYearLabel').textContent = yr;
+/* ────────── 에비뉴엘 모달 (연도 선택 가능) ────────── */
+let avModalYear = curYear;
+let ctModalYear = curYear;
+const modalBranchCache = {}; // { 'av-2025': {...}, 'ct-2024': {...} }
+
+async function loadBranchModalData(prefix, year) {
+  const key = `${prefix}-${year}`;
+  if (modalBranchCache[key]) return modalBranchCache[key];
+  const colName = prefix === 'av' ? 'avenue_annual' : 'centum_annual';
+  try {
+    const snap = await getDoc(doc(db,'artifacts','patek-s','public','data',colName,String(year)));
+    const data = snap.exists() ? snap.data() : {};
+    modalBranchCache[key] = data;
+    return data;
+  } catch(e) { return {}; }
+}
+
+function fillBranchModal(prefix, data) {
+  const isCur = (prefix === 'av' ? avModalYear : ctModalYear) === curYear;
   const cq = curQuarter();
   for (let q = 1; q <= 4; q++) {
-    document.getElementById(`av-qtr-hdr-${q}`).className = `av-qtr-hdr${q === cq ? ' cur' : ''}`;
+    const hdr = document.getElementById(`${prefix === 'av' ? 'av' : 'ct'}-qtr-hdr-${q}`);
+    if (hdr) hdr.className = `av-qtr-hdr${(isCur && q === cq) ? ' cur' : ''}`;
   }
   for (let m = 1; m <= 12; m++) {
-    const amtEl = document.getElementById(`av-m${m}`);
-    const pcsEl = document.getElementById(`av-p${m}`);
-    if (amtEl) amtEl.value = fmtInput(avenueData[`m${m}`]);
-    if (pcsEl) pcsEl.value = fmtInput(avenueData[`m${m}_pcs`]);
+    const amtEl = document.getElementById(`${prefix}-m${m}`);
+    const pcsEl = document.getElementById(`${prefix}-p${m}`);
+    if (amtEl) amtEl.value = fmtInput(data[`m${m}`]);
+    if (pcsEl) pcsEl.value = fmtInput(data[`m${m}_pcs`]);
   }
-  window.calcBranchSub('av');
-  document.getElementById('avenueModal').classList.add('show');
-});
+  window.calcBranchSub(prefix);
+}
 
+async function openBranchModal(prefix) {
+  const yr = prefix === 'av' ? avModalYear : ctModalYear;
+  const labelId = prefix === 'av' ? 'avenueYearLabel' : 'centumYearLabel';
+  const modalId = prefix === 'av' ? 'avenueModal' : 'centumModal';
+  document.getElementById(labelId).textContent = yr;
+  // 현재 연도면 메모리 데이터 사용, 다른 연도면 Firebase에서 로드
+  let data;
+  if (yr === curYear) {
+    data = prefix === 'av' ? avenueData : centumData;
+  } else {
+    data = await loadBranchModalData(prefix, yr);
+  }
+  fillBranchModal(prefix, data);
+  document.getElementById(modalId).classList.add('show');
+}
+
+window.changeAvYear = async function(delta) {
+  avModalYear += delta;
+  document.getElementById('avenueYearLabel').textContent = avModalYear;
+  let data;
+  if (avModalYear === curYear) data = avenueData;
+  else data = await loadBranchModalData('av', avModalYear);
+  fillBranchModal('av', data);
+};
+
+window.changeCtYear = async function(delta) {
+  ctModalYear += delta;
+  document.getElementById('centumYearLabel').textContent = ctModalYear;
+  let data;
+  if (ctModalYear === curYear) data = centumData;
+  else data = await loadBranchModalData('ct', ctModalYear);
+  fillBranchModal('ct', data);
+};
+
+document.getElementById('avenueOpen').addEventListener('click', () => {
+  avModalYear = curYear;
+  openBranchModal('av');
+});
 document.getElementById('avenueClose').addEventListener('click', () =>
   document.getElementById('avenueModal').classList.remove('show'));
 
 document.getElementById('avenueApply').addEventListener('click', () => {
-  const yr = curYear;
+  const yr = avModalYear;
   const saveObj = { updatedAt: new Date().toISOString() };
   const newData = {};
   for (let m = 1; m <= 12; m++) {
@@ -614,39 +667,23 @@ document.getElementById('avenueApply').addEventListener('click', () => {
     newData[`m${m}`]     = amt || 0;
     newData[`m${m}_pcs`] = pcs || 0;
   }
-  // 즉시 UI 반영 (Firestore 응답 대기 없이)
-  avenueData = newData;
-  renderChart();
-  recalcQuarter();
+  modalBranchCache[`av-${yr}`] = newData;
+  if (yr === curYear) { avenueData = newData; renderChart(); recalcQuarter(); }
   document.getElementById('avenueModal').classList.remove('show');
-  // 백그라운드 저장
   setDoc(doc(db,'artifacts','patek-s','public','data','avenue_annual',String(yr)), saveObj, {merge:true})
     .catch(e => console.error('avenue save:', e));
 });
 
-/* ────────── 센텀 모달 ────────── */
+/* ────────── 센텀 모달 (연도 선택 가능) ────────── */
 document.getElementById('centumOpen').addEventListener('click', () => {
-  const yr = curYear;
-  document.getElementById('centumYearLabel').textContent = yr;
-  const cq = curQuarter();
-  for (let q = 1; q <= 4; q++) {
-    document.getElementById(`ct-qtr-hdr-${q}`).className = `av-qtr-hdr${q === cq ? ' cur' : ''}`;
-  }
-  for (let m = 1; m <= 12; m++) {
-    const amtEl = document.getElementById(`ct-m${m}`);
-    const pcsEl = document.getElementById(`ct-p${m}`);
-    if (amtEl) amtEl.value = fmtInput(centumData[`m${m}`]);
-    if (pcsEl) pcsEl.value = fmtInput(centumData[`m${m}_pcs`]);
-  }
-  window.calcBranchSub('ct');
-  document.getElementById('centumModal').classList.add('show');
+  ctModalYear = curYear;
+  openBranchModal('ct');
 });
-
 document.getElementById('centumClose').addEventListener('click', () =>
   document.getElementById('centumModal').classList.remove('show'));
 
 document.getElementById('centumApply').addEventListener('click', () => {
-  const yr = curYear;
+  const yr = ctModalYear;
   const saveObj = { updatedAt: new Date().toISOString() };
   const newData = {};
   for (let m = 1; m <= 12; m++) {
@@ -657,14 +694,20 @@ document.getElementById('centumApply').addEventListener('click', () => {
     newData[`m${m}`]     = amt || 0;
     newData[`m${m}_pcs`] = pcs || 0;
   }
-  // 즉시 UI 반영
-  centumData = newData;
-  renderChart();
-  recalcQuarter();
+  modalBranchCache[`ct-${yr}`] = newData;
+  if (yr === curYear) {
+    centumData = newData;
+    renderChart();
+    recalcQuarter();
+    const sync = { updatedAt: new Date().toISOString() };
+    for (let m = 1; m <= 12; m++) { sync[`m${m}`] = newData[`m${m}`]; sync[`m${m}_pcs`] = newData[`m${m}_pcs`]; }
+    setDoc(doc(db,'artifacts','patek-s','public','data','centum_annual',String(yr)), sync, {merge:true})
+      .catch(e => console.error('centum-sync:', e));
+  } else {
+    setDoc(doc(db,'artifacts','patek-s','public','data','centum_annual',String(yr)), saveObj, {merge:true})
+      .catch(e => console.error('centum save:', e));
+  }
   document.getElementById('centumModal').classList.remove('show');
-  // 백그라운드 저장
-  setDoc(doc(db,'artifacts','patek-s','public','data','centum_annual',String(yr)), saveObj, {merge:true})
-    .catch(e => console.error('centum save:', e));
 });
 
 /* ────────── 분기 목표 인라인 입력 (억 단위) ────────── */
@@ -788,14 +831,16 @@ function updateTabCounts() {
 }
 
 function renderSummary() {
-  const ORDER  = ['전체','판매예정','컨펌예정','이월예정','AS','잔여재고','기타','판매완료','등록','선수금'];
-  const LABELS = { '전체':'전체 재고','판매예정':'판매 예정','컨펌예정':'컨펌 예정','이월예정':'이월 예정','잔여재고':'잔여 재고','AS':'AS','기타':'기타(이동)','판매완료':'판매 완료','등록':'MPDS 등록 중','선수금':'선수금' };
-  const COLORS = { '전체':'black','판매예정':'green','컨펌예정':'orange','이월예정':'blue','잔여재고':'black','AS':'red','기타':'black','판매완료':'blue','등록':'blue','선수금':'black' };
+  // 요청 순서: 전체 재고, 판매 완료, 선수금, 판매 예정, 컨펌 예정, 이월 예정, 잔여 재고, AS, 기타, MPDS 등록 중
+  const ORDER  = ['전체','판매완료','선수금','판매예정','컨펌예정','이월예정','잔여재고','AS','기타','등록'];
+  const LABELS = { '전체':'전체 재고','판매완료':'판매 완료','선수금':'선수금','판매예정':'판매 예정','컨펌예정':'컨펌 예정','이월예정':'이월 예정','잔여재고':'잔여 재고','AS':'AS','기타':'기타(이동)','등록':'MPDS 등록 중' };
+  const COLORS = { '전체':'black','판매완료':'amber','선수금':'black','판매예정':'green','컨펌예정':'orange','이월예정':'blue','잔여재고':'black','AS':'red','기타':'black','등록':'blue' };
+  const TD = 'style="text-align:center;padding:11px 12px;"';
 
   const summary = {};
   ORDER.forEach(s => { summary[s] = { qty:0, amount:0 }; });
   rows.forEach(r => {
-    const s = r.status || '잔여재고';
+    const s   = r.status || '잔여재고';
     const pcs = IS_NO_PCS(s) ? 0 : 1;
     const amt = Number(r.amount)||0;
     if (summary[s] !== undefined) { summary[s].qty += pcs; summary[s].amount += amt; }
@@ -803,8 +848,8 @@ function renderSummary() {
     summary['전체'].qty += pcs; summary['전체'].amount += amt;
   });
   document.getElementById('summaryTbody').innerHTML = ORDER.map(s => {
-    const qtyDisp = s === '선수금' ? '-' : summary[s].qty + ' pcs';
-    return `<tr><td class="${COLORS[s]}">${LABELS[s]}</td><td>${qtyDisp}</td><td>${fmtW(summary[s].amount)}</td></tr>`;
+    const qtyDisp = s === '선수금' ? '-' : pcsLabel(summary[s].qty);
+    return `<tr><td ${TD} class="${COLORS[s]}">${LABELS[s]}</td><td ${TD}>${qtyDisp}</td><td ${TD}>${fmtW(summary[s].amount)}</td></tr>`;
   }).join('');
 }
 
