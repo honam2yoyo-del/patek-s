@@ -434,45 +434,16 @@
         <div class="wide-panel">
           <div class="panel-header">
             <div class="section-title">지역별 판매 현황</div>
-            <div style="display:flex;align-items:center;gap:12px;">
-              <div class="tab-group">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div class="tab-group" id="viewToggle">
+                <button class="tab-btn active" onclick="setView('region',this)">지역</button>
+                <button class="tab-btn" onclick="setView('collection',this)">Collection</button>
+              </div>
+              <div class="tab-group" id="timeTabGroup">
                 <button class="tab-btn active" onclick="setTab('monthly',this)">월별</button>
                 <button class="tab-btn" onclick="setTab('quarterly',this)">분기별</button>
                 <button class="tab-btn" onclick="setTab('yearly',this)">연도별</button>
               </div>
-              <span class="unit">* 단위 : KRW</span>
-            </div>
-          </div>
-          <div class="filter-row">
-            <span class="filter-group-label">지역</span>
-            <div class="filter-btns" id="regionFilterBtns">
-              <button class="filter-btn active" onclick="setRegionFilter(null,this)">전체</button>
-              <button class="filter-btn" onclick="setRegionFilter('부산',this)">부산</button>
-              <button class="filter-btn" onclick="setRegionFilter('서울',this)">서울</button>
-              <button class="filter-btn" onclick="setRegionFilter('대구',this)">대구</button>
-              <button class="filter-btn" onclick="setRegionFilter('경남',this)">경남</button>
-              <button class="filter-btn" onclick="setRegionFilter('울산,경북',this)">울산,경북</button>
-              <button class="filter-btn" onclick="setRegionFilter('광주,전라',this)">광주,전라</button>
-              <button class="filter-btn" onclick="setRegionFilter('경기',this)">경기</button>
-              <button class="filter-btn" onclick="setRegionFilter('세종',this)">세종</button>
-              <button class="filter-btn" onclick="setRegionFilter('강원,충청,제주',this)">강원,충청,제주</button>
-              <button class="filter-btn" onclick="setRegionFilter('기타',this)">기타</button>
-            </div>
-          </div>
-          <div class="filter-row">
-            <span class="filter-group-label">Collection</span>
-            <div class="filter-btns" id="collectionFilterBtns">
-              <button class="filter-btn active" onclick="setCollectionFilter(null,this)">전체</button>
-              <button class="filter-btn" onclick="setCollectionFilter('Grand Complications',this)">Grand Complications</button>
-              <button class="filter-btn" onclick="setCollectionFilter('Complications',this)">Complications</button>
-              <button class="filter-btn" onclick="setCollectionFilter('Calatrava',this)">Calatrava</button>
-              <button class="filter-btn" onclick="setCollectionFilter('Nautilus',this)">Nautilus</button>
-              <button class="filter-btn" onclick="setCollectionFilter('Aquanaut',this)">Aquanaut</button>
-              <button class="filter-btn" onclick="setCollectionFilter('Cubitus',this)">Cubitus</button>
-              <button class="filter-btn" onclick="setCollectionFilter('Twenty~4',this)">Twenty~4</button>
-              <button class="filter-btn" onclick="setCollectionFilter('Gondolo',this)">Gondolo</button>
-              <button class="filter-btn" onclick="setCollectionFilter('Golden Ellipse',this)">Golden Ellipse</button>
-              <button class="filter-btn" onclick="setCollectionFilter('기타',this)">기타</button>
             </div>
           </div>
           <div class="wide-panel-body">
@@ -561,25 +532,18 @@ let lineData    = JSON.parse(JSON.stringify(DEFAULT_LINES));
 let regionData  = JSON.parse(JSON.stringify(DEFAULT_REGIONS));
 let monthlyData = JSON.parse(JSON.stringify(DEFAULT_MONTHLY));
 let notes       = [...DEFAULT_NOTES];
-let salesRaw    = [];
-let selectedRegion     = null;
-let selectedCollection = null;
+let salesRaw  = [];
+let activeTab  = 'monthly';
+let activeView = 'region'; // 'region' | 'collection'
+let yearlyCache = {};
 
-const REGION_CANONICAL = ['부산','서울','대구','경남','울산,경북','광주,전라','경기','세종','강원,충청,제주'];
-const COL_CANONICAL    = ['Grand Complications','Complications','Calatrava','Nautilus','Aquanaut','Cubitus','Twenty~4','Gondolo','Golden Ellipse'];
+const COL_CANONICAL = ['Grand Complications','Complications','Calatrava','Nautilus','Aquanaut','Cubitus','Twenty~4','Gondolo','Golden Ellipse'];
 
-function normReg(r) {
-  const c = (r||'').trim();
-  return REGION_CANONICAL.includes(c) ? c : '기타';
-}
 function normCol(c) {
   const v = (c||'').trim();
   if (v === 'Grand Complication') return 'Grand Complications';
   return COL_CANONICAL.includes(v) ? v : '기타';
 }
-
-let activeTab = 'monthly';
-let yearlyCache = {};
 
 function getYearRange() {
   return [curYear-4, curYear-3, curYear-2, curYear-1, curYear];
@@ -598,7 +562,7 @@ async function loadYearlyData() {
 
 window.setTab = function(tab, btn) {
   activeTab = tab;
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#timeTabGroup .tab-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   if (tab === 'yearly') {
     loadYearlyData().then(() => renderRegionalTable());
@@ -607,15 +571,9 @@ window.setTab = function(tab, btn) {
   }
 };
 
-window.setRegionFilter = function(region, btn) {
-  selectedRegion = region;
-  document.querySelectorAll('#regionFilterBtns .filter-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  renderRegionalTable();
-};
-window.setCollectionFilter = function(col, btn) {
-  selectedCollection = col;
-  document.querySelectorAll('#collectionFilterBtns .filter-btn').forEach(b => b.classList.remove('active'));
+window.setView = function(view, btn) {
+  activeView = view;
+  document.querySelectorAll('#viewToggle .tab-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   renderRegionalTable();
 };
@@ -786,50 +744,40 @@ function renderRegionalTable() {
 function renderMonthlyView() {
   const MONTHS = [1,2,3,4,5,6,7,8,9,10,11,12];
   const curM = curMonth;
-  const useRaw = selectedCollection && salesRaw.length > 0;
+  const rowLabel = activeView === 'collection' ? 'Collection' : '지역';
 
   document.getElementById('monthlyThead').innerHTML = `<tr>
-    <th>지역</th>
+    <th>${rowLabel}</th>
     ${MONTHS.map(m => `<th${m === curM ? ' class="highlight-month"' : ''}>${m}월</th>`).join('')}
     <th>합계</th><th>비중</th><th>전년대비</th>
   </tr>`;
 
   let displayRows;
-  if (useRaw) {
-    const filteredRaw = salesRaw.filter(s => {
-      const colOk = normCol(s.line) === selectedCollection;
-      const regOk = !selectedRegion || normReg(s.region) === selectedRegion;
-      return colOk && regOk;
-    });
-    const regOrder = [...REGION_CANONICAL, '기타'];
-    const usedRegs = selectedRegion
-      ? (regOrder.includes(selectedRegion) ? [selectedRegion] : ['기타'])
-      : regOrder.filter(reg => filteredRaw.some(s => normReg(s.region) === reg));
-    displayRows = usedRegs.map(reg => ({
-      region: reg, ri: -1, yoy: null,
-      monthly: MONTHS.map(m => filteredRaw
-        .filter(s => normReg(s.region) === reg && s.month === m)
+  if (activeView === 'collection') {
+    displayRows = [...COL_CANONICAL, '기타'].map(col => ({
+      region: col, ri: -1, yoy: null,
+      monthly: MONTHS.map(m => salesRaw
+        .filter(s => normCol(s.line) === col && s.month === m)
         .reduce((sum, s) => sum + (Number(s.amount) || 0), 0))
-    }));
+    })).filter(r => r.monthly.some(v => v > 0));
   } else {
-    let rows = regionData.map((r, ri) => ({
+    displayRows = regionData.map((r, ri) => ({
       region: r.region, ri, yoy: r.yoy != null ? r.yoy : null,
       monthly: monthlyData[ri] || new Array(12).fill(0)
     }));
-    if (selectedRegion) rows = rows.filter(r => normReg(r.region) === selectedRegion);
-    displayRows = rows;
   }
 
   const grandTotal = displayRows.reduce((s, r) => s + r.monthly.reduce((a, v) => a + (Number(v) || 0), 0), 0);
 
   document.getElementById('monthlyTbody').innerHTML = displayRows.map(row => {
     const { ri, yoy } = row;
+    const editable = activeView === 'region' && ri >= 0;
     const mCells = MONTHS.map(m => {
       const val = row.monthly[m-1] || 0;
       const cls = m === curM ? ' class="highlight-month"' : '';
       const style = m === curM ? 'color:#0067e8;font-weight:900;' : '';
-      if (useRaw) return `<td${cls} style="${style}">${val > 0 ? fmtN(val) : '-'}</td>`;
-      return `<td${cls}><input class="td-inp" type="text" value="${val > 0 ? fmtN(val) : ''}" oninput="if(!monthlyData[${ri}])monthlyData[${ri}]=new Array(12).fill(0);monthlyData[${ri}][${m-1}]=Number(this.value.replace(/,/g,''))||0;renderMonthlyTfoot();" style="${style}" placeholder="0"/></td>`;
+      if (editable) return `<td${cls}><input class="td-inp" type="text" value="${val > 0 ? fmtN(val) : ''}" oninput="if(!monthlyData[${ri}])monthlyData[${ri}]=new Array(12).fill(0);monthlyData[${ri}][${m-1}]=Number(this.value.replace(/,/g,''))||0;renderMonthlyTfoot();" style="${style}" placeholder="0"/></td>`;
+      return `<td${cls} style="${style}">${val > 0 ? fmtN(val) : '-'}</td>`;
     }).join('');
     const rowSum = row.monthly.reduce((s, v) => s + (Number(v) || 0), 0);
     const share = grandTotal > 0 ? Math.round(rowSum / grandTotal * 100) : 0;
@@ -849,39 +797,29 @@ function renderMonthlyView() {
 function renderQuarterlyView() {
   const QS = ['1분기', '2분기', '3분기', '4분기'];
   const QM = [[0,1,2],[3,4,5],[6,7,8],[9,10,11]];
+  const rowLabel = activeView === 'collection' ? 'Collection' : '지역';
 
   document.getElementById('monthlyThead').innerHTML = `<tr>
-    <th>지역</th>${QS.map(q => `<th>${q}</th>`).join('')}
+    <th>${rowLabel}</th>${QS.map(q => `<th>${q}</th>`).join('')}
     <th>합계</th><th>비중</th><th>전년대비</th>
   </tr>`;
 
   let displayRows;
-  if (selectedCollection && salesRaw.length > 0) {
-    const filteredRaw = salesRaw.filter(s => {
-      const colOk = normCol(s.line) === selectedCollection;
-      const regOk = !selectedRegion || normReg(s.region) === selectedRegion;
-      return colOk && regOk;
-    });
-    const regOrder = [...REGION_CANONICAL, '기타'];
-    const usedRegs = selectedRegion
-      ? (regOrder.includes(selectedRegion) ? [selectedRegion] : ['기타'])
-      : regOrder.filter(reg => filteredRaw.some(s => normReg(s.region) === reg));
-    displayRows = usedRegs.map(reg => ({
-      region: reg, ri: -1, yoy: null,
-      quarterly: QM.map(months => filteredRaw
-        .filter(s => normReg(s.region) === reg && months.includes(s.month - 1))
+  if (activeView === 'collection') {
+    displayRows = [...COL_CANONICAL, '기타'].map(col => ({
+      region: col, ri: -1, yoy: null,
+      quarterly: QM.map(months => salesRaw
+        .filter(s => normCol(s.line) === col && months.includes(s.month - 1))
         .reduce((sum, s) => sum + (Number(s.amount) || 0), 0))
-    }));
+    })).filter(r => r.quarterly.some(v => v > 0));
   } else {
-    let rows = regionData.map((r, ri) => {
+    displayRows = regionData.map((r, ri) => {
       const m = monthlyData[ri] || new Array(12).fill(0);
       return {
         region: r.region, ri, yoy: r.yoy != null ? r.yoy : null,
         quarterly: QM.map(months => months.reduce((s, mi) => s + (Number(m[mi]) || 0), 0))
       };
     });
-    if (selectedRegion) rows = rows.filter(r => normReg(r.region) === selectedRegion);
-    displayRows = rows;
   }
 
   const grandTotal = displayRows.reduce((s, r) => s + r.quarterly.reduce((a, v) => a + (v || 0), 0), 0);
@@ -890,9 +828,8 @@ function renderQuarterlyView() {
     const qCells = row.quarterly.map(v => `<td>${v > 0 ? fmtN(v) : '-'}</td>`).join('');
     const rowSum = row.quarterly.reduce((s, v) => s + (v || 0), 0);
     const share = grandTotal > 0 ? Math.round(rowSum / grandTotal * 100) : 0;
-    const { yoy } = row;
-    const yoyHtml = yoy != null
-      ? `<span class="${yoy >= 0 ? 'up' : 'down'}">${yoy >= 0 ? '+' + yoy : yoy}%</span>` : '-';
+    const yoyHtml = row.yoy != null
+      ? `<span class="${row.yoy >= 0 ? 'up' : 'down'}">${row.yoy >= 0 ? '+' + row.yoy : row.yoy}%</span>` : '-';
     return `<tr>
       <td>${esc(row.region)}</td>${qCells}
       <td style="font-weight:900;">${rowSum > 0 ? fmtN(rowSum) : '-'}</td>
@@ -906,25 +843,44 @@ function renderQuarterlyView() {
 
 function renderYearlyView() {
   const years = getYearRange();
+  const rowLabel = activeView === 'collection' ? 'Collection' : '지역';
 
   document.getElementById('monthlyThead').innerHTML = `<tr>
-    <th>지역</th>${years.map(y => `<th>${y}년</th>`).join('')}
+    <th>${rowLabel}</th>${years.map(y => `<th>${y}년</th>`).join('')}
     <th>합계</th><th>비중</th><th>전년대비</th>
   </tr>`;
 
-  const displayRows = regionData.map((r, ri) => {
-    const yearTotals = years.map(y => {
-      if (y === curYear) return (monthlyData[ri] || []).reduce((s, v) => s + (Number(v) || 0), 0);
-      const cached = yearlyCache[y];
-      if (!cached || !cached.monthlyData) return 0;
-      const cm = cached.monthlyData[ri];
-      return cm ? cm.reduce((s, v) => s + (Number(v) || 0), 0) : 0;
+  let displayRows;
+  if (activeView === 'collection') {
+    displayRows = [...COL_CANONICAL, '기타'].map(col => {
+      const yearTotals = years.map(y => {
+        if (y === curYear) return salesRaw.filter(s => normCol(s.line) === col).reduce((s, v) => s + (Number(v.amount) || 0), 0);
+        const cached = yearlyCache[y];
+        if (!cached) return 0;
+        const yr = cached.salesListData?.salesRaw;
+        if (yr?.length) return yr.filter(s => normCol(s.line) === col).reduce((s, v) => s + (Number(v.amount) || 0), 0);
+        const ld = cached.salesListData?.lineData || cached.lineData || [];
+        const e = ld.find(r => normCol(r.line || r.name || '') === col);
+        return e ? (Number(e.amount) || 0) : 0;
+      });
+      const cur = yearTotals[yearTotals.length-1], prev = yearTotals[yearTotals.length-2];
+      const yoy = prev > 0 ? Math.round((cur - prev) / prev * 100) : null;
+      return { region: col, ri: -1, yearTotals, yoy };
+    }).filter(r => r.yearTotals.some(v => v > 0));
+  } else {
+    displayRows = regionData.map((r, ri) => {
+      const yearTotals = years.map(y => {
+        if (y === curYear) return (monthlyData[ri] || []).reduce((s, v) => s + (Number(v) || 0), 0);
+        const cached = yearlyCache[y];
+        if (!cached || !cached.monthlyData) return 0;
+        const cm = cached.monthlyData[ri];
+        return cm ? cm.reduce((s, v) => s + (Number(v) || 0), 0) : 0;
+      });
+      const cur = yearTotals[yearTotals.length-1], prev = yearTotals[yearTotals.length-2];
+      const yoy = prev > 0 ? Math.round((cur - prev) / prev * 100) : null;
+      return { region: r.region, ri, yearTotals, yoy };
     });
-    const curTotal  = yearTotals[yearTotals.length - 1];
-    const prevTotal = yearTotals[yearTotals.length - 2];
-    const yoy = prevTotal > 0 ? Math.round((curTotal - prevTotal) / prevTotal * 100) : null;
-    return { region: r.region, ri, yearTotals, yoy };
-  });
+  }
 
   const grandTotal = displayRows.reduce((s, r) => s + r.yearTotals.reduce((a, v) => a + (v || 0), 0), 0);
 
@@ -932,9 +888,8 @@ function renderYearlyView() {
     const yCells = row.yearTotals.map(v => `<td>${v > 0 ? fmtN(v) : '-'}</td>`).join('');
     const rowSum = row.yearTotals.reduce((s, v) => s + (v || 0), 0);
     const share = grandTotal > 0 ? Math.round(rowSum / grandTotal * 100) : 0;
-    const { yoy } = row;
-    const yoyHtml = yoy != null
-      ? `<span class="${yoy >= 0 ? 'up' : 'down'}">${yoy >= 0 ? '+' + yoy : yoy}%</span>` : '-';
+    const yoyHtml = row.yoy != null
+      ? `<span class="${row.yoy >= 0 ? 'up' : 'down'}">${row.yoy >= 0 ? '+' + row.yoy : row.yoy}%</span>` : '-';
     return `<tr>
       <td>${esc(row.region)}</td>${yCells}
       <td style="font-weight:900;">${rowSum > 0 ? fmtN(rowSum) : '-'}</td>
@@ -973,17 +928,11 @@ function _renderTfoot(type, displayRows, grandTotal) {
 }
 
 window.renderMonthlyTfoot = function() {
-  // 월별 탭 셀 편집 시 호출 — tfoot + 비중 셀 실시간 갱신
+  // 월별 탭(지역 뷰) 셀 편집 시 호출 — tfoot + 비중 셀 실시간 갱신
   const MONTHS = [1,2,3,4,5,6,7,8,9,10,11,12];
   const curM = curMonth;
-  const filteredRegs = selectedRegion
-    ? regionData.filter(r => normReg(r.region) === selectedRegion)
-    : regionData;
   const mSums = MONTHS.map((_, mi) =>
-    filteredRegs.reduce((s, r) => {
-      const ri = regionData.indexOf(r);
-      return s + (Number((monthlyData[ri] || [])[mi]) || 0);
-    }, 0)
+    regionData.reduce((s, r, ri) => s + (Number((monthlyData[ri] || [])[mi]) || 0), 0)
   );
   const total = mSums.reduce((s, v) => s + v, 0);
   const tCells = mSums.map((v, mi) => {
@@ -993,10 +942,8 @@ window.renderMonthlyTfoot = function() {
   document.getElementById('monthlyTfoot').innerHTML =
     `<tr><td>합계</td>${tCells}<td>${total > 0 ? fmtN(total) : '-'}</td><td>100%</td><td>-</td></tr>`;
 
-  const grandTotal = filteredRegs.reduce((s, r) => {
-    const ri = regionData.indexOf(r);
-    return s + (monthlyData[ri] || []).reduce((a, v) => a + (Number(v) || 0), 0);
-  }, 0);
+  const grandTotal = regionData.reduce((s, r, ri) =>
+    s + (monthlyData[ri] || []).reduce((a, v) => a + (Number(v) || 0), 0), 0);
   document.querySelectorAll('.share-cell').forEach(cell => {
     const ri = Number(cell.dataset.ri);
     if (ri < 0) return;
