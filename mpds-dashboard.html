@@ -340,9 +340,9 @@
             <button class="filter-pill" data-filter="판매예정">판매 예정</button>
             <button class="filter-pill" data-filter="컨펌예정">컨펌 예정</button>
             <button class="filter-pill" data-filter="이월예정">이월 예정</button>
+            <button class="filter-pill" data-filter="잔여 재고">잔여 재고</button>
             <button class="filter-pill" data-filter="AS">AS</button>
             <button class="filter-pill" data-filter="기타">기타(이동)</button>
-            <button class="filter-pill" data-filter="잔여 재고">잔여 재고</button>
             <button class="filter-pill" data-filter="판매 완료">판매 완료</button>
             <button class="filter-pill" data-filter="선수금">선수금</button>
           </div>
@@ -352,11 +352,11 @@
               <thead>
                 <tr>
                   <th style="width:40px;"><input type="checkbox" id="checkAll"/></th>
-                  <th style="width:130px;">REF.</th>
-                  <th style="width:160px;">SERIAL</th>
+                  <th style="width:130px;cursor:pointer;user-select:none;" onclick="window.mpdsSortBy('ref')">REF.<span id="mpsi-ref"><span style="font-size:9px;color:#ccc;margin-left:2px;">↕</span></span></th>
+                  <th style="width:160px;cursor:pointer;user-select:none;" onclick="window.mpdsSortBy('serial')">SERIAL<span id="mpsi-serial"><span style="font-size:9px;color:#ccc;margin-left:2px;">↕</span></span></th>
                   <th id="lineFilterTh" style="width:130px;" onclick="window.toggleLineFilter(this)">Collection <span id="lineFilterIndicator" style="font-size:10px;color:#075bd8;"></span></th>
-                  <th id="dateSortTh" style="width:110px;" onclick="window.toggleDateSort()">입고일 <span id="dateSortIndicator"></span></th>
-                  <th style="width:130px;">금액(KRW)</th>
+                  <th id="dateSortTh" style="width:110px;cursor:pointer;user-select:none;" onclick="window.mpdsSortBy('date')">입고일<span id="mpsi-date"><span style="font-size:9px;color:#ccc;margin-left:2px;">↕</span></span></th>
+                  <th style="width:130px;cursor:pointer;user-select:none;" onclick="window.mpdsSortBy('amount')">금액(KRW)<span id="mpsi-amount"><span style="font-size:9px;color:#ccc;margin-left:2px;">↕</span></span></th>
                   <th style="width:104px;">상태</th>
                   <th>비고</th>
                   <th style="width:26px;"></th>
@@ -754,7 +754,8 @@ function loadMonth() {
     }
     selectedIds = new Set();
     dateSortDir = null;
-    const ind = document.getElementById('dateSortIndicator'); if (ind) ind.textContent = '';
+    mpdsSortKey = ''; mpdsSortDir = 0;
+    mpdsUpdateSortIcons();
     renderAll();
   });
 }
@@ -868,6 +869,33 @@ document.getElementById('tabsBar').addEventListener('click', e => {
 /* ── 테이블 ── */
 const tblSearch = document.getElementById('tableSearch');
 
+/* ── MPDS 정렬 상태 (0=기본, 1=오름차순, -1=내림차순) ── */
+let mpdsSortKey = '';
+let mpdsSortDir = 0;
+const MPDS_SORT_COLS = ['ref','serial','date','amount'];
+
+function mpdsUpdateSortIcons() {
+  MPDS_SORT_COLS.forEach(k => {
+    const el = document.getElementById('mpsi-' + k);
+    if (!el) return;
+    if (k !== mpdsSortKey || mpdsSortDir === 0) el.innerHTML = '<span style="font-size:9px;color:#ccc;margin-left:2px;">↕</span>';
+    else if (mpdsSortDir === 1)                 el.innerHTML = '<span style="font-size:9px;color:#075bd8;margin-left:2px;">▲</span>';
+    else                                        el.innerHTML = '<span style="font-size:9px;color:#075bd8;margin-left:2px;">▼</span>';
+  });
+}
+
+window.mpdsSortBy = function(key) {
+  if (mpdsSortKey !== key) { mpdsSortKey = key; mpdsSortDir = 1; }
+  else if (mpdsSortDir === 1)  mpdsSortDir = -1;
+  else if (mpdsSortDir === -1) { mpdsSortKey = ''; mpdsSortDir = 0; }
+  else                          mpdsSortDir = 1;
+  mpdsUpdateSortIcons();
+  renderTable();
+};
+
+// 기존 toggleDateSort는 mpdsSortBy로 위임 (하위호환)
+window.toggleDateSort = function() { window.mpdsSortBy('date'); };
+
 function getFiltered() {
   const kw = tblSearch.value.trim().toLowerCase();
   let list = inventory.map((r,i) => ({...r, _i:i})).filter(r => {
@@ -876,17 +904,15 @@ function getFiltered() {
     const kmatch = !kw || (r.ref||'').toLowerCase().includes(kw) || (r.serial||'').toLowerCase().includes(kw) || (r.line||'').toLowerCase().includes(kw);
     return fmatch && lmatch && kmatch;
   });
-  if (dateSortDir === 'asc')  list.sort((a,b) => (a.date||'').localeCompare(b.date||''));
-  if (dateSortDir === 'desc') list.sort((a,b) => (b.date||'').localeCompare(a.date||''));
+  if (mpdsSortKey && mpdsSortDir !== 0) {
+    const dir = mpdsSortDir;
+    list.sort((a, b) => {
+      if (mpdsSortKey === 'amount') return ((Number(a.amount)||0) - (Number(b.amount)||0)) * dir;
+      return ((a[mpdsSortKey]||'').toString().toLowerCase()).localeCompare(((b[mpdsSortKey]||'').toString().toLowerCase()), 'ko-KR', {numeric:true}) * dir;
+    });
+  }
   return list;
 }
-
-window.toggleDateSort = function() {
-  dateSortDir = dateSortDir === null ? 'asc' : dateSortDir === 'asc' ? 'desc' : null;
-  const ind = document.getElementById('dateSortIndicator');
-  if (ind) ind.textContent = dateSortDir === 'asc' ? '↑' : dateSortDir === 'desc' ? '↓' : '';
-  renderTable();
-};
 
 // window 노출 핸들러 (module scope → inline handler 안전 접근)
 window.mpdsSet = function(ri, key, val) {

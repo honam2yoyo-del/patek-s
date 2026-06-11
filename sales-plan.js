@@ -757,9 +757,33 @@ document.getElementById('goalRateApply').addEventListener('click', () => {
   document.getElementById('goalRateModal').classList.remove('show');
 });
 
+/* ────────── 매출 표 정렬 상태 ────────── */
+let saleSortKey = '';
+let saleSortDir = 0; // 0=기본 1=오름차순 -1=내림차순
+
+const SALE_SORT_COLS = ['ref','serial','amount','customer','saleDate'];
+function saleUpdateSortIcons() {
+  SALE_SORT_COLS.forEach(k => {
+    const el = document.getElementById('ssi-' + k);
+    if (!el) return;
+    if (k !== saleSortKey || saleSortDir === 0) el.innerHTML = '<span style="font-size:9px;color:#ccc;margin-left:2px;">↕</span>';
+    else if (saleSortDir === 1)                 el.innerHTML = '<span style="font-size:9px;color:#075bd8;margin-left:2px;">▲</span>';
+    else                                        el.innerHTML = '<span style="font-size:9px;color:#075bd8;margin-left:2px;">▼</span>';
+  });
+}
+window.saleSortBy = function(key) {
+  if (saleSortKey !== key) { saleSortKey = key; saleSortDir = 1; }
+  else if (saleSortDir === 1)  saleSortDir = -1;
+  else if (saleSortDir === -1) { saleSortKey = ''; saleSortDir = 0; }
+  else                          saleSortDir = 1;
+  saleUpdateSortIcons();
+  renderTable();
+};
+
 /* ────────── 재고 테이블 ────────── */
 function renderTable() {
   updateTabCounts();
+  saleUpdateSortIcons();
   const tbody    = document.getElementById('inventoryTbody');
   const q = searchQuery.trim().toLowerCase();
   let filtered = activeFilters.has('전체') ? rows : rows.filter(r => activeFilters.has(r.status));
@@ -768,6 +792,14 @@ function renderTable() {
     (r.ref||'').toLowerCase().includes(q) ||
     (r.serial||'').toLowerCase().includes(q)
   );
+  if (saleSortKey && saleSortDir !== 0) {
+    const dir = saleSortDir;
+    filtered.sort((a, b) => {
+      if (saleSortKey === 'amount')   return ((Number(a.amount)||0) - (Number(b.amount)||0)) * dir;
+      if (saleSortKey === 'saleDate') { const da=(a.saleDate||''), db=(b.saleDate||''); return da.localeCompare(db) * dir; }
+      return ((a[saleSortKey]||'').toString().toLowerCase()).localeCompare(((b[saleSortKey]||'').toString().toLowerCase()), 'ko-KR', {numeric:true}) * dir;
+    });
+  }
   tbody.innerHTML = '';
 
   filtered.forEach((r) => {

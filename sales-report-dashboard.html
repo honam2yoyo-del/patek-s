@@ -498,11 +498,11 @@
             <thead>
               <tr>
                 <th><input type="checkbox" id="checkAll"/></th>
-                <th>REF.</th>
-                <th>Serial</th>
-                <th>금액</th>
-                <th>고객명</th>
-                <th>예상 판매일</th>
+                <th style="cursor:pointer;user-select:none;" onclick="window.saleSortBy('ref')">REF.<span id="ssi-ref"><span style="font-size:9px;color:#ccc;margin-left:2px;">↕</span></span></th>
+                <th style="cursor:pointer;user-select:none;" onclick="window.saleSortBy('serial')">Serial<span id="ssi-serial"><span style="font-size:9px;color:#ccc;margin-left:2px;">↕</span></span></th>
+                <th style="cursor:pointer;user-select:none;" onclick="window.saleSortBy('amount')">금액<span id="ssi-amount"><span style="font-size:9px;color:#ccc;margin-left:2px;">↕</span></span></th>
+                <th style="cursor:pointer;user-select:none;" onclick="window.saleSortBy('customer')">고객명<span id="ssi-customer"><span style="font-size:9px;color:#ccc;margin-left:2px;">↕</span></span></th>
+                <th style="cursor:pointer;user-select:none;" onclick="window.saleSortBy('saleDate')">예상 판매일<span id="ssi-saleDate"><span style="font-size:9px;color:#ccc;margin-left:2px;">↕</span></span></th>
                 <th>상태</th>
                 <th>비고</th>
                 <th></th>
