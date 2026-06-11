@@ -324,7 +324,7 @@
         <div class="inventory-panel" style="margin-top:14px;">
           <div class="table-ctrl">
             <div class="search-wrap">
-              <input id="tableSearch" class="search-input" type="text" placeholder="REF., SERIAL, 라인 검색"/>
+              <input id="tableSearch" class="search-input" type="text" placeholder="REF., SERIAL, Collection 검색"/>
               <span class="search-icon">🔍</span>
             </div>
             <div style="display:flex;gap:8px;align-items:center;">
@@ -354,7 +354,7 @@
                   <th style="width:40px;"><input type="checkbox" id="checkAll"/></th>
                   <th style="width:130px;">REF.</th>
                   <th style="width:160px;">SERIAL</th>
-                  <th id="lineFilterTh" style="width:130px;" onclick="window.toggleLineFilter(this)">라인 <span id="lineFilterIndicator" style="font-size:10px;color:#075bd8;"></span></th>
+                  <th id="lineFilterTh" style="width:130px;" onclick="window.toggleLineFilter(this)">Collection <span id="lineFilterIndicator" style="font-size:10px;color:#075bd8;"></span></th>
                   <th id="dateSortTh" style="width:110px;" onclick="window.toggleDateSort()">입고일 <span id="dateSortIndicator"></span></th>
                   <th style="width:130px;">금액(KRW)</th>
                   <th style="width:104px;">상태</th>
@@ -430,7 +430,7 @@
           </div>
           <table class="line-sum-tbl">
             <thead>
-              <tr><th>라인</th><th>수량</th><th>비율</th></tr>
+              <tr><th>Collection</th><th>수량</th><th>비율</th></tr>
             </thead>
             <tbody id="lineSummaryBody"></tbody>
             <tfoot>
@@ -488,7 +488,7 @@
         <select id="mpdsScSalesperson" style="height:38px;border:1px solid #d9e0ea;border-radius:7px;padding:0 12px;font-size:14px;font-family:inherit;outline:none;cursor:pointer;"></select>
       </div>
       <div style="display:grid;grid-template-columns:80px 1fr;align-items:center;gap:10px;">
-        <label style="font-size:14px;font-weight:900;color:#374151;">라인</label>
+        <label style="font-size:14px;font-weight:900;color:#374151;">Collection</label>
         <input id="mpdsScLine" type="text" placeholder="자동 매칭" readonly style="height:38px;border:1px solid #e2e7ef;border-radius:7px;padding:0 12px;font-size:14px;font-family:inherit;background:#f6f8fb;color:#374151;"/>
       </div>
     </div>
@@ -650,6 +650,7 @@ onAuthStateChanged(auth, user => {
   if (user) {
     document.getElementById('monthPickerLabel').textContent = `${curYear}년 ${curMonth}월`;
     loadMpdsStaff();
+    loadMpdsLineConfig();
     loadMonth();
   }
 });
@@ -662,7 +663,35 @@ async function loadMpdsStaff() {
     _mpdsStaff = snap.docs.map(d=>({id:d.id,...d.data()})).filter(u=>u.approved);
   } catch(e) { _mpdsStaff = []; }
 }
-function mpdsGetLine(inv) { return inv.line || ''; }
+// DEFAULT_LINES 폴백 (lineConfig 미로드 시)
+const MPDS_DEFAULT_LINES = [
+  { name: 'Grand Complications', refs: ['5320G-011','5327G-001','5327R-001','7140G-001','7140R-001','5236P-011','5160/500R-001','6159G-001','5270J-001','5322G-001','5531G-001','6002R-001','6301P-001','6300GR-001','27000M-001'] },
+  { name: 'Complications', refs: ['5328G-001','5212A-001','5205G-013','5205R-011','5396G-017','5396R-016','4946G-001','4946R-001','4947/1A-001','4948R-001','5235/50R-001','5326G-001','5172G-001','5172G-010','5905/1A-001','5905R-010','5961R-010','5961P-001','5224R-001','5524G-010','5524R-001','5231G-001','5330G-001','5930P-001','7129J-001','5935A-001','7130G-016','5924G-001','5924G-010','7121/200G-001','5180/1R-001','5249R-001'] },
+  { name: 'Calatrava', refs: ['5088/100P-001','5226G-001','5227G-015','5227J-001','6007G-001','6007G-010','6007G-011','6119G-001','6119R-001','6196P-001','7200/50G-001','7200/50G-012'] },
+  { name: 'Gondolo', refs: ['7042/100R-010','7042/100G-010','4962/200R-010'] },
+  { name: 'Golden Ellipse', refs: ['5738/1R-001','5738P-001','5738R-001','5738/51G-001','5738G-001','3738/100G-014'] },
+  { name: 'Cubitus', refs: ['5822P-001','5821/1AR-001','5821/1A-001','7128/1G-001','7128/1R-001','5840P-001'] },
+  { name: 'Nautilus', refs: ['5712/1R-001','5726/1A-014','5726A-001','5811/1G-001','5811/1460G-001','5740/1G-001','5980/1400G-010','5980/1400R-011','5980/60G-001','5990/1A-011','5990/1R-001','5990/1400G-001','7010/1G-013','7010/1R-013','7010G-013','7010R-013','7118/1A-001','7118/1R-001','7118/1R-010','7118/1200R-001','7118/1450G-001','7118/1450R-001','5723/1R-001','5723/112R-001','5711/110P-001','5711/111P-001','5711/112P-001','5810/1G-001','5610/1P-001','958G-001'] },
+  { name: 'Aquanaut', refs: ['5167A-001','5167R-001','5164G-001','5164R-001','5168G-001','5168G-010','5968A-001','5968G-001','5968G-010','5968R-001','5072R-001','5261R-001','5267/200A-001','5267/200A-010','5268/200R-010','5268/461G-001','5269R-001','7968/300R-001'] },
+  { name: 'Twenty~4', refs: ['7300/1200A-001','7300/1200A-010','7300/1200A-011','7300/1200R-001','7300/1200R-010','4910/1200A-001','4910/1200A-010','4910/1200A-011','7340/1R-001','7340/1R-010'] },
+  { name: 'Pocket Watches', refs: ['973J-001','980G-010','980J-011','980R-001','983J-001'] }
+];
+let _mpdsLineConfig = [];
+async function loadMpdsLineConfig() {
+  try {
+    const snap = await getDoc(doc(db,'artifacts','patek-s','public','data','lineConfig'));
+    _mpdsLineConfig = snap.exists() ? (snap.data().lines||[]) : [];
+  } catch(e) { _mpdsLineConfig = []; }
+}
+function mpdsGetLine(inv) {
+  if (!inv.ref) return inv.line||'';
+  const pool = _mpdsLineConfig.length > 0 ? _mpdsLineConfig : MPDS_DEFAULT_LINES;
+  const r = (inv.ref||'').toLowerCase();
+  for (const l of pool) {
+    if ((l.refs||[]).some(x=>x.toLowerCase()===r)) return l.name;
+  }
+  return inv.line||'';
+}
 function mpdsShowSaleDialog(ri) {
   const item = inventory[ri];
   if (!item) return;
@@ -681,10 +710,19 @@ function mpdsShowSaleDialog(ri) {
   modal.style.display = 'flex';
   document.getElementById('mpdsScCancel').onclick  = () => { modal.style.display='none'; };
   document.getElementById('mpdsScConfirm').onclick = () => {
+    const region = (document.getElementById('mpdsScRegion')?.value||'').trim();
+    const staff  = document.getElementById('mpdsScSalesperson')?.value||'';
+    const date   = (document.getElementById('mpdsScDate')?.value||'').trim();
+    const line   = document.getElementById('mpdsScLine')?.value||'';
+    if (!date)   { alert('판매일을 입력해 주세요.'); return; }
+    if (!region) { alert('지역을 입력해 주세요.'); return; }
+    if (!staff)  { alert('판매 직원을 선택해 주세요.'); return; }
+    if (!line)   { alert('Collection 정보가 없습니다. 설정에서 Collection을 먼저 등록해 주세요.'); return; }
     item.status            = '판매 완료';
-    item.region            = (document.getElementById('mpdsScRegion')?.value||'').trim();
-    item.salesperson       = document.getElementById('mpdsScSalesperson')?.value||'';
-    item.saleCompletedDate = document.getElementById('mpdsScDate')?.value||'';
+    item.region            = region;
+    item.salesperson       = staff;
+    item.line              = line;
+    item.saleCompletedDate = date;
     modal.style.display    = 'none';
     renderAll();
     window.markDirty && window.markDirty();
@@ -1020,7 +1058,7 @@ window.clearSelection = function() { selectedIds.clear(); renderTable(); };
 
 window.copyList = function() {
   const items = inventory.filter((_,i) => selectedIds.has(i));
-  const text = ['REF.\tSERIAL\t라인\t금액', ...items.map(r => `${r.ref}\t${r.serial}\t${r.line}\t${Number(r.amount||0).toLocaleString('ko-KR')}`)].join('\n');
+  const text = ['REF.\tSERIAL\tCollection\t금액', ...items.map(r => `${r.ref}\t${r.serial}\t${r.line}\t${Number(r.amount||0).toLocaleString('ko-KR')}`)].join('\n');
   navigator.clipboard.writeText(text).then(() => alert('등록 리스트가 클립보드에 복사되었습니다.')).catch(() => alert('복사 실패'));
 };
 
@@ -1078,7 +1116,7 @@ document.getElementById('save-btn').addEventListener('click', async () => {
 /* ── 엑셀 ── */
 document.getElementById('excelBtn').addEventListener('click', () => {
   if (!window.XLSX) { alert('라이브러리 로딩 중'); return; }
-  const header = ['REF.','SERIAL','라인','입고일','금액(KRW)','상태','등록 여부','비고'];
+  const header = ['REF.','SERIAL','Collection','입고일','금액(KRW)','상태','등록 여부','비고'];
   const data   = inventory.map(r => [r.ref, r.serial, r.line, r.date, r.amount, r.status, r.registered, r.note]);
   const ws = window.XLSX.utils.aoa_to_sheet([header,...data]);
   const wb = window.XLSX.utils.book_new();

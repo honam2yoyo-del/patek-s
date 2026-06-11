@@ -75,7 +75,20 @@ let showPrevYear = false;    // 전년 비교 토글 상태
 // 목표 달성률 데이터
 let goalRateData = { total: 0, centum: 0, avenue: 0 };
 
-// 라인 설정 + 직원 목록 캐시
+// Collection 설정 + 직원 목록 캐시
+const DEFAULT_LINES = [
+  { name: 'Grand Complications', refs: ['5320G-011','5327G-001','5327R-001','7140G-001','7140R-001','5236P-011','5160/500R-001','6159G-001','5270J-001','5204G-010','5370R-001','5373P-001','6104R-001','5322G-001','5260/1455R-001','5260/355R-001','7040/250G-001','5178G-012','7047G-001','5303R-001','5304/301R-001','5308G-001','5374G-001','5531G-001','6002R-001','6301P-001','6300GR-001','27000M-001'] },
+  { name: 'Complications', refs: ['5328G-001','5212A-001','5205G-013','5205R-011','5396G-017','5396R-016','4946G-001','4946R-001','4947/1A-001','4948R-001','5235/50R-001','5326G-001','5172G-001','5172G-010','5905/1A-001','5905R-010','5961R-010','5961P-001','5224R-001','5524G-010','5524R-001','5231G-001','5330G-001','5930P-001','7129J-001','5935A-001','7130G-016','5924G-001','5924G-010','7121/200G-001','5180/1R-001','5249R-001'] },
+  { name: 'Calatrava', refs: ['5088/100P-001','5226G-001','5227G-015','5227J-001','6007G-001','6007G-010','6007G-011','6119G-001','6119R-001','6196P-001','7200/50G-001','7200/50G-012'] },
+  { name: 'Gondolo', refs: ['7042/100R-010','7042/100G-010','4962/200R-010'] },
+  { name: 'Golden Ellipse', refs: ['5738/1R-001','5738P-001','5738R-001','5738/51G-001','5738G-001','3738/100G-014'] },
+  { name: 'Cubitus', refs: ['5822P-001','5821/1AR-001','5821/1A-001','7128/1G-001','7128/1R-001','5840P-001'] },
+  { name: 'Nautilus', refs: ['5712/1R-001','5726/1A-014','5726A-001','5811/1G-001','5811/1460G-001','5740/1G-001','5980/1400G-010','5980/1400R-011','5980/60G-001','5990/1A-011','5990/1R-001','5990/1400G-001','7010/1G-013','7010/1R-013','7010G-013','7010R-013','7118/1A-001','7118/1A-011','7118/1200A-001','7118/1200A-011','7118/1R-001','7118/1R-010','7118/1200R-001','7118/1200R-010','7118/1300R-001','7118/1450G-001','7118/1450R-001','5723/1R-001','5723/1R-010','5723/112R-001','5711/110P-001','5711/111P-001','5711/112P-001','5811/1G-001','5810/1G-001','5610/1P-001','5810G-001','958G-001'] },
+  { name: 'Aquanaut', refs: ['5167A-001','5167R-001','5164G-001','5164R-001','5168G-001','5168G-010','5968A-001','5968G-001','5968G-010','5968R-001','5072R-001','5261R-001','5267/200A-001','5267/200A-010','5267/200A-011','5268/200R-010','5268/461G-001','5269R-001','7968/300R-001'] },
+  { name: 'Twenty~4', refs: ['7300/1200A-001','7300/1200A-010','7300/1200A-011','7300/1200R-001','7300/1200R-010','4910/1200A-001','4910/1200A-010','4910/1200A-011','7340/1R-001','7340/1R-010'] },
+  { name: 'Pocket Watches', refs: ['973J-001','980G-010','980J-011','980R-001','983J-001'] },
+  { name: 'Rare Handcrafts', refs: ['5531G-010','5278/50R-010','5278/50R-011','5738/50G-041','5738/50G-042','5738/50J-010','5738/50J-012','5738/50R-010','5738/50R-021','5077/100R-068','5077/210R-001','5077/356R-001','5077/357G-001','5177G-056','5177G-057','5177J-001','5177R-001','992/173J-001','992/190G-001','995/141G-001','999/100G-001','10045M-001','10046M-001','20192M-001','20196M-001','20199M-001','20200M-001','20201M-001','22000M-001'] }
+];
 let _lineConfig = [];
 let _staffList  = [];
 
@@ -93,8 +106,9 @@ async function loadStaffList() {
 }
 function getLineForRef(ref) {
   if (!ref) return '';
-  const r = ref.toLowerCase();
-  for (const l of _lineConfig) {
+  const r    = ref.toLowerCase();
+  const pool = _lineConfig.length > 0 ? _lineConfig : DEFAULT_LINES;
+  for (const l of pool) {
     if ((l.refs||[]).some(x => x.toLowerCase() === r)) return l.name;
   }
   return '';
@@ -285,17 +299,25 @@ function saveQuarterGoalData() {
 
 /* ────────── 데이터 로드 ────────── */
 function loadMonth() {
-  if (unsubPlan) unsubPlan();
+  if (unsubPlan)      unsubPlan();
+  if (unsubInventory) unsubInventory();
   goalRateData = { total: 0, centum: 0, avenue: 0 };
   const docId = `${curYear}-${pad(curMonth)}`;
   unsubPlan = onSnapshot(doc(db,'artifacts','patek-s','public','data','sales_dashboard',docId), snap => {
     applyData(snap.exists() ? snap.data() : null);
   });
-  // 재고 목록 연동: getDoc으로 일회 로드
-  getDoc(doc(db,'artifacts','patek-s','public','data','inventory',docId)).then(snap => {
-    rows = snap.exists() ? (snap.data().rows||[]).map(r=>({...r, status:canonicalStatus(r.status)})) : [];
+  // 재고 목록 실시간 연동 (재고·MPDS 페이지 변경도 즉시 반영)
+  unsubInventory = onSnapshot(doc(db,'artifacts','patek-s','public','data','inventory',docId), snap => {
+    rows = snap.exists()
+      ? (snap.data().rows||[]).map(r => {
+          const normalized = {...r, status: canonicalStatus(r.status)};
+          // Collection이 저장 안 된 row는 REF로 자동 매칭
+          if (!normalized.line) normalized.line = getLineForRef(normalized.ref);
+          return normalized;
+        })
+      : [];
     renderTable();
-  }).catch(() => { rows = []; renderTable(); });
+  });
   // 작년 같은 달 현재 매출 → 작년 월 매출 필드에 자동 반영
   const prevDocId = `${curYear - 1}-${pad(curMonth)}`;
   getDoc(doc(db,'artifacts','patek-s','public','data','sales_dashboard', prevDocId)).then(snap => {
@@ -350,14 +372,8 @@ function applyData(d) {
   } else {
     _manualSalesLock.expectedSales = false;
   }
-  // 직접 수정 후 저장된 현재 매출 복원
-  if (d?.currentSales != null) {
-    sv('f-currentSales', d.currentSales);
-    sv('f-currentPcs',   d.currentPcs);
-    _manualSalesLock.currentSales = true;
-  } else {
-    _manualSalesLock.currentSales = false;
-  }
+  // 현재 매출은 항상 rows(판매완료+선수금)에서 자동 계산
+  _manualSalesLock.currentSales = false;
 
   // goalRateData는 loadQuarterGoalData()에서 별도 로드 (분기 공유)
   // rows는 inventory onSnapshot에서 별도 관리 (재고 목록 양방향 연동)
@@ -902,6 +918,7 @@ window.invChStatus = function(ri, val, el) {
 function showSaleCompleteDialog(ri) {
   const r    = rows[ri];
   if (!r) return;
+  // REF로 Collection 자동 매칭, 없으면 기존 저장값 사용
   const autoLine = getLineForRef(r.ref) || r.line || '';
   const modal = document.getElementById('saleCompleteModal');
   if (!modal) return;
@@ -930,11 +947,19 @@ function showSaleCompleteDialog(ri) {
 
   document.getElementById('scCancel').onclick = () => { modal.style.display = 'none'; };
   document.getElementById('scConfirm').onclick = () => {
+    const region = (document.getElementById('scRegion')?.value || '').trim();
+    const staff  = document.getElementById('scSalesperson')?.value || '';
+    const date   = (document.getElementById('scDate')?.value || '').trim();
+    const line   = document.getElementById('scLine')?.value || autoLine;
+    if (!date)   { alert('판매일을 입력해 주세요.'); return; }
+    if (!region) { alert('지역을 입력해 주세요.'); return; }
+    if (!staff)  { alert('판매 직원을 선택해 주세요.'); return; }
+    if (!line)   { alert('Collection 정보가 없습니다. 설정에서 Collection을 먼저 등록해 주세요.'); return; }
     r.status             = '판매완료';
-    r.region             = (document.getElementById('scRegion')?.value || '').trim();
-    r.salesperson        = document.getElementById('scSalesperson')?.value || '';
-    r.line               = document.getElementById('scLine')?.value || autoLine;
-    r.saleCompletedDate  = document.getElementById('scDate')?.value || '';
+    r.region             = region;
+    r.salesperson        = staff;
+    r.line               = line;
+    r.saleCompletedDate  = date;
     modal.style.display  = 'none';
     renderTable();
     window.markDirty && window.markDirty();
@@ -1035,7 +1060,7 @@ window.renderSalesList = function() {
     }).join('');
   }
 
-  // 라인별 요약
+  // Collection별 요약
   const lineStat = {};
   doneList.forEach(r => {
     const k = r.line || '미분류';

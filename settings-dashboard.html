@@ -122,10 +122,10 @@
     </div>
 
     <div class="panel">
-      <div class="panel-header">라인 관리</div>
-      <div class="panel-sub">각 라인에 속한 REF.를 등록합니다. 재고 관리 엑셀 업로드 시 자동으로 라인이 매핑됩니다.</div>
+      <div class="panel-header">Collection 관리</div>
+      <div class="panel-sub">각 Collection에 속한 REF.를 등록합니다. 재고 관리 엑셀 업로드 시 자동으로 Collection이 매핑됩니다.</div>
       <div class="line-list" id="lineList"></div>
-      <button class="add-line-btn" id="addLineBtn">+ 새 라인 추가</button>
+      <button class="add-line-btn" id="addLineBtn">+ 새 Collection 추가</button>
     </div>
   </main>
 </div>
@@ -160,7 +160,7 @@
 <div id="resetConfirmModal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.52);z-index:9700;align-items:center;justify-content:center;">
   <div style="background:#fff;border-radius:12px;padding:28px 32px;width:380px;box-shadow:0 16px 48px rgba(15,23,42,.28);font-family:'Malgun Gothic','맑은 고딕',Arial,sans-serif;">
     <div style="font-size:18px;font-weight:900;color:#dc2626;margin-bottom:10px;">⚠️ 초기화 하시겠습니까?</div>
-    <div style="font-size:14px;font-weight:700;color:#6b7280;line-height:1.6;margin-bottom:24px;">라인 관리 설정을 제외한 <strong style="color:#111827;">모든 데이터가 영구 삭제</strong>됩니다.<br>이 작업은 되돌릴 수 없습니다.</div>
+    <div style="font-size:14px;font-weight:700;color:#6b7280;line-height:1.6;margin-bottom:24px;">Collection 관리 설정을 제외한 <strong style="color:#111827;">모든 데이터가 영구 삭제</strong>됩니다.<br>이 작업은 되돌릴 수 없습니다.</div>
     <div style="display:flex;gap:10px;justify-content:flex-end;">
       <button id="resetCancel" style="height:40px;padding:0 18px;border:1px solid #e2e7ef;border-radius:7px;background:#fff;font-size:14px;font-weight:700;cursor:pointer;color:#6b7280;font-family:inherit;">취소</button>
       <button id="resetConfirm" style="height:40px;padding:0 22px;border:none;border-radius:7px;background:#dc2626;color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">초기화</button>
@@ -236,9 +236,9 @@ function renderLines() {
     card.className = 'line-card';
     card.innerHTML = `
       <div class="line-card-header">
-        <input class="line-name-input" value="${esc(line.name||'')}" placeholder="라인 이름 (예: Grand Complications)"
+        <input class="line-name-input" value="${esc(line.name||'')}" placeholder="Collection 이름 (예: Grand Complications)"
           oninput="window.setLineName(${li},this.value)"/>
-        <button class="btn-line-del" onclick="window.deleteLine(${li})" title="라인 삭제">✕</button>
+        <button class="btn-line-del" onclick="window.deleteLine(${li})" title="Collection 삭제">✕</button>
       </div>
       <div class="refs-wrap" id="refs-${li}">
         ${(line.refs||[]).map((ref,ri) => `<span class="ref-tag">${esc(ref)}<button class="ref-tag-del" onclick="window.deleteRef(${li},${ri})">×</button></span>`).join('')}
@@ -255,7 +255,7 @@ function renderLines() {
 function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 window.setLineName = (li, val) => { if (lines[li]) lines[li].name = val; };
-window.deleteLine  = (li) => { if (confirm('이 라인을 삭제하시겠습니까?')) { lines.splice(li,1); renderLines(); window.markDirty&&window.markDirty(); } };
+window.deleteLine  = (li) => { if (confirm('이 Collection을 삭제하시겠습니까?')) { lines.splice(li,1); renderLines(); window.markDirty&&window.markDirty(); } };
 window.addRef = (li) => {
   const inp = document.getElementById(`ri-${li}`);
   const val = (inp.value||'').trim().toUpperCase();

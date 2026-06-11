@@ -350,8 +350,8 @@
         </div>
         <div class="kpi-pcs-row">(<input class="kpi-pcs-num" id="f-lastYearPcs" type="text" inputmode="numeric" placeholder="0" oninput="window.fmtNum(this)"/> pcs)</div>
       </div>
-      <div class="kpi-card" id="currentSalesCard" style="cursor:pointer;" onclick="window.openSalesList()" title="클릭하면 판매 내역을 봅니다">
-        <div class="kpi-title">현재 매출 <span style="font-size:11px;color:#0067e8;font-weight:700;">▶ 내역</span></div>
+      <div class="kpi-card" id="currentSalesCard">
+        <div class="kpi-title">현재 매출 <span onclick="window.openSalesList()" style="font-size:11px;color:#0067e8;font-weight:700;cursor:pointer;text-decoration:underline;text-underline-offset:2px;">▶ 내역</span></div>
         <div class="kpi-amount-row blue">
           <input class="kpi-num blue" id="f-currentSales" type="text" inputmode="numeric" placeholder="0" oninput="window.fmtNum(this);recalcRemain()"/>
           <span class="kpi-unit blue">원</span>
@@ -715,7 +715,7 @@
         <select id="scSalesperson" style="height:38px;border:1px solid #d9e0ea;border-radius:7px;padding:0 12px;font-size:14px;font-family:inherit;outline:none;cursor:pointer;"></select>
       </div>
       <div style="display:grid;grid-template-columns:80px 1fr;align-items:center;gap:10px;">
-        <label style="font-size:14px;font-weight:900;color:#374151;">라인</label>
+        <label style="font-size:14px;font-weight:900;color:#374151;">Collection</label>
         <input id="scLine" type="text" placeholder="자동 매칭" readonly style="height:38px;border:1px solid #e2e7ef;border-radius:7px;padding:0 12px;font-size:14px;font-family:inherit;background:#f6f8fb;color:#374151;"/>
       </div>
     </div>

@@ -329,7 +329,7 @@
         </div>
         <div class="summary-card">
           <div>
-            <div class="summary-label">최다 판매 라인</div>
+            <div class="summary-label">최다 판매 Collection</div>
             <div class="summary-value" id="sum-top-line">-</div>
             <div class="summary-sub" id="sum-top-line-sub">-</div>
           </div>
@@ -345,12 +345,12 @@
 
       <div class="note-line">* 전년 대비는 이전 월과 비교한 수치입니다.</div>
 
-      <!-- 라인별 / 지역별 -->
+      <!-- Collection별 / 지역별 -->
       <section class="report-grid">
-        <!-- 라인별 판매 -->
+        <!-- Collection별 판매 -->
         <div class="panel">
           <div class="panel-header">
-            <div class="section-title">라인별 판매</div>
+            <div class="section-title">Collection별 판매</div>
             <span class="unit">* 단위 : KRW</span>
           </div>
           <div class="analysis-panel">
@@ -368,7 +368,7 @@
               </div>
               <div class="donut-wrap">
                 <div class="donut" id="lineDonut"></div>
-                <div class="donut-hole">라인별<br>Amount 비중</div>
+                <div class="donut-hole">Collection별<br>Amount 비중</div>
                 <div class="chart-label ll1" id="ll1"></div>
                 <div class="chart-label ll2" id="ll2"></div>
                 <div class="chart-label ll3" id="ll3"></div>
@@ -500,10 +500,10 @@ const DEFAULT_MONTHLY = [
   [18300, 20100, 22900, 22000, 0,0,0,0,0,0,0,0]
 ];
 const DEFAULT_NOTES = [
-  'Nautilus 라인의 판매 비중이 가장 높게 나타났습니다. 매출 비중 43%, 수량 4 pcs.',
+  'Nautilus Collection의 판매 비중이 가장 높게 나타났습니다. 매출 비중 43%, 수량 4 pcs.',
   '부산 지역 매출이 전체 지역 중 가장 높은 비중을 차지하였습니다. 매출 비중 33%, 수량 6 pcs.',
   '전년 대비 총 매출이 12.4% 상승하여 긍정적인 흐름을 보였습니다.',
-  'Grand Complication 라인의 매출이 전년 대비 12% 증가하였습니다.'
+  'Grand Complication Collection의 매출이 전년 대비 12% 증가하였습니다.'
 ];
 
 let curYear  = new Date().getFullYear();
@@ -764,7 +764,7 @@ window.recommendNotes = function() {
   const topRegShare = regAmt > 0 ? Math.round((topReg?.amount||0)/regAmt*100) : 0;
 
   notes = [
-    `${topLine?.line||'Nautilus'} 라인의 판매 비중이 가장 높게 나타났습니다. 매출 비중 ${topLineShare}%, 수량 ${topLine?.qty||0} pcs.`,
+    `${topLine?.line||'Nautilus'} Collection의 판매 비중이 가장 높게 나타났습니다. 매출 비중 ${topLineShare}%, 수량 ${topLine?.qty||0} pcs.`,
     `${topReg?.region||'부산'} 지역 매출이 전체 지역 중 가장 높은 비중을 차지하였습니다. 매출 비중 ${topRegShare}%, 수량 ${topReg?.qty||0} pcs.`,
     `전년 대비 총 매출이 ${Math.abs(avgYoy)}% ${Number(avgYoy)>=0?'상승':'하락'}하여 ${Number(avgYoy)>=0?'긍정적인 흐름을 보였습니다.':'개선이 필요합니다.'}`,
     `이번 달 총 판매 수량은 ${totQty} pcs이며, 총 매출액은 ${fmtN(totAmt)} KRW입니다.`
@@ -809,7 +809,7 @@ window.downloadExcel = function() {
   const totAmt = lineData.reduce((s,r)=>s+(Number(r.amount)||0),0);
   const lineRows = lineData.map(r => [r.line, r.qty, r.amount, totAmt>0?Math.round((r.amount||0)/totAmt*100)+'%':'0%', (r.yoy>=0?'+':'')+r.yoy+'%']);
   const ws1 = window.XLSX.utils.aoa_to_sheet([lineHeader,...lineRows]);
-  window.XLSX.utils.book_append_sheet(wb, ws1, '라인별 판매');
+  window.XLSX.utils.book_append_sheet(wb, ws1, 'Collection별 판매');
 
   // 지역별
   const regionHeader = ['지역','Qty','Amount','비중','전년대비'];

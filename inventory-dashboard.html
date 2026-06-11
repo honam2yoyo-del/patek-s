@@ -398,7 +398,7 @@
         <select id="invScSalesperson" style="height:38px;border:1px solid #d9e0ea;border-radius:7px;padding:0 12px;font-size:14px;font-family:inherit;outline:none;cursor:pointer;"></select>
       </div>
       <div style="display:grid;grid-template-columns:80px 1fr;align-items:center;gap:10px;">
-        <label style="font-size:14px;font-weight:900;color:#374151;">라인</label>
+        <label style="font-size:14px;font-weight:900;color:#374151;">Collection</label>
         <input id="invScLine" type="text" placeholder="자동 매칭" readonly style="height:38px;border:1px solid #e2e7ef;border-radius:7px;padding:0 12px;font-size:14px;font-family:inherit;background:#f6f8fb;color:#374151;"/>
       </div>
     </div>
@@ -1176,10 +1176,11 @@ async function loadStaffForInv() {
 }
 
 function invGetLineForRef(ref) {
-  if (!ref || !lineConfig) return '';
-  const lc = lineConfig.lines || lineConfig;
-  const r  = ref.toLowerCase();
-  for (const l of lc) {
+  if (!ref) return '';
+  const configured = lineConfig?.lines || (Array.isArray(lineConfig) ? lineConfig : []);
+  const pool = configured.length > 0 ? configured : DEFAULT_LINES;
+  const r = ref.toLowerCase();
+  for (const l of pool) {
     if ((l.refs||[]).some(x=>x.toLowerCase()===r)) return l.name;
   }
   return '';
@@ -1204,11 +1205,19 @@ function invShowSaleDialog(ri) {
   modal.style.display = 'flex';
   document.getElementById('invScCancel').onclick  = () => { modal.style.display='none'; };
   document.getElementById('invScConfirm').onclick = () => {
+    const region = (document.getElementById('invScRegion')?.value||'').trim();
+    const staff  = document.getElementById('invScSalesperson')?.value||'';
+    const date   = (document.getElementById('invScDate')?.value||'').trim();
+    const line   = document.getElementById('invScLine')?.value||autoLine;
+    if (!date)   { alert('판매일을 입력해 주세요.'); return; }
+    if (!region) { alert('지역을 입력해 주세요.'); return; }
+    if (!staff)  { alert('판매 직원을 선택해 주세요.'); return; }
+    if (!line)   { alert('Collection 정보가 없습니다. 설정에서 Collection을 먼저 등록해 주세요.'); return; }
     r.status            = '판매완료';
-    r.region            = (document.getElementById('invScRegion')?.value||'').trim();
-    r.salesperson       = document.getElementById('invScSalesperson')?.value||'';
-    r.line              = document.getElementById('invScLine')?.value||autoLine;
-    r.saleCompletedDate = document.getElementById('invScDate')?.value||'';
+    r.region            = region;
+    r.salesperson       = staff;
+    r.line              = line;
+    r.saleCompletedDate = date;
     modal.style.display = 'none';
     renderKpi();
     renderTable();
