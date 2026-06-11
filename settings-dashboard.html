@@ -354,25 +354,39 @@ async function deleteColDocs(colRef) {
 }
 
 async function resetAllData() {
-  const base = ['artifacts', 'patek-s', 'public', 'data'];
+  // artifacts/patek-s/public/data 문서 참조 (lineConfig 문서는 여기 속하지만 컬렉션이 아니라 건드리지 않음)
+  const dataRef = doc(db, 'artifacts', 'patek-s', 'public', 'data');
+  const uid = auth.currentUser?.uid;
+
+  // 하위 컬렉션 순차 삭제 (Promise.all 대신 for-of: 하나 실패해도 나머지 계속 진행)
   const subCols = [
     'schedules', 'leave_requests', 'cal_events', 'time_requests',
     'sales_data', 'quarter_goals', 'avenue_annual', 'centum_annual',
     'mpds', 'sales_dashboard', 'inventory', 'sales_reports'
   ];
-  await Promise.all(subCols.map(name => deleteColDocs(collection(db, ...base, name))));
+  for (const name of subCols) {
+    try {
+      await deleteColDocs(collection(dataRef, name));
+    } catch(e) { console.error(`삭제 실패 [${name}]:`, e); }
+  }
 
+  // 루트 컬렉션 삭제
   const rootCols = ['notices', 'as_records', 'sp_orders', 'delivery_notes'];
-  await Promise.all(rootCols.map(name => deleteColDocs(collection(db, name))));
+  for (const name of rootCols) {
+    try {
+      await deleteColDocs(collection(db, name));
+    } catch(e) { console.error(`삭제 실패 [${name}]:`, e); }
+  }
 
   // users: 현재 로그인 유저 제외 삭제
-  const usersSnap = await getDocs(collection(db, 'users'));
-  const uid = auth.currentUser?.uid;
-  if (!usersSnap.empty) {
-    const batch = writeBatch(db);
-    usersSnap.docs.forEach(d => { if (d.id !== uid) batch.delete(d.ref); });
-    await batch.commit();
-  }
+  try {
+    const usersSnap = await getDocs(collection(db, 'users'));
+    if (!usersSnap.empty) {
+      const batch = writeBatch(db);
+      usersSnap.docs.forEach(d => { if (d.id !== uid) batch.delete(d.ref); });
+      await batch.commit();
+    }
+  } catch(e) { console.error('삭제 실패 [users]:', e); }
 }
 </script>
 <script>
