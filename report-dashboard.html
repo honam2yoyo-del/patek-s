@@ -480,38 +480,33 @@ const fmtN = n => n != null ? Number(n).toLocaleString('ko-KR') : '-';
 
 /* ── 기본 데이터 ── */
 const DEFAULT_LINES = [
-  { line:'Grand Complication', qty:6,  amount:762500,  yoy:12  },
-  { line:'Complication',       qty:2,  amount:153700,  yoy:-5  },
-  { line:'Calatrava',          qty:1,  amount:53900,   yoy:-8  },
-  { line:'Nautilus',           qty:4,  amount:909200,  yoy:21  },
-  { line:'Aquanaut',           qty:1,  amount:85400,   yoy:3   },
-  { line:'Cubitus',            qty:1,  amount:157200,  yoy:9   },
-  { line:'Twenty~4',           qty:2,  amount:157200,  yoy:-2  }
+  { line:'Grand Complication', qty:0, amount:0, yoy:0 },
+  { line:'Complication',       qty:0, amount:0, yoy:0 },
+  { line:'Calatrava',          qty:0, amount:0, yoy:0 },
+  { line:'Nautilus',           qty:0, amount:0, yoy:0 },
+  { line:'Aquanaut',           qty:0, amount:0, yoy:0 },
+  { line:'Cubitus',            qty:0, amount:0, yoy:0 },
+  { line:'Twenty~4',           qty:0, amount:0, yoy:0 }
 ];
 const DEFAULT_REGIONS = [
-  { region:'부산',             qty:6, amount:700700, yoy:18  },
-  { region:'서울',             qty:4, amount:452800, yoy:-3  },
-  { region:'대구',             qty:2, amount:292700, yoy:7   },
-  { region:'경기',             qty:2, amount:383800, yoy:11  },
-  { region:'인천, 경북',       qty:1, amount:108600, yoy:6   },
-  { region:'광주, 전라',       qty:0, amount:100000, yoy:-1  },
-  { region:'강원, 충청, 제주', qty:1, amount:83300,  yoy:2   }
+  { region:'부산',             qty:0, amount:0, yoy:0 },
+  { region:'서울',             qty:0, amount:0, yoy:0 },
+  { region:'대구',             qty:0, amount:0, yoy:0 },
+  { region:'경기',             qty:0, amount:0, yoy:0 },
+  { region:'인천, 경북',       qty:0, amount:0, yoy:0 },
+  { region:'광주, 전라',       qty:0, amount:0, yoy:0 },
+  { region:'강원, 충청, 제주', qty:0, amount:0, yoy:0 }
 ];
 const DEFAULT_MONTHLY = [
-  [120500,132200,145000,302100,0,0,0,0,0,0,0,0],
-  [80300, 95400, 110600,166500,0,0,0,0,0,0,0,0],
-  [60200, 70300, 92500, 69700, 0,0,0,0,0,0,0,0],
-  [95000, 88500, 102700,97600, 0,0,0,0,0,0,0,0],
-  [22000, 25500, 28900, 32200, 0,0,0,0,0,0,0,0],
-  [20300, 21800, 26700, 31200, 0,0,0,0,0,0,0,0],
-  [18300, 20100, 22900, 22000, 0,0,0,0,0,0,0,0]
+  [0,0,0,0,0,0,0,0,0,0,0,0],
+  [0,0,0,0,0,0,0,0,0,0,0,0],
+  [0,0,0,0,0,0,0,0,0,0,0,0],
+  [0,0,0,0,0,0,0,0,0,0,0,0],
+  [0,0,0,0,0,0,0,0,0,0,0,0],
+  [0,0,0,0,0,0,0,0,0,0,0,0],
+  [0,0,0,0,0,0,0,0,0,0,0,0]
 ];
-const DEFAULT_NOTES = [
-  'Nautilus Collection의 판매 비중이 가장 높게 나타났습니다. 매출 비중 43%, 수량 4 pcs.',
-  '부산 지역 매출이 전체 지역 중 가장 높은 비중을 차지하였습니다. 매출 비중 33%, 수량 6 pcs.',
-  '전년 대비 총 매출이 12.4% 상승하여 긍정적인 흐름을 보였습니다.',
-  'Grand Complication Collection의 매출이 전년 대비 12% 증가하였습니다.'
-];
+const DEFAULT_NOTES = [];
 
 let curYear  = new Date().getFullYear();
 let curMonth = new Date().getMonth() + 1;
