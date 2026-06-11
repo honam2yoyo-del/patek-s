@@ -598,24 +598,28 @@ onAuthStateChanged(auth, user => {
 });
 
 /* ── 데이터 로드 ── */
+let unsubInventory = null;
+
 function loadMonth() {
-  if (unsubReport) unsubReport();
+  if (unsubReport)    unsubReport();
+  if (unsubInventory) unsubInventory();
+  salesRaw = [];
+
   const docId = `${curYear}-${pad(curMonth)}`;
+
+  // 보고서 데이터 (lineData, regionData, monthlyData, notes)
   unsubReport = onSnapshot(doc(db,'artifacts','patek-s','public','data','sales_reports',docId), snap => {
     if (snap.exists()) {
       const d = snap.data();
-      // salesListData가 있으면 현재 매출(판매 완료) 데이터로 자동 채움
       if (d.salesListData) {
         const sl = d.salesListData;
         lineData   = sl.lineData?.length   ? sl.lineData.map(r=>({line:r.line||r.name||'',qty:r.qty||0,amount:r.amount||0,yoy:r.yoy||0}))
                                            : (d.lineData ? JSON.parse(JSON.stringify(d.lineData)) : JSON.parse(JSON.stringify(DEFAULT_LINES)));
         regionData = sl.regionData?.length ? sl.regionData.map(r=>({region:r.region||r.name||'',qty:r.qty||0,amount:r.amount||0}))
                                            : (d.regionData ? JSON.parse(JSON.stringify(d.regionData)) : JSON.parse(JSON.stringify(DEFAULT_REGIONS)));
-        salesRaw   = sl.salesRaw || [];
       } else {
         lineData   = d.lineData   ? JSON.parse(JSON.stringify(d.lineData))   : JSON.parse(JSON.stringify(DEFAULT_LINES));
         regionData = d.regionData ? JSON.parse(JSON.stringify(d.regionData)) : JSON.parse(JSON.stringify(DEFAULT_REGIONS));
-        salesRaw   = [];
       }
       monthlyData = d.monthlyData ? JSON.parse(JSON.stringify(d.monthlyData)) : JSON.parse(JSON.stringify(DEFAULT_MONTHLY));
       notes       = d.notes       ? [...d.notes]                               : [...DEFAULT_NOTES];
@@ -624,9 +628,25 @@ function loadMonth() {
       regionData  = JSON.parse(JSON.stringify(DEFAULT_REGIONS));
       monthlyData = JSON.parse(JSON.stringify(DEFAULT_MONTHLY));
       notes       = [...DEFAULT_NOTES];
-      salesRaw    = [];
     }
     renderAll();
+  });
+
+  // 재고 직접 연동: 판매완료 행 → salesRaw (Collection 뷰용 실시간 데이터)
+  unsubInventory = onSnapshot(doc(db,'artifacts','patek-s','public','data','inventory',docId), snap => {
+    if (snap.exists()) {
+      const invRows = snap.data().rows || [];
+      const done = invRows.filter(r => r.status === '판매완료' || r.status === '판매 완료');
+      salesRaw = done.map(r => {
+        let m = curMonth;
+        const d = r.saleCompletedDate || r.saleDate || '';
+        if (d) { const p = new Date(d); if (!isNaN(p.getTime())) m = p.getMonth() + 1; }
+        return { line: r.line || '기타', region: r.region || '기타', amount: Number(r.amount) || 0, month: m };
+      });
+    } else {
+      salesRaw = [];
+    }
+    renderRegionalTable();
   });
 }
 
