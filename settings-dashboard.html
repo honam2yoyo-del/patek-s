@@ -47,6 +47,8 @@
     .add-line-btn:hover { border-color:#075bd8;color:#075bd8;background:#f0f7ff; }
     .btn-primary { height:42px;padding:0 22px;border:none;border-radius:7px;background:#075bd8;color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit; }
     .save-ok { color:#059669;font-size:14px;font-weight:700; }
+    .btn-danger { height:42px;padding:0 22px;border:1px solid #fca5a5;border-radius:7px;background:#fff5f5;color:#dc2626;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit; }
+    .btn-danger:hover { background:#fee2e2; }
     html { overflow-x:hidden; }
     .sidebar { overflow:hidden;transition:width .25s ease; }
     .sidebar.collapsed { width:52px; }
@@ -114,6 +116,7 @@
       <h1 class="title">설정</h1>
       <div style="display:flex;gap:12px;align-items:center;">
         <span class="save-ok" id="saveOk" style="display:none;">✔ 저장됨</span>
+        <button class="btn-danger" id="reset-btn">🗑 초기화</button>
         <button class="btn-primary" id="save-btn">💾 저장하기</button>
       </div>
     </div>
@@ -139,6 +142,32 @@
     </div>
   </div>
 </div>
+<!-- 비밀번호 모달 -->
+<div id="pwModal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.52);z-index:9600;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:12px;padding:28px 32px;width:380px;box-shadow:0 16px 48px rgba(15,23,42,.28);font-family:'Malgun Gothic','맑은 고딕',Arial,sans-serif;">
+    <div style="font-size:18px;font-weight:900;color:#111827;margin-bottom:8px;">🔐 관리자 인증</div>
+    <div style="font-size:14px;font-weight:700;color:#6b7280;margin-bottom:18px;">데이터 초기화를 위해 비밀번호를 입력하세요.</div>
+    <input type="password" id="pwInput" placeholder="비밀번호" style="width:100%;height:42px;border:1px solid #d9e0ea;border-radius:7px;padding:0 14px;font-size:15px;font-family:inherit;outline:none;box-sizing:border-box;"/>
+    <div id="pwError" style="display:none;color:#dc2626;font-size:13px;font-weight:700;margin-top:8px;">비밀번호가 올바르지 않습니다.</div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
+      <button id="pwCancel" style="height:40px;padding:0 18px;border:1px solid #e2e7ef;border-radius:7px;background:#fff;font-size:14px;font-weight:700;cursor:pointer;color:#6b7280;font-family:inherit;">취소</button>
+      <button id="pwConfirm" style="height:40px;padding:0 22px;border:none;border-radius:7px;background:#dc2626;color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">확인</button>
+    </div>
+  </div>
+</div>
+
+<!-- 초기화 확인 모달 -->
+<div id="resetConfirmModal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.52);z-index:9700;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:12px;padding:28px 32px;width:380px;box-shadow:0 16px 48px rgba(15,23,42,.28);font-family:'Malgun Gothic','맑은 고딕',Arial,sans-serif;">
+    <div style="font-size:18px;font-weight:900;color:#dc2626;margin-bottom:10px;">⚠️ 초기화 하시겠습니까?</div>
+    <div style="font-size:14px;font-weight:700;color:#6b7280;line-height:1.6;margin-bottom:24px;">라인 관리 설정을 제외한 <strong style="color:#111827;">모든 데이터가 영구 삭제</strong>됩니다.<br>이 작업은 되돌릴 수 없습니다.</div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button id="resetCancel" style="height:40px;padding:0 18px;border:1px solid #e2e7ef;border-radius:7px;background:#fff;font-size:14px;font-weight:700;cursor:pointer;color:#6b7280;font-family:inherit;">취소</button>
+      <button id="resetConfirm" style="height:40px;padding:0 22px;border:none;border-radius:7px;background:#dc2626;color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">초기화</button>
+    </div>
+  </div>
+</div>
+
 <script>
 (function(){
   var _dirty=false,_url=null;
@@ -159,7 +188,7 @@
 <script type="module">
 import { initializeApp }   from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, setDoc, collection, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const FC = { apiKey:"AIzaSyCt7aQXA5eFdnDTMHlRhjPAkyH4b8UB6HY", authDomain:"patek-s.firebaseapp.com", projectId:"patek-s", storageBucket:"patek-s.firebasestorage.app", messagingSenderId:"786016749285", appId:"1:786016749285:web:58538eec1cf7e72068b60c" };
 const app  = initializeApp(FC);
@@ -264,6 +293,86 @@ document.getElementById('save-btn').addEventListener('click', async () => {
     btn.textContent = '💾 저장하기';
   }
 });
+
+// ── 데이터 초기화 ──
+document.getElementById('reset-btn').addEventListener('click', () => {
+  document.getElementById('pwInput').value = '';
+  document.getElementById('pwError').style.display = 'none';
+  document.getElementById('pwModal').style.display = 'flex';
+  setTimeout(() => document.getElementById('pwInput').focus(), 100);
+});
+
+document.getElementById('pwCancel').addEventListener('click', () => {
+  document.getElementById('pwModal').style.display = 'none';
+});
+
+document.getElementById('pwInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') document.getElementById('pwConfirm').click();
+  if (e.key === 'Escape') document.getElementById('pwCancel').click();
+});
+
+document.getElementById('pwConfirm').addEventListener('click', () => {
+  if (document.getElementById('pwInput').value === '161021') {
+    document.getElementById('pwModal').style.display = 'none';
+    document.getElementById('resetConfirmModal').style.display = 'flex';
+  } else {
+    document.getElementById('pwError').style.display = 'block';
+    document.getElementById('pwInput').value = '';
+    document.getElementById('pwInput').focus();
+  }
+});
+
+document.getElementById('resetCancel').addEventListener('click', () => {
+  document.getElementById('resetConfirmModal').style.display = 'none';
+});
+
+document.getElementById('resetConfirm').addEventListener('click', async () => {
+  const btn = document.getElementById('resetConfirm');
+  btn.textContent = '초기화 중...';
+  btn.disabled = true;
+  try {
+    await resetAllData();
+    document.getElementById('resetConfirmModal').style.display = 'none';
+    alert('초기화가 완료되었습니다.');
+  } catch(e) {
+    alert('초기화 실패: ' + e.message);
+  } finally {
+    btn.textContent = '초기화';
+    btn.disabled = false;
+  }
+});
+
+async function deleteColDocs(colRef) {
+  const snap = await getDocs(colRef);
+  if (snap.empty) return;
+  for (let i = 0; i < snap.docs.length; i += 500) {
+    const batch = writeBatch(db);
+    snap.docs.slice(i, i + 500).forEach(d => batch.delete(d.ref));
+    await batch.commit();
+  }
+}
+
+async function resetAllData() {
+  const base = ['artifacts', 'patek-s', 'public', 'data'];
+  const subCols = [
+    'schedules', 'leave_requests', 'cal_events', 'time_requests',
+    'sales_data', 'quarter_goals', 'avenue_annual', 'centum_annual',
+    'mpds', 'sales_dashboard', 'inventory', 'sales_reports'
+  ];
+  await Promise.all(subCols.map(name => deleteColDocs(collection(db, ...base, name))));
+
+  const rootCols = ['notices', 'as_records', 'sp_orders', 'delivery_notes'];
+  await Promise.all(rootCols.map(name => deleteColDocs(collection(db, name))));
+
+  // users: 현재 로그인 유저 제외 삭제
+  const usersSnap = await getDocs(collection(db, 'users'));
+  const uid = auth.currentUser?.uid;
+  if (!usersSnap.empty) {
+    const batch = writeBatch(db);
+    usersSnap.docs.forEach(d => { if (d.id !== uid) batch.delete(d.ref); });
+    await batch.commit();
+  }
+}
 </script>
 <script>
 window.toggleSidebar=function(){
