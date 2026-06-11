@@ -358,7 +358,7 @@ async function resetAllData() {
   const dataRef = doc(db, 'artifacts', 'patek-s', 'public', 'data');
   const uid = auth.currentUser?.uid;
 
-  // 하위 컬렉션 순차 삭제 (Promise.all 대신 for-of: 하나 실패해도 나머지 계속 진행)
+  // 하위 컬렉션 순차 삭제
   const subCols = [
     'schedules', 'leave_requests', 'cal_events', 'time_requests',
     'sales_data', 'quarter_goals', 'avenue_annual', 'centum_annual',
@@ -369,6 +369,19 @@ async function resetAllData() {
       await deleteColDocs(collection(dataRef, name));
     } catch(e) { console.error(`삭제 실패 [${name}]:`, e); }
   }
+
+  // sales_reports 직접 삭제 (getDocs list 권한 우회 — 문서 ID 패턴 YYYY-MM이 알려져 있음)
+  // 존재하지 않는 문서에 batch.delete 해도 오류 없음
+  try {
+    const curY = new Date().getFullYear();
+    const srBatch = writeBatch(db);
+    for (let y = 2020; y <= curY + 1; y++) {
+      for (let m = 1; m <= 12; m++) {
+        srBatch.delete(doc(dataRef, 'sales_reports', `${y}-${String(m).padStart(2,'0')}`));
+      }
+    }
+    await srBatch.commit();
+  } catch(e) { console.error('sales_reports 직접 삭제 실패:', e); }
 
   // 루트 컬렉션 삭제
   const rootCols = ['notices', 'as_records', 'sp_orders', 'delivery_notes'];

@@ -935,11 +935,10 @@ window.saveData = async function() {
   if (btn) btn.textContent = '저장 중...';
   try {
     await setDoc(doc(db,'artifacts','patek-s','public','data','sales_reports',`${curYear}-${pad(curMonth)}`), {
-      lineData:    lineData.map(r=>({...r})),
-      regionData:  regionData.map(r=>({...r})),
-      monthlyData: monthlyData.map(r=>[...r]),
-      notes:       [...notes],
-      updatedAt:   new Date().toISOString()
+      lineData:   lineData.map(r=>({...r})),
+      regionData: regionData.map(r=>({...r})),
+      notes:      [...notes],
+      updatedAt:  new Date().toISOString()
     }, {merge:true});
     if (btn) btn.textContent = '✔ 저장됨';
     setTimeout(() => { if(btn) btn.textContent = '💾 저장하기'; }, 2000);
