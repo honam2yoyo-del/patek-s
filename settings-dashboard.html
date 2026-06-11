@@ -370,18 +370,21 @@ async function resetAllData() {
     } catch(e) { console.error(`삭제 실패 [${name}]:`, e); }
   }
 
-  // sales_reports 직접 삭제 (getDocs list 권한 우회 — 문서 ID 패턴 YYYY-MM이 알려져 있음)
+  // YYYY-MM 패턴 컬렉션 직접 삭제 (getDocs list 권한 우회)
   // 존재하지 않는 문서에 batch.delete 해도 오류 없음
+  const ymCols = ['sales_reports', 'inventory', 'sales_dashboard'];
   try {
     const curY = new Date().getFullYear();
-    const srBatch = writeBatch(db);
-    for (let y = 2020; y <= curY + 1; y++) {
-      for (let m = 1; m <= 12; m++) {
-        srBatch.delete(doc(dataRef, 'sales_reports', `${y}-${String(m).padStart(2,'0')}`));
+    for (const colName of ymCols) {
+      const b = writeBatch(db);
+      for (let y = 2020; y <= curY + 1; y++) {
+        for (let m = 1; m <= 12; m++) {
+          b.delete(doc(dataRef, colName, `${y}-${String(m).padStart(2,'0')}`));
+        }
       }
+      await b.commit();
     }
-    await srBatch.commit();
-  } catch(e) { console.error('sales_reports 직접 삭제 실패:', e); }
+  } catch(e) { console.error('YYYY-MM 컬렉션 직접 삭제 실패:', e); }
 
   // 루트 컬렉션 삭제
   const rootCols = ['notices', 'as_records', 'sp_orders', 'delivery_notes'];
