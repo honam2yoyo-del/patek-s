@@ -531,7 +531,7 @@ window.fmtNum = function(el) {
 
 const STATUS_OPTIONS = ['등록','판매예정','컨펌예정','이월예정','AS','기타','잔여 재고','판매 완료','선수금'];
 const MPDS_STATUS_DISPLAY = {'판매예정':'판매 예정','컨펌예정':'컨펌 예정','이월예정':'이월 예정','판매 완료':'판매 완료','선수금':'선수금','등록':'MPDS 등록 중','기타':'기타(이동)','AS':'AS','잔여 재고':'잔여 재고'};
-const IS_NO_PCS = s => s === '선수금';
+const IS_NO_PCS = () => false; // 선수금 포함 모든 상태 pcs 집계
 function statusSelClass(s) {
   return {'등록':'s-reg','판매예정':'s-sale','컨펌예정':'s-confirm','이월예정':'s-carry','AS':'s-as','기타':'s-etc','잔여 재고':'s-rest','보류':'s-rest','판매 완료':'s-done','선수금':'s-advance'}[s]||'s-rest';
 }

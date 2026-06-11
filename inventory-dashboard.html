@@ -467,7 +467,7 @@ function canonicalStatus(s) {
   const t = String(s||'').trim();
   return m[t] || (STATUSES.includes(t) ? t : '잔여재고');
 }
-const IS_NO_PCS = s => s === '선수금'; // 선수금: 금액만 집계, pcs 제외
+const IS_NO_PCS = () => false; // 선수금 포함 모든 상태 pcs 집계
 
 // 상태 변경 핸들러 — window 노출로 인라인 핸들러에서 안전하게 호출
 let _invDD2 = null;
@@ -817,18 +817,22 @@ function renderKpi() {
   set('kpi-rest',    '잔여재고');
   set('kpi-reg',     '등록');
 
-  // 선수금: pcs는 "-"로, 금액만 표시
-  const advPcs = document.getElementById('kpi-adv-pcs');
-  const advAmt = document.getElementById('kpi-adv-amt');
-  if (advPcs) advPcs.innerHTML  = `- <small>pcs</small>`;
-  if (advAmt) advAmt.textContent = fmtW(stat['선수금'].amt);
+  // 선수금: pcs + 금액 모두 표시
+  set('kpi-adv', '선수금');
 }
 
 function forceAdvKpi() {
-  let advAmt = 0;
-  rows.forEach(r => { if ((r.status||'') === '선수금') advAmt += (typeof r.amount==='number' ? r.amount : (Number(r.amount)||0)); });
-  const el = document.getElementById('kpi-adv-amt');
-  if (el) el.textContent = fmtW(advAmt);
+  let advAmt = 0, advQty = 0;
+  rows.forEach(r => {
+    if ((r.status||'') === '선수금') {
+      advAmt += (typeof r.amount==='number' ? r.amount : (Number(r.amount)||0));
+      advQty++;
+    }
+  });
+  const ep = document.getElementById('kpi-adv-pcs');
+  const ea = document.getElementById('kpi-adv-amt');
+  if (ep) ep.innerHTML  = `${advQty} <small>pcs</small>`;
+  if (ea) ea.textContent = fmtW(advAmt);
 }
 
 /* ────────── 필터 (복수 선택) ────────── */

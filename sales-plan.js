@@ -44,7 +44,7 @@ const BADGE_MAP = {
   '잔여재고':'badge-rest','AS':'badge-as','기타':'badge-rest','판매완료':'badge-done',
   '등록':'badge-reg','선수금':'badge-advance'
 };
-const IS_NO_PCS = s => s === '선수금'; // 선수금: 금액만 집계, pcs 제외
+const IS_NO_PCS = () => false; // 선수금 포함 모든 상태 pcs 집계
 const pcsLabel  = n => (n === 1 ? '1 pc' : (n || 0) + ' pcs');
 
 function canonicalStatus(s) {
@@ -848,7 +848,7 @@ function renderSummary() {
     summary['전체'].qty += pcs; summary['전체'].amount += amt;
   });
   document.getElementById('summaryTbody').innerHTML = ORDER.map(s => {
-    const qtyDisp = s === '선수금' ? '-' : pcsLabel(summary[s].qty);
+    const qtyDisp = pcsLabel(summary[s].qty);
     return `<tr><td ${TD} class="${COLORS[s]}">${LABELS[s]}</td><td ${TD}>${qtyDisp}</td><td ${TD}>${fmtW(summary[s].amount)}</td></tr>`;
   }).join('');
 }
@@ -890,12 +890,13 @@ function autoCalcCurrentSales() {
     pcsEl.value = donePcs > 0 ? String(donePcs) : '';
   }
   if (pcsDisp) {
-    if (donePcs === 0 && advPcs === 0) {
+    const totalPcs = donePcs + advPcs;
+    if (totalPcs === 0) {
       pcsDisp.textContent = '(-)';
     } else if (advPcs === 0) {
       pcsDisp.textContent = `(${pcsLabel(donePcs)})`;
     } else {
-      pcsDisp.textContent = `(${pcsLabel(donePcs)} / 선수금 ${pcsLabel(advPcs)})`;
+      pcsDisp.textContent = `(${pcsLabel(totalPcs)} · 선수금 ${pcsLabel(advPcs)})`;
     }
   }
   recalcRemain();
