@@ -511,7 +511,8 @@ const DEFAULT_NOTES = [];
 let curYear  = new Date().getFullYear();
 let curMonth = new Date().getMonth() + 1;
 let unsubReport = null;
-let lastYearAmounts = { byLine:{}, byRegion:{} }; // 작년 같은 달 라인/지역별 금액 합계 (yoy 계산용)
+let lastYearAmounts = { byLine:{}, byRegion:{} }; // 작년 라인/지역별 금액 (per-line yoy용)
+let lastYearTotalSales = null; // 작년 총 매출 (sales_dashboard.currentSales) — 요약 전년 대비 기준
 
 let lineData    = JSON.parse(JSON.stringify(DEFAULT_LINES));
 let regionData  = JSON.parse(JSON.stringify(DEFAULT_REGIONS));
@@ -696,6 +697,7 @@ function loadMonth() {
   if (unsubInventory) unsubInventory();
   salesRaw = [];
   lastYearAmounts = { byLine:{}, byRegion:{} };
+  lastYearTotalSales = null;
 
   const docId = `${curYear}-${pad(curMonth)}`;
 
@@ -745,16 +747,21 @@ function loadMonth() {
 
   // 작년 같은 달 데이터 로드 → yoy 계산용
   // inventory 판매완료 우선, 없으면 sales_reports lineData/regionData 사용
-  // 작년 같은 달: inventory(현재형) + mpds(구형, MPDS→inventory 통합 이전 데이터) + sales_reports(수동저장) 순으로 시도
+  // 작년 같은 달 데이터 로드: sales_dashboard(총 매출) + inventory/mpds/sales_reports(라인별)
   const prevDocId = `${curYear - 1}-${pad(curMonth)}`;
   Promise.all([
+    getDoc(doc(db,'artifacts','patek-s','public','data','sales_dashboard', prevDocId)),
     getDoc(doc(db,'artifacts','patek-s','public','data','inventory', prevDocId)),
     getDoc(doc(db,'artifacts','patek-s','public','data','mpds', prevDocId)),
     getDoc(doc(db,'artifacts','patek-s','public','data','sales_reports', prevDocId))
-  ]).then(([invSnap, mpdsSnap, repSnap]) => {
+  ]).then(([dashSnap, invSnap, mpdsSnap, repSnap]) => {
+    // ── 총 매출 (요약 전년 대비용) ──
+    if (dashSnap.exists() && dashSnap.data().currentSales != null) {
+      lastYearTotalSales = Number(dashSnap.data().currentSales);
+    }
+    // ── 라인/지역별 금액 (per-line yoy용) ──
     const byLine = {}, byRegion = {};
     let hasData = false;
-    // 1순위: inventory 판매완료
     if (invSnap.exists()) {
       const done = (invSnap.data().rows || []).filter(r => r.status === '판매완료' || r.status === '판매 완료');
       done.forEach(r => {
@@ -765,7 +772,6 @@ function loadMonth() {
       });
       if (done.length > 0) hasData = true;
     }
-    // 2순위: mpds 판매완료 (MPDS→inventory 통합 이전에 저장된 구형 데이터)
     if (!hasData && mpdsSnap.exists()) {
       const done = (mpdsSnap.data().inventory || []).filter(r => r.status === '판매완료' || r.status === '판매 완료');
       done.forEach(r => {
@@ -776,13 +782,16 @@ function loadMonth() {
       });
       if (done.length > 0) hasData = true;
     }
-    // 3순위: sales_reports lineData/regionData (동향 보고에서 직접 저장한 경우)
     if (!hasData && repSnap.exists()) {
       const d = repSnap.data();
       const ld = d.salesListData?.lineData || d.lineData || [];
       const rd = d.salesListData?.regionData || d.regionData || [];
       ld.forEach(r => { const k = r.line||r.name||''; if (k && r.amount) byLine[k] = Number(r.amount)||0; });
       rd.forEach(r => { const k = r.region||r.name||''; if (k && r.amount) byRegion[k] = Number(r.amount)||0; });
+    }
+    // sales_dashboard.currentSales가 있으면 라인별 합산 결과로도 총액 보정
+    if (lastYearTotalSales == null && hasData) {
+      lastYearTotalSales = Object.values(byLine).reduce((s,v)=>s+v, 0) || null;
     }
     lastYearAmounts = { byLine, byRegion };
     renderAll();
@@ -913,14 +922,22 @@ function updateRegionChart(shares) {
 window.updateSummary = function() {
   const totAmt = lineData.reduce((s,r)=>s+(Number(r.amount)||0),0);
   const totQty = lineData.reduce((s,r)=>s+(Number(r.qty)||0),0);
-  const avgYoy = lineData.length ? lineData.reduce((s,r)=>s+(Number(r.yoy)||0),0)/lineData.length : 0;
+
+  // 전년 대비: lastYearTotalSales(sales_dashboard.currentSales) 기준으로 계산
+  // 없으면 per-line yoy 평균으로 폴백
+  let summaryYoy;
+  if (lastYearTotalSales != null && lastYearTotalSales > 0 && totAmt > 0) {
+    summaryYoy = Math.round((totAmt - lastYearTotalSales) / lastYearTotalSales * 1000) / 10;
+  } else {
+    summaryYoy = lineData.length ? lineData.reduce((s,r)=>s+(Number(r.yoy)||0),0)/lineData.length : 0;
+  }
 
   document.getElementById('sum-total').textContent = fmtN(totAmt) + ' KRW';
   document.getElementById('sum-qty').textContent   = totQty + ' pcs';
-  document.getElementById('sum-yoy').textContent   = `${avgYoy>=0?'▲':'▼'} ${Math.abs(avgYoy).toFixed(1)}%`;
-  document.getElementById('sum-yoy').className     = avgYoy >= 0 ? 'up' : 'down';
-  document.getElementById('sum-yoy2').className    = avgYoy >= 0 ? 'up' : 'down';
-  document.getElementById('sum-yoy2').textContent  = `${avgYoy>=0?'▲':'▼'} ${Math.abs(avgYoy).toFixed(1)}%`;
+  document.getElementById('sum-yoy').textContent   = `${summaryYoy>=0?'▲':'▼'} ${Math.abs(summaryYoy).toFixed(1)}%`;
+  document.getElementById('sum-yoy').className     = summaryYoy >= 0 ? 'up' : 'down';
+  document.getElementById('sum-yoy2').className    = summaryYoy >= 0 ? 'up' : 'down';
+  document.getElementById('sum-yoy2').textContent  = `${summaryYoy>=0?'▲':'▼'} ${Math.abs(summaryYoy).toFixed(1)}%`;
 
   const topLine = [...lineData].sort((a,b)=>(b.amount||0)-(a.amount||0))[0];
   const topLineShare = totAmt > 0 ? Math.round((topLine?.amount||0)/totAmt*100) : 0;
@@ -967,7 +984,12 @@ window.deleteNote = function(i) {
 window.recommendNotes = function() {
   const totAmt = lineData.reduce((s,r)=>s+(Number(r.amount)||0),0);
   const totQty = lineData.reduce((s,r)=>s+(Number(r.qty)||0),0);
-  const avgYoy = lineData.length ? (lineData.reduce((s,r)=>s+(Number(r.yoy)||0),0)/lineData.length).toFixed(1) : 0;
+  let noteYoy;
+  if (lastYearTotalSales != null && lastYearTotalSales > 0 && totAmt > 0) {
+    noteYoy = (Math.round((totAmt - lastYearTotalSales) / lastYearTotalSales * 1000) / 10).toFixed(1);
+  } else {
+    noteYoy = lineData.length ? (lineData.reduce((s,r)=>s+(Number(r.yoy)||0),0)/lineData.length).toFixed(1) : '0.0';
+  }
   const topLine = [...lineData].sort((a,b)=>(b.amount||0)-(a.amount||0))[0];
   const topLineShare = totAmt > 0 ? Math.round((topLine?.amount||0)/totAmt*100) : 0;
   const topReg  = [...regionData].sort((a,b)=>(b.amount||0)-(a.amount||0))[0];
@@ -977,7 +999,7 @@ window.recommendNotes = function() {
   notes = [
     `${topLine?.line||'Nautilus'} Collection의 판매 비중이 가장 높게 나타났습니다. 비중 ${topLineShare}%, 수량 ${topLine?.qty||0} pcs.`,
     `${topReg?.region||'부산'} 지역 매출이 전체 지역 중 가장 높은 비중을 차지하였습니다. 비중 ${topRegShare}%, 수량 ${topReg?.qty||0} pcs.`,
-    `전년 대비 총 매출이 ${Math.abs(avgYoy)}% ${Number(avgYoy)>=0?'상승':'하락'}하여 ${Number(avgYoy)>=0?'긍정적인 흐름을 보였습니다.':'개선이 필요합니다.'}`,
+    `전년 대비 총 매출이 ${Math.abs(noteYoy)}% ${Number(noteYoy)>=0?'상승':'하락'}하여 ${Number(noteYoy)>=0?'긍정적인 흐름을 보였습니다.':'개선이 필요합니다.'}`,
     `이번 달 총 판매 수량은 ${totQty} pcs이며, 총 매출액은 ${fmtN(totAmt)} KRW입니다.`
   ];
   renderNotes();
