@@ -297,6 +297,12 @@
       <div class="topbar">
         <h1 class="page-title">매출 현황 보고서</h1>
         <div class="toolbar">
+          <div class="tab-group" id="periodGroup">
+            <button class="tab-btn active" onclick="setPeriod('monthly',this)">월별</button>
+            <button class="tab-btn" onclick="setPeriod('quarterly',this)">분기별</button>
+            <button class="tab-btn" onclick="setPeriod('yearly',this)">연도별</button>
+          </div>
+          <span id="period-label" style="font-size:12px;font-weight:800;color:#64748b;white-space:nowrap;"></span>
           <button class="action-btn excel-btn" onclick="downloadExcel()">
             <span class="btn-icon excel-icon">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h9l5 5v13H5V3z"/><path d="M14 3v5h5"/><path d="M8 10l3 4-3 4"/><path d="M14 10l-3 4 3 4"/></svg>
@@ -435,56 +441,19 @@
         </div>
       </section>
 
-      <!-- 지역별 판매 현황 + 특이사항 -->
-      <section class="bottom-grid">
-        <div class="wide-panel">
-          <div class="panel-header">
-            <div class="section-title">지역별 판매 현황</div>
-            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-              <div class="tab-group" id="viewToggle">
-                <button class="tab-btn active" onclick="setView('region',this)">지역</button>
-                <button class="tab-btn" onclick="setView('collection',this)">Collection</button>
-              </div>
-              <select id="monthlySelect" class="view-select active" onchange="onMonthlyChange(this.value)">
-                <option value="0">월별 전체</option>
-                <option value="1">1월</option><option value="2">2월</option><option value="3">3월</option>
-                <option value="4">4월</option><option value="5">5월</option><option value="6">6월</option>
-                <option value="7">7월</option><option value="8">8월</option><option value="9">9월</option>
-                <option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
-              </select>
-              <select id="quarterlySelect" class="view-select" onchange="onQuarterlyChange(this.value)">
-                <option value="0">분기별 전체</option>
-                <option value="1">1분기</option><option value="2">2분기</option>
-                <option value="3">3분기</option><option value="4">4분기</option>
-              </select>
-              <button class="tab-btn" id="yearlyBtn" onclick="setYearly(this)">연도별</button>
-            </div>
-          </div>
-          <div class="wide-panel-body">
-            <table class="wide-table" id="monthlyTable">
-              <colgroup id="monthlyColgroup"></colgroup>
-              <thead id="monthlyThead"></thead>
-              <tbody id="monthlyTbody"></tbody>
-              <tfoot id="monthlyTfoot"></tfoot>
-            </table>
-            <div class="note-line" style="margin-top:8px;">* 금액 단위: KRW &nbsp;|&nbsp; Amt = 판매금액, Qty = 판매수량</div>
+      <!-- 특이사항 -->
+      <div class="panel" style="margin-bottom:14px;">
+        <div class="panel-header">
+          <div class="section-title">특이사항</div>
+          <div style="display:flex;gap:8px;">
+            <button class="small-btn" onclick="recommendNotes()">자동 문장 추천</button>
+            <button class="small-btn note-add-btn" onclick="addNote()">+ 추가</button>
           </div>
         </div>
-
-        <!-- 특이사항 (표 아래로 이동) -->
-        <div class="wide-panel">
-          <div class="panel-header">
-            <div class="section-title">특이사항</div>
-            <div style="display:flex;gap:8px;">
-              <button class="small-btn" onclick="recommendNotes()">자동 문장 추천</button>
-              <button class="small-btn note-add-btn" onclick="addNote()">+ 추가</button>
-            </div>
-          </div>
-          <div class="special-box">
-            <ul class="special-list" id="specialList"></ul>
-          </div>
+        <div class="special-box">
+          <ul class="special-list" id="specialList"></ul>
         </div>
-      </section>
+      </div>
     </div><!-- /report-page -->
   </main>
 
@@ -547,75 +516,61 @@ let lineData    = JSON.parse(JSON.stringify(DEFAULT_LINES));
 let regionData  = JSON.parse(JSON.stringify(DEFAULT_REGIONS));
 let monthlyData = JSON.parse(JSON.stringify(DEFAULT_MONTHLY));
 let notes       = [...DEFAULT_NOTES];
-let salesRaw  = [];
-let activeTab     = 'monthly';
-let activeView    = 'region'; // 'region' | 'collection'
-let filterMonth   = null;     // null = 전체, 1-12
-let filterQuarter = null;     // null = 전체, 1-4
-let yearlyCache   = {};
+let salesRaw     = [];
+let lineDataFS   = null; // Firestore 원본 (폴백용)
+let regionDataFS = null;
+let reportPeriod = 'monthly'; // 'monthly' | 'quarterly' | 'yearly'
 
-const COL_CANONICAL = ['Grand Complications','Complications','Calatrava','Nautilus','Aquanaut','Cubitus','Twenty~4','Gondolo','Golden Ellipse'];
-
-function normCol(c) {
-  const v = (c||'').trim();
-  if (v === 'Grand Complication') return 'Grand Complications';
-  return COL_CANONICAL.includes(v) ? v : '기타';
+/* ── 기간 필터 ── */
+function getFilteredSalesRaw() {
+  if (reportPeriod === 'monthly') {
+    return salesRaw.filter(s => s.month === curMonth);
+  } else if (reportPeriod === 'quarterly') {
+    const q = Math.ceil(curMonth / 3);
+    const months = [(q-1)*3+1, (q-1)*3+2, q*3];
+    return salesRaw.filter(s => months.includes(s.month));
+  }
+  return salesRaw; // yearly: all months
 }
 
-function getYearRange() {
-  return [curYear-4, curYear-3, curYear-2, curYear-1, curYear];
+function computeFromSalesRaw(raw) {
+  const lm = {}, rm = {};
+  raw.forEach(s => {
+    const lk = s.line || '기타';
+    if (!lm[lk]) lm[lk] = { line: lk, qty: 0, amount: 0, yoy: 0 };
+    lm[lk].qty++;
+    lm[lk].amount += s.amount;
+    const rk = s.region || '기타';
+    if (!rm[rk]) rm[rk] = { region: rk, qty: 0, amount: 0, yoy: 0 };
+    rm[rk].qty++;
+    rm[rk].amount += s.amount;
+  });
+  return {
+    ld: Object.values(lm).sort((a,b) => b.amount - a.amount),
+    rd: Object.values(rm).sort((a,b) => b.amount - a.amount)
+  };
 }
 
-async function loadYearlyData() {
-  const years = getYearRange().filter(y => y < curYear);
-  await Promise.all(years.map(async y => {
-    if (yearlyCache[y] !== undefined) return;
-    try {
-      const snap = await getDoc(doc(db,'artifacts','patek-s','public','data','sales_reports',`${y}-12`));
-      yearlyCache[y] = snap.exists() ? snap.data() : null;
-    } catch(e) { yearlyCache[y] = null; }
-  }));
+function updatePeriodLabel() {
+  const el = document.getElementById('period-label');
+  if (!el) return;
+  if (reportPeriod === 'monthly') {
+    el.textContent = `${curMonth}월 기준`;
+  } else if (reportPeriod === 'quarterly') {
+    const q = Math.ceil(curMonth / 3);
+    const start = (q-1)*3+1, end = q*3;
+    el.textContent = `${q}분기(${start}~${end}월) 기준`;
+  } else {
+    el.textContent = `${curYear}년 기준`;
+  }
 }
 
-window.onMonthlyChange = function(val) {
-  activeTab     = 'monthly';
-  filterMonth   = val === '0' ? null : Number(val);
-  filterQuarter = null;
-  document.getElementById('quarterlySelect').value = '0';
-  document.getElementById('quarterlySelect').classList.remove('active');
-  document.getElementById('monthlySelect').classList.add('active');
-  const yb = document.getElementById('yearlyBtn'); if (yb) yb.classList.remove('active');
-  renderRegionalTable();
-};
-
-window.onQuarterlyChange = function(val) {
-  activeTab     = 'quarterly';
-  filterQuarter = val === '0' ? null : Number(val);
-  filterMonth   = null;
-  document.getElementById('monthlySelect').value = '0';
-  document.getElementById('monthlySelect').classList.remove('active');
-  document.getElementById('quarterlySelect').classList.add('active');
-  const yb = document.getElementById('yearlyBtn'); if (yb) yb.classList.remove('active');
-  renderRegionalTable();
-};
-
-window.setYearly = function(btn) {
-  activeTab     = 'yearly';
-  filterMonth   = null;
-  filterQuarter = null;
-  document.getElementById('monthlySelect').value = '0';
-  document.getElementById('quarterlySelect').value = '0';
-  document.getElementById('monthlySelect').classList.remove('active');
-  document.getElementById('quarterlySelect').classList.remove('active');
+window.setPeriod = function(period, btn) {
+  reportPeriod = period;
+  document.querySelectorAll('#periodGroup .tab-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  loadYearlyData().then(() => renderRegionalTable());
-};
-
-window.setView = function(view, btn) {
-  activeView = view;
-  document.querySelectorAll('#viewToggle .tab-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  renderRegionalTable();
+  updatePeriodLabel();
+  renderAll();
 };
 
 
@@ -669,10 +624,12 @@ function loadMonth() {
       monthlyData = JSON.parse(JSON.stringify(DEFAULT_MONTHLY));
       notes       = [...DEFAULT_NOTES];
     }
+    lineDataFS   = JSON.parse(JSON.stringify(lineData));
+    regionDataFS = JSON.parse(JSON.stringify(regionData));
     renderAll();
   });
 
-  // 재고 직접 연동: 판매완료 행 → salesRaw (Collection 뷰용 실시간 데이터)
+  // 재고 직접 연동: 판매완료 행 → salesRaw (기간 필터 데이터 소스)
   unsubInventory = onSnapshot(doc(db,'artifacts','patek-s','public','data','inventory',docId), snap => {
     if (snap.exists()) {
       const invRows = snap.data().rows || [];
@@ -686,14 +643,24 @@ function loadMonth() {
     } else {
       salesRaw = [];
     }
-    renderRegionalTable();
+    renderAll();
   });
 }
 
 function renderAll() {
+  // salesRaw 기반으로 기간별 데이터 계산
+  if (salesRaw.length > 0) {
+    const filtered = getFilteredSalesRaw();
+    const { ld, rd } = computeFromSalesRaw(filtered);
+    if (ld.length) lineData   = ld;
+    if (rd.length) regionData = rd;
+  } else {
+    lineData   = lineDataFS   || lineData;
+    regionData = regionDataFS || regionData;
+  }
+  updatePeriodLabel();
   renderLineTable();
   renderRegionTable();
-  renderRegionalTable();
   renderNotes();
   updateSummary();
 }
@@ -794,199 +761,11 @@ function updateRegionChart(shares) {
   document.getElementById('region-mini-qty').textContent   = (top?.qty||0)+' pcs';
 }
 
-/* ── 지역별 현황 테이블 (탭 전환) ── */
-function renderRegionalTable() {
-  if (activeTab === 'monthly')   renderMonthlyView();
-  else if (activeTab === 'quarterly') renderQuarterlyView();
-  else renderYearlyView();
-}
+/* renderRegionalTable 제거됨 — 기간 필터는 renderAll에서 처리 */
 
-/* ── 공통 헬퍼: salesRaw 기반 {qty, amount} 집계 ── */
-function srAgg(items) {
-  return { qty: items.length, amount: items.reduce((s,v) => s + (Number(v.amount)||0), 0) };
-}
-function renderTH2(label, cols, rowLabel) {
-  // cols: [{label, span, isCur}]
-  const n = cols.length;
-  // Qty=2%, label=8%, 비중=3.5%, 전년대비=4.5% → 나머지를 (n+1)개 Amt에 배분
-  const qtyPct   = 2;
-  const labelPct = 8;
-  const sharePct = 3.5;
-  const yoyPct   = 4.5;
-  const amtPct   = ((100 - labelPct - (n + 1) * qtyPct - sharePct - yoyPct) / (n + 1)).toFixed(2);
-  const cg = document.getElementById('monthlyColgroup');
-  if (cg) {
-    let ch = `<col style="width:${labelPct}%">`;
-    for (let i = 0; i < n; i++) ch += `<col style="width:${qtyPct}%"><col style="width:${amtPct}%">`;
-    ch += `<col style="width:${qtyPct}%"><col style="width:${amtPct}%">`;  // 합계
-    ch += `<col style="width:${sharePct}%"><col style="width:${yoyPct}%">`;
-    cg.innerHTML = ch;
-  }
-  const r1 = cols.map(c =>
-    `<th colspan="2"${c.isCur?' class="highlight-month"':''}>${c.label}</th>`
-  ).join('') + `<th colspan="2">합계</th><th rowspan="2" style="vertical-align:middle;">비중</th><th rowspan="2" style="vertical-align:middle;">전년대비</th>`;
-  const r2 = cols.map(() => '<th>Qty</th><th>Amt</th>').join('') + '<th>Qty</th><th>Amt</th>';
-  document.getElementById('monthlyThead').innerHTML =
-    `<tr><th rowspan="2" style="vertical-align:middle;">${rowLabel}</th>${r1}</tr><tr>${r2}</tr>`;
-}
-function renderBodyTfoot(displayRows, visCols, colKey, curM) {
-  const grandAmt = displayRows.reduce((s,r) =>
-    s + visCols.reduce((a,c) => a + ((r[colKey][c.idx] || {amount:0}).amount), 0), 0);
-
-  document.getElementById('monthlyTbody').innerHTML = displayRows.map(row => {
-    const { yoy } = row;
-    const cells = visCols.map(c => {
-      const { qty, amount } = row[colKey][c.idx] || {qty:null,amount:0};
-      const cs = c.isCur ? ' class="highlight-month"' : '';
-      const st = c.isCur ? 'color:#0067e8;font-weight:900;' : '';
-      const q  = qty != null ? (qty > 0 ? qty : '-') : '-';
-      if (row.editable) {
-        return `<td${cs} style="${st}">${q}</td><td${cs}><input class="td-inp" type="text" value="${amount>0?fmtN(amount):''}" oninput="if(!monthlyData[${row.ri}])monthlyData[${row.ri}]=new Array(12).fill(0);monthlyData[${row.ri}][${c.mi}]=Number(this.value.replace(/,/g,''))||0;renderMonthlyTfoot();" style="${st}" placeholder="0"/></td>`;
-      }
-      return `<td${cs} style="${st}">${q}</td><td${cs} style="${st}">${amount>0?fmtN(amount):'-'}</td>`;
-    }).join('');
-    const rowQty = visCols.reduce((s,c)=>s+((row[colKey][c.idx]||{qty:0}).qty||0),0);
-    const rowAmt = visCols.reduce((s,c)=>s+((row[colKey][c.idx]||{amount:0}).amount||0),0);
-    const share  = grandAmt > 0 ? Math.round(rowAmt/grandAmt*100) : 0;
-    const yoyH   = yoy != null ? `<span class="${yoy>=0?'up':'down'}">${yoy>=0?'+'+yoy:yoy}%</span>` : '-';
-    return `<tr><td>${esc(row.label)}</td>${cells}<td style="font-weight:900;">${rowQty>0?rowQty:'-'}</td><td style="font-weight:900;">${rowAmt>0?fmtN(rowAmt):'-'}</td><td class="share-cell" data-ri="${row.ri??-1}" style="font-weight:800;">${share>0?share+'%':'-'}</td><td style="font-weight:800;">${yoyH}</td></tr>`;
-  }).join('');
-
-  const colQtySums = visCols.map(c=>displayRows.reduce((s,r)=>s+((r[colKey][c.idx]||{qty:0}).qty||0),0));
-  const colAmtSums = visCols.map(c=>displayRows.reduce((s,r)=>s+((r[colKey][c.idx]||{amount:0}).amount||0),0));
-  const totQty = colQtySums.reduce((s,v)=>s+v,0);
-  const totAmt = colAmtSums.reduce((s,v)=>s+v,0);
-  const tfCells = visCols.map((_,i)=>`<td>${colQtySums[i]>0?colQtySums[i]:'-'}</td><td>${colAmtSums[i]>0?fmtN(colAmtSums[i]):'-'}</td>`).join('');
-  document.getElementById('monthlyTfoot').innerHTML =
-    `<tr><td>합계</td>${tfCells}<td>${totQty>0?totQty:'-'}</td><td>${totAmt>0?fmtN(totAmt):'-'}</td><td>100%</td><td>-</td></tr>`;
-}
-
-/* ── 월별 뷰 ── */
-function renderMonthlyView() {
-  const ALL = [1,2,3,4,5,6,7,8,9,10,11,12];
-  const curM = curMonth;
-  const visMo = filterMonth ? [filterMonth] : ALL;
-  const rowLabel = activeView === 'collection' ? 'Collection' : '지역';
-
-  const cols = visMo.map(m => ({ label:`${m}월`, span:2, isCur: m===curM, idx: m-1, mi: m-1 }));
-  renderTH2(rowLabel, cols, rowLabel);
-
-  let displayRows;
-  if (activeView === 'collection') {
-    displayRows = [...COL_CANONICAL, '기타'].map(col => ({
-      label: col, ri: -1, yoy: null, editable: false,
-      mo: ALL.map(m => srAgg(salesRaw.filter(s => normCol(s.line)===col && s.month===m)))
-    })).filter(r => r.mo.some(v => v.qty>0));
-  } else {
-    const useSR = salesRaw.length > 0;
-    displayRows = regionData.map((r, ri) => ({
-      label: r.region, ri, yoy: r.yoy??null, editable: !useSR,
-      mo: ALL.map((m, mi) => useSR
-        ? srAgg(salesRaw.filter(s => s.region===r.region && s.month===m))
-        : { qty: null, amount: (monthlyData[ri]||[])[mi] || 0 })
-    }));
-  }
-
-  renderBodyTfoot(displayRows, cols, 'mo', curM);
-}
-
-/* ── 분기별 뷰 ── */
-function renderQuarterlyView() {
-  const QM = [[0,1,2],[3,4,5],[6,7,8],[9,10,11]];
-  const visQ = filterQuarter ? [filterQuarter] : [1,2,3,4];
-  const rowLabel = activeView === 'collection' ? 'Collection' : '지역';
-
-  const cols = visQ.map(q => ({ label:`${q}분기`, span:2, isCur:false, idx:q-1, mi:null }));
-  renderTH2(rowLabel, cols, rowLabel);
-
-  let displayRows;
-  if (activeView === 'collection') {
-    displayRows = [...COL_CANONICAL, '기타'].map(col => ({
-      label: col, ri: -1, yoy: null, editable: false,
-      qt: QM.map(months => srAgg(salesRaw.filter(s => normCol(s.line)===col && months.includes(s.month-1))))
-    })).filter(r => r.qt.some(v => v.qty>0));
-  } else {
-    const useSR = salesRaw.length > 0;
-    displayRows = regionData.map((r, ri) => ({
-      label: r.region, ri, yoy: r.yoy??null, editable: false,
-      qt: QM.map(months => useSR
-        ? srAgg(salesRaw.filter(s => s.region===r.region && months.includes(s.month-1)))
-        : { qty: null, amount: months.reduce((s,mi) => s+((monthlyData[ri]||[])[mi]||0), 0) })
-    }));
-  }
-
-  renderBodyTfoot(displayRows, cols, 'qt', null);
-}
-
-/* ── 연도별 뷰 ── */
-function renderYearlyView() {
-  const years = getYearRange();
-  const rowLabel = activeView === 'collection' ? 'Collection' : '지역';
-  const cols = years.map((y,i) => ({ label:`${y}년`, span:2, isCur:false, idx:i, mi:null }));
-  renderTH2(rowLabel, cols, rowLabel);
-
-  function getYearCell(cached, y, filterFn) {
-    if (y === curYear) return srAgg(salesRaw.filter(filterFn));
-    if (!cached) return {qty:0, amount:0};
-    const yr = cached.salesListData?.salesRaw;
-    if (yr?.length) return srAgg(yr.filter(filterFn));
-    return {qty:0, amount:0};
-  }
-
-  let displayRows;
-  if (activeView === 'collection') {
-    displayRows = [...COL_CANONICAL, '기타'].map(col => {
-      const yr = years.map((y,i) => getYearCell(yearlyCache[y], y, s => normCol(s.line)===col));
-      const cur=yr[yr.length-1].amount, prev=yr[yr.length-2]?.amount;
-      return { label:col, ri:-1, yoy: prev>0?Math.round((cur-prev)/prev*100):null, editable:false, yd:yr };
-    }).filter(r => r.yd.some(v => v.qty>0||v.amount>0));
-  } else {
-    const useSR = salesRaw.length > 0;
-    displayRows = regionData.map((r, ri) => {
-      const yd = years.map((y,i) => {
-        if (y === curYear) return useSR
-          ? srAgg(salesRaw.filter(s => s.region===r.region))
-          : { qty:null, amount:(monthlyData[ri]||[]).reduce((s,v)=>s+(Number(v)||0),0) };
-        const cached = yearlyCache[y];
-        if (!cached||!cached.monthlyData) return {qty:null,amount:0};
-        const cm=cached.monthlyData[ri];
-        return {qty:null, amount:cm?cm.reduce((s,v)=>s+(Number(v)||0),0):0};
-      });
-      const cur=yd[yd.length-1].amount, prev=yd[yd.length-2]?.amount;
-      return { label:r.region, ri, yoy:prev>0?Math.round((cur-prev)/prev*100):null, editable:false, yd };
-    });
-  }
-
-  renderBodyTfoot(displayRows, cols, 'yd', null);
-}
-
-window.renderMonthlyTfoot = function() {
-  // 지역 뷰 편집 모드(salesRaw 없음)에서 입력 시 호출 — tfoot + 비중 실시간 갱신
-  const visMo = filterMonth ? [filterMonth] : [1,2,3,4,5,6,7,8,9,10,11,12];
-  const curM = curMonth;
-  const colAmtSums = visMo.map(m => regionData.reduce((s,r,ri) => s+((monthlyData[ri]||[])[m-1]||0), 0));
-  const totAmt = colAmtSums.reduce((s,v)=>s+v,0);
-  const tfCells = visMo.map((m,i) => {
-    const cs = m===curM?' class="highlight-month"':'';
-    return `<td${cs}>-</td><td${cs}>${colAmtSums[i]>0?fmtN(colAmtSums[i]):'-'}</td>`;
-  }).join('');
-  document.getElementById('monthlyTfoot').innerHTML =
-    `<tr><td>합계</td>${tfCells}<td>-</td><td>${totAmt>0?fmtN(totAmt):'-'}</td><td>100%</td><td>-</td></tr>`;
-  const grandAmt = regionData.reduce((s,r,ri) =>
-    s + visMo.reduce((a,m)=>a+((monthlyData[ri]||[])[m-1]||0), 0), 0);
-  document.querySelectorAll('.share-cell').forEach(cell => {
-    const ri = Number(cell.dataset.ri);
-    if (ri<0) return;
-    const rowAmt = visMo.reduce((s,m)=>s+((monthlyData[ri]||[])[m-1]||0), 0);
-    cell.textContent = grandAmt>0 ? Math.round(rowAmt/grandAmt*100)+'%' : '-';
-  });
-};
 
 /* ── 요약 카드 업데이트 ── */
 window.updateSummary = function() {
-  renderLineTable();
-  renderRegionTable();
-
   const totAmt = lineData.reduce((s,r)=>s+(Number(r.amount)||0),0);
   const totQty = lineData.reduce((s,r)=>s+(Number(r.qty)||0),0);
   const avgYoy = lineData.length ? lineData.reduce((s,r)=>s+(Number(r.yoy)||0),0)/lineData.length : 0;
