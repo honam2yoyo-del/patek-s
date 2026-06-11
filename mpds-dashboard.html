@@ -692,11 +692,17 @@ function mpdsGetLine(inv) {
   }
   return inv.line||'';
 }
-function mpdsShowSaleDialog(ri) {
-  const item = inventory[ri];
+function mpdsShowSaleDialog(ri, targetStatus) {
+  const item   = inventory[ri];
   if (!item) return;
-  const modal = document.getElementById('mpdsSaleModal');
+  const status = targetStatus || '판매 완료';
+  const modal  = document.getElementById('mpdsSaleModal');
   if (!modal) return;
+
+  // 타이틀 변경
+  const titleEl = modal.querySelector('div[style*="font-size:18px"]');
+  if (titleEl) titleEl.textContent = status === '선수금' ? '💰 선수금 등록' : '✔ 판매 완료 등록';
+
   const sel = document.getElementById('mpdsScSalesperson');
   if (sel) {
     sel.innerHTML = '<option value="">선택 안 함</option>' +
@@ -718,7 +724,7 @@ function mpdsShowSaleDialog(ri) {
     if (!region) { alert('지역을 입력해 주세요.'); return; }
     if (!staff)  { alert('판매 직원을 선택해 주세요.'); return; }
     if (!line)   { alert('Collection 정보가 없습니다. 설정에서 Collection을 먼저 등록해 주세요.'); return; }
-    item.status            = '판매 완료';
+    item.status            = status;
     item.region            = region;
     item.salesperson       = staff;
     item.line              = line;
@@ -901,8 +907,8 @@ window.mpdsStatusDD = function(e, ri) {
       ev.stopPropagation();
       closeMpdsDD();
       if (!inventory[ri]) return;
-      if (s === '판매 완료') {
-        mpdsShowSaleDialog(ri);
+      if (s === '판매 완료' || s === '선수금') {
+        mpdsShowSaleDialog(ri, s);
       } else {
         inventory[ri].status = s;
         renderAll();

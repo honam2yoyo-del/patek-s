@@ -935,8 +935,8 @@ window.invStatusDD = function(e, ri) {
       ev.stopPropagation();
       closeInvDD();
       if (!rows[ri]) return;
-      if (s === '판매완료') {
-        showSaleCompleteDialog(ri);
+      if (s === '판매완료' || s === '선수금') {
+        showSaleCompleteDialog(ri, s);
       } else {
         rows[ri].status = s;
         renderTable();
@@ -961,13 +961,17 @@ window.invChStatus = function(ri, val, el) {
 };
 
 /* ── 판매 완료 입력 다이얼로그 ── */
-function showSaleCompleteDialog(ri) {
+function showSaleCompleteDialog(ri, targetStatus) {
   const r    = rows[ri];
   if (!r) return;
-  // REF로 Collection 자동 매칭, 없으면 기존 저장값 사용
+  const status   = targetStatus || '판매완료';
   const autoLine = getLineForRef(r.ref) || r.line || '';
-  const modal = document.getElementById('saleCompleteModal');
+  const modal    = document.getElementById('saleCompleteModal');
   if (!modal) return;
+
+  // 다이얼로그 타이틀 변경
+  const titleEl = modal.querySelector('div[style*="font-size:18px"]');
+  if (titleEl) titleEl.textContent = status === '선수금' ? '💰 선수금 등록' : '✔ 판매 완료 등록';
 
   // 직원 select 채우기
   const selEl = document.getElementById('scSalesperson');
@@ -979,15 +983,10 @@ function showSaleCompleteDialog(ri) {
       }).join('');
     selEl.value = r.salesperson || '';
   }
-  const regionEl = document.getElementById('scRegion');
-  if (regionEl) regionEl.value = r.region || '';
-  const lineEl = document.getElementById('scLine');
-  if (lineEl) lineEl.value = autoLine;
-  const dateEl = document.getElementById('scDate');
-  if (dateEl) {
-    const today = new Date();
-    dateEl.value = r.saleCompletedDate || `${today.getFullYear()}.${today.getMonth()+1}.${today.getDate()}`;
-  }
+  document.getElementById('scRegion').value = r.region || '';
+  document.getElementById('scLine').value   = autoLine;
+  const today = new Date();
+  document.getElementById('scDate').value   = r.saleCompletedDate || `${today.getFullYear()}.${today.getMonth()+1}.${today.getDate()}`;
 
   modal.style.display = 'flex';
 
@@ -1001,12 +1000,12 @@ function showSaleCompleteDialog(ri) {
     if (!region) { alert('지역을 입력해 주세요.'); return; }
     if (!staff)  { alert('판매 직원을 선택해 주세요.'); return; }
     if (!line)   { alert('Collection 정보가 없습니다. 설정에서 Collection을 먼저 등록해 주세요.'); return; }
-    r.status             = '판매완료';
-    r.region             = region;
-    r.salesperson        = staff;
-    r.line               = line;
-    r.saleCompletedDate  = date;
-    modal.style.display  = 'none';
+    r.status            = status;
+    r.region            = region;
+    r.salesperson       = staff;
+    r.line              = line;
+    r.saleCompletedDate = date;
+    modal.style.display = 'none';
     renderTable();
     window.markDirty && window.markDirty();
   };

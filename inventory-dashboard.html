@@ -486,8 +486,8 @@ window.chStatusDD = function(e, ri) {
       ev.stopPropagation();
       closeInvDD2();
       if (!rows[ri]) return;
-      if (s === '판매완료') {
-        invShowSaleDialog(ri);
+      if (s === '판매완료' || s === '선수금') {
+        invShowSaleDialog(ri, s);
       } else {
         rows[ri].status = s;
         renderKpi();
@@ -1200,12 +1200,18 @@ function invGetLineForRef(ref) {
   return '';
 }
 
-function invShowSaleDialog(ri) {
-  const r     = rows[ri];
+function invShowSaleDialog(ri, targetStatus) {
+  const r      = rows[ri];
   if (!r) return;
+  const status   = targetStatus || '판매완료';
   const autoLine = invGetLineForRef(r.ref) || r.line || '';
-  const modal = document.getElementById('invSaleModal');
+  const modal    = document.getElementById('invSaleModal');
   if (!modal) return;
+
+  // 타이틀 변경
+  const titleEl = modal.querySelector('div[style*="font-size:18px"]');
+  if (titleEl) titleEl.textContent = status === '선수금' ? '💰 선수금 등록' : '✔ 판매 완료 등록';
+
   const sel = document.getElementById('invScSalesperson');
   if (sel) {
     sel.innerHTML = '<option value="">선택 안 함</option>' +
@@ -1227,7 +1233,7 @@ function invShowSaleDialog(ri) {
     if (!region) { alert('지역을 입력해 주세요.'); return; }
     if (!staff)  { alert('판매 직원을 선택해 주세요.'); return; }
     if (!line)   { alert('Collection 정보가 없습니다. 설정에서 Collection을 먼저 등록해 주세요.'); return; }
-    r.status            = '판매완료';
+    r.status            = status;
     r.region            = region;
     r.salesperson       = staff;
     r.line              = line;
@@ -1235,7 +1241,8 @@ function invShowSaleDialog(ri) {
     modal.style.display = 'none';
     renderKpi();
     renderTable();
-    syncStatusToMpds(r.ref, r.serial, '판매완료');
+    forceAdvKpi();
+    syncStatusToMpds(r.ref, r.serial, status === '선수금' ? '선수금' : '판매완료');
     window.markDirty && window.markDirty();
   };
 }
