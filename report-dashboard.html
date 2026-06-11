@@ -115,10 +115,16 @@
     .rl4 { left:10px;bottom:90px; } .rl5 { left:14px;top:82px; } .rl6 { left:78px;top:14px; }
 
     /* ── 하단 그리드 ── */
-    .bottom-grid { display:grid;grid-template-columns:1.4fr 1fr;gap:14px;margin-bottom:14px; }
+    .bottom-grid { display:flex;flex-direction:column;gap:14px;margin-bottom:14px; }
     .wide-panel { background:#fff;border:1px solid #e1e7f0;border-radius:10px;box-shadow:0 2px 8px rgba(15,23,42,.035);overflow:hidden; }
-    .wide-panel-body { padding:0 14px 16px;overflow-x:auto; }
-    .wide-table th, .wide-table td { padding:7px 7px;font-size:12px; }
+    .wide-panel-body { padding:0 14px 16px; }
+    .wide-table { table-layout:fixed;width:100%; }
+    .wide-table th, .wide-table td { padding:clamp(2px,0.3vw,4px) clamp(2px,0.25vw,4px);font-size:clamp(7px,0.6vw,12px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+    .wide-table th { background:#f3f6fa;font-weight:900;color:#003b8e; }
+    .wide-table td { background:#fff;font-weight:700; }
+    .wide-table tfoot td { background:#f8fafc;font-weight:900;color:#003b8e; }
+    .view-select { height:30px;border:1.5px solid #d0d9e8;border-radius:7px;background:#f0f4fa;font-size:12px;font-weight:800;color:#374151;padding:0 8px;cursor:pointer;outline:none; }
+    .view-select:focus,.view-select.active { border-color:#075bd8; }
 
     /* ── 월별 필터 ── */
     .filter-row { display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:8px 14px 4px; }
@@ -429,21 +435,29 @@
         </div>
       </section>
 
-      <!-- 연도별 월단위 지역별 -->
+      <!-- 지역별 판매 현황 + 특이사항 -->
       <section class="bottom-grid">
         <div class="wide-panel">
           <div class="panel-header">
             <div class="section-title">지역별 판매 현황</div>
-            <div style="display:flex;align-items:center;gap:8px;">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
               <div class="tab-group" id="viewToggle">
                 <button class="tab-btn active" onclick="setView('region',this)">지역</button>
                 <button class="tab-btn" onclick="setView('collection',this)">Collection</button>
               </div>
-              <div class="tab-group" id="timeTabGroup">
-                <button class="tab-btn active" onclick="setTab('monthly',this)">월별</button>
-                <button class="tab-btn" onclick="setTab('quarterly',this)">분기별</button>
-                <button class="tab-btn" onclick="setTab('yearly',this)">연도별</button>
-              </div>
+              <select id="monthlySelect" class="view-select active" onchange="onMonthlyChange(this.value)">
+                <option value="0">월별 전체</option>
+                <option value="1">1월</option><option value="2">2월</option><option value="3">3월</option>
+                <option value="4">4월</option><option value="5">5월</option><option value="6">6월</option>
+                <option value="7">7월</option><option value="8">8월</option><option value="9">9월</option>
+                <option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
+              </select>
+              <select id="quarterlySelect" class="view-select" onchange="onQuarterlyChange(this.value)">
+                <option value="0">분기별 전체</option>
+                <option value="1">1분기</option><option value="2">2분기</option>
+                <option value="3">3분기</option><option value="4">4분기</option>
+              </select>
+              <button class="tab-btn" id="yearlyBtn" onclick="setYearly(this)">연도별</button>
             </div>
           </div>
           <div class="wide-panel-body">
@@ -452,11 +466,11 @@
               <tbody id="monthlyTbody"></tbody>
               <tfoot id="monthlyTfoot"></tfoot>
             </table>
-            <div class="note-line" style="margin-top:10px;">* 금액은 원(KRW) 기준입니다.</div>
+            <div class="note-line" style="margin-top:8px;">* 금액 단위: KRW &nbsp;|&nbsp; Amt = 판매금액, Qty = 판매수량</div>
           </div>
         </div>
 
-        <!-- 특이사항 -->
+        <!-- 특이사항 (표 아래로 이동) -->
         <div class="wide-panel">
           <div class="panel-header">
             <div class="section-title">특이사항</div>
@@ -533,9 +547,11 @@ let regionData  = JSON.parse(JSON.stringify(DEFAULT_REGIONS));
 let monthlyData = JSON.parse(JSON.stringify(DEFAULT_MONTHLY));
 let notes       = [...DEFAULT_NOTES];
 let salesRaw  = [];
-let activeTab  = 'monthly';
-let activeView = 'region'; // 'region' | 'collection'
-let yearlyCache = {};
+let activeTab     = 'monthly';
+let activeView    = 'region'; // 'region' | 'collection'
+let filterMonth   = null;     // null = 전체, 1-12
+let filterQuarter = null;     // null = 전체, 1-4
+let yearlyCache   = {};
 
 const COL_CANONICAL = ['Grand Complications','Complications','Calatrava','Nautilus','Aquanaut','Cubitus','Twenty~4','Gondolo','Golden Ellipse'];
 
@@ -560,15 +576,38 @@ async function loadYearlyData() {
   }));
 }
 
-window.setTab = function(tab, btn) {
-  activeTab = tab;
-  document.querySelectorAll('#timeTabGroup .tab-btn').forEach(b => b.classList.remove('active'));
+window.onMonthlyChange = function(val) {
+  activeTab     = 'monthly';
+  filterMonth   = val === '0' ? null : Number(val);
+  filterQuarter = null;
+  document.getElementById('quarterlySelect').value = '0';
+  document.getElementById('quarterlySelect').classList.remove('active');
+  document.getElementById('monthlySelect').classList.add('active');
+  const yb = document.getElementById('yearlyBtn'); if (yb) yb.classList.remove('active');
+  renderRegionalTable();
+};
+
+window.onQuarterlyChange = function(val) {
+  activeTab     = 'quarterly';
+  filterQuarter = val === '0' ? null : Number(val);
+  filterMonth   = null;
+  document.getElementById('monthlySelect').value = '0';
+  document.getElementById('monthlySelect').classList.remove('active');
+  document.getElementById('quarterlySelect').classList.add('active');
+  const yb = document.getElementById('yearlyBtn'); if (yb) yb.classList.remove('active');
+  renderRegionalTable();
+};
+
+window.setYearly = function(btn) {
+  activeTab     = 'yearly';
+  filterMonth   = null;
+  filterQuarter = null;
+  document.getElementById('monthlySelect').value = '0';
+  document.getElementById('quarterlySelect').value = '0';
+  document.getElementById('monthlySelect').classList.remove('active');
+  document.getElementById('quarterlySelect').classList.remove('active');
   btn.classList.add('active');
-  if (tab === 'yearly') {
-    loadYearlyData().then(() => renderRegionalTable());
-  } else {
-    renderRegionalTable();
-  }
+  loadYearlyData().then(() => renderRegionalTable());
 };
 
 window.setView = function(view, btn) {
@@ -761,215 +800,169 @@ function renderRegionalTable() {
   else renderYearlyView();
 }
 
+/* ── 공통 헬퍼: salesRaw 기반 {qty, amount} 집계 ── */
+function srAgg(items) {
+  return { qty: items.length, amount: items.reduce((s,v) => s + (Number(v.amount)||0), 0) };
+}
+function renderTH2(label, cols, rowLabel) {
+  // cols: [{label, span, isCur}]
+  const r1 = cols.map(c =>
+    `<th colspan="${c.span}"${c.isCur?' class="highlight-month"':''}>${c.label}</th>`
+  ).join('') + `<th colspan="2">합계</th><th rowspan="2" style="vertical-align:middle;">비중</th><th rowspan="2" style="vertical-align:middle;">전년대비</th>`;
+  const r2 = cols.map(() => '<th>Qty</th><th>Amt</th>').join('') + '<th>Qty</th><th>Amt</th>';
+  document.getElementById('monthlyThead').innerHTML =
+    `<tr><th rowspan="2" style="vertical-align:middle;">${rowLabel}</th>${r1}</tr><tr>${r2}</tr>`;
+}
+function renderBodyTfoot(displayRows, visCols, colKey, curM) {
+  const grandAmt = displayRows.reduce((s,r) =>
+    s + visCols.reduce((a,c) => a + ((r[colKey][c.idx] || {amount:0}).amount), 0), 0);
+
+  document.getElementById('monthlyTbody').innerHTML = displayRows.map(row => {
+    const { yoy } = row;
+    const cells = visCols.map(c => {
+      const { qty, amount } = row[colKey][c.idx] || {qty:null,amount:0};
+      const cs = c.isCur ? ' class="highlight-month"' : '';
+      const st = c.isCur ? 'color:#0067e8;font-weight:900;' : '';
+      const q  = qty != null ? (qty > 0 ? qty : '-') : '-';
+      if (row.editable) {
+        return `<td${cs} style="${st}">${q}</td><td${cs}><input class="td-inp" type="text" value="${amount>0?fmtN(amount):''}" oninput="if(!monthlyData[${row.ri}])monthlyData[${row.ri}]=new Array(12).fill(0);monthlyData[${row.ri}][${c.mi}]=Number(this.value.replace(/,/g,''))||0;renderMonthlyTfoot();" style="${st}" placeholder="0"/></td>`;
+      }
+      return `<td${cs} style="${st}">${q}</td><td${cs} style="${st}">${amount>0?fmtN(amount):'-'}</td>`;
+    }).join('');
+    const rowQty = visCols.reduce((s,c)=>s+((row[colKey][c.idx]||{qty:0}).qty||0),0);
+    const rowAmt = visCols.reduce((s,c)=>s+((row[colKey][c.idx]||{amount:0}).amount||0),0);
+    const share  = grandAmt > 0 ? Math.round(rowAmt/grandAmt*100) : 0;
+    const yoyH   = yoy != null ? `<span class="${yoy>=0?'up':'down'}">${yoy>=0?'+'+yoy:yoy}%</span>` : '-';
+    return `<tr><td>${esc(row.label)}</td>${cells}<td style="font-weight:900;">${rowQty>0?rowQty:'-'}</td><td style="font-weight:900;">${rowAmt>0?fmtN(rowAmt):'-'}</td><td class="share-cell" data-ri="${row.ri??-1}" style="font-weight:800;">${share>0?share+'%':'-'}</td><td style="font-weight:800;">${yoyH}</td></tr>`;
+  }).join('');
+
+  const colQtySums = visCols.map(c=>displayRows.reduce((s,r)=>s+((r[colKey][c.idx]||{qty:0}).qty||0),0));
+  const colAmtSums = visCols.map(c=>displayRows.reduce((s,r)=>s+((r[colKey][c.idx]||{amount:0}).amount||0),0));
+  const totQty = colQtySums.reduce((s,v)=>s+v,0);
+  const totAmt = colAmtSums.reduce((s,v)=>s+v,0);
+  const tfCells = visCols.map((_,i)=>`<td>${colQtySums[i]>0?colQtySums[i]:'-'}</td><td>${colAmtSums[i]>0?fmtN(colAmtSums[i]):'-'}</td>`).join('');
+  document.getElementById('monthlyTfoot').innerHTML =
+    `<tr><td>합계</td>${tfCells}<td>${totQty>0?totQty:'-'}</td><td>${totAmt>0?fmtN(totAmt):'-'}</td><td>100%</td><td>-</td></tr>`;
+}
+
+/* ── 월별 뷰 ── */
 function renderMonthlyView() {
-  const MONTHS = [1,2,3,4,5,6,7,8,9,10,11,12];
+  const ALL = [1,2,3,4,5,6,7,8,9,10,11,12];
   const curM = curMonth;
+  const visMo = filterMonth ? [filterMonth] : ALL;
   const rowLabel = activeView === 'collection' ? 'Collection' : '지역';
 
-  document.getElementById('monthlyThead').innerHTML = `<tr>
-    <th>${rowLabel}</th>
-    ${MONTHS.map(m => `<th${m === curM ? ' class="highlight-month"' : ''}>${m}월</th>`).join('')}
-    <th>합계</th><th>비중</th><th>전년대비</th>
-  </tr>`;
+  const cols = visMo.map(m => ({ label:`${m}월`, span:2, isCur: m===curM, idx: m-1, mi: m-1 }));
+  renderTH2(rowLabel, cols, rowLabel);
 
   let displayRows;
   if (activeView === 'collection') {
     displayRows = [...COL_CANONICAL, '기타'].map(col => ({
-      region: col, ri: -1, yoy: null,
-      monthly: MONTHS.map(m => salesRaw
-        .filter(s => normCol(s.line) === col && s.month === m)
-        .reduce((sum, s) => sum + (Number(s.amount) || 0), 0))
-    })).filter(r => r.monthly.some(v => v > 0));
+      label: col, ri: -1, yoy: null, editable: false,
+      mo: ALL.map(m => srAgg(salesRaw.filter(s => normCol(s.line)===col && s.month===m)))
+    })).filter(r => r.mo.some(v => v.qty>0));
   } else {
+    const useSR = salesRaw.length > 0;
     displayRows = regionData.map((r, ri) => ({
-      region: r.region, ri, yoy: r.yoy != null ? r.yoy : null,
-      monthly: monthlyData[ri] || new Array(12).fill(0)
+      label: r.region, ri, yoy: r.yoy??null, editable: !useSR,
+      mo: ALL.map((m, mi) => useSR
+        ? srAgg(salesRaw.filter(s => s.region===r.region && s.month===m))
+        : { qty: null, amount: (monthlyData[ri]||[])[mi] || 0 })
     }));
   }
 
-  const grandTotal = displayRows.reduce((s, r) => s + r.monthly.reduce((a, v) => a + (Number(v) || 0), 0), 0);
-
-  document.getElementById('monthlyTbody').innerHTML = displayRows.map(row => {
-    const { ri, yoy } = row;
-    const editable = activeView === 'region' && ri >= 0;
-    const mCells = MONTHS.map(m => {
-      const val = row.monthly[m-1] || 0;
-      const cls = m === curM ? ' class="highlight-month"' : '';
-      const style = m === curM ? 'color:#0067e8;font-weight:900;' : '';
-      if (editable) return `<td${cls}><input class="td-inp" type="text" value="${val > 0 ? fmtN(val) : ''}" oninput="if(!monthlyData[${ri}])monthlyData[${ri}]=new Array(12).fill(0);monthlyData[${ri}][${m-1}]=Number(this.value.replace(/,/g,''))||0;renderMonthlyTfoot();" style="${style}" placeholder="0"/></td>`;
-      return `<td${cls} style="${style}">${val > 0 ? fmtN(val) : '-'}</td>`;
-    }).join('');
-    const rowSum = row.monthly.reduce((s, v) => s + (Number(v) || 0), 0);
-    const share = grandTotal > 0 ? Math.round(rowSum / grandTotal * 100) : 0;
-    const yoyHtml = yoy != null
-      ? `<span class="${yoy >= 0 ? 'up' : 'down'}">${yoy >= 0 ? '+' + yoy : yoy}%</span>` : '-';
-    return `<tr>
-      <td>${esc(row.region)}</td>${mCells}
-      <td style="font-weight:900;">${rowSum > 0 ? fmtN(rowSum) : '-'}</td>
-      <td class="share-cell" data-ri="${ri}" style="font-weight:800;">${share > 0 ? share + '%' : '-'}</td>
-      <td style="font-weight:800;">${yoyHtml}</td>
-    </tr>`;
-  }).join('');
-
-  _renderTfoot('monthly', displayRows, grandTotal);
+  renderBodyTfoot(displayRows, cols, 'mo', curM);
 }
 
+/* ── 분기별 뷰 ── */
 function renderQuarterlyView() {
-  const QS = ['1분기', '2분기', '3분기', '4분기'];
   const QM = [[0,1,2],[3,4,5],[6,7,8],[9,10,11]];
+  const visQ = filterQuarter ? [filterQuarter] : [1,2,3,4];
   const rowLabel = activeView === 'collection' ? 'Collection' : '지역';
 
-  document.getElementById('monthlyThead').innerHTML = `<tr>
-    <th>${rowLabel}</th>${QS.map(q => `<th>${q}</th>`).join('')}
-    <th>합계</th><th>비중</th><th>전년대비</th>
-  </tr>`;
+  const cols = visQ.map(q => ({ label:`${q}분기`, span:2, isCur:false, idx:q-1, mi:null }));
+  renderTH2(rowLabel, cols, rowLabel);
 
   let displayRows;
   if (activeView === 'collection') {
     displayRows = [...COL_CANONICAL, '기타'].map(col => ({
-      region: col, ri: -1, yoy: null,
-      quarterly: QM.map(months => salesRaw
-        .filter(s => normCol(s.line) === col && months.includes(s.month - 1))
-        .reduce((sum, s) => sum + (Number(s.amount) || 0), 0))
-    })).filter(r => r.quarterly.some(v => v > 0));
+      label: col, ri: -1, yoy: null, editable: false,
+      qt: QM.map(months => srAgg(salesRaw.filter(s => normCol(s.line)===col && months.includes(s.month-1))))
+    })).filter(r => r.qt.some(v => v.qty>0));
   } else {
-    displayRows = regionData.map((r, ri) => {
-      const m = monthlyData[ri] || new Array(12).fill(0);
-      return {
-        region: r.region, ri, yoy: r.yoy != null ? r.yoy : null,
-        quarterly: QM.map(months => months.reduce((s, mi) => s + (Number(m[mi]) || 0), 0))
-      };
-    });
+    const useSR = salesRaw.length > 0;
+    displayRows = regionData.map((r, ri) => ({
+      label: r.region, ri, yoy: r.yoy??null, editable: false,
+      qt: QM.map(months => useSR
+        ? srAgg(salesRaw.filter(s => s.region===r.region && months.includes(s.month-1)))
+        : { qty: null, amount: months.reduce((s,mi) => s+((monthlyData[ri]||[])[mi]||0), 0) })
+    }));
   }
 
-  const grandTotal = displayRows.reduce((s, r) => s + r.quarterly.reduce((a, v) => a + (v || 0), 0), 0);
-
-  document.getElementById('monthlyTbody').innerHTML = displayRows.map(row => {
-    const qCells = row.quarterly.map(v => `<td>${v > 0 ? fmtN(v) : '-'}</td>`).join('');
-    const rowSum = row.quarterly.reduce((s, v) => s + (v || 0), 0);
-    const share = grandTotal > 0 ? Math.round(rowSum / grandTotal * 100) : 0;
-    const yoyHtml = row.yoy != null
-      ? `<span class="${row.yoy >= 0 ? 'up' : 'down'}">${row.yoy >= 0 ? '+' + row.yoy : row.yoy}%</span>` : '-';
-    return `<tr>
-      <td>${esc(row.region)}</td>${qCells}
-      <td style="font-weight:900;">${rowSum > 0 ? fmtN(rowSum) : '-'}</td>
-      <td style="font-weight:800;">${share > 0 ? share + '%' : '-'}</td>
-      <td style="font-weight:800;">${yoyHtml}</td>
-    </tr>`;
-  }).join('');
-
-  _renderTfoot('quarterly', displayRows, grandTotal);
+  renderBodyTfoot(displayRows, cols, 'qt', null);
 }
 
+/* ── 연도별 뷰 ── */
 function renderYearlyView() {
   const years = getYearRange();
   const rowLabel = activeView === 'collection' ? 'Collection' : '지역';
+  const cols = years.map((y,i) => ({ label:`${y}년`, span:2, isCur:false, idx:i, mi:null }));
+  renderTH2(rowLabel, cols, rowLabel);
 
-  document.getElementById('monthlyThead').innerHTML = `<tr>
-    <th>${rowLabel}</th>${years.map(y => `<th>${y}년</th>`).join('')}
-    <th>합계</th><th>비중</th><th>전년대비</th>
-  </tr>`;
+  function getYearCell(cached, y, filterFn) {
+    if (y === curYear) return srAgg(salesRaw.filter(filterFn));
+    if (!cached) return {qty:0, amount:0};
+    const yr = cached.salesListData?.salesRaw;
+    if (yr?.length) return srAgg(yr.filter(filterFn));
+    return {qty:0, amount:0};
+  }
 
   let displayRows;
   if (activeView === 'collection') {
     displayRows = [...COL_CANONICAL, '기타'].map(col => {
-      const yearTotals = years.map(y => {
-        if (y === curYear) return salesRaw.filter(s => normCol(s.line) === col).reduce((s, v) => s + (Number(v.amount) || 0), 0);
-        const cached = yearlyCache[y];
-        if (!cached) return 0;
-        const yr = cached.salesListData?.salesRaw;
-        if (yr?.length) return yr.filter(s => normCol(s.line) === col).reduce((s, v) => s + (Number(v.amount) || 0), 0);
-        const ld = cached.salesListData?.lineData || cached.lineData || [];
-        const e = ld.find(r => normCol(r.line || r.name || '') === col);
-        return e ? (Number(e.amount) || 0) : 0;
-      });
-      const cur = yearTotals[yearTotals.length-1], prev = yearTotals[yearTotals.length-2];
-      const yoy = prev > 0 ? Math.round((cur - prev) / prev * 100) : null;
-      return { region: col, ri: -1, yearTotals, yoy };
-    }).filter(r => r.yearTotals.some(v => v > 0));
+      const yr = years.map((y,i) => getYearCell(yearlyCache[y], y, s => normCol(s.line)===col));
+      const cur=yr[yr.length-1].amount, prev=yr[yr.length-2]?.amount;
+      return { label:col, ri:-1, yoy: prev>0?Math.round((cur-prev)/prev*100):null, editable:false, yd:yr };
+    }).filter(r => r.yd.some(v => v.qty>0||v.amount>0));
   } else {
+    const useSR = salesRaw.length > 0;
     displayRows = regionData.map((r, ri) => {
-      const yearTotals = years.map(y => {
-        if (y === curYear) return (monthlyData[ri] || []).reduce((s, v) => s + (Number(v) || 0), 0);
+      const yd = years.map((y,i) => {
+        if (y === curYear) return useSR
+          ? srAgg(salesRaw.filter(s => s.region===r.region))
+          : { qty:null, amount:(monthlyData[ri]||[]).reduce((s,v)=>s+(Number(v)||0),0) };
         const cached = yearlyCache[y];
-        if (!cached || !cached.monthlyData) return 0;
-        const cm = cached.monthlyData[ri];
-        return cm ? cm.reduce((s, v) => s + (Number(v) || 0), 0) : 0;
+        if (!cached||!cached.monthlyData) return {qty:null,amount:0};
+        const cm=cached.monthlyData[ri];
+        return {qty:null, amount:cm?cm.reduce((s,v)=>s+(Number(v)||0),0):0};
       });
-      const cur = yearTotals[yearTotals.length-1], prev = yearTotals[yearTotals.length-2];
-      const yoy = prev > 0 ? Math.round((cur - prev) / prev * 100) : null;
-      return { region: r.region, ri, yearTotals, yoy };
+      const cur=yd[yd.length-1].amount, prev=yd[yd.length-2]?.amount;
+      return { label:r.region, ri, yoy:prev>0?Math.round((cur-prev)/prev*100):null, editable:false, yd };
     });
   }
 
-  const grandTotal = displayRows.reduce((s, r) => s + r.yearTotals.reduce((a, v) => a + (v || 0), 0), 0);
-
-  document.getElementById('monthlyTbody').innerHTML = displayRows.map(row => {
-    const yCells = row.yearTotals.map(v => `<td>${v > 0 ? fmtN(v) : '-'}</td>`).join('');
-    const rowSum = row.yearTotals.reduce((s, v) => s + (v || 0), 0);
-    const share = grandTotal > 0 ? Math.round(rowSum / grandTotal * 100) : 0;
-    const yoyHtml = row.yoy != null
-      ? `<span class="${row.yoy >= 0 ? 'up' : 'down'}">${row.yoy >= 0 ? '+' + row.yoy : row.yoy}%</span>` : '-';
-    return `<tr>
-      <td>${esc(row.region)}</td>${yCells}
-      <td style="font-weight:900;">${rowSum > 0 ? fmtN(rowSum) : '-'}</td>
-      <td style="font-weight:800;">${share > 0 ? share + '%' : '-'}</td>
-      <td style="font-weight:800;">${yoyHtml}</td>
-    </tr>`;
-  }).join('');
-
-  _renderTfoot('yearly', displayRows, grandTotal);
-}
-
-function _renderTfoot(type, displayRows, grandTotal) {
-  const curM = curMonth;
-  let cells = '';
-  let total = 0;
-
-  if (type === 'monthly') {
-    const mSums = Array.from({length:12}, (_, mi) =>
-      displayRows.reduce((s, r) => s + (Number(r.monthly[mi]) || 0), 0));
-    total = mSums.reduce((s, v) => s + v, 0);
-    cells = mSums.map((v, mi) => {
-      const cls = (mi+1) === curM ? ' class="highlight-month"' : '';
-      return `<td${cls}>${v > 0 ? fmtN(v) : '-'}</td>`;
-    }).join('');
-  } else if (type === 'quarterly') {
-    const qSums = [0,1,2,3].map(qi => displayRows.reduce((s, r) => s + (r.quarterly[qi] || 0), 0));
-    total = qSums.reduce((s, v) => s + v, 0);
-    cells = qSums.map(v => `<td>${v > 0 ? fmtN(v) : '-'}</td>`).join('');
-  } else {
-    const ySums = getYearRange().map((_, yi) => displayRows.reduce((s, r) => s + (r.yearTotals[yi] || 0), 0));
-    total = ySums.reduce((s, v) => s + v, 0);
-    cells = ySums.map(v => `<td>${v > 0 ? fmtN(v) : '-'}</td>`).join('');
-  }
-  document.getElementById('monthlyTfoot').innerHTML =
-    `<tr><td>합계</td>${cells}<td>${total > 0 ? fmtN(total) : '-'}</td><td>100%</td><td>-</td></tr>`;
+  renderBodyTfoot(displayRows, cols, 'yd', null);
 }
 
 window.renderMonthlyTfoot = function() {
-  // 월별 탭(지역 뷰) 셀 편집 시 호출 — tfoot + 비중 셀 실시간 갱신
-  const MONTHS = [1,2,3,4,5,6,7,8,9,10,11,12];
+  // 지역 뷰 편집 모드(salesRaw 없음)에서 입력 시 호출 — tfoot + 비중 실시간 갱신
+  const visMo = filterMonth ? [filterMonth] : [1,2,3,4,5,6,7,8,9,10,11,12];
   const curM = curMonth;
-  const mSums = MONTHS.map((_, mi) =>
-    regionData.reduce((s, r, ri) => s + (Number((monthlyData[ri] || [])[mi]) || 0), 0)
-  );
-  const total = mSums.reduce((s, v) => s + v, 0);
-  const tCells = mSums.map((v, mi) => {
-    const cls = (mi+1) === curM ? ' class="highlight-month"' : '';
-    return `<td${cls}>${v > 0 ? fmtN(v) : '-'}</td>`;
+  const colAmtSums = visMo.map(m => regionData.reduce((s,r,ri) => s+((monthlyData[ri]||[])[m-1]||0), 0));
+  const totAmt = colAmtSums.reduce((s,v)=>s+v,0);
+  const tfCells = visMo.map((m,i) => {
+    const cs = m===curM?' class="highlight-month"':'';
+    return `<td${cs}>-</td><td${cs}>${colAmtSums[i]>0?fmtN(colAmtSums[i]):'-'}</td>`;
   }).join('');
   document.getElementById('monthlyTfoot').innerHTML =
-    `<tr><td>합계</td>${tCells}<td>${total > 0 ? fmtN(total) : '-'}</td><td>100%</td><td>-</td></tr>`;
-
-  const grandTotal = regionData.reduce((s, r, ri) =>
-    s + (monthlyData[ri] || []).reduce((a, v) => a + (Number(v) || 0), 0), 0);
+    `<tr><td>합계</td>${tfCells}<td>-</td><td>${totAmt>0?fmtN(totAmt):'-'}</td><td>100%</td><td>-</td></tr>`;
+  const grandAmt = regionData.reduce((s,r,ri) =>
+    s + visMo.reduce((a,m)=>a+((monthlyData[ri]||[])[m-1]||0), 0), 0);
   document.querySelectorAll('.share-cell').forEach(cell => {
     const ri = Number(cell.dataset.ri);
-    if (ri < 0) return;
-    const rowTotal = (monthlyData[ri] || []).reduce((a, v) => a + (Number(v) || 0), 0);
-    const share = grandTotal > 0 ? Math.round(rowTotal / grandTotal * 100) : 0;
-    cell.textContent = share > 0 ? share + '%' : '-';
+    if (ri<0) return;
+    const rowAmt = visMo.reduce((s,m)=>s+((monthlyData[ri]||[])[m-1]||0), 0);
+    cell.textContent = grandAmt>0 ? Math.round(rowAmt/grandAmt*100)+'%' : '-';
   });
 };
 
