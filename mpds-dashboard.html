@@ -481,7 +481,7 @@
       </div>
       <div style="display:grid;grid-template-columns:80px 1fr;align-items:center;gap:10px;">
         <label style="font-size:14px;font-weight:900;color:#374151;">지역</label>
-        <input id="mpdsScRegion" type="text" placeholder="예: 서울, 부산, 대구" style="height:38px;border:1px solid #d9e0ea;border-radius:7px;padding:0 12px;font-size:14px;font-family:inherit;outline:none;"/>
+        <select id="mpdsScRegion" style="height:38px;border:1px solid #d9e0ea;border-radius:7px;padding:0 12px;font-size:14px;font-family:inherit;outline:none;cursor:pointer;"><option value="">선택</option><option>부산</option><option>서울</option><option>대구</option><option>경남</option><option>울산</option><option>경북</option><option>광주</option><option>전라</option><option>경기</option><option>세종</option><option>강원</option><option>충청</option><option>제주</option><option>기타</option></select>
       </div>
       <div style="display:grid;grid-template-columns:80px 1fr;align-items:center;gap:10px;">
         <label style="font-size:14px;font-weight:900;color:#374151;">판매 직원</label>
@@ -699,9 +699,13 @@ function mpdsShowSaleDialog(ri, targetStatus) {
   const modal  = document.getElementById('mpdsSaleModal');
   if (!modal) return;
 
-  // 타이틀 변경
-  const titleEl = modal.querySelector('div[style*="font-size:18px"]');
-  if (titleEl) titleEl.textContent = status === '선수금' ? '💰 선수금 등록' : '✔ 판매 완료 등록';
+  // 타이틀·색상·버튼 동적 변경
+  const isAdvMpds = status === '선수금';
+  const colorMpds = isAdvMpds ? '#0891b2' : '#d97706';
+  const titleEl   = modal.querySelector('div[style*="font-size:18px"]');
+  const confirmBtn= document.getElementById('mpdsScConfirm');
+  if (titleEl)    { titleEl.textContent = isAdvMpds ? '✔ 선수금 등록' : '✔ 판매 완료 등록'; titleEl.style.color = colorMpds; }
+  if (confirmBtn) confirmBtn.style.background = colorMpds;
 
   const sel = document.getElementById('mpdsScSalesperson');
   if (sel) {
@@ -885,7 +889,15 @@ window.toggleDateSort = function() {
 };
 
 // window 노출 핸들러 (module scope → inline handler 안전 접근)
-window.mpdsSet = function(ri, key, val) { if (inventory[ri]) inventory[ri][key] = val; };
+window.mpdsSet = function(ri, key, val) {
+  if (!inventory[ri]) return;
+  inventory[ri][key] = val;
+  // REF 입력 시 Collection 자동 매칭
+  if (key === 'ref' && val) {
+    const matched = mpdsGetLine({ ref: val });
+    if (matched) inventory[ri].line = matched;
+  }
+};
 window.mpdsSetAmt = function(ri, el) {
   window.fmtNum(el);
   if (inventory[ri]) inventory[ri].amount = window.parseNum(el.value);

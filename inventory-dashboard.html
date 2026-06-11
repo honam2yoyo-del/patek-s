@@ -391,7 +391,7 @@
       </div>
       <div style="display:grid;grid-template-columns:80px 1fr;align-items:center;gap:10px;">
         <label style="font-size:14px;font-weight:900;color:#374151;">지역</label>
-        <input id="invScRegion" type="text" placeholder="예: 서울, 부산, 대구" style="height:38px;border:1px solid #d9e0ea;border-radius:7px;padding:0 12px;font-size:14px;font-family:inherit;outline:none;"/>
+        <select id="invScRegion" style="height:38px;border:1px solid #d9e0ea;border-radius:7px;padding:0 12px;font-size:14px;font-family:inherit;outline:none;cursor:pointer;"><option value="">선택</option><option>부산</option><option>서울</option><option>대구</option><option>경남</option><option>울산</option><option>경북</option><option>광주</option><option>전라</option><option>경기</option><option>세종</option><option>강원</option><option>충청</option><option>제주</option><option>기타</option></select>
       </div>
       <div style="display:grid;grid-template-columns:80px 1fr;align-items:center;gap:10px;">
         <label style="font-size:14px;font-weight:900;color:#374151;">판매 직원</label>
@@ -517,7 +517,13 @@ window.chStatus = function(ri, val, el) {
 
 // 필드 단순 업데이트 — module 스코프 rows에 안전 접근
 window.setField = function(ri, key, val) {
-  if (rows[ri]) rows[ri][key] = val;
+  if (!rows[ri]) return;
+  rows[ri][key] = val;
+  // REF 입력 시 Collection 자동 매칭
+  if (key === 'ref' && val) {
+    const matched = invGetLineForRef(val);
+    if (matched) rows[ri].line = matched;
+  }
 };
 
 // 금액 업데이트 (포맷 + size + 체크박스 데이터 동기화)
@@ -1208,9 +1214,13 @@ function invShowSaleDialog(ri, targetStatus) {
   const modal    = document.getElementById('invSaleModal');
   if (!modal) return;
 
-  // 타이틀 변경
-  const titleEl = modal.querySelector('div[style*="font-size:18px"]');
-  if (titleEl) titleEl.textContent = status === '선수금' ? '💰 선수금 등록' : '✔ 판매 완료 등록';
+  // 타이틀·색상·버튼 동적 변경
+  const isAdvInv  = status === '선수금';
+  const colorInv  = isAdvInv ? '#0891b2' : '#d97706';
+  const titleEl   = modal.querySelector('div[style*="font-size:18px"]');
+  const confirmBtn= document.getElementById('invScConfirm');
+  if (titleEl)    { titleEl.textContent = isAdvInv ? '✔ 선수금 등록' : '✔ 판매 완료 등록'; titleEl.style.color = colorInv; }
+  if (confirmBtn) confirmBtn.style.background = colorInv;
 
   const sel = document.getElementById('invScSalesperson');
   if (sel) {

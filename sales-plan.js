@@ -904,7 +904,13 @@ function autoCalcCurrentSales() {
 
 /* ── inline 핸들러용 window 노출 (module scope → global scope 접근) ── */
 window.invSet = function(ri, key, val) {
-  if (rows[ri]) rows[ri][key] = val;
+  if (!rows[ri]) return;
+  rows[ri][key] = val;
+  // REF 입력 시 Collection 자동 매칭
+  if (key === 'ref' && val) {
+    const matched = getLineForRef(val);
+    if (matched) rows[ri].line = matched;
+  }
   window.markDirty && window.markDirty();
 };
 window.invSetAmt = function(ri, el) {
@@ -969,9 +975,13 @@ function showSaleCompleteDialog(ri, targetStatus) {
   const modal    = document.getElementById('saleCompleteModal');
   if (!modal) return;
 
-  // 다이얼로그 타이틀 변경
-  const titleEl = modal.querySelector('div[style*="font-size:18px"]');
-  if (titleEl) titleEl.textContent = status === '선수금' ? '💰 선수금 등록' : '✔ 판매 완료 등록';
+  // 다이얼로그 타이틀·색상·버튼 동적 변경
+  const isAdv     = status === '선수금';
+  const color     = isAdv ? '#0891b2' : '#d97706';
+  const titleEl   = modal.querySelector('div[style*="font-size:18px"]');
+  const confirmBtn= document.getElementById('scConfirm');
+  if (titleEl)    { titleEl.textContent = isAdv ? '✔ 선수금 등록' : '✔ 판매 완료 등록'; titleEl.style.color = color; }
+  if (confirmBtn) confirmBtn.style.background = color;
 
   // 직원 select 채우기
   const selEl = document.getElementById('scSalesperson');
@@ -1099,8 +1109,8 @@ window.renderSalesList = function() {
         <td style="padding:9px 14px;font-size:13px;">${esc(r.customer||'-')}</td>
         <td style="padding:9px 14px;font-size:13px;">${esc(r.region||'-')}</td>
         <td style="padding:9px 14px;font-size:13px;">${esc(r.line||'-')}</td>
-        <td style="padding:9px 14px;font-size:13px;color:#6b7280;">${esc(r.note||'-')}</td>
-        <td style="padding:9px 14px;font-size:13px;">${esc(r.salesperson||'-')}${isAdv?'<span style="margin-left:6px;background:#cffafe;color:#0891b2;font-size:11px;font-weight:900;padding:1px 6px;border-radius:10px;">선수금</span>':''}</td>
+        <td style="padding:9px 14px;font-size:13px;color:#6b7280;">${esc(r.note||'-')}${isAdv?'<span style="margin-left:6px;background:#cffafe;color:#0891b2;font-size:11px;font-weight:900;padding:1px 6px;border-radius:10px;">선수금</span>':''}</td>
+        <td style="padding:9px 14px;font-size:13px;">${esc(r.salesperson||'-')}</td>
       </tr>`;
     }).join('');
   }
@@ -1145,7 +1155,7 @@ window.renderSalesList = function() {
 window.exportSalesListExcel = function() {
   if (!window.XLSX) { alert('XLSX 라이브러리 로딩 중입니다.'); return; }
   const list = getSlpRows();
-  const headers = ['No','판매일','REF.','Serial','금액','고객명','지역','Collection','비고','판매직원','구분'];
+  const headers = ['No','판매일','REF.','Serial','금액','고객명','지역','Collection','비고','판매 직원','구분'];
   const data = list.map((r,i) => [
     i+1,
     r.saleCompletedDate||r.saleDate||'',
