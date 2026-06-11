@@ -511,7 +511,7 @@ const DEFAULT_NOTES = [];
 let curYear  = new Date().getFullYear();
 let curMonth = new Date().getMonth() + 1;
 let unsubReport = null;
-let lastYearRaw = []; // 작년 같은 달 판매완료 데이터 (yoy 계산용)
+let lastYearAmounts = { byLine:{}, byRegion:{} }; // 작년 같은 달 라인/지역별 금액 합계 (yoy 계산용)
 
 let lineData    = JSON.parse(JSON.stringify(DEFAULT_LINES));
 let regionData  = JSON.parse(JSON.stringify(DEFAULT_REGIONS));
@@ -534,6 +534,15 @@ function getFilteredSalesRaw() {
   return salesRaw; // yearly: all months
 }
 
+function applyYoy(arr, keyField) {
+  const map = keyField === 'line' ? lastYearAmounts.byLine : lastYearAmounts.byRegion;
+  if (!map || Object.keys(map).length === 0) return;
+  arr.forEach(r => {
+    const ly = map[r[keyField]] || 0;
+    r.yoy = ly > 0 ? Math.round((r.amount - ly) / ly * 100) : 0;
+  });
+}
+
 function computeFromSalesRaw(raw) {
   const lm = {}, rm = {};
   raw.forEach(s => {
@@ -546,28 +555,11 @@ function computeFromSalesRaw(raw) {
     rm[rk].qty++;
     rm[rk].amount += s.amount;
   });
-  // 작년 데이터로 yoy(전년 대비 %) 자동 계산
-  if (lastYearRaw.length > 0) {
-    const lyLine = {}, lyRegion = {};
-    lastYearRaw.forEach(s => {
-      const lk = s.line || '기타';
-      lyLine[lk] = (lyLine[lk] || 0) + s.amount;
-      const rk = s.region || '기타';
-      lyRegion[rk] = (lyRegion[rk] || 0) + s.amount;
-    });
-    Object.values(lm).forEach(r => {
-      const ly = lyLine[r.line] || 0;
-      r.yoy = ly > 0 ? Math.round((r.amount - ly) / ly * 100) : 0;
-    });
-    Object.values(rm).forEach(r => {
-      const ly = lyRegion[r.region] || 0;
-      r.yoy = ly > 0 ? Math.round((r.amount - ly) / ly * 100) : 0;
-    });
-  }
-  return {
-    ld: Object.values(lm).sort((a,b) => b.amount - a.amount),
-    rd: Object.values(rm).sort((a,b) => b.amount - a.amount)
-  };
+  const ld = Object.values(lm).sort((a,b) => b.amount - a.amount);
+  const rd = Object.values(rm).sort((a,b) => b.amount - a.amount);
+  applyYoy(ld, 'line');
+  applyYoy(rd, 'region');
+  return { ld, rd };
 }
 
 function updatePeriodLabel() {
@@ -703,7 +695,7 @@ function loadMonth() {
   if (unsubReport)    unsubReport();
   if (unsubInventory) unsubInventory();
   salesRaw = [];
-  lastYearRaw = [];
+  lastYearAmounts = { byLine:{}, byRegion:{} };
 
   const docId = `${curYear}-${pad(curMonth)}`;
 
@@ -751,20 +743,35 @@ function loadMonth() {
     renderAll();
   });
 
-  // 작년 같은 달 inventory 로드 → yoy 계산용
+  // 작년 같은 달 데이터 로드 → yoy 계산용
+  // inventory 판매완료 우선, 없으면 sales_reports lineData/regionData 사용
   const prevDocId = `${curYear - 1}-${pad(curMonth)}`;
-  getDoc(doc(db,'artifacts','patek-s','public','data','inventory', prevDocId)).then(snap => {
-    if (snap.exists()) {
-      const prevRows = snap.data().rows || [];
-      const done = prevRows.filter(r => r.status === '판매완료' || r.status === '판매 완료');
-      lastYearRaw = done.map(r => ({
-        line: r.line || '기타', region: r.region || '기타', amount: Number(r.amount) || 0
-      }));
-    } else {
-      lastYearRaw = [];
+  Promise.all([
+    getDoc(doc(db,'artifacts','patek-s','public','data','inventory', prevDocId)),
+    getDoc(doc(db,'artifacts','patek-s','public','data','sales_reports', prevDocId))
+  ]).then(([invSnap, repSnap]) => {
+    const byLine = {}, byRegion = {};
+    let hasInv = false;
+    if (invSnap.exists()) {
+      const done = (invSnap.data().rows || []).filter(r => r.status === '판매완료' || r.status === '판매 완료');
+      done.forEach(r => {
+        const lk = r.line || '기타';
+        byLine[lk] = (byLine[lk] || 0) + (Number(r.amount) || 0);
+        const rk = r.region || '기타';
+        byRegion[rk] = (byRegion[rk] || 0) + (Number(r.amount) || 0);
+      });
+      if (done.length > 0) hasInv = true;
     }
+    if (!hasInv && repSnap.exists()) {
+      const d = repSnap.data();
+      const ld = d.salesListData?.lineData || d.lineData || [];
+      const rd = d.salesListData?.regionData || d.regionData || [];
+      ld.forEach(r => { const k = r.line||r.name||''; if (k && r.amount) byLine[k] = Number(r.amount)||0; });
+      rd.forEach(r => { const k = r.region||r.name||''; if (k && r.amount) byRegion[k] = Number(r.amount)||0; });
+    }
+    lastYearAmounts = { byLine, byRegion };
     renderAll();
-  }).catch(() => { lastYearRaw = []; });
+  }).catch(() => { lastYearAmounts = { byLine:{}, byRegion:{} }; });
 }
 
 function renderAll() {
@@ -777,6 +784,9 @@ function renderAll() {
   } else {
     lineData   = lineDataFS   || lineData;
     regionData = regionDataFS || regionData;
+    // 수동 입력 데이터에도 작년 기준 yoy 재계산
+    applyYoy(lineData, 'line');
+    applyYoy(regionData, 'region');
   }
   updatePeriodLabel();
   renderLineTable();
