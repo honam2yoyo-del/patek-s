@@ -75,6 +75,9 @@ let showPrevYear = false;    // 전년 비교 토글 상태
 // 목표 달성률 데이터
 let goalRateData = { total: 0, centum: 0, avenue: 0 };
 
+// 현재 로그인 사용자 이름 캐시
+let _currentUserName = '';
+
 // Collection 설정 + 직원 목록 캐시
 const DEFAULT_LINES = [
   { name: 'Grand Complications', refs: ['5320G-011','5327G-001','5327R-001','7140G-001','7140R-001','5236P-011','5160/500R-001','6159G-001','5270J-001','5204G-010','5370R-001','5373P-001','6104R-001','5322G-001','5260/1455R-001','5260/355R-001','7040/250G-001','5178G-012','7047G-001','5303R-001','5304/301R-001','5308G-001','5374G-001','5531G-001','6002R-001','6301P-001','6300GR-001','27000M-001'] },
@@ -102,6 +105,10 @@ async function loadStaffList() {
   try {
     const snap = await getDocs(collection(db,'users'));
     _staffList = snap.docs.map(d=>({id:d.id,...d.data()})).filter(u=>u.approved);
+    // 현재 로그인 사용자 이름 자동 추출
+    const uid = auth.currentUser?.uid;
+    const me  = _staffList.find(u => u.id === uid);
+    _currentUserName = me?.name || me?.displayName || auth.currentUser?.displayName || '';
   } catch(e) { _staffList = []; }
 }
 function getLineForRef(ref) {
@@ -1023,7 +1030,7 @@ function showSaleCompleteDialog(ri, targetStatus) {
         const name = u.name || u.displayName || u.email || u.id;
         return `<option value="${name}">${name}</option>`;
       }).join('');
-    selEl.value = r.salesperson || '';
+    selEl.value = r.salesperson || _currentUserName || '';
   }
   document.getElementById('scRegion').value = r.region || '';
   document.getElementById('scLine').value   = autoLine;

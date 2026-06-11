@@ -657,10 +657,14 @@ onAuthStateChanged(auth, user => {
 
 /* ── 직원 + 판매완료 다이얼로그 ── */
 let _mpdsStaff = [];
+let _mpdsCurrentUserName = '';
 async function loadMpdsStaff() {
   try {
     const snap = await getDocs(collection(db,'users'));
     _mpdsStaff = snap.docs.map(d=>({id:d.id,...d.data()})).filter(u=>u.approved);
+    const uid = auth.currentUser?.uid;
+    const me  = _mpdsStaff.find(u => u.id === uid);
+    _mpdsCurrentUserName = me?.name || me?.displayName || auth.currentUser?.displayName || '';
   } catch(e) { _mpdsStaff = []; }
 }
 // DEFAULT_LINES 폴백 (lineConfig 미로드 시)
@@ -711,7 +715,7 @@ function mpdsShowSaleDialog(ri, targetStatus) {
   if (sel) {
     sel.innerHTML = '<option value="">선택 안 함</option>' +
       _mpdsStaff.map(u=>{const n=u.name||u.displayName||u.email||u.id;return`<option value="${n}">${n}</option>`;}).join('');
-    sel.value = item.salesperson||'';
+    sel.value = item.salesperson || _mpdsCurrentUserName || '';
   }
   const today = new Date();
   document.getElementById('mpdsScDate').value   = item.saleCompletedDate||`${today.getFullYear()}.${today.getMonth()+1}.${today.getDate()}`;
