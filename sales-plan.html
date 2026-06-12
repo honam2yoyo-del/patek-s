@@ -265,7 +265,7 @@
 
         <!-- 매출 요약 패널 (3열) -->
         <div class="panel">
-          <div class="panel-header">매출 요약</div>
+          <div class="panel-header" id="summaryPanelHeader">매출 요약</div>
           <div class="summary-3col">
 
             <!-- 전체 목표 달성률 -->
@@ -431,7 +431,7 @@ const MON  = now.getMonth()+1;
 const YM   = `${YEAR}-${String(MON).padStart(2,'0')}`;
 
 // ── 데이터 저장소 ──
-let salesData = null, mpdsData = null, invData = null, centumData = null;
+let salesData = null, mpdsData = null, invData = null, centumData = null, avenueData = null;
 let goalData = { total: 0, centum: 0, avenue: 0 };
 
 function render(){
@@ -463,20 +463,28 @@ function render(){
   document.getElementById('kpi-as').textContent = asCount + '건';
   document.getElementById('bot-as-active').textContent = asCount;
 
-  // 전체 목표 달성률 (분기 전체 목표 / 3 = 월간 목표 추정, 없으면 예상 매출 사용)
-  const totalMonthGoal = goalData.total > 0 ? goalData.total / 3 : expected;
-  const achPct = totalMonthGoal > 0 ? Math.round(current / totalMonthGoal * 100) : 0;
-  document.getElementById('achieve-pct').textContent = achPct + '%';
-  document.getElementById('achieve-bar').style.width  = clamp(achPct,0,100) + '%';
-  document.getElementById('achieve-sub').textContent  = `현재 ${current ? toOk(current) : '-'} / 목표 ${totalMonthGoal ? toOk(totalMonthGoal) : '-'}`;
+  // 분기 기준 계산
+  const qNum = Math.ceil(MON / 3);
+  const qMonths = [qNum * 3 - 2, qNum * 3 - 1, qNum * 3];
+  const centumQAchieved = qMonths.reduce((s, m) => s + (Number(centumData?.[`m${m}`]) || 0), 0);
+  const avenueQAchieved = qMonths.reduce((s, m) => s + (Number(avenueData?.[`m${m}`]) || 0), 0);
+  const totalQAchieved  = centumQAchieved + avenueQAchieved;
 
-  // 센텀 목표 달성률 (센텀 달성액 / 센텀 분기 목표 / 3)
-  const centumMonthAchieved = centumData ? (Number(centumData[`m${MON}`]) || 0) : 0;
-  const centumMonthGoal = goalData.centum > 0 ? goalData.centum / 3 : 0;
-  const centumPct = centumMonthGoal > 0 ? Math.round(centumMonthAchieved / centumMonthGoal * 100) : 0;
+  // 패널 헤더에 분기 표시
+  const summaryHeader = document.getElementById('summaryPanelHeader');
+  if (summaryHeader) summaryHeader.textContent = `매출 요약 (${qNum}분기)`;
+
+  // 전체 목표 달성률 (분기 달성 합계 / 분기 전체 목표)
+  const achPct = goalData.total > 0 ? Math.round(totalQAchieved / goalData.total * 100) : 0;
+  document.getElementById('achieve-pct').textContent = achPct + '%';
+  document.getElementById('achieve-bar').style.width  = clamp(achPct, 0, 100) + '%';
+  document.getElementById('achieve-sub').textContent  = `현재 ${totalQAchieved ? toOk(totalQAchieved) : '-'} / 목표 ${goalData.total ? toOk(goalData.total) : '-'}`;
+
+  // 센텀 목표 달성률 (분기 센텀 달성 / 분기 센텀 목표)
+  const centumPct = goalData.centum > 0 ? Math.round(centumQAchieved / goalData.centum * 100) : 0;
   document.getElementById('centum-pct').textContent = centumPct + '%';
-  document.getElementById('centum-bar').style.width  = clamp(centumPct,0,100) + '%';
-  document.getElementById('centum-sub').textContent  = `현재 ${centumMonthAchieved ? toOk(centumMonthAchieved) : '-'} / 목표 ${centumMonthGoal ? toOk(centumMonthGoal) : '-'}`;
+  document.getElementById('centum-bar').style.width  = clamp(centumPct, 0, 100) + '%';
+  document.getElementById('centum-sub').textContent  = `현재 ${centumQAchieved ? toOk(centumQAchieved) : '-'} / 목표 ${goalData.centum ? toOk(goalData.centum) : '-'}`;
 
   // 작년 동월 대비
   const yoyEl = document.getElementById('yoy-pct');
@@ -648,9 +656,13 @@ function startListeners(){
     render();
   });
 
-  // 센텀 연간 달성 데이터
+  // 센텀·에비뉴엘 연간 달성 데이터
   getDoc(doc(db, `artifacts/patek-s/public/data/centum_annual/${YEAR}`)).then(snap => {
     centumData = snap.exists() ? snap.data() : null;
+    render();
+  });
+  getDoc(doc(db, `artifacts/patek-s/public/data/avenue_annual/${YEAR}`)).then(snap => {
+    avenueData = snap.exists() ? snap.data() : null;
     render();
   });
 
