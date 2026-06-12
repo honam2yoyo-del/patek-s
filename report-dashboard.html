@@ -297,8 +297,8 @@
   <main class="main" id="mainArea">
     <div class="report-page">
       <div class="topbar">
-        <div style="display:flex;align-items:center;gap:12px;flex-shrink:0;flex-wrap:wrap;">
-          <h1 class="page-title" style="white-space:nowrap;">매출 현황 보고서</h1>
+        <h1 class="page-title" style="white-space:nowrap;">매출 현황 보고서</h1>
+        <div class="toolbar">
           <div id="periodPickerWrap" style="position:relative;">
             <div class="tab-group" id="periodGroup">
               <button class="tab-btn active" onclick="togglePicker('monthly',this)">월별</button>
@@ -308,8 +308,6 @@
             <div id="periodPickerPopup" class="mpp-popup" style="display:none;min-width:220px;"></div>
           </div>
           <span id="period-label" style="font-size:12px;font-weight:800;color:#075bd8;white-space:nowrap;border:1px solid #c7deff;border-radius:6px;padding:4px 10px;background:#eef6ff;"></span>
-        </div>
-        <div class="toolbar">
           <button class="btn btn-primary" id="save-btn" onclick="saveData()">💾 저장하기</button>
         </div>
       </div>
