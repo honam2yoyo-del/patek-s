@@ -642,6 +642,7 @@
       <div style="display:flex;gap:10px;align-items:center;">
         <span id="slpMonthLabel" style="font-size:14px;font-weight:700;color:#374151;"></span>
         <button onclick="window.exportSalesListExcel()" style="height:38px;padding:0 16px;border:1px solid #d9e0ea;border-radius:7px;background:#fff;font-size:13px;font-weight:700;cursor:pointer;">📊 엑셀 다운로드</button>
+        <button onclick="window.openCsvUpload()" style="height:38px;padding:0 16px;border:1px solid #0067e8;border-radius:7px;background:#fff;color:#0067e8;font-size:13px;font-weight:700;cursor:pointer;">📂 CSV 업로드</button>
         <button onclick="window.closeSalesList()" style="height:38px;padding:0 16px;border:none;border-radius:7px;background:#111827;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">✕ 닫기</button>
       </div>
     </div>
@@ -778,5 +779,6 @@ window.toggleSidebar=function(){
 };
 (function(){try{if(localStorage.getItem('_sbc')==='true'){var sb=document.getElementById('sidebar'),app=document.querySelector('.app'),ba=document.querySelector('.bottom-actions');if(sb)sb.classList.add('collapsed');if(app)app.classList.add('sidebar-collapsed');if(ba)ba.style.left='52px';}}catch(e){}})();
 </script>
+<input type="file" id="csvFileInput" accept=".csv" style="display:none"/>
 </body>
 </html>

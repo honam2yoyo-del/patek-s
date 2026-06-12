@@ -1454,6 +1454,201 @@ document.getElementById('excelBtn').addEventListener('click', () => {
 
 function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
+/* ────────── CSV 업로드 ────────── */
+window.openCsvUpload = function() {
+  const inp = document.getElementById('csvFileInput');
+  if (inp) inp.click();
+};
+
+function parseCsvLine(line) {
+  const res = []; let cur = '', inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') inQ = !inQ;
+    else if (c === ',' && !inQ) { res.push(cur); cur = ''; }
+    else cur += c;
+  }
+  res.push(cur);
+  return res;
+}
+
+function csvTitleCase(str) {
+  if (!str) return '';
+  return str.toLowerCase().replace(/(?:^|\s)\S/g, c => c.toUpperCase());
+}
+
+function csvParseAmount(str) {
+  const s = String(str||'').replace(/\s/g,'');
+  if (!s || s === '-') return 0;
+  const n = Number(s.replace(/,/g,''));
+  return isNaN(n) ? 0 : n;
+}
+
+let _csvOverlay = null;
+function showCsvOverlay(msg) {
+  if (!_csvOverlay) {
+    _csvOverlay = document.createElement('div');
+    _csvOverlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.6);z-index:99999;display:flex;align-items:center;justify-content:center;font-family:"Malgun Gothic",Arial,sans-serif;';
+    _csvOverlay.innerHTML = '<div style="background:#fff;border-radius:12px;padding:28px 36px;text-align:center;box-shadow:0 16px 48px rgba(0,0,0,.25);min-width:300px;"><div id="_csvMsg" style="font-size:16px;font-weight:900;color:#111827;margin-bottom:6px;"></div><div style="font-size:13px;color:#6b7280;font-weight:600;">잠시만 기다려 주세요...</div></div>';
+    document.body.appendChild(_csvOverlay);
+  }
+  document.getElementById('_csvMsg').textContent = msg;
+  _csvOverlay.style.display = 'flex';
+}
+function updateCsvOverlay(msg) { const el = document.getElementById('_csvMsg'); if (el) el.textContent = msg; }
+function hideCsvOverlay() { if (_csvOverlay) _csvOverlay.style.display = 'none'; }
+
+async function processCsvImport(file) {
+  showCsvOverlay('파일 읽는 중...');
+  let text;
+  try { text = await file.text(); } catch(e) { hideCsvOverlay(); alert('파일 읽기 실패: ' + e.message); return; }
+
+  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  if (lines.length < 2) { hideCsvOverlay(); alert('데이터가 없습니다.'); return; }
+
+  const importRows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const cols          = parseCsvLine(lines[i]);
+    if (cols.length < 6) continue;
+    const saleDateRaw   = cols[0].trim();
+    const ref           = cols[1].trim();
+    const serialRaw     = (cols[2] || '').trim();
+    const amountRaw     = cols[3] || '';
+    const customer      = (cols[4] || '').trim();
+    const regionRaw     = (cols[5] || '').trim();
+    const collectionRaw = (cols[6] || '').trim();
+    if (!saleDateRaw || !ref) continue;
+    const dm = saleDateRaw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!dm) continue;
+    const ym         = `${dm[1]}-${dm[2]}`;
+    const serial     = serialRaw.replace(/^[-\s]+$/, '').trim();
+    const isAdv      = serial === '';
+    const amount     = csvParseAmount(amountRaw);
+    const region     = regionRaw.slice(0, 2);
+    const collection = csvTitleCase(collectionRaw);
+    importRows.push({ ym, saleDate: saleDateRaw, ref, serial, amount, customer, region, collection,
+      status: isAdv ? '선수금' : '판매완료', note: isAdv ? '선수금' : '' });
+  }
+
+  if (importRows.length === 0) { hideCsvOverlay(); alert('유효한 데이터가 없습니다.'); return; }
+
+  await loadLineConfig();
+
+  // Collection 관리에 없는 REF 파악
+  const refToAdd = {};
+  importRows.forEach(r => {
+    if (!getLineForRef(r.ref) && r.collection) {
+      const key = r.collection.toLowerCase();
+      if (!refToAdd[key]) refToAdd[key] = { name: r.collection, refs: new Set() };
+      refToAdd[key].refs.add(r.ref);
+    }
+  });
+  const newRefCount = Object.values(refToAdd).reduce((s,v) => s + v.refs.size, 0);
+  const monthList   = [...new Set(importRows.map(r => r.ym))].sort();
+
+  hideCsvOverlay();
+  const confirmMsg = `총 ${importRows.length}개 항목 / ${monthList.length}개 월\n` +
+    (newRefCount > 0 ? `새 REF. ${newRefCount}개 → Collection 관리 자동 등록\n` : '') +
+    '\n저장하시겠습니까?';
+  if (!confirm(confirmMsg)) return;
+
+  showCsvOverlay('Collection 업데이트 중...');
+
+  // lineConfig에 새 REF 추가
+  if (Object.keys(refToAdd).length > 0) {
+    const pool    = _lineConfig.length > 0 ? _lineConfig : DEFAULT_LINES;
+    const updated = pool.map(l => ({ name: l.name, refs: [...(l.refs||[])] }));
+    Object.values(refToAdd).forEach(({ name, refs }) => {
+      const idx = updated.findIndex(l => l.name.toLowerCase() === name.toLowerCase());
+      if (idx >= 0) refs.forEach(ref => { if (!updated[idx].refs.includes(ref)) updated[idx].refs.push(ref); });
+      else updated.push({ name, refs: [...refs] });
+    });
+    _lineConfig = updated;
+    try {
+      await setDoc(doc(db,'artifacts','patek-s','public','data','lineConfig'),
+        { lines: updated, updatedAt: new Date().toISOString() }, { merge: true });
+    } catch(e) { console.error('lineConfig 업데이트 실패:', e); }
+  }
+
+  // 월별 그룹화
+  const byMonth = {};
+  importRows.forEach(r => { (byMonth[r.ym] = byMonth[r.ym] || []).push(r); });
+
+  let saved = 0;
+  for (const ym of monthList) {
+    updateCsvOverlay(`저장 중... (${saved + 1}/${monthList.length}) — ${ym}`);
+    try {
+      const snap     = await getDoc(doc(db,'artifacts','patek-s','public','data','inventory',ym));
+      const existing = snap.exists() ? (snap.data().rows||[]) : [];
+
+      const newRows = byMonth[ym].map(r => ({
+        ref: r.ref, serial: r.serial, amount: r.amount, customer: r.customer,
+        saleDate: r.saleDate, saleCompletedDate: r.saleDate,
+        status: r.status, note: r.note, region: r.region,
+        line: getLineForRef(r.ref) || r.collection, salesperson: ''
+      }));
+
+      // 중복 제거 (ref+serial+saleCompletedDate+amount 동일하면 스킵)
+      const merged = [...existing];
+      newRows.forEach(nr => {
+        const dup = existing.some(e =>
+          e.ref === nr.ref && e.serial === nr.serial &&
+          e.saleCompletedDate === nr.saleCompletedDate && Number(e.amount) === Number(nr.amount)
+        );
+        if (!dup) merged.push(nr);
+      });
+
+      await setDoc(doc(db,'artifacts','patek-s','public','data','inventory',ym),
+        { rows: merged, updatedAt: new Date().toISOString() }, { merge: true });
+
+      // sales_dashboard.currentSales 업데이트 (전년 대비 연동)
+      const done = merged.filter(r => r.status === '판매완료');
+      const adv  = merged.filter(r => r.status === '선수금');
+      const currentSales = [...done, ...adv].reduce((s,r) => s+(Number(r.amount)||0), 0);
+      await setDoc(doc(db,'artifacts','patek-s','public','data','sales_dashboard',ym),
+        { currentSales, currentPcs: done.length, updatedAt: new Date().toISOString() }, { merge: true });
+
+      // sales_reports 업데이트 (동향 보고 연동)
+      const lineMap = {}, regionMap = {};
+      done.forEach(r => {
+        const lk = r.line||'미분류';
+        if (!lineMap[lk]) lineMap[lk] = { line:lk, qty:0, amount:0, yoy:0 };
+        lineMap[lk].qty++; lineMap[lk].amount += Number(r.amount)||0;
+        const rk = r.region||'미입력';
+        if (!regionMap[rk]) regionMap[rk] = { region:rk, qty:0, amount:0 };
+        regionMap[rk].qty++; regionMap[rk].amount += Number(r.amount)||0;
+      });
+      const mo = Number(ym.split('-')[1]);
+      await setDoc(doc(db,'artifacts','patek-s','public','data','sales_reports',ym), {
+        salesListData: {
+          lineData:    Object.values(lineMap),
+          regionData:  Object.values(regionMap),
+          salesRaw:    done.map(r => ({ line:r.line||'기타', region:r.region||'기타', amount:Number(r.amount)||0, month:mo })),
+          totalQty:    done.length,
+          totalAmount: done.reduce((s,r) => s+(Number(r.amount)||0), 0),
+          updatedAt:   new Date().toISOString()
+        }
+      }, { merge: true });
+
+      saved++;
+    } catch(e) { console.error(`${ym} 저장 실패:`, e); }
+  }
+
+  hideCsvOverlay();
+  alert(`✅ ${saved}개 월 저장 완료 (총 ${importRows.length}개 항목)`);
+  loadMonth();
+}
+
+// CSV 파일 input 이벤트 연결
+{
+  const _ci = document.getElementById('csvFileInput');
+  if (_ci) _ci.addEventListener('change', async e => {
+    const f = e.target.files[0];
+    if (f) await processCsvImport(f);
+    e.target.value = '';
+  });
+}
+
 /* ────────── 초기화 ────────── */
 initBranchModals();
 loadMonth();
