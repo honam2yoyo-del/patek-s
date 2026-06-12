@@ -176,9 +176,16 @@
     .green { color:#059669; } .blue { color:#075bd8; } .red { color:#ef4444; } .orange { color:#f97316; } .black { color:#111827; }
 
     /* ── 하단 바 ── */
-    .bottom-actions { position:fixed;left:185px;right:0;bottom:0;height:68px;display:flex;justify-content:flex-end;align-items:center;gap:12px;background:rgba(255,255,255,.98);border-top:1px solid #e2e7ef;padding:0 24px;box-shadow:0 -4px 16px rgba(15,23,42,.06); }
-    .bottom-btn { height:42px;border:1px solid #d9e0ea;border-radius:7px;background:#fff;color:#111827;padding:0 20px;font-size:14px;font-weight:900;cursor:pointer;white-space:nowrap; }
-    .bottom-btn:hover { background:#f8fafc; }
+    .bottom-actions { position:fixed;left:185px;right:0;bottom:0;height:64px;display:flex;justify-content:flex-end;align-items:center;gap:10px;background:rgba(255,255,255,.98);border-top:1px solid #e2e7ef;padding:0 24px;box-shadow:0 -4px 16px rgba(15,23,42,.06);z-index:200; }
+    .action-btn { height:42px;min-width:116px;border:1px solid #d9e0ea;border-radius:7px;background:#fff;padding:0 14px;display:inline-flex;align-items:center;justify-content:center;gap:9px;font-size:14px;font-weight:900;color:#111827;cursor:pointer;transition:all .15s; }
+    .action-btn:hover { background:#f8fafc;border-color:#cbd5e1;transform:translateY(-1px); }
+    .btn-icon { width:22px;height:22px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0; }
+    .btn-icon svg { width:17px;height:17px;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round; }
+    .excel-icon { background:#e8f7ee; } .excel-icon svg { stroke:#059669; }
+    .pdf-icon { background:#fff1f2; } .pdf-icon svg { stroke:#ef4444; }
+    .print-icon { background:#f1f5f9; } .print-icon svg { stroke:#334155; }
+    .a4-icon { background:#eff6ff; } .a4-icon svg { stroke:#2563eb; }
+    @media print { .bottom-actions { display:none !important; } }
     .btn-save { background:#075bd8;color:#fff;border-color:#075bd8; }
     .btn-save:hover { background:#0550b3; }
     .bulk-status-bottom { height:38px;border:1px solid #9bbcff;border-radius:7px;padding:0 12px;font-size:13px;font-weight:800;color:#075bd8;background:#f0f7ff;cursor:pointer;font-family:inherit; }
@@ -466,8 +473,22 @@
       <option value="선수금">선수금</option>
     </select>
   </div>
-  <button class="bottom-btn" id="excelBtn">엑셀 다운로드</button>
-  <button class="bottom-btn" onclick="window.print()">프린트</button>
+  <button class="action-btn excel-btn" id="excelBtn">
+    <span class="btn-icon excel-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h9l5 5v13H5V3z"/><path d="M14 3v5h5"/><path d="M8 10l3 4-3 4"/><path d="M14 10l-3 4 3 4"/></svg></span>
+    <span>엑셀 다운로드</span>
+  </button>
+  <button class="action-btn pdf-btn" onclick="window.print()">
+    <span class="btn-icon pdf-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l3 3v15H6V3z"/><path d="M15 3v4h4"/><path d="M8 16h8"/><path d="M8 12h8"/><path d="M8 8h4"/></svg></span>
+    <span>PDF 다운로드</span>
+  </button>
+  <button class="action-btn print-btn" onclick="window.print()">
+    <span class="btn-icon print-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 8V3h10v5"/><path d="M6 17H4v-6h16v6h-2"/><path d="M7 14h10v7H7v-7z"/><path d="M8 17h8"/></svg></span>
+    <span>인쇄</span>
+  </button>
+  <button class="action-btn a4-btn" onclick="document.body.classList.toggle('a4-mode')">
+    <span class="btn-icon a4-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18H6V3z"/><path d="M9 15l1.5-6h3l1.5 6"/><path d="M10 13h4"/></svg></span>
+    <span>A4 미리보기</span>
+  </button>
 </div>
 
 <!-- ── 판매 완료 입력 모달 (MPDS 페이지) ── -->

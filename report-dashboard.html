@@ -161,11 +161,13 @@
     .a4-mode .main { background:#e5e7eb;padding:24px; }
     .a4-mode .report-page { background:#fff;width:1120px;min-height:790px;margin:0 auto;padding:22px;box-shadow:0 8px 30px rgba(15,23,42,.18); }
     .a4-mode .save-bar { display:none; }
+    .a4-mode .bottom-actions { display:none; }
+    .bottom-actions { position:fixed;left:185px;right:0;bottom:0;height:64px;display:flex;justify-content:flex-end;align-items:center;gap:10px;padding:0 24px;background:rgba(255,255,255,.97);border-top:1px solid #e2e7ef;box-shadow:0 -4px 16px rgba(15,23,42,.06);z-index:200; }
 
     html { overflow-x:hidden; }
     @media print {
       body { background:#fff; }
-      .sidebar,.toolbar,.note-line,.special-actions,.save-bar { display:none !important; }
+      .sidebar,.toolbar,.note-line,.special-actions,.save-bar,.bottom-actions { display:none !important; }
       .app { display:block; } .main { padding:0; }
       .panel,.wide-panel,.summary-card { break-inside:avoid; }
     }
@@ -308,30 +310,6 @@
           <span id="period-label" style="font-size:12px;font-weight:800;color:#075bd8;white-space:nowrap;border:1px solid #c7deff;border-radius:6px;padding:4px 10px;background:#eef6ff;"></span>
         </div>
         <div class="toolbar">
-          <button class="action-btn excel-btn" onclick="downloadExcel()">
-            <span class="btn-icon excel-icon">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h9l5 5v13H5V3z"/><path d="M14 3v5h5"/><path d="M8 10l3 4-3 4"/><path d="M14 10l-3 4 3 4"/></svg>
-            </span>
-            <span>엑셀 다운로드</span>
-          </button>
-          <button class="action-btn pdf-btn" onclick="downloadPdf()">
-            <span class="btn-icon pdf-icon">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l3 3v15H6V3z"/><path d="M15 3v4h4"/><path d="M8 16h8"/><path d="M8 12h8"/><path d="M8 8h4"/></svg>
-            </span>
-            <span>PDF 다운로드</span>
-          </button>
-          <button class="action-btn print-btn" onclick="window.print()">
-            <span class="btn-icon print-icon">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 8V3h10v5"/><path d="M6 17H4v-6h16v6h-2"/><path d="M7 14h10v7H7v-7z"/><path d="M8 17h8"/></svg>
-            </span>
-            <span>인쇄</span>
-          </button>
-          <button class="action-btn a4-btn" onclick="toggleA4()">
-            <span class="btn-icon a4-icon">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18H6V3z"/><path d="M9 15l1.5-6h3l1.5 6"/><path d="M10 13h4"/></svg>
-            </span>
-            <span>A4 미리보기</span>
-          </button>
           <button class="btn btn-primary" id="save-btn" onclick="saveData()">💾 저장하기</button>
         </div>
       </div>
@@ -1099,6 +1077,32 @@ function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;'
   });
 })();
 </script>
+<div class="bottom-actions">
+  <button class="action-btn excel-btn" onclick="downloadExcel()">
+    <span class="btn-icon excel-icon">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h9l5 5v13H5V3z"/><path d="M14 3v5h5"/><path d="M8 10l3 4-3 4"/><path d="M14 10l-3 4 3 4"/></svg>
+    </span>
+    <span>엑셀 다운로드</span>
+  </button>
+  <button class="action-btn pdf-btn" onclick="downloadPdf()">
+    <span class="btn-icon pdf-icon">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l3 3v15H6V3z"/><path d="M15 3v4h4"/><path d="M8 16h8"/><path d="M8 12h8"/><path d="M8 8h4"/></svg>
+    </span>
+    <span>PDF 다운로드</span>
+  </button>
+  <button class="action-btn print-btn" onclick="window.print()">
+    <span class="btn-icon print-icon">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 8V3h10v5"/><path d="M6 17H4v-6h16v6h-2"/><path d="M7 14h10v7H7v-7z"/><path d="M8 17h8"/></svg>
+    </span>
+    <span>인쇄</span>
+  </button>
+  <button class="action-btn a4-btn" onclick="toggleA4()">
+    <span class="btn-icon a4-icon">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18H6V3z"/><path d="M9 15l1.5-6h3l1.5 6"/><path d="M10 13h4"/></svg>
+    </span>
+    <span>A4 미리보기</span>
+  </button>
+</div>
 <script>
 window.toggleSidebar=function(){
   var sb=document.getElementById('sidebar'),app=document.querySelector('.app'),ba=document.querySelector('.bottom-actions');
