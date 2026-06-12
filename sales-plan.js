@@ -836,6 +836,7 @@ function renderTable() {
       <td><input type="checkbox" class="row-check" data-amount="${r.amount||0}" data-status="${r.status||''}"/></td>
       <td><input class="td-edit" value="${esc(r.ref||'')}" oninput="window.invSet(${ri},'ref',this.value)" placeholder="REF."/></td>
       <td><input class="td-edit" value="${esc(r.serial||'')}" oninput="window.invSet(${ri},'serial',this.value)" placeholder="Serial"/></td>
+      <td><input class="td-edit" type="text" inputmode="numeric" value="${r.qty??1}" oninput="window.invSet(${ri},'qty',+this.value||1)" placeholder="1" style="text-align:center;width:50px;"/></td>
       <td><div class="amt-cell">
         <input class="td-edit amt" type="text" inputmode="numeric" value="${amtFmt}"
           oninput="window.invSetAmt(${ri},this)"
@@ -866,6 +867,7 @@ function renderTfoot(filtered) {
   const filterLabel = activeFilters.has('전체') ? '전체' : [...activeFilters].map(f => STATUS_DISPLAY[f]||f).join('+');
   document.getElementById('inventoryTfoot').innerHTML = `<tr>
     <td colspan="2">${filterLabel} 합계</td>
+    <td></td>
     <td></td>
     <td>${fmtW(total)}</td>
     <td colspan="5">${pcsLabel(pcs)}</td>
@@ -1383,6 +1385,7 @@ async function saveData() {
     rows: rows.map(r => ({
       ref:               r.ref||'',
       serial:            r.serial||'',
+      qty:               r.qty != null ? Number(r.qty) : 1,
       amount:            r.amount != null ? Number(r.amount) : null,
       customer:          r.customer||'',
       saleDate:          r.saleDate||'',
@@ -1505,15 +1508,17 @@ async function processCsvImport(file) {
     const saleDateRaw   = cols[0].trim();
     const ref           = cols[1].trim();
     const serialRaw     = (cols[2] || '').trim();
-    const amountRaw     = cols[3] || '';
-    const customer      = (cols[4] || '').trim();
-    const regionRaw     = (cols[5] || '').trim();
-    const collectionRaw = (cols[6] || '').trim();
+    const qtyRaw        = (cols[3] || '1').trim();
+    const amountRaw     = cols[4] || '';
+    const customer      = (cols[5] || '').trim();
+    const regionRaw     = (cols[6] || '').trim();
+    const collectionRaw = (cols[7] || '').trim();
     if (!saleDateRaw || !ref) continue;
     const dm = saleDateRaw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
     if (!dm) continue;
     const ym         = `${dm[1]}-${dm[2]}`;
     const serial     = serialRaw.replace(/^[-\s]+$/, '').trim();
+    const qty        = Math.max(1, parseInt(qtyRaw) || 1);
     const isAdv      = serial === '';
     const amount     = csvParseAmount(amountRaw);
     const isRefund   = amount < 0;
@@ -1521,7 +1526,7 @@ async function processCsvImport(file) {
     const collection = csvTitleCase(collectionRaw);
     const status     = isRefund ? '반품' : (isAdv ? '선수금' : '판매완료');
     const note       = isRefund ? '반품' : (isAdv ? '선수금' : '');
-    importRows.push({ ym, saleDate: saleDateRaw, ref, serial, amount, customer, region, collection, status, note });
+    importRows.push({ ym, saleDate: saleDateRaw, ref, serial, qty, amount, customer, region, collection, status, note });
   }
 
   if (importRows.length === 0) { hideCsvOverlay(); alert('유효한 데이터가 없습니다.'); return; }
@@ -1576,7 +1581,7 @@ async function processCsvImport(file) {
       const existing = snap.exists() ? (snap.data().rows||[]) : [];
 
       const newRows = byMonth[ym].map(r => ({
-        ref: r.ref, serial: r.serial, amount: r.amount, customer: r.customer,
+        ref: r.ref, serial: r.serial, qty: r.qty||1, amount: r.amount, customer: r.customer,
         saleDate: r.saleDate, saleCompletedDate: r.saleDate,
         status: r.status, note: r.note, region: r.region,
         line: getLineForRef(r.ref) || r.collection, salesperson: ''

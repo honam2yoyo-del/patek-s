@@ -331,6 +331,7 @@
               <th style="width:44px;"><input type="checkbox" id="checkAll"/></th>
               <th style="width:130px;cursor:pointer;user-select:none;" onclick="window.invSortBy('ref')" id="th-ref">REF. <span id="si-ref"></span></th>
               <th style="width:165px;cursor:pointer;user-select:none;" onclick="window.invSortBy('serial')" id="th-serial">Serial <span id="si-serial"></span></th>
+              <th style="width:60px;">수량</th>
               <th style="width:160px;cursor:pointer;user-select:none;" onclick="window.invSortBy('amount')" id="th-amount">금액 <span id="si-amount"></span></th>
               <th style="width:110px;cursor:pointer;user-select:none;" onclick="window.invSortBy('customer')" id="th-customer">고객명 <span id="si-customer"></span></th>
               <th style="width:150px;cursor:pointer;user-select:none;" onclick="window.invSortBy('saleDate')" id="th-saleDate">예상 판매일 <span id="si-saleDate"></span></th>
@@ -927,6 +928,7 @@ function renderTable() {
       <td><input type="checkbox" class="row-check" data-amount="${r.amount||0}" data-status="${r.status||''}"/></td>
       <td><input class="td-edit" value="${esc(r.ref||'')}" oninput="window.setField(${ri},'ref',this.value)" placeholder="REF."/></td>
       <td><input class="td-edit" value="${esc(r.serial||'')}" oninput="window.setField(${ri},'serial',this.value)" placeholder="Serial"/></td>
+      <td><input class="td-edit" type="text" inputmode="numeric" value="${r.qty??1}" oninput="window.setField(${ri},'qty',+this.value||1)" placeholder="1" style="text-align:center;width:50px;"/></td>
       <td style="padding:0;"><div style="display:flex;align-items:center;justify-content:center;padding:10px 12px;gap:0;"><input class="td-edit" type="text" inputmode="numeric" value="${fmtInput(r.amount)}" size="${Math.max(3,(fmtInput(r.amount)||'').length)+1}"
           oninput="window.setAmt(${ri},this)"
           placeholder="0" style="width:auto;text-align:center;"/><span style="font-weight:700;font-size:14px;">원</span></div></td>
@@ -952,6 +954,7 @@ function renderTfoot(filtered) {
   const label = activeFilters.has('전체') ? '전체' : [...activeFilters].join('+');
   document.getElementById('invTfoot').innerHTML = `<tr>
     <td colspan="3" style="font-weight:900;">${label} 합계</td>
+    <td></td>
     <td style="font-weight:900;">${fmtW(total)}</td>
     <td colspan="5" style="font-weight:900;">${pcs === 1 ? '1 pc' : pcs + ' pcs'}</td>
   </tr>`;
@@ -1291,6 +1294,7 @@ async function saveData() {
       rows: rows.map(r=>({
         ref:               r.ref||'',
         serial:            r.serial||'',
+        qty:               r.qty != null ? Number(r.qty) : 1,
         amount:            r.amount!=null ? Number(r.amount) : null,
         customer:          r.customer||'',
         saleDate:          r.saleDate||'',

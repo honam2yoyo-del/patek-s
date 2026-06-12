@@ -354,6 +354,7 @@
                   <th style="width:40px;"><input type="checkbox" id="checkAll"/></th>
                   <th style="width:130px;cursor:pointer;user-select:none;" onclick="window.mpdsSortBy('ref')">REF.<span id="mpsi-ref"><span style="font-size:13px;color:#9ca3af;margin-left:3px;line-height:1;">↕</span></span></th>
                   <th style="width:160px;cursor:pointer;user-select:none;" onclick="window.mpdsSortBy('serial')">SERIAL<span id="mpsi-serial"><span style="font-size:13px;color:#9ca3af;margin-left:3px;line-height:1;">↕</span></span></th>
+                  <th style="width:60px;">수량</th>
                   <th id="lineFilterTh" style="width:130px;" onclick="window.toggleLineFilter(this)">Collection <span id="lineFilterIndicator" style="font-size:10px;color:#075bd8;"></span></th>
                   <th id="dateSortTh" style="width:110px;cursor:pointer;user-select:none;" onclick="window.mpdsSortBy('saleDate')">예상 판매일<span id="mpsi-saleDate"><span style="font-size:13px;color:#9ca3af;margin-left:3px;line-height:1;">↕</span></span></th>
                   <th style="width:130px;cursor:pointer;user-select:none;" onclick="window.mpdsSortBy('amount')">금액(KRW)<span id="mpsi-amount"><span style="font-size:13px;color:#9ca3af;margin-left:3px;line-height:1;">↕</span></span></th>
@@ -1031,6 +1032,7 @@ function renderTable() {
       <td><input type="checkbox" class="row-check" data-idx="${ri}" ${selectedIds.has(ri)?'checked':''}/></td>
       <td><input class="td-edit" value="${esc(r.ref||'')}"    oninput="window.mpdsSet(${ri},'ref',this.value)"/></td>
       <td><input class="td-edit" value="${esc(r.serial||'')}" oninput="window.mpdsSet(${ri},'serial',this.value)"/></td>
+      <td><input class="td-edit" type="text" inputmode="numeric" value="${r.qty??1}" oninput="window.mpdsSet(${ri},'qty',+this.value||1)" placeholder="1" style="text-align:center;width:50px;"/></td>
       <td><input class="td-edit" value="${esc(r.line||'')}"   oninput="window.mpdsSet(${ri},'line',this.value);renderDonut();"/></td>
       <td><input class="td-edit" value="${esc(r.saleDate||'')}" oninput="window.mpdsSet(${ri},'saleDate',this.value)" onblur="window.mpdsApplyDate(${ri},this)" placeholder="예: 260601"/></td>
       <td><input class="td-edit" type="text" inputmode="numeric" value="${fmtInput(r.amount)}"
@@ -1150,7 +1152,7 @@ window.clearSelection = function() { selectedIds.clear(); renderTable(); };
 
 window.copyList = function() {
   const items = inventory.filter((_,i) => selectedIds.has(i));
-  const text = ['REF.\tSERIAL\tCollection\t금액', ...items.map(r => `${r.ref}\t${r.serial}\t${r.line}\t${Number(r.amount||0).toLocaleString('ko-KR')}`)].join('\n');
+  const text = ['REF.\tSERIAL\t수량\tCollection\t금액', ...items.map(r => `${r.ref}\t${r.serial}\t${r.qty??1}\t${r.line}\t${Number(r.amount||0).toLocaleString('ko-KR')}`)].join('\n');
   navigator.clipboard.writeText(text).then(() => alert('등록 리스트가 클립보드에 복사되었습니다.')).catch(() => alert('복사 실패'));
 };
 
@@ -1184,8 +1186,8 @@ document.getElementById('save-btn').addEventListener('click', async () => {
 /* ── 엑셀 ── */
 document.getElementById('excelBtn').addEventListener('click', () => {
   if (!window.XLSX) { alert('라이브러리 로딩 중'); return; }
-  const header = ['REF.','SERIAL','Collection','예상 판매일','금액(KRW)','상태','비고'];
-  const data   = inventory.map(r => [r.ref, r.serial, r.line, r.saleDate, r.amount, r.status, r.note]);
+  const header = ['REF.','SERIAL','수량','Collection','예상 판매일','금액(KRW)','상태','비고'];
+  const data   = inventory.map(r => [r.ref, r.serial, r.qty??1, r.line, r.saleDate, r.amount, r.status, r.note]);
   const ws = window.XLSX.utils.aoa_to_sheet([header,...data]);
   const wb = window.XLSX.utils.book_new();
   window.XLSX.utils.book_append_sheet(wb, ws, `MPDS_${curYear}년${curMonth}월`);
