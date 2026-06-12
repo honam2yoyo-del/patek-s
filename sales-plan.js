@@ -395,14 +395,8 @@ function applyData(d) {
   sv('f-mpdsCurrent',   d?.mpdsCurrent);
   sv('f-mpdsIncoming',  d?.mpdsIncoming);
 
-  // 직접 수정 후 저장된 예상 매출 복원 (저장값 있으면 자동계산 잠금)
-  if (d?.expectedSales != null) {
-    sv('f-expectedSales', d.expectedSales);
-    sv('f-expectedPcs',   d.expectedPcs);
-    _manualSalesLock.expectedSales = true;
-  } else {
-    _manualSalesLock.expectedSales = false;
-  }
+  // 예상 매출은 항상 재고의 판매예정 항목에서 자동 계산
+  _manualSalesLock.expectedSales = false;
   // 현재 매출은 항상 rows(판매완료+선수금)에서 자동 계산
   _manualSalesLock.currentSales = false;
 
@@ -916,11 +910,10 @@ function renderSummary() {
   }).join('');
 }
 
-/* ── 판매예정·판매완료 합산 → 예상 매출 자동 반영 ── */
+/* ── 판매예정 합산 → 예상 매출 자동 반영 ── */
 function autoCalcFromInventory() {
   if (_manualSalesLock.expectedSales) { recalcRemain(); return; }
-  const targets = ['판매예정', '판매완료'];
-  const filtered = rows.filter(r => targets.includes(r.status));
+  const filtered = rows.filter(r => r.status === '판매예정');
   const totalAmt = filtered.reduce((s, r) => s + (Number(r.amount)||0), 0);
   const totalPcs = filtered.length;
   const salesEl = document.getElementById('f-expectedSales');
