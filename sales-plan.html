@@ -268,9 +268,9 @@
           <div class="panel-header">매출 요약</div>
           <div class="summary-3col">
 
-            <!-- 목표 달성률 -->
+            <!-- 전체 목표 달성률 -->
             <div class="summary-col">
-              <div class="summary-col-label">목표 달성률</div>
+              <div class="summary-col-label">전체 목표 달성률</div>
               <div class="summary-big-pct blue" id="achieve-pct">0%</div>
               <div class="summary-progress">
                 <div class="fill blue" id="achieve-bar" style="width:0%"></div>
@@ -278,9 +278,9 @@
               <div class="summary-sub" id="achieve-sub">현재 -억 / 목표 -억</div>
             </div>
 
-            <!-- 센터 목표 달성률 -->
+            <!-- 센텀 목표 달성률 -->
             <div class="summary-col highlighted">
-              <div class="summary-col-label">센터 목표 달성률</div>
+              <div class="summary-col-label">센텀 목표 달성률</div>
               <div class="summary-big-pct green" id="centum-pct">0%</div>
               <div class="summary-progress">
                 <div class="fill green" id="centum-bar" style="width:0%"></div>
@@ -288,11 +288,11 @@
               <div class="summary-sub" id="centum-sub">현재 -억 / 목표 -억</div>
             </div>
 
-            <!-- 작년 동일 대비 -->
+            <!-- 작년 동월 대비 -->
             <div class="summary-col">
-              <div class="summary-col-label">작년 동일 대비</div>
+              <div class="summary-col-label">작년 동월 대비</div>
               <div class="summary-yoy" id="yoy-pct">-</div>
-              <div class="summary-sub" id="yoy-sub">작년 동일 -억</div>
+              <div class="summary-sub" id="yoy-sub">작년 동월 -억</div>
             </div>
 
           </div>
@@ -432,6 +432,7 @@ const YM   = `${YEAR}-${String(MON).padStart(2,'0')}`;
 
 // ── 데이터 저장소 ──
 let salesData = null, mpdsData = null, invData = null, centumData = null;
+let goalData = { total: 0, centum: 0, avenue: 0 };
 
 function render(){
   const sd = salesData || {};
@@ -444,11 +445,11 @@ function render(){
   const remainPcs = Math.max(expPcs - curPcs, 0);
 
   // KPI
-  document.getElementById('kpi-expected').textContent = expected ? toOk(expected) : '-';
+  document.getElementById('kpi-expected').textContent = expected ? Number(expected).toLocaleString('ko-KR') + ' 원' : '-';
   document.getElementById('kpi-expected-pcs').textContent = expected ? `(${expPcs} pcs)` : '(- pcs)';
-  document.getElementById('kpi-current').textContent  = current ? toOk(current) : '-';
+  document.getElementById('kpi-current').textContent  = current ? Number(current).toLocaleString('ko-KR') + ' 원' : '-';
   document.getElementById('kpi-current-pcs').textContent = current ? `(${curPcs} pcs)` : '(- pcs)';
-  document.getElementById('kpi-remain').textContent   = expected ? toOk(remain) : '-';
+  document.getElementById('kpi-remain').textContent   = expected ? Number(remain).toLocaleString('ko-KR') + ' 원' : '-';
   document.getElementById('kpi-remain-pcs').textContent  = expected ? `(${remainPcs} pcs)` : '(- pcs)';
 
   // MPDS 등록 가능 (잔여 재고 또는 등록 상태)
@@ -462,21 +463,22 @@ function render(){
   document.getElementById('kpi-as').textContent = asCount + '건';
   document.getElementById('bot-as-active').textContent = asCount;
 
-  // 목표 달성률
-  const achPct = expected > 0 ? Math.round(current / expected * 100) : 0;
+  // 전체 목표 달성률 (분기 전체 목표 / 3 = 월간 목표 추정, 없으면 예상 매출 사용)
+  const totalMonthGoal = goalData.total > 0 ? goalData.total / 3 : expected;
+  const achPct = totalMonthGoal > 0 ? Math.round(current / totalMonthGoal * 100) : 0;
   document.getElementById('achieve-pct').textContent = achPct + '%';
   document.getElementById('achieve-bar').style.width  = clamp(achPct,0,100) + '%';
-  document.getElementById('achieve-sub').textContent  = `현재 ${current ? toOk(current) : '-'} / 목표 ${expected ? toOk(expected) : '-'}`;
+  document.getElementById('achieve-sub').textContent  = `현재 ${current ? toOk(current) : '-'} / 목표 ${totalMonthGoal ? toOk(totalMonthGoal) : '-'}`;
 
-  // 센터 목표 달성률
-  const cd = centumData || {};
-  const centumMonthGoal = cd[`m${MON}`] || 0;
-  const centumPct = centumMonthGoal > 0 ? Math.round(current / centumMonthGoal * 100) : 0;
+  // 센텀 목표 달성률 (센텀 달성액 / 센텀 분기 목표 / 3)
+  const centumMonthAchieved = centumData ? (Number(centumData[`m${MON}`]) || 0) : 0;
+  const centumMonthGoal = goalData.centum > 0 ? goalData.centum / 3 : 0;
+  const centumPct = centumMonthGoal > 0 ? Math.round(centumMonthAchieved / centumMonthGoal * 100) : 0;
   document.getElementById('centum-pct').textContent = centumPct + '%';
   document.getElementById('centum-bar').style.width  = clamp(centumPct,0,100) + '%';
-  document.getElementById('centum-sub').textContent  = `현재 ${current ? toOk(current) : '-'} / 목표 ${centumMonthGoal ? toOk(centumMonthGoal) : '-'}`;
+  document.getElementById('centum-sub').textContent  = `현재 ${centumMonthAchieved ? toOk(centumMonthAchieved) : '-'} / 목표 ${centumMonthGoal ? toOk(centumMonthGoal) : '-'}`;
 
-  // 작년 동일 대비
+  // 작년 동월 대비
   const yoyEl = document.getElementById('yoy-pct');
   const yoySubEl = document.getElementById('yoy-sub');
   if(lastYear > 0 && current > 0){
@@ -488,7 +490,7 @@ function render(){
     yoyEl.textContent = '-';
     yoyEl.className = 'summary-yoy';
   }
-  yoySubEl.textContent = `작년 동일 ${lastYear ? toOk(lastYear) : '-'}`;
+  yoySubEl.textContent = `작년 동월 ${lastYear ? toOk(lastYear) : '-'}`;
 }
 
 // ── To Do & Check list (공지사항 연동) ──
@@ -646,9 +648,19 @@ function startListeners(){
     render();
   });
 
-  // 센텀 연간 목표
+  // 센텀 연간 달성 데이터
   getDoc(doc(db, `artifacts/patek-s/public/data/centum_annual/${YEAR}`)).then(snap => {
     centumData = snap.exists() ? snap.data() : null;
+    render();
+  });
+
+  // 분기 목표 데이터
+  const qNum = Math.ceil(MON / 3);
+  getDoc(doc(db, `artifacts/patek-s/public/data/quarter_goals/${YEAR}-Q${qNum}`)).then(snap => {
+    if (snap.exists()) {
+      const d = snap.data();
+      goalData = { total: d.totalGoalAmount || 0, centum: d.centumGoalAmount || 0, avenue: d.avenueGoalAmount || 0 };
+    }
     render();
   });
 
