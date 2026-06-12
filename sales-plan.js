@@ -34,15 +34,15 @@ window.fmtNum = function(el) {
   }
 };
 
-const STATUSES  = ['판매예정','컨펌예정','이월예정','AS','잔여재고','기타','판매완료','등록','선수금'];
+const STATUSES  = ['판매예정','컨펌예정','이월예정','AS','잔여재고','기타','판매완료','등록','선수금','반품'];
 const STATUS_DISPLAY = {
   '판매예정':'판매 예정','컨펌예정':'컨펌 예정','이월예정':'이월 예정',
-  '잔여재고':'잔여 재고','AS':'AS','기타':'기타(이동)','판매완료':'판매 완료','등록':'MPDS 등록 중','선수금':'선수금'
+  '잔여재고':'잔여 재고','AS':'AS','기타':'기타(이동)','판매완료':'판매 완료','등록':'MPDS 등록 중','선수금':'선수금','반품':'반품'
 };
 const BADGE_MAP = {
   '판매예정':'badge-sale','컨펌예정':'badge-confirm','이월예정':'badge-carry',
   '잔여재고':'badge-rest','AS':'badge-as','기타':'badge-rest','판매완료':'badge-done',
-  '등록':'badge-reg','선수금':'badge-advance'
+  '등록':'badge-reg','선수금':'badge-advance','반품':'badge-refund'
 };
 const IS_NO_PCS = () => false; // 선수금 포함 모든 상태 pcs 집계
 const pcsLabel  = n => (n === 1 ? '1 pc' : (n || 0) + ' pcs');
@@ -54,7 +54,7 @@ function canonicalStatus(s) {
 }
 
 function statusSelClass(s) {
-  return {'판매예정':'s-sale','컨펌예정':'s-confirm','이월예정':'s-carry','잔여재고':'s-rest','AS':'s-as','기타':'s-etc','판매완료':'s-done','등록':'s-reg','선수금':'s-advance'}[s]||'s-rest';
+  return {'판매예정':'s-sale','컨펌예정':'s-confirm','이월예정':'s-carry','잔여재고':'s-rest','AS':'s-as','기타':'s-etc','판매완료':'s-done','등록':'s-reg','선수금':'s-advance','반품':'s-refund'}[s]||'s-rest';
 }
 
 let curYear  = new Date().getFullYear();
@@ -875,7 +875,7 @@ function renderTfoot(filtered) {
 const SALES_PILL_CLASS = {
   '전체':'active','등록':'active-blue','판매예정':'active-green','컨펌예정':'active-orange',
   '이월예정':'active-blue','AS':'active-red','기타':'active-purple',
-  '잔여재고':'active-black','판매완료':'active-teal','선수금':'active-cyan'
+  '잔여재고':'active-black','판매완료':'active-teal','선수금':'active-cyan','반품':'active-refund'
 };
 function updateTabCounts() {
   document.querySelectorAll('.filter-pill').forEach(tab => {
@@ -888,10 +888,10 @@ function updateTabCounts() {
 }
 
 function renderSummary() {
-  // 요청 순서: 전체 재고, 판매 완료, 선수금, 판매 예정, 컨펌 예정, 이월 예정, 잔여 재고, AS, 기타, MPDS 등록 중
-  const ORDER  = ['전체','판매완료','선수금','판매예정','컨펌예정','이월예정','잔여재고','AS','기타','등록'];
-  const LABELS = { '전체':'전체 재고','판매완료':'판매 완료','선수금':'선수금','판매예정':'판매 예정','컨펌예정':'컨펌 예정','이월예정':'이월 예정','잔여재고':'잔여 재고','AS':'AS','기타':'기타(이동)','등록':'MPDS 등록 중' };
-  const COLORS = { '전체':'black','판매완료':'amber','선수금':'black','판매예정':'green','컨펌예정':'orange','이월예정':'blue','잔여재고':'black','AS':'red','기타':'black','등록':'blue' };
+  // 요청 순서: 전체 재고, 판매 완료, 선수금, 반품, 판매 예정, 컨펌 예정, 이월 예정, 잔여 재고, AS, 기타, MPDS 등록 중
+  const ORDER  = ['전체','판매완료','선수금','반품','판매예정','컨펌예정','이월예정','잔여재고','AS','기타','등록'];
+  const LABELS = { '전체':'전체 재고','판매완료':'판매 완료','선수금':'선수금','반품':'반품','판매예정':'판매 예정','컨펌예정':'컨펌 예정','이월예정':'이월 예정','잔여재고':'잔여 재고','AS':'AS','기타':'기타(이동)','등록':'MPDS 등록 중' };
+  const COLORS = { '전체':'black','판매완료':'amber','선수금':'black','반품':'refund','판매예정':'green','컨펌예정':'orange','이월예정':'blue','잔여재고':'black','AS':'red','기타':'black','등록':'blue' };
   const TD = 'style="text-align:center;padding:11px 12px;"';
 
   const summary = {};
@@ -928,32 +928,31 @@ function autoCalcFromInventory() {
   recalcRemain();
 }
 
-/* ── 판매완료 + 선수금 합산 → 현재 매출 자동 반영 ── */
+/* ── 판매완료 + 선수금 합산 (반품 차감) → 현재 매출 자동 반영 ── */
 function autoCalcCurrentSales() {
   if (_manualSalesLock.currentSales) { recalcRemain(); return; }
   const completed = rows.filter(r => r.status === '판매완료');
   const advances  = rows.filter(r => r.status === '선수금');
-  const totalAmt  = [...completed, ...advances].reduce((s, r) => s + (Number(r.amount)||0), 0);
+  const refunds   = rows.filter(r => r.status === '반품');
+  const totalAmt  = [...completed, ...advances, ...refunds].reduce((s, r) => s + (Number(r.amount)||0), 0);
   const donePcs   = completed.length;
   const advPcs    = advances.length;
+  const refPcs    = refunds.length;
   const salesEl   = document.getElementById('f-currentSales');
-  const pcsEl     = document.getElementById('f-currentPcs');   // hidden input for save
-  const pcsDisp   = document.getElementById('currentPcsDisplay'); // display span
+  const pcsEl     = document.getElementById('f-currentPcs');
+  const pcsDisp   = document.getElementById('currentPcsDisplay');
   if (salesEl && document.activeElement !== salesEl) {
-    salesEl.value = totalAmt > 0 ? totalAmt.toLocaleString('ko-KR') : '';
+    salesEl.value = totalAmt !== 0 ? totalAmt.toLocaleString('ko-KR') : '';
   }
   if (pcsEl) {
     pcsEl.value = donePcs > 0 ? String(donePcs) : '';
   }
   if (pcsDisp) {
-    const totalPcs = donePcs + advPcs;
-    if (totalPcs === 0) {
-      pcsDisp.textContent = '(-)';
-    } else if (advPcs === 0) {
-      pcsDisp.textContent = `(${pcsLabel(donePcs)})`;
-    } else {
-      pcsDisp.textContent = `(${pcsLabel(donePcs)} · 선수금 ${pcsLabel(advPcs)})`;
-    }
+    const parts = [];
+    if (donePcs > 0) parts.push(pcsLabel(donePcs));
+    if (advPcs  > 0) parts.push(`선수금 ${pcsLabel(advPcs)}`);
+    if (refPcs  > 0) parts.push(`반품 ${pcsLabel(refPcs)}`);
+    pcsDisp.textContent = parts.length ? `(${parts.join(' · ')})` : '(-)';
   }
   recalcRemain();
 }
@@ -1293,7 +1292,7 @@ if (addRowBtn) {
 const SALES_TO_MPDS_STATUS = {
   '판매예정':'판매예정','컨펌예정':'컨펌예정','이월예정':'이월예정',
   '판매완료':'판매 완료','잔여재고':'잔여 재고',
-  'AS':'AS','기타':'기타','등록':'등록','선수금':'선수금'
+  'AS':'AS','기타':'기타','등록':'등록','선수금':'선수금','반품':'잔여 재고'
 };
 async function syncSalesToMpds(invRows) {
   const docId = `${curYear}-${pad(curMonth)}`;
@@ -1517,10 +1516,12 @@ async function processCsvImport(file) {
     const serial     = serialRaw.replace(/^[-\s]+$/, '').trim();
     const isAdv      = serial === '';
     const amount     = csvParseAmount(amountRaw);
+    const isRefund   = amount < 0;
     const region     = regionRaw.slice(0, 2);
     const collection = csvTitleCase(collectionRaw);
-    importRows.push({ ym, saleDate: saleDateRaw, ref, serial, amount, customer, region, collection,
-      status: isAdv ? '선수금' : '판매완료', note: isAdv ? '선수금' : '' });
+    const status     = isRefund ? '반품' : (isAdv ? '선수금' : '판매완료');
+    const note       = isRefund ? '반품' : (isAdv ? '선수금' : '');
+    importRows.push({ ym, saleDate: saleDateRaw, ref, serial, amount, customer, region, collection, status, note });
   }
 
   if (importRows.length === 0) { hideCsvOverlay(); alert('유효한 데이터가 없습니다.'); return; }

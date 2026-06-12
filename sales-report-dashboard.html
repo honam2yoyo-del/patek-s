@@ -69,7 +69,7 @@
     .kpi-pcs-num { background:transparent;border:none;outline:none;font-family:inherit;font-size:14px;font-weight:700;color:#4b5563;min-width:20px;width:3ch; }
     .kpi-num::placeholder,.kpi-pcs-num::placeholder { color:#ccc; }
 
-    .blue{color:#0067e8;} .red{color:#ff0000;} .green{color:#009844;} .orange{color:#ff7a00;} .black{color:#111827;}
+    .blue{color:#0067e8;} .red{color:#ff0000;} .green{color:#009844;} .orange{color:#ff7a00;} .black{color:#111827;} .refund{color:#be185d;}
 
     /* ── 대시보드 패널 ── */
     .dashboard-grid { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-bottom:16px; }
@@ -133,6 +133,7 @@
     .filter-pill.active-purple { background:#7c3aed;color:#fff;border-color:#7c3aed; }
     .filter-pill.active-teal   { background:#d97706;color:#fff;border-color:#d97706; }
     .filter-pill.active-cyan   { background:#0891b2;color:#fff;border-color:#0891b2; }
+    .filter-pill.active-refund { background:#be185d;color:#fff;border-color:#be185d; }
     .table-wrap { padding:clamp(8px,1vw,14px) clamp(10px,1.2vw,16px) clamp(8px,1vw,12px);overflow-x:auto; }
     table { width:100%;border-collapse:collapse; }
     .inventory-table { table-layout:fixed;width:100%; }
@@ -157,6 +158,7 @@
     .status-sel.s-done    { background:#fef3c7;color:#d97706; }
     .status-sel.s-reg     { background:#eaf3ff;color:#0067e8; }
     .status-sel.s-advance { background:#cffafe;color:#0891b2; }
+    .status-sel.s-refund  { background:#fce7f3;color:#be185d; }
     .status-sel { display:inline-flex;align-items:center;justify-content:center; }
     .inline-dd { position:fixed;background:#fff;border:1px solid #e2e7ef;border-radius:8px;box-shadow:0 8px 24px rgba(15,23,42,.15);z-index:600;overflow:hidden;min-width:120px; }
     .inline-dd-opt { padding:9px 14px;font-size:13px;font-weight:700;cursor:pointer;color:#374151;transition:background .1s;text-align:center; }
@@ -173,6 +175,7 @@
     .badge-done    { background:#fef3c7;color:#d97706; }
     .badge-reg     { background:#eaf3ff;color:#0067e8; }
     .badge-advance { background:#cffafe;color:#0891b2; }
+    .badge-refund  { background:#fce7f3;color:#be185d; }
     .selected-summary { margin:10px 16px 12px;height:40px;border:1px solid #7aa9ff;border-radius:5px;display:grid;grid-template-columns:1fr 1fr 1fr;align-items:center;padding:0 16px;font-size:14px;font-weight:900; }
     .selected-summary b { color:#0067e8;margin-left:10px; }
     .summary-panel { padding:18px 16px; }
@@ -479,6 +482,7 @@
             <button class="filter-pill" data-filter="기타">기타(이동)</button>
             <button class="filter-pill" data-filter="판매완료">판매 완료</button>
             <button class="filter-pill" data-filter="선수금">선수금</button>
+            <button class="filter-pill" data-filter="반품">반품</button>
             <button class="filter-pill" data-filter="등록">MPDS 등록 중</button>
           </div>
         </div>
