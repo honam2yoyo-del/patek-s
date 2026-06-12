@@ -347,9 +347,10 @@ function loadMonth() {
       const prevRows  = invSnap.data().rows || [];
       const completed = prevRows.filter(r => r.status === '판매완료' || r.status === '판매 완료');
       const advances  = prevRows.filter(r => r.status === '선수금');
-      const totalAmt  = [...completed, ...advances].reduce((s,r) => s+(Number(r.amount)||0), 0);
+      const refunds   = prevRows.filter(r => r.status === '반품');
+      const totalAmt  = [...completed, ...advances, ...refunds].reduce((s,r) => s+(Number(r.amount)||0), 0);
       const donePcs   = completed.length;
-      if (totalAmt > 0 || donePcs > 0) {
+      if (totalAmt !== 0 || donePcs > 0) {
         if (lyEl)    lyEl.value    = totalAmt > 0 ? fmtInput(totalAmt) : '';
         if (lyPcsEl) { lyPcsEl.value = donePcs > 0 ? String(donePcs) : ''; lyPcsEl.style.width = Math.max(2, lyPcsEl.value.length||1)+'ch'; }
         filled = true;
