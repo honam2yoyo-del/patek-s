@@ -959,7 +959,7 @@ function autoCalcCurrentSales() {
     } else if (advPcs === 0) {
       pcsDisp.textContent = `(${pcsLabel(donePcs)})`;
     } else {
-      pcsDisp.textContent = `(${pcsLabel(totalPcs)} · 선수금 ${pcsLabel(advPcs)})`;
+      pcsDisp.textContent = `(${pcsLabel(donePcs)} · 선수금 ${pcsLabel(advPcs)})`;
     }
   }
   recalcRemain();
