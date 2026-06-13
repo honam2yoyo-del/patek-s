@@ -876,16 +876,21 @@ function buildDonutSVG(data, colors, centerText, shortNameFn) {
 
     /* 도넛 호 그리기 */
     if (span > 0.003) {
-      const cosS=Math.cos(startAngle), sinS=Math.sin(startAngle);
-      const cosE=Math.cos(endAngle),   sinE=Math.sin(endAngle);
-      const large = frac>0.5?1:0;
-      const p=[
-        `M${(cx+R*cosS).toFixed(1)},${(cy+R*sinS).toFixed(1)}`,
-        `A${R},${R},0,${large},1,${(cx+R*cosE).toFixed(1)},${(cy+R*sinE).toFixed(1)}`,
-        `L${(cx+ri*cosE).toFixed(1)},${(cy+ri*sinE).toFixed(1)}`,
-        `A${ri},${ri},0,${large},0,${(cx+ri*cosS).toFixed(1)},${(cy+ri*sinS).toFixed(1)}Z`
-      ].join(' ');
-      pathsHTML += `<path d="${p}" fill="${color}"/>`;
+      if (frac >= 0.9999) {
+        /* 단일 100% 세그먼트: SVG arc 명령은 시작=끝 지점 시 퇴화(degenerate)하므로 circle로 대체 */
+        pathsHTML += `<circle cx="${cx}" cy="${cy}" r="${R}" fill="${color}"/>`;
+      } else {
+        const cosS=Math.cos(startAngle), sinS=Math.sin(startAngle);
+        const cosE=Math.cos(endAngle),   sinE=Math.sin(endAngle);
+        const large = frac>0.5?1:0;
+        const p=[
+          `M${(cx+R*cosS).toFixed(1)},${(cy+R*sinS).toFixed(1)}`,
+          `A${R},${R},0,${large},1,${(cx+R*cosE).toFixed(1)},${(cy+R*sinE).toFixed(1)}`,
+          `L${(cx+ri*cosE).toFixed(1)},${(cy+ri*sinE).toFixed(1)}`,
+          `A${ri},${ri},0,${large},0,${(cx+ri*cosS).toFixed(1)},${(cy+ri*sinS).toFixed(1)}Z`
+        ].join(' ');
+        pathsHTML += `<path d="${p}" fill="${color}"/>`;
+      }
     }
 
     /* 내부 라벨: 호 중간 지점에 배치 */
