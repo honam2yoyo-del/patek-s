@@ -98,8 +98,8 @@
     .quarter-list li:last-child { border-bottom:0; }
     .quarter-value { font-weight:900; }
 
-    .chart-wrap { height:256px;padding-top:6px;display:flex;align-items:flex-end;justify-content:center;gap:42px;border-left:1px solid #dbe3ee;border-bottom:1px solid #dbe3ee;position:relative; }
-    .chart-unit  { position:absolute;left:-4px;top:-4px;font-size:12px;color:#111827;font-weight:700; }
+    .chart-wrap { min-height:200px;padding-top:6px;display:flex;align-items:flex-end;justify-content:center;gap:42px;border-left:1px solid #dbe3ee;border-bottom:1px solid #dbe3ee;position:relative; }
+    .chart-unit  { position:absolute;left:2px;top:8px;font-size:12px;color:#111827;font-weight:700; }
     .bar-item    { height:220px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:5px;font-size:12px;font-weight:700;min-width:80px; }
     .bar-meta    { text-align:center;line-height:1.35;margin-bottom:2px;font-size:12px;font-weight:800; }
     .bar         { width:38px;border-radius:5px 5px 0 0;background:linear-gradient(180deg,#2d86ff 0%,#0058d6 100%); }
@@ -468,8 +468,8 @@
           <span>월별 매출 누적 현황</span>
           <button id="prevYearToggle" onclick="window.togglePrevYear()" class="btn" style="height:28px;font-size:11px;font-weight:700;padding:0 10px;border-radius:6px;">전년 비교</button>
         </div>
-        <div class="panel-body">
-          <div class="chart-wrap" id="chartWrap">
+        <div class="panel-body" style="display:flex;flex-direction:column;padding-bottom:20px;">
+          <div class="chart-wrap" id="chartWrap" style="flex:1;">
             <div class="chart-unit">(천 원)</div>
           </div>
         </div>
