@@ -532,7 +532,7 @@ function getChartData() {
   }));
 }
 
-const MAX_BAR_H = 200;
+const MAX_BAR_H = 174;
 
 // 전년 비교 토글
 window.togglePrevYear = function() {
@@ -556,63 +556,70 @@ function calcBarH(amt, maxAmt) {
 }
 
 function renderChart() {
-  const data    = getChartData();
-  const wrap    = document.getElementById('chartWrap');
+  const data     = getChartData();
+  const wrap     = document.getElementById('chartWrap');
+  const legendEl = document.getElementById('chartLegend');
   if (!wrap) return;
   const amounts = data.map(d => d.amount);
   const q = curQuarter();
   const months = quarterMonths(q);
 
-  const growthLabel = (cur, prev) => {
-    if (!prev) return '';
-    const r = (cur - prev) / prev * 100;
-    const s = (r >= 0 ? '+' : '') + r.toFixed(1) + '%';
-    const c = r >= 0 ? '#059669' : '#dc2626';
-    return `<div style="font-size:10px;font-weight:800;color:${c};margin-top:2px;">${s}</div>`;
-  };
-
   if (showPrevYear) {
-    // 전년도 같은 분기 데이터
     const prevAmounts = months.map(m => Number(prevYearCentumData[`m${m}`]) || 0);
     const maxAmt = Math.max(...amounts, ...prevAmounts, 1);
 
-    const legend = `<div style="position:absolute;top:0;right:4px;display:flex;gap:8px;font-size:10px;font-weight:700;color:#374151;">
-      <span style="display:flex;align-items:center;gap:3px;"><span style="width:10px;height:10px;background:#2d86ff;display:inline-block;border-radius:2px;flex-shrink:0;"></span>${curYear}년</span>
-      <span style="display:flex;align-items:center;gap:3px;"><span style="width:10px;height:10px;background:#9ca3af;display:inline-block;border-radius:2px;flex-shrink:0;"></span>${curYear-1}년</span>
-    </div>`;
+    if (legendEl) {
+      legendEl.style.display = 'flex';
+      legendEl.innerHTML =
+        `<span style="display:flex;align-items:center;gap:3px;"><span style="width:10px;height:10px;background:#2d86ff;display:inline-block;border-radius:2px;flex-shrink:0;"></span>${curYear}년</span>` +
+        `<span style="display:flex;align-items:center;gap:3px;"><span style="width:10px;height:10px;background:#9ca3af;display:inline-block;border-radius:2px;flex-shrink:0;"></span>${curYear-1}년</span>`;
+    }
 
-    wrap.innerHTML = '<div class="chart-unit">(천 원)</div>' + legend + data.map((d, i) => {
+    wrap.innerHTML = '<div class="chart-unit">(천 원)</div>' + data.map((d, i) => {
       const h  = calcBarH(amounts[i], maxAmt);
       const ph = calcBarH(prevAmounts[i], maxAmt);
       const disp     = amounts[i]     > 0 ? Math.round(amounts[i]     / 1000).toLocaleString('ko-KR') : '-';
       const prevDisp = prevAmounts[i] > 0 ? Math.round(prevAmounts[i] / 1000).toLocaleString('ko-KR') : '-';
-      return `<div class="bar-item" style="min-width:70px;">
-        <div class="bar-meta" style="line-height:1.3;">
-          <div style="color:#0058d6;font-size:11px;font-weight:800;">${disp}</div>
-          <div style="color:#9ca3af;font-size:10px;font-weight:700;">${prevDisp}</div>
+      const r = (amounts[i] && prevAmounts[i])
+        ? (amounts[i] - prevAmounts[i]) / prevAmounts[i] * 100 : null;
+      const growthHtml = r !== null
+        ? `<div class="bar-growth" style="color:${r >= 0 ? '#059669' : '#dc2626'}">${(r >= 0 ? '+' : '') + r.toFixed(1)}%</div>`
+        : '';
+      return `<div class="bar-item">
+        <div class="bar-top-label">
+          <div class="bar-meta">
+            <div style="color:#0058d6;font-size:11px;font-weight:800;">${disp}</div>
+            <div style="color:#9ca3af;font-size:10px;font-weight:700;">${prevDisp}</div>
+          </div>
         </div>
-        <div style="display:flex;align-items:flex-end;gap:3px;justify-content:center;">
+        <div class="bar-drawing">
           <div style="width:26px;height:${h}px;border-radius:5px 5px 0 0;background:linear-gradient(180deg,#2d86ff 0%,#0058d6 100%);"></div>
           <div style="width:26px;height:${ph}px;border-radius:5px 5px 0 0;background:linear-gradient(180deg,#c4c9d4 0%,#9ca3af 100%);"></div>
         </div>
-        <div class="bar-month">${d.label||''}</div>
-        ${growthLabel(amounts[i], prevAmounts[i])}
+        <div class="bar-bottom-label">
+          <div class="bar-month">${d.label||''}</div>
+          ${growthHtml}
+        </div>
       </div>`;
     }).join('');
 
   } else {
-    // 단독 모드
-    const prevAmounts = months.map(m => Number(prevYearCentumData[`m${m}`]) || 0);
+    if (legendEl) { legendEl.style.display = 'none'; legendEl.innerHTML = ''; }
     const maxAmt = Math.max(...amounts, 1);
     wrap.innerHTML = '<div class="chart-unit">(천 원)</div>' + data.map((d, i) => {
       const h       = calcBarH(amounts[i], maxAmt);
       const dispAmt = amounts[i] > 0 ? Math.round(amounts[i] / 1000).toLocaleString('ko-KR') : '-';
       const pStr    = d.pcs ? `(${d.pcs} pcs)` : '';
       return `<div class="bar-item">
-        <div class="bar-meta"><div>${pStr}</div><div>${dispAmt}</div></div>
-        <div class="bar" style="height:${h}px;"></div>
-        <div class="bar-month">${d.label||''}</div>
-        ${growthLabel(amounts[i], prevAmounts[i])}
+        <div class="bar-top-label">
+          <div class="bar-meta"><div>${pStr}</div><div>${dispAmt}</div></div>
+        </div>
+        <div class="bar-drawing">
+          <div class="bar" style="height:${h}px;"></div>
+        </div>
+        <div class="bar-bottom-label">
+          <div class="bar-month">${d.label||''}</div>
+        </div>
       </div>`;
     }).join('');
   }
