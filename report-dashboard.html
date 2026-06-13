@@ -359,7 +359,7 @@
         <div class="panel">
           <div class="panel-header">
             <div class="section-title">Collection별 판매</div>
-            <span class="unit">* 단위 : KRW</span>
+            <span class="unit">(단위: KRW 1,000)</span>
           </div>
           <div class="analysis-panel">
             <table id="lineTable">
@@ -392,7 +392,7 @@
         <div class="panel">
           <div class="panel-header">
             <div class="section-title">지역별 판매</div>
-            <span class="unit">* 단위 : KRW</span>
+            <span class="unit">(단위: KRW 1,000)</span>
           </div>
           <div class="analysis-panel">
             <table id="regionTable">
@@ -453,6 +453,7 @@ const db   = getFirestore(app);
 
 const pad = n => String(n).padStart(2,'0');
 const fmtN = n => n != null ? Number(n).toLocaleString('ko-KR') : '-';
+const fmtK = n => n != null ? Math.floor(Number(n)/1000).toLocaleString('ko-KR') : '-';
 
 /* ── 기본 데이터 ── */
 const DEFAULT_LINES = [
@@ -821,7 +822,7 @@ function renderLineTable() {
     return `<tr>
       <td><input class="td-inp" value="${esc(r.line)}" oninput="lineData[${i}].line=this.value;updateSummary();"/></td>
       <td><input class="td-inp" type="text" value="${r.qty||0}" oninput="lineData[${i}].qty=Number(this.value)||0;updateSummary();"/></td>
-      <td><input class="td-inp" type="text" value="${fmtN(r.amount)}" oninput="lineData[${i}].amount=Number(this.value.replace(/,/g,''))||0;updateSummary();"/></td>
+      <td><input class="td-inp" type="text" value="${fmtK(r.amount)}" oninput="lineData[${i}].amount=Number(this.value.replace(/,/g,''))*1000||0;updateSummary();"/></td>
       <td>${shares[i]}%</td>
       <td><input class="td-inp ${yoyClass}" value="${r.yoy>=0?'+'+r.yoy:r.yoy}" oninput="lineData[${i}].yoy=Number(this.value)||0;" style="width:60px;"/></td>
     </tr>`;
@@ -831,7 +832,7 @@ function renderLineTable() {
   const totAmt = lineData.reduce((s,r)=>s+(Number(r.amount)||0),0);
   const totYoy = lineData.length ? (lineData.reduce((s,r)=>s+(Number(r.yoy)||0),0)/lineData.length).toFixed(1) : 0;
   const yoyClass2 = totYoy >= 0 ? 'up' : 'down';
-  document.getElementById('lineTfoot').innerHTML = `<tr><td>Total</td><td>${totQty}</td><td>${fmtN(totAmt)}</td><td>100%</td><td class="${yoyClass2}">${totYoy>=0?'▲'+totYoy+'%':'▼'+Math.abs(totYoy)+'%'}</td></tr>`;
+  document.getElementById('lineTfoot').innerHTML = `<tr><td>Total</td><td>${totQty}</td><td>${fmtK(totAmt)}</td><td>100%</td><td class="${yoyClass2}">${totYoy>=0?'▲'+totYoy+'%':'▼'+Math.abs(totYoy)+'%'}</td></tr>`;
 
   updateLineChart(shares);
 }
@@ -866,7 +867,7 @@ function renderRegionTable() {
     return `<tr>
       <td><input class="td-inp" value="${esc(r.region)}" oninput="regionData[${i}].region=this.value;updateSummary();"/></td>
       <td><input class="td-inp" type="text" value="${r.qty||0}" oninput="regionData[${i}].qty=Number(this.value)||0;updateSummary();"/></td>
-      <td><input class="td-inp" type="text" value="${fmtN(r.amount)}" oninput="regionData[${i}].amount=Number(this.value.replace(/,/g,''))||0;updateSummary();"/></td>
+      <td><input class="td-inp" type="text" value="${fmtK(r.amount)}" oninput="regionData[${i}].amount=Number(this.value.replace(/,/g,''))*1000||0;updateSummary();"/></td>
       <td>${shares[i]}%</td>
       <td><input class="td-inp ${yoyClass}" value="${r.yoy>=0?'+'+r.yoy:r.yoy}" oninput="regionData[${i}].yoy=Number(this.value)||0;" style="width:60px;"/></td>
     </tr>`;
@@ -876,7 +877,7 @@ function renderRegionTable() {
   const totAmt = regionData.reduce((s,r)=>s+(Number(r.amount)||0),0);
   const totYoy = regionData.length ? (regionData.reduce((s,r)=>s+(Number(r.yoy)||0),0)/regionData.length).toFixed(1) : 0;
   const yoyClass2 = totYoy >= 0 ? 'up' : 'down';
-  document.getElementById('regionTfoot').innerHTML = `<tr><td>Total</td><td>${totQty}</td><td>${fmtN(totAmt)}</td><td>100%</td><td class="${yoyClass2}">${totYoy>=0?'▲'+totYoy+'%':'▼'+Math.abs(totYoy)+'%'}</td></tr>`;
+  document.getElementById('regionTfoot').innerHTML = `<tr><td>Total</td><td>${totQty}</td><td>${fmtK(totAmt)}</td><td>100%</td><td class="${yoyClass2}">${totYoy>=0?'▲'+totYoy+'%':'▼'+Math.abs(totYoy)+'%'}</td></tr>`;
 
   updateRegionChart(shares);
 }
