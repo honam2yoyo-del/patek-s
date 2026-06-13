@@ -860,8 +860,7 @@ function renderTable() {
       <td class="editable-cell" onclick="window.invStatusDD(event,${ri})">
         <span class="status-sel ${statusSelClass(r.status)}" style="pointer-events:none;">${STATUS_DISPLAY[r.status]||r.status||'잔여재고'}</span>
       </td>
-      <td><input class="td-edit" value="${esc(r.note||'')}" oninput="window.invSet(${ri},'note',this.value)" placeholder="비고"/></td>
-      <td><button class="td-del" onclick="window.invDelRow(${ri});">✕</button></td>`;
+      <td><input class="td-edit" value="${esc(r.note||'')}" oninput="window.invSet(${ri},'note',this.value)" placeholder="비고"/></td>`;
     tbody.appendChild(tr);
   });
 
@@ -882,7 +881,7 @@ function renderTfoot(filtered) {
     <td></td>
     <td></td>
     <td>${fmtW(total)}</td>
-    <td colspan="5">${pcsLabel(pcs)}</td>
+    <td colspan="4">${pcsLabel(pcs)}</td>
   </tr>`;
 }
 

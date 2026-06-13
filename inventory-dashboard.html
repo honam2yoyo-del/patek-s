@@ -95,7 +95,7 @@
 
     /* ── 테이블 ── */
     .table-wrap { overflow-x:auto; }
-    table { width:100%;border-collapse:collapse;min-width:1000px;table-layout:fixed; }
+    table { width:100%;border-collapse:collapse;table-layout:fixed; }
     th,td { border:1px solid #e2e7ef;padding:10px 12px;font-size:14px;text-align:center;white-space:nowrap; }
     th { background:#f6f8fb;font-weight:900; }
     td { background:#fff;font-weight:700; }
@@ -104,7 +104,7 @@
     .td-del  { background:none;border:none;cursor:pointer;color:#ccc;font-size:14px;padding:2px; }
     .td-del:hover { color:#f00; }
     #invTbody td { cursor:text; }
-    #invTbody td:first-child, #invTbody td:last-child { cursor:default; }
+    #invTbody td:first-child { cursor:default; }
 
     /* ── 상태 뱃지/셀렉트 ── */
     .badge { display:inline-flex;justify-content:center;align-items:center;min-width:68px;height:26px;padding:0 8px;border-radius:14px;font-size:12px;font-weight:900;white-space:nowrap; }
@@ -358,7 +358,6 @@
                 </select>
               </th>
               <th style="width:160px;">비고</th>
-              <th style="width:28px;"></th>
             </tr>
           </thead>
           <tbody id="invTbody"></tbody>
@@ -958,8 +957,7 @@ function renderTable() {
       <td class="editable-cell" onclick="window.chStatusDD(event,${ri})">
         <span class="status-sel ${statusSelClass(r.status)}" style="pointer-events:none;">${STATUS_DISPLAY[r.status]||r.status||'잔여재고'}</span>
       </td>
-      <td><input class="td-edit" value="${esc(r.note||'')}" oninput="window.setField(${ri},'note',this.value)" placeholder="비고"/></td>
-      <td><button class="td-del" onclick="window.confirmDelete(${ri})">✕</button></td>`;
+      <td><input class="td-edit" value="${esc(r.note||'')}" oninput="window.setField(${ri},'note',this.value)" placeholder="비고"/></td>`;
     tbody.appendChild(tr);
   });
 
@@ -977,7 +975,7 @@ function renderTfoot(filtered) {
     <td colspan="3" style="font-weight:900;">${label} 합계</td>
     <td></td>
     <td style="font-weight:900;">${fmtW(total)}</td>
-    <td colspan="5" style="font-weight:900;">${pcs === 1 ? '1 pc' : pcs + ' pcs'}</td>
+    <td colspan="4" style="font-weight:900;">${pcs === 1 ? '1 pc' : pcs + ' pcs'}</td>
   </tr>`;
 }
 

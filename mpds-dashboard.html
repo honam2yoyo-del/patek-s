@@ -115,7 +115,7 @@
     .filter-pill.active-cyan   { background:#0891b2;color:#fff;border-color:#0891b2; }
     .table-wrap { padding:6px 8px 0;overflow-x:auto; }
     table { width:100%;border-collapse:collapse; }
-    .mpds-table { min-width:960px; }
+    .mpds-table { table-layout:fixed; width:100%; }
     th,td { border:1px solid #e2e7ef;padding:9px 10px;text-align:center;font-size:13px;white-space:nowrap; }
     th { background:#f5f8fc;color:#003b8e;font-weight:900; }
     td { background:#fff;font-weight:700; }
@@ -357,18 +357,28 @@
 
           <div class="table-wrap">
             <table class="mpds-table">
+              <colgroup>
+                <col style="width:4%"/>
+                <col style="width:13%"/>
+                <col style="width:16%"/>
+                <col style="width:6%"/>
+                <col style="width:13%"/>
+                <col style="width:11%"/>
+                <col style="width:13%"/>
+                <col style="width:10%"/>
+                <col style="width:14%"/>
+              </colgroup>
               <thead>
                 <tr>
-                  <th style="width:40px;"><input type="checkbox" id="checkAll"/></th>
-                  <th style="width:130px;cursor:pointer;user-select:none;" onclick="window.mpdsSortBy('ref')">REF.<span id="mpsi-ref"><span style="font-size:13px;color:#9ca3af;margin-left:3px;line-height:1;">↕</span></span></th>
-                  <th style="width:160px;cursor:pointer;user-select:none;" onclick="window.mpdsSortBy('serial')">SERIAL<span id="mpsi-serial"><span style="font-size:13px;color:#9ca3af;margin-left:3px;line-height:1;">↕</span></span></th>
-                  <th style="width:60px;">수량</th>
-                  <th id="lineFilterTh" style="width:130px;" onclick="window.toggleLineFilter(this)">Collection <span id="lineFilterIndicator" style="font-size:10px;color:#075bd8;"></span></th>
-                  <th id="dateSortTh" style="width:110px;cursor:pointer;user-select:none;" onclick="window.mpdsSortBy('saleDate')">예상 판매일<span id="mpsi-saleDate"><span style="font-size:13px;color:#9ca3af;margin-left:3px;line-height:1;">↕</span></span></th>
-                  <th style="width:130px;cursor:pointer;user-select:none;" onclick="window.mpdsSortBy('amount')">금액(KRW)<span id="mpsi-amount"><span style="font-size:13px;color:#9ca3af;margin-left:3px;line-height:1;">↕</span></span></th>
-                  <th style="width:104px;">상태</th>
+                  <th><input type="checkbox" id="checkAll"/></th>
+                  <th style="cursor:pointer;user-select:none;" onclick="window.mpdsSortBy('ref')">REF.<span id="mpsi-ref"><span style="font-size:13px;color:#9ca3af;margin-left:3px;line-height:1;">↕</span></span></th>
+                  <th style="cursor:pointer;user-select:none;" onclick="window.mpdsSortBy('serial')">SERIAL<span id="mpsi-serial"><span style="font-size:13px;color:#9ca3af;margin-left:3px;line-height:1;">↕</span></span></th>
+                  <th>수량</th>
+                  <th id="lineFilterTh" onclick="window.toggleLineFilter(this)">Collection <span id="lineFilterIndicator" style="font-size:10px;color:#075bd8;"></span></th>
+                  <th id="dateSortTh" style="cursor:pointer;user-select:none;" onclick="window.mpdsSortBy('saleDate')">예상 판매일<span id="mpsi-saleDate"><span style="font-size:13px;color:#9ca3af;margin-left:3px;line-height:1;">↕</span></span></th>
+                  <th style="cursor:pointer;user-select:none;" onclick="window.mpdsSortBy('amount')">금액(KRW)<span id="mpsi-amount"><span style="font-size:13px;color:#9ca3af;margin-left:3px;line-height:1;">↕</span></span></th>
+                  <th>상태</th>
                   <th>비고</th>
-                  <th style="width:26px;"></th>
                 </tr>
               </thead>
               <tbody id="invTbody"></tbody>
@@ -376,7 +386,7 @@
                 <tr class="selected-row">
                   <td></td><td>선택 합계</td><td colspan="3"></td>
                   <td id="selAmount">0 원</td>
-                  <td colspan="4"><b id="selQty">0 pcs</b></td>
+                  <td colspan="3"><b id="selQty">0 pcs</b></td>
                 </tr>
               </tfoot>
             </table>
@@ -1062,8 +1072,7 @@ function renderTable() {
       <td class="editable-cell" onclick="window.mpdsStatusDD(event,${ri})">
         <span class="status-sel ${statusSelClass(r.status)}" style="pointer-events:none;">${MPDS_STATUS_DISPLAY[r.status]||r.status||'등록'}</span>
       </td>
-      <td><input class="td-edit" value="${esc(r.note||'')}" oninput="window.mpdsSet(${ri},'note',this.value)" placeholder="비고"/></td>
-      <td><button class="td-del" onclick="window.mpdsDelete(${ri})">✕</button></td>`;
+      <td><input class="td-edit" value="${esc(r.note||'')}" oninput="window.mpdsSet(${ri},'note',this.value)" placeholder="비고"/></td>`;
     tbody.appendChild(tr);
   });
   // tbody 클릭 → 셀 포커스
