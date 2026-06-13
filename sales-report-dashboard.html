@@ -463,12 +463,12 @@
       </div>
 
       <!-- 월별 매출 누적 현황 (자동 계산) -->
-      <div class="panel">
+      <div class="panel" style="display:flex;flex-direction:column;">
         <div class="panel-header" style="display:flex;justify-content:space-between;align-items:center;">
           <span>월별 매출 누적 현황</span>
           <button id="prevYearToggle" onclick="window.togglePrevYear()" class="btn" style="height:28px;font-size:11px;font-weight:700;padding:0 10px;border-radius:6px;">전년 비교</button>
         </div>
-        <div class="panel-body" style="display:flex;flex-direction:column;padding-bottom:20px;">
+        <div class="panel-body" style="flex:1;display:flex;flex-direction:column;padding-bottom:20px;">
           <div class="chart-wrap" id="chartWrap" style="flex:1;">
             <div class="chart-unit">(천 원)</div>
           </div>
