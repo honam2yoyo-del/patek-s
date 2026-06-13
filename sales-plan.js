@@ -1292,11 +1292,41 @@ function updateSelectedTotal() {
   document.getElementById('selectedAmount').textContent = fmtW(amount);
 }
 
-/* ── 새 행 추가 버튼 (하단 바에 있을 경우 대비) ── */
+/* ── 행 추가 / 선택 삭제 / 전체 삭제 ── */
 const addRowBtn = document.getElementById('addRowBtn');
 if (addRowBtn) {
   addRowBtn.addEventListener('click', () => {
     rows.push({ ref:'', serial:'', amount:null, customer:'', saleDate:'', status:'판매예정', note:'' });
+    renderTable();
+    window.markDirty && window.markDirty();
+  });
+}
+
+const delSelBtn = document.getElementById('delSelBtn');
+if (delSelBtn) {
+  delSelBtn.addEventListener('click', () => {
+    const checked = document.querySelectorAll('#inventoryTbody .row-check:checked');
+    if (checked.length === 0) { alert('삭제할 행을 선택해주세요.'); return; }
+    if (!confirm(`선택한 ${checked.length}건을 삭제하시겠습니까?`)) return;
+    const filtered = activeFilters.has('전체') ? rows : rows.filter(r => activeFilters.has(r.status));
+    const toDelete = new Set();
+    checked.forEach(cb => {
+      const tr  = cb.closest('tr');
+      const idx = [...tr.parentElement.children].indexOf(tr);
+      if (filtered[idx]) toDelete.add(rows.indexOf(filtered[idx]));
+    });
+    rows = rows.filter((_, i) => !toDelete.has(i));
+    renderTable();
+    window.markDirty && window.markDirty();
+  });
+}
+
+const delAllBtn = document.getElementById('delAllBtn');
+if (delAllBtn) {
+  delAllBtn.addEventListener('click', () => {
+    if (rows.length === 0) { alert('삭제할 데이터가 없습니다.'); return; }
+    if (!confirm(`전체 ${rows.length}건을 모두 삭제하시겠습니까?`)) return;
+    rows = [];
     renderTable();
     window.markDirty && window.markDirty();
   });
