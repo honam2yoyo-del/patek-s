@@ -436,8 +436,13 @@ let goalData = { total: 0, centum: 0, avenue: 0 };
 
 function render(){
   const sd = salesData || {};
-  const expected  = sd.expectedSales  || 0;
-  const expPcs    = sd.expectedPcs    || 0;
+  // 예상 매출: invData(재고)에서 직접 계산 (판매예정+판매완료+선수금) — sales-report-dashboard와 동일 로직
+  const invRows   = (invData && invData.rows) ? invData.rows : [];
+  const expRows   = invRows.filter(r => r.status === '판매예정' || r.status === '판매완료' || r.status === '선수금');
+  const expected  = invRows.length > 0
+    ? expRows.reduce((s, r) => s + (Number(r.amount) || 0), 0)
+    : (sd.expectedSales || 0);
+  const expPcs    = invRows.length > 0 ? expRows.length : (sd.expectedPcs || 0);
   const current   = sd.currentSales   || 0;
   const curPcs    = sd.currentPcs     || 0;
   const lastYear  = sd.lastYearSales  || 0;
@@ -458,7 +463,6 @@ function render(){
   document.getElementById('kpi-mpds').textContent = mpdsCount + ' pcs';
 
   // 매장 재고 AS
-  const invRows = (invData && invData.rows) ? invData.rows : [];
   const asCount = invRows.filter(r => r.status === 'AS').length;
   document.getElementById('kpi-as').textContent = asCount + '건';
   document.getElementById('bot-as-active').textContent = asCount;
