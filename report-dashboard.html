@@ -125,12 +125,12 @@
     .highlight-month { color:#0067e8;font-weight:900;background:#eef6ff; }
 
     /* ── 도넛 차트 ── */
-    .chart-side { display:flex;flex-direction:column;align-items:center;gap:8px;padding:8px 6px 6px; }
+    .chart-side { display:flex;flex-direction:column;justify-content:flex-start;align-items:center;gap:24px;padding:8px 6px 6px; }
     .mini-card { border:1px solid #dfe6f0;border-radius:8px;padding:6px 10px;background:#fbfdff;min-width:90px;width:100%;max-width:160px; }
     .mini-title { font-size:10px;color:#64748b;font-weight:900;text-align:center;margin-bottom:2px; }
     .mini-main { text-align:center;color:#003b8e;font-size:13px;font-weight:900;margin-bottom:4px; }
     .mini-row { display:flex;justify-content:space-between;gap:6px;font-size:10px;font-weight:800;border-top:1px solid #e5eaf2;padding-top:4px;margin-top:3px; }
-    .donut-wrap { width:100%;display:flex;align-items:center;justify-content:center;overflow:visible; }
+    .donut-wrap { flex:1;width:100%;min-height:180px;display:flex;align-items:center;justify-content:center;position:relative;overflow:visible; }
 
     /* ── 하단 그리드 ── */
     .bottom-grid { display:flex;flex-direction:column;gap:14px;margin-bottom:14px; }
@@ -839,17 +839,18 @@ function renderLineTable() {
 
 /* ── SVG 도넛 차트 빌더 (지시선 + 외부 라벨) ── */
 function buildDonutSVG(data, colors, centerText, shortNameFn) {
-  const W = 260, H = 200, cx = 130, cy = 100;
-  const R = 58, ri = 34;
+  /* ViewBox 370×260: 도넛 + 지시선 + 11px 라벨이 모두 viewBox 안에 수용됨 */
+  const W = 370, H = 260, cx = 185, cy = 130;
+  const R = 65, ri = 38;
   const total = data.reduce((s, d) => s + (Number(d.amount)||0), 0);
 
   const cLines = centerText.split('<br>');
   const ctSVG = cLines.map((l, j) =>
-    `<text x="${cx}" y="${(cy + (j-(cLines.length-1)/2)*9).toFixed(1)}" font-size="7.5" font-weight="900" text-anchor="middle" dominant-baseline="central" fill="#374151">${l}</text>`
+    `<text x="${cx}" y="${(cy + (j-(cLines.length-1)/2)*12).toFixed(1)}" font-size="10" font-weight="900" text-anchor="middle" dominant-baseline="central" fill="#374151">${l}</text>`
   ).join('');
 
   if (total === 0) {
-    return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="overflow:visible" xmlns="http://www.w3.org/2000/svg">
+    return `<svg viewBox="0 0 ${W} ${H}" width="100%" xmlns="http://www.w3.org/2000/svg">
       <circle cx="${cx}" cy="${cy}" r="${R}" fill="#e2e8f0"/>
       <circle cx="${cx}" cy="${cy}" r="${ri}" fill="white" stroke="#eef2f7" stroke-width="1"/>
       ${ctSVG}
@@ -882,21 +883,22 @@ function buildDonutSVG(data, colors, centerText, shortNameFn) {
 
     if (pct > 0) {
       const cm = Math.cos(mid), sm = Math.sin(mid);
-      const lx1 = (cx+(R+4)*cm).toFixed(1), ly1 = (cy+(R+4)*sm).toFixed(1);
-      const lx2 = (cx+(R+17)*cm).toFixed(1), ly2 = (cy+(R+17)*sm).toFixed(1);
+      /* 지시선: 도넛 바깥 4px → 21px */
+      const lx1 = (cx+(R+4)*cm).toFixed(1),  ly1 = (cy+(R+4)*sm).toFixed(1);
+      const lx2 = (cx+(R+21)*cm).toFixed(1), ly2 = (cy+(R+21)*sm).toFixed(1);
       const isRight = cm >= 0;
-      const tx = (cx+(R+20)*cm + (isRight ? 2 : -2)).toFixed(1);
+      const tx = (cx+(R+25)*cm + (isRight ? 2 : -2)).toFixed(1);
       const anchor = isRight ? 'start' : 'end';
       const name = shortNameFn(d);
-      labelsHTML += `<line x1="${lx1}" y1="${ly1}" x2="${lx2}" y2="${ly2}" stroke="#c0c8d5" stroke-width="0.9"/>`;
-      labelsHTML += `<text x="${tx}" y="${ly2}" font-size="7.5" font-weight="800" text-anchor="${anchor}" dominant-baseline="central" fill="#374151">${name} <tspan fill="#6b7280">${pct}%</tspan></text>`;
+      labelsHTML += `<line x1="${lx1}" y1="${ly1}" x2="${lx2}" y2="${ly2}" stroke="#b0bac8" stroke-width="1"/>`;
+      labelsHTML += `<text x="${tx}" y="${ly2}" font-size="11" font-weight="800" text-anchor="${anchor}" dominant-baseline="central" fill="#1e293b">${name}<tspan font-size="10" fill="#64748b"> ${pct}%</tspan></text>`;
     }
     startAngle = endAngle;
   });
 
-  return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="overflow:visible" xmlns="http://www.w3.org/2000/svg">
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" xmlns="http://www.w3.org/2000/svg">
     ${pathsHTML}
-    <circle cx="${cx}" cy="${cy}" r="${ri}" fill="white" stroke="#eef2f7" stroke-width="1"/>
+    <circle cx="${cx}" cy="${cy}" r="${ri}" fill="white" stroke="#e2e8f0" stroke-width="1.5"/>
     ${ctSVG}
     ${labelsHTML}
   </svg>`;
