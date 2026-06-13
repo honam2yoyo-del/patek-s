@@ -117,7 +117,7 @@
     .badge-done    { background:#fef3c7;color:#d97706; }
     .badge-reg     { background:#eaf3ff;color:#0067e8; }
     .badge-advance { background:#cffafe;color:#0891b2; }
-    .status-sel { -webkit-appearance:none;appearance:none;height:28px;border:none;border-radius:14px;padding:0 10px;font-size:12px;font-weight:900;cursor:pointer;min-width:84px;text-align:center;font-family:inherit; }
+    .status-sel { -webkit-appearance:none;appearance:none;height:28px;border:none;border-radius:14px;padding:0 5px;font-size:12px;font-weight:900;cursor:pointer;min-width:60px;text-align:center;font-family:inherit; }
     .status-sel.s-sale    { background:#e6f8ee;color:#009844; }
     .status-sel.s-confirm { background:#fff3e5;color:#ff7a00; }
     .status-sel.s-carry   { background:#eaf3ff;color:#0067e8; }
@@ -337,8 +337,8 @@
             <tr>
               <th style="width:44px;"><input type="checkbox" id="checkAll"/></th>
               <th style="width:130px;cursor:pointer;user-select:none;" onclick="window.invSortBy('ref')" id="th-ref">REF. <span id="si-ref"></span></th>
-              <th style="width:189px;cursor:pointer;user-select:none;" onclick="window.invSortBy('serial')" id="th-serial">Serial <span id="si-serial"></span></th>
-              <th style="width:36px;">수량</th>
+              <th style="width:173px;cursor:pointer;user-select:none;" onclick="window.invSortBy('serial')" id="th-serial">Serial <span id="si-serial"></span></th>
+              <th style="width:52px;">수량</th>
               <th style="width:160px;cursor:pointer;user-select:none;" onclick="window.invSortBy('amount')" id="th-amount">금액 <span id="si-amount"></span></th>
               <th style="width:110px;cursor:pointer;user-select:none;" onclick="window.invSortBy('customer')" id="th-customer">고객명 <span id="si-customer"></span></th>
               <th style="width:150px;cursor:pointer;user-select:none;" onclick="window.invSortBy('saleDate')" id="th-saleDate">예상 판매일 <span id="si-saleDate"></span></th>
@@ -948,7 +948,7 @@ function renderTable() {
       <td><input type="checkbox" class="row-check" data-amount="${r.amount||0}" data-status="${r.status||''}"/></td>
       <td><input class="td-edit" value="${esc(r.ref||'')}" oninput="window.setField(${ri},'ref',this.value)" placeholder="REF."/></td>
       <td><input class="td-edit" value="${esc(r.serial||'')}" oninput="window.setField(${ri},'serial',this.value)" placeholder="Serial"/></td>
-      <td><input class="td-edit" type="text" inputmode="numeric" value="${r.qty??1}" oninput="window.setField(${ri},'qty',+this.value||1)" placeholder="1" style="text-align:center;width:50px;"/></td>
+      <td><input class="td-edit" type="text" inputmode="numeric" value="${r.qty??1}" oninput="window.setField(${ri},'qty',+this.value||1)" placeholder="1" style="text-align:center;width:100%;"/></td>
       <td style="padding:0;"><div style="display:flex;align-items:center;justify-content:center;padding:10px 12px;gap:0;"><input class="td-edit" type="text" inputmode="numeric" value="${fmtInput(r.amount)}" size="${Math.max(3,(fmtInput(r.amount)||'').length)+1}"
           oninput="window.setAmt(${ri},this)"
           placeholder="0" style="width:auto;text-align:center;"/><span style="font-weight:700;font-size:14px;">원</span></div></td>

@@ -848,7 +848,7 @@ function renderTable() {
       <td><input type="checkbox" class="row-check" data-amount="${r.amount||0}" data-status="${r.status||''}"/></td>
       <td><input class="td-edit" value="${esc(r.ref||'')}" oninput="window.invSet(${ri},'ref',this.value)" placeholder="REF."/></td>
       <td><input class="td-edit" value="${esc(r.serial||'')}" oninput="window.invSet(${ri},'serial',this.value)" placeholder="Serial"/></td>
-      <td><input class="td-edit" type="text" inputmode="numeric" value="${r.qty??1}" oninput="window.invSet(${ri},'qty',+this.value||1)" placeholder="1" style="text-align:center;width:50px;"/></td>
+      <td><input class="td-edit" type="text" inputmode="numeric" value="${r.qty??1}" oninput="window.invSet(${ri},'qty',+this.value||1)" placeholder="1" style="text-align:center;width:100%;"/></td>
       <td><div class="amt-cell">
         <input class="td-edit amt" type="text" inputmode="numeric" value="${amtFmt}"
           oninput="window.invSetAmt(${ri},this)"
