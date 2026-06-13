@@ -112,8 +112,8 @@
     .mpds-input { width:74px;height:36px;border:1px solid #d9e0ea;border-radius:6px;text-align:center;font-size:16px;font-weight:800;outline:none; }
 
     /* ── 재고 관리 ── */
-    .inventory-panel { background:#fff;border:1px solid #e2e7ef;border-radius:8px;box-shadow:0 2px 8px rgba(15,23,42,.035);display:grid;grid-template-columns:2.25fr 1fr;overflow:hidden;margin-bottom:0; }
-    .inventory-left  { border-right:1px solid #e5eaf2; }
+    .inventory-panel { background:#fff;border:1px solid #e2e7ef;border-radius:8px;box-shadow:0 2px 8px rgba(15,23,42,.035);display:grid;grid-template-columns:3fr 1fr;overflow:hidden;margin-bottom:0; }
+    .inventory-left  { border-right:1px solid #e5eaf2;min-width:0;overflow:hidden; }
     .inventory-header { padding:18px 24px 10px;font-size:19px;font-weight:900; }
     .filter-wrap { display:flex;flex-direction:column;gap:clamp(8px,1vw,12px);padding:clamp(8px,1vw,12px) clamp(10px,1.2vw,16px) clamp(10px,1.2vw,14px);border-bottom:1px solid #e5eaf2; }
     .filter-search-box { position:relative;width:100%; }
@@ -184,10 +184,10 @@
     .badge-refund  { background:#fce7f3;color:#be185d; }
     .selected-summary { margin:10px 16px 12px;height:40px;border:1px solid #7aa9ff;border-radius:5px;display:grid;grid-template-columns:1fr 1fr 1fr;align-items:center;padding:0 16px;font-size:14px;font-weight:900; }
     .selected-summary b { color:#0067e8;margin-left:10px; }
-    .summary-panel { padding:18px 16px; }
-    .summary-title { font-size:19px;font-weight:900;margin-bottom:14px; }
-    .summary-table th,.summary-table td { padding:14px 12px;font-size:15px; }
-    .summary-table td:first-child { text-align:left;padding-left:18px;font-weight:900; }
+    .summary-panel { padding:clamp(10px,1.2vw,18px) clamp(8px,1vw,16px);min-width:0;overflow:hidden; }
+    .summary-title { font-size:clamp(12px,1.3vw,19px);font-weight:900;margin-bottom:clamp(8px,1vw,14px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+    .summary-table th,.summary-table td { padding:clamp(6px,0.7vw,14px) clamp(4px,0.6vw,12px);font-size:clamp(10px,1vw,15px); }
+    .summary-table td:first-child { text-align:left;padding-left:clamp(8px,1vw,18px);font-weight:900; }
 
     /* ── 하단 바 ── */
     .bottom-actions { position:fixed;left:185px;right:0;bottom:0;height:64px;display:flex;justify-content:flex-end;align-items:center;gap:10px;padding:0 24px;background:rgba(255,255,255,.97);border-top:1px solid #e2e7ef;box-shadow:0 -4px 16px rgba(15,23,42,.06);z-index:200; }
