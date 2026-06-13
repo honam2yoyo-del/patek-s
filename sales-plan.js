@@ -919,7 +919,7 @@ function renderSummary() {
   });
   document.getElementById('summaryTbody').innerHTML = ORDER.map(s => {
     const qtyDisp = pcsLabel(summary[s].qty);
-    return `<tr><td ${TD} class="${COLORS[s]}">${LABELS[s]}</td><td ${TD}>${qtyDisp}</td><td ${TD}>${fmtW(summary[s].amount).replace(' 원','원')}</td></tr>`;
+    return `<tr><td ${TD} class="${COLORS[s]}">${LABELS[s]}</td><td ${TD}>${qtyDisp}</td><td ${TD}>${fmtW(summary[s].amount)}</td></tr>`;
   }).join('');
 }
 
