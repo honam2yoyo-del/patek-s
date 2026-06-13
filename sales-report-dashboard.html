@@ -184,10 +184,11 @@
     .badge-refund  { background:#fce7f3;color:#be185d; }
     .selected-summary { margin:clamp(6px,0.7vw,10px) clamp(8px,1vw,16px) clamp(8px,1vw,12px);height:clamp(30px,2.8vw,40px);border:1px solid #7aa9ff;border-radius:5px;display:grid;grid-template-columns:1fr 1fr 1fr;align-items:center;padding:0 clamp(8px,1vw,16px);font-size:clamp(9px,0.85vw,14px);font-weight:900;white-space:nowrap;overflow:hidden; }
     .selected-summary b { color:#0067e8;margin-left:10px; }
-    .summary-panel { padding:clamp(10px,1.2vw,18px) clamp(8px,1vw,16px);min-width:0;overflow:hidden; }
+    .summary-panel { padding:clamp(10px,1.2vw,18px) clamp(8px,1vw,16px);min-width:0;overflow-x:auto;overflow-y:visible; }
     .summary-title { font-size:clamp(11px,1.1vw,19px);font-weight:900;margin-bottom:clamp(6px,0.8vw,14px);white-space:nowrap; }
-    .summary-table th,.summary-table td { padding:clamp(4px,0.45vw,14px) clamp(3px,0.4vw,12px);font-size:clamp(9px,0.85vw,15px);white-space:nowrap; }
-    .summary-table td:first-child { text-align:left;padding-left:clamp(8px,1vw,18px);font-weight:900; }
+    .summary-table { width:100%;table-layout:fixed; }
+    .summary-table th,.summary-table td { padding:clamp(4px,0.45vw,14px) clamp(3px,0.4vw,12px);font-size:clamp(9px,0.85vw,15px);white-space:nowrap;overflow:hidden;text-overflow:clip; }
+    .summary-table td:first-child { text-align:left;padding-left:clamp(6px,0.8vw,18px);font-weight:900; }
 
     /* ── 하단 바 ── */
     .bottom-actions { position:fixed;left:185px;right:0;bottom:0;height:64px;display:flex;justify-content:flex-end;align-items:center;gap:10px;padding:0 24px;background:rgba(255,255,255,.97);border-top:1px solid #e2e7ef;box-shadow:0 -4px 16px rgba(15,23,42,.06);z-index:200; }
@@ -547,6 +548,7 @@
       <aside class="summary-panel">
         <div class="summary-title">재고 상태별 합계</div>
         <table class="summary-table">
+          <colgroup><col style="width:40%"/><col style="width:20%"/><col style="width:40%"/></colgroup>
           <thead><tr><th style="text-align:center;">상태</th><th style="text-align:center;">수량</th><th style="text-align:center;">총 금액</th></tr></thead>
           <tbody id="summaryTbody"></tbody>
         </table>
