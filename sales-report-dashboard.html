@@ -143,15 +143,15 @@
     .table-wrap { padding:clamp(8px,1vw,14px) clamp(10px,1.2vw,16px) clamp(8px,1vw,12px);overflow-x:auto; }
     table { width:100%;border-collapse:collapse; }
     .inventory-table { table-layout:fixed;width:100%; }
-    th,td { border:1px solid #e2e7ef;padding:clamp(3px,0.4vw,10px) clamp(3px,0.5vw,12px);font-size:clamp(9px,0.9vw,14px);text-align:center;white-space:normal;overflow-wrap:break-word;word-break:break-word; }
+    th,td { border:1px solid #e2e7ef;padding:clamp(2px,0.25vw,10px) clamp(2px,0.3vw,10px);font-size:clamp(8px,0.75vw,14px);text-align:center;white-space:nowrap; }
     th { background:#f6f8fb;font-weight:900; }
     td { background:#fff;font-weight:700; }
     .inventory-table tfoot td { background:#fbfcfe;font-weight:900; }
     input[type="checkbox"] { width:clamp(13px,1.2vw,16px);height:clamp(13px,1.2vw,16px);accent-color:#0067e8;cursor:pointer; }
-    .td-edit { background:transparent;border:none;outline:none;font-family:inherit;font-size:clamp(9px,0.9vw,14px);font-weight:700;color:#111827;width:100%;min-width:0;text-align:center; }
+    .td-edit { background:transparent;border:none;outline:none;font-family:inherit;font-size:clamp(8px,0.75vw,14px);font-weight:700;color:#111827;width:100%;min-width:0;text-align:center;white-space:nowrap; }
     .amt-cell { display:flex;align-items:center;justify-content:center;gap:3px; }
     .amt-cell .td-edit { flex:1;min-width:0;max-width:clamp(50px,6vw,90px);width:auto; }
-    .amt-unit { font-weight:700;font-size:clamp(11px,1.2vw,14px);flex-shrink:0; }
+    .amt-unit { font-weight:700;font-size:clamp(8px,0.75vw,14px);flex-shrink:0;white-space:nowrap; }
     .td-del  { background:none;border:none;cursor:pointer;color:#ccc;font-size:clamp(11px,1vw,14px);padding:2px; }
     .td-del:hover { color:#f00; }
     .status-sel { -webkit-appearance:none;appearance:none;height:clamp(20px,1.8vw,28px);border:none;border-radius:14px;padding:0 clamp(3px,0.5vw,10px);font-size:clamp(9px,0.85vw,12px);font-weight:900;cursor:pointer;min-width:clamp(44px,4vw,84px);text-align:center;font-family:inherit;outline:none;width:100%; }
@@ -172,7 +172,7 @@
     .inline-dd-opt.active { color:#075bd8;background:#eff6ff; }
     td.editable-cell { cursor:pointer; }
     td.editable-cell:hover { background:#f0f6ff!important; }
-    .badge { display:inline-flex;justify-content:center;align-items:center;min-width:clamp(40px,4vw,66px);height:clamp(20px,1.8vw,26px);padding:0 clamp(4px,0.5vw,8px);border-radius:6px;font-size:clamp(9px,0.85vw,12px);font-weight:900; }
+    .badge { display:inline-flex;justify-content:center;align-items:center;min-width:clamp(36px,3.5vw,66px);height:clamp(18px,1.6vw,26px);padding:0 clamp(3px,0.4vw,8px);border-radius:6px;font-size:clamp(8px,0.75vw,12px);font-weight:900;white-space:nowrap; }
     .badge-sale    { background:#e6f8ee;color:#009844; }
     .badge-confirm { background:#fff3e5;color:#ff7a00; }
     .badge-carry   { background:#eaf3ff;color:#0067e8; }
@@ -182,11 +182,11 @@
     .badge-reg     { background:#eaf3ff;color:#0067e8; }
     .badge-advance { background:#cffafe;color:#0891b2; }
     .badge-refund  { background:#fce7f3;color:#be185d; }
-    .selected-summary { margin:clamp(6px,0.7vw,10px) clamp(8px,1vw,16px) clamp(8px,1vw,12px);height:clamp(30px,2.8vw,40px);border:1px solid #7aa9ff;border-radius:5px;display:grid;grid-template-columns:1fr 1fr 1fr;align-items:center;padding:0 clamp(8px,1vw,16px);font-size:clamp(10px,1vw,14px);font-weight:900; }
+    .selected-summary { margin:clamp(6px,0.7vw,10px) clamp(8px,1vw,16px) clamp(8px,1vw,12px);height:clamp(30px,2.8vw,40px);border:1px solid #7aa9ff;border-radius:5px;display:grid;grid-template-columns:1fr 1fr 1fr;align-items:center;padding:0 clamp(8px,1vw,16px);font-size:clamp(9px,0.85vw,14px);font-weight:900;white-space:nowrap;overflow:hidden; }
     .selected-summary b { color:#0067e8;margin-left:10px; }
     .summary-panel { padding:clamp(10px,1.2vw,18px) clamp(8px,1vw,16px);min-width:0;overflow:hidden; }
-    .summary-title { font-size:clamp(12px,1.3vw,19px);font-weight:900;margin-bottom:clamp(8px,1vw,14px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
-    .summary-table th,.summary-table td { padding:clamp(6px,0.7vw,14px) clamp(4px,0.6vw,12px);font-size:clamp(10px,1vw,15px); }
+    .summary-title { font-size:clamp(11px,1.1vw,19px);font-weight:900;margin-bottom:clamp(6px,0.8vw,14px);white-space:nowrap; }
+    .summary-table th,.summary-table td { padding:clamp(4px,0.45vw,14px) clamp(3px,0.4vw,12px);font-size:clamp(9px,0.85vw,15px);white-space:nowrap; }
     .summary-table td:first-child { text-align:left;padding-left:clamp(8px,1vw,18px);font-weight:900; }
 
     /* ── 하단 바 ── */
