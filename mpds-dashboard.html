@@ -101,8 +101,8 @@
     .search-input { width:100%;height:42px;border:1px solid #d9e0ea;border-radius:7px;padding:0 40px 0 12px;font-size:14px;font-weight:700;outline:none; }
     .search-icon { position:absolute;right:12px;top:50%;transform:translateY(-50%);color:#64748b;font-size:15px;pointer-events:none; }
     .add-row-btn { height:38px;border:1px solid #009844;border-radius:6px;background:#009844;color:#fff;padding:0 14px;font-size:13px;font-weight:700;cursor:pointer; }
-    .filter-bar { display:flex;align-items:center;gap:6px;padding:0 4px 14px;border-bottom:1px solid #e5eaf2;flex-wrap:wrap; }
-    .filter-pill { display:inline-flex;align-items:center;height:32px;padding:0 14px;border:1px solid #d9e0ea;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;user-select:none;transition:.12s;background:#fff;color:#374151;font-family:inherit; }
+    .filter-bar { display:flex;align-items:center;gap:5px;padding:0 4px 10px;border-bottom:1px solid #e5eaf2;flex-wrap:nowrap;overflow-x:auto; }
+    .filter-pill { display:inline-flex;align-items:center;flex-shrink:0;height:26px;padding:0 10px;border:1px solid #d9e0ea;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;user-select:none;transition:.12s;background:#fff;color:#374151;font-family:inherit;white-space:nowrap; }
     .filter-pill:hover { border-color:#9ca3af; }
     .filter-pill.active        { background:#374151;color:#fff;border-color:#374151; }
     .filter-pill.active-green  { background:#009844;color:#fff;border-color:#009844; }
@@ -122,6 +122,9 @@
     .td-edit { background:transparent;border:none;outline:none;font-family:inherit;font-size:13px;font-weight:700;text-align:center;width:100%;color:#111827; }
     .td-del { background:none;border:none;cursor:pointer;color:#ccc;font-size:13px;padding:2px; }
     .td-del:hover { color:#f00; }
+    .mpds-table th,.mpds-table td { padding:6px 4px;font-size:12px;overflow:hidden;text-overflow:ellipsis; }
+    .mpds-table .td-edit { font-size:12px; }
+    .mpds-table .status-sel { min-width:0;width:100%;font-size:11px;padding:0 4px;height:24px; }
     .selected-row td { background:#fbfdff;font-weight:900;color:#075bd8; }
 
     .status-sel { -webkit-appearance:none;appearance:none;height:28px;border:none;border-radius:14px;padding:0 10px;font-size:12px;font-weight:900;cursor:pointer;min-width:84px;text-align:center;font-family:inherit;outline:none; }
@@ -361,12 +364,12 @@
                 <col style="width:4%"/>
                 <col style="width:13%"/>
                 <col style="width:16%"/>
-                <col style="width:6%"/>
-                <col style="width:13%"/>
-                <col style="width:11%"/>
-                <col style="width:13%"/>
+                <col style="width:5%"/>
+                <col style="width:12%"/>
                 <col style="width:10%"/>
-                <col style="width:14%"/>
+                <col style="width:13%"/>
+                <col style="width:12%"/>
+                <col style="width:15%"/>
               </colgroup>
               <thead>
                 <tr>
