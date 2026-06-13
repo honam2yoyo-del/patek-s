@@ -845,8 +845,9 @@ function contrastColor(hex) {
 }
 
 function buildDonutSVG(data, colors, centerText, shortNameFn) {
-  /* ViewBox 고정 → 도넛 크기 불변. overflow="visible"로 라벨이 SVG 경계 밖으로 나와도 렌더됨 */
+  /* ViewBox·R 고정 → 크기 불변. overflow="visible"로 바깥 라벨이 SVG 밖으로 나와도 패널 안에서 렌더됨 */
   const W=280, H=280, cx=140, cy=140, R=115, ri=68;
+  const midR = (R+ri)/2; /* 91.5 — 안쪽 라벨 반지름 */
   const total = data.reduce((s,d) => s+(Number(d.amount)||0), 0);
 
   const cLines = centerText.split('<br>');
@@ -862,7 +863,7 @@ function buildDonutSVG(data, colors, centerText, shortNameFn) {
   }
 
   let startAngle = -Math.PI/2;
-  let pathsHTML = '', labelsHTML = '';
+  let pathsHTML = '', insideHTML = '', outsideHTML = '';
 
   data.forEach((d, i) => {
     const val = Number(d.amount)||0;
@@ -891,26 +892,40 @@ function buildDonutSVG(data, colors, centerText, shortNameFn) {
       }
     }
 
-    /* 바깥쪽 지시선 라벨: 1% 이상 전부 표시 */
-    if (pct >= 1 && span > 0.003) {
-      const name = (shortNameFn(d)||'');
+    if (pct < 1 || span <= 0.003) { startAngle = endAngle; return; }
+
+    const name    = (shortNameFn(d)||'');
+    const arcLen  = span * midR;                              /* 호 길이 (SVG 단위) */
+    const nameFits = pct >= 8  && arcLen > name.length * 5.8 + 6; /* 이름+비율 두 줄 들어갈 공간 */
+    const pctFits  = pct >= 3  && arcLen > 14;               /* 비율 한 줄만 들어갈 공간 */
+
+    if (nameFits || pctFits) {
+      /* ── 안쪽 라벨 ── */
+      const tc = contrastColor(color);
+      const lx = (cx + midR*Math.cos(mid)).toFixed(1);
+      const ly = (cy + midR*Math.sin(mid)).toFixed(1);
+      if (nameFits) {
+        insideHTML += `<text text-anchor="middle" font-weight="900">` +
+          `<tspan x="${lx}" y="${ly}" dy="-5.5" font-size="10" fill="${tc}">${name}</tspan>` +
+          `<tspan x="${lx}" dy="13" font-size="10" fill="${tc}">${pct}%</tspan></text>`;
+      } else {
+        insideHTML += `<text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="900" fill="${tc}">${pct}%</text>`;
+      }
+    } else {
+      /* ── 바깥쪽 지시선 라벨 (조각이 너무 작아 안쪽에 못 들어갈 때만) ── */
       const cosM = Math.cos(mid), sinM = Math.sin(mid);
-      /* 꺾임 좌표 (외곽 링에서 12px 방사 방향으로) */
       const ex = cx + (R+12)*cosM;
       const ey = cy + (R+12)*sinM;
-      /* 가로 선반: 좌/우 방향 결정 */
       const isRight = cosM >= 0;
       const sx = ex + (isRight ? 14 : -14);
       const ta = isRight ? 'start' : 'end';
-      /* 지시선 */
-      labelsHTML += `<line x1="${(cx+(R+1)*cosM).toFixed(1)}" y1="${(cy+(R+1)*sinM).toFixed(1)}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="#94a3b8" stroke-width="0.9"/>`;
-      labelsHTML += `<line x1="${ex.toFixed(1)}" y1="${ey.toFixed(1)}" x2="${sx.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="#94a3b8" stroke-width="0.9"/>`;
-      /* 텍스트: 8% 이상은 이름+비율 두 줄, 미만은 비율만 */
-      if (name && pct >= 8) {
-        labelsHTML += `<text x="${sx.toFixed(1)}" y="${(ey-3).toFixed(1)}" text-anchor="${ta}" font-size="8.5" font-weight="900" fill="#1e293b">${name}</text>`;
-        labelsHTML += `<text x="${sx.toFixed(1)}" y="${(ey+7).toFixed(1)}" text-anchor="${ta}" font-size="8" fill="#64748b">${pct}%</text>`;
+      outsideHTML += `<line x1="${(cx+(R+1)*cosM).toFixed(1)}" y1="${(cy+(R+1)*sinM).toFixed(1)}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="#94a3b8" stroke-width="0.9"/>`;
+      outsideHTML += `<line x1="${ex.toFixed(1)}" y1="${ey.toFixed(1)}" x2="${sx.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="#94a3b8" stroke-width="0.9"/>`;
+      if (name) {
+        outsideHTML += `<text x="${sx.toFixed(1)}" y="${(ey-3).toFixed(1)}" text-anchor="${ta}" font-size="8.5" font-weight="900" fill="#1e293b">${name}</text>`;
+        outsideHTML += `<text x="${sx.toFixed(1)}" y="${(ey+7).toFixed(1)}" text-anchor="${ta}" font-size="8" fill="#64748b">${pct}%</text>`;
       } else {
-        labelsHTML += `<text x="${sx.toFixed(1)}" y="${(ey+3.5).toFixed(1)}" text-anchor="${ta}" font-size="8.5" font-weight="900" fill="#374151">${pct}%</text>`;
+        outsideHTML += `<text x="${sx.toFixed(1)}" y="${(ey+3.5).toFixed(1)}" text-anchor="${ta}" font-size="8.5" font-weight="900" fill="#374151">${pct}%</text>`;
       }
     }
     startAngle = endAngle;
@@ -920,7 +935,8 @@ function buildDonutSVG(data, colors, centerText, shortNameFn) {
     ${pathsHTML}
     <circle cx="${cx}" cy="${cy}" r="${ri}" fill="white" stroke="#e2e8f0" stroke-width="2"/>
     ${ctSVG}
-    ${labelsHTML}
+    ${insideHTML}
+    ${outsideHTML}
   </svg>`;
 }
 
