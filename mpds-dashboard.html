@@ -1067,7 +1067,7 @@ function renderTable() {
       <td><input type="checkbox" class="row-check" data-idx="${ri}" ${selectedIds.has(ri)?'checked':''}/></td>
       <td><input class="td-edit" value="${esc(r.ref||'')}"    oninput="window.mpdsSet(${ri},'ref',this.value)"/></td>
       <td><input class="td-edit" value="${esc(r.serial||'')}" oninput="window.mpdsSet(${ri},'serial',this.value)"/></td>
-      <td><input class="td-edit" type="text" inputmode="numeric" value="${r.qty??1}" oninput="window.mpdsSet(${ri},'qty',+this.value||1)" placeholder="1" style="text-align:center;width:50px;"/></td>
+      <td><input class="td-edit" type="text" inputmode="numeric" value="${r.qty??1}" oninput="window.mpdsSet(${ri},'qty',+this.value||1)" placeholder="1" style="text-align:center;width:100%;"/></td>
       <td><input class="td-edit" value="${esc(r.line||'')}"   oninput="window.mpdsSet(${ri},'line',this.value);renderDonut();"/></td>
       <td><input class="td-edit" value="${esc(r.saleDate||'')}" oninput="window.mpdsSet(${ri},'saleDate',this.value)" onblur="window.mpdsApplyDate(${ri},this)" placeholder="예: 260601"/></td>
       <td><input class="td-edit" type="text" inputmode="numeric" value="${fmtInput(r.amount)}"
