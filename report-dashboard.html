@@ -130,7 +130,7 @@
     .mini-title { font-size:10px;color:#64748b;font-weight:900;text-align:center;margin-bottom:2px; }
     .mini-main { text-align:center;color:#003b8e;font-size:13px;font-weight:900;margin-bottom:4px; }
     .mini-row { display:flex;justify-content:space-between;gap:6px;font-size:10px;font-weight:800;border-top:1px solid #e5eaf2;padding-top:4px;margin-top:3px; }
-    .donut-wrap { width:100%;display:flex;align-items:center;justify-content:center;position:relative; }
+    .donut-wrap { width:100%;display:flex;align-items:center;justify-content:center;position:relative;overflow:visible;padding:14px 0; }
 
     /* ── 하단 그리드 ── */
     .bottom-grid { display:flex;flex-direction:column;gap:14px;margin-bottom:14px; }
@@ -845,9 +845,8 @@ function contrastColor(hex) {
 }
 
 function buildDonutSVG(data, colors, centerText, shortNameFn) {
-  /* 정사각형 ViewBox → 컨테이너 너비 = 렌더 높이 (최대 크기 활용) */
+  /* ViewBox 고정 → 도넛 크기 불변. overflow="visible"로 라벨이 SVG 경계 밖으로 나와도 렌더됨 */
   const W=280, H=280, cx=140, cy=140, R=115, ri=68;
-  const midR = (R+ri)/2; /* 91.5 — 라벨 배치 반지름 */
   const total = data.reduce((s,d) => s+(Number(d.amount)||0), 0);
 
   const cLines = centerText.split('<br>');
@@ -856,7 +855,7 @@ function buildDonutSVG(data, colors, centerText, shortNameFn) {
   ).join('');
 
   if (total === 0) {
-    return `<svg viewBox="0 0 ${W} ${H}" width="100%" xmlns="http://www.w3.org/2000/svg">
+    return `<svg viewBox="0 0 ${W} ${H}" width="100%" overflow="visible" xmlns="http://www.w3.org/2000/svg">
       <circle cx="${cx}" cy="${cy}" r="${R}" fill="#e2e8f0"/>
       <circle cx="${cx}" cy="${cy}" r="${ri}" fill="white" stroke="#eef2f7" stroke-width="1.5"/>
       ${ctSVG}</svg>`;
@@ -877,7 +876,6 @@ function buildDonutSVG(data, colors, centerText, shortNameFn) {
     /* 도넛 호 그리기 */
     if (span > 0.003) {
       if (frac >= 0.9999) {
-        /* 단일 100% 세그먼트: SVG arc 명령은 시작=끝 지점 시 퇴화(degenerate)하므로 circle로 대체 */
         pathsHTML += `<circle cx="${cx}" cy="${cy}" r="${R}" fill="${color}"/>`;
       } else {
         const cosS=Math.cos(startAngle), sinS=Math.sin(startAngle);
@@ -893,30 +891,32 @@ function buildDonutSVG(data, colors, centerText, shortNameFn) {
       }
     }
 
-    /* 내부 라벨: 호 중간 지점에 배치 */
-    if (pct >= 4) {
-      const tc = contrastColor(color);
-      const lx = (cx + midR*Math.cos(mid)).toFixed(1);
-      const ly = (cy + midR*Math.sin(mid)).toFixed(1);
-      const name = shortNameFn(d);
-      const arcLen = span * midR; /* 호 길이(SVG 단위) */
-      const nameFits = pct >= 10 && arcLen > name.length * 5.8;
-
-      if (nameFits) {
-        /* 이름 + 비율 두 줄 */
-        labelsHTML += `<text text-anchor="middle" font-weight="900">
-          <tspan x="${lx}" y="${ly}" dy="-5.5" font-size="10" fill="${tc}">${name}</tspan>
-          <tspan x="${lx}" dy="13" font-size="10" fill="${tc}">${pct}%</tspan>
-        </text>`;
+    /* 바깥쪽 지시선 라벨: 1% 이상 전부 표시 */
+    if (pct >= 1 && span > 0.003) {
+      const name = (shortNameFn(d)||'');
+      const cosM = Math.cos(mid), sinM = Math.sin(mid);
+      /* 꺾임 좌표 (외곽 링에서 12px 방사 방향으로) */
+      const ex = cx + (R+12)*cosM;
+      const ey = cy + (R+12)*sinM;
+      /* 가로 선반: 좌/우 방향 결정 */
+      const isRight = cosM >= 0;
+      const sx = ex + (isRight ? 14 : -14);
+      const ta = isRight ? 'start' : 'end';
+      /* 지시선 */
+      labelsHTML += `<line x1="${(cx+(R+1)*cosM).toFixed(1)}" y1="${(cy+(R+1)*sinM).toFixed(1)}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="#94a3b8" stroke-width="0.9"/>`;
+      labelsHTML += `<line x1="${ex.toFixed(1)}" y1="${ey.toFixed(1)}" x2="${sx.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="#94a3b8" stroke-width="0.9"/>`;
+      /* 텍스트: 8% 이상은 이름+비율 두 줄, 미만은 비율만 */
+      if (name && pct >= 8) {
+        labelsHTML += `<text x="${sx.toFixed(1)}" y="${(ey-3).toFixed(1)}" text-anchor="${ta}" font-size="8.5" font-weight="900" fill="#1e293b">${name}</text>`;
+        labelsHTML += `<text x="${sx.toFixed(1)}" y="${(ey+7).toFixed(1)}" text-anchor="${ta}" font-size="8" fill="#64748b">${pct}%</text>`;
       } else {
-        /* 비율만 한 줄 */
-        labelsHTML += `<text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="900" fill="${tc}">${pct}%</text>`;
+        labelsHTML += `<text x="${sx.toFixed(1)}" y="${(ey+3.5).toFixed(1)}" text-anchor="${ta}" font-size="8.5" font-weight="900" fill="#374151">${pct}%</text>`;
       }
     }
     startAngle = endAngle;
   });
 
-  return `<svg viewBox="0 0 ${W} ${H}" width="100%" xmlns="http://www.w3.org/2000/svg">
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" overflow="visible" xmlns="http://www.w3.org/2000/svg">
     ${pathsHTML}
     <circle cx="${cx}" cy="${cy}" r="${ri}" fill="white" stroke="#e2e8f0" stroke-width="2"/>
     ${ctSVG}
