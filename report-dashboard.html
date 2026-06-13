@@ -87,7 +87,7 @@
     /* ── 테이블 ── */
     .analysis-panel { display:flex;flex-wrap:nowrap;gap:14px;padding:0 14px 18px;align-items:flex-start; }
     .analysis-panel > * { min-width:0; }
-    .analysis-panel > :first-child { flex:1.1;min-width:0;overflow-x:auto; }
+    .analysis-panel > :first-child { flex:1.1;min-width:0;overflow-x:visible; }
     .analysis-panel > :last-child  { flex:1;min-width:0; }
     table { width:100%;border-collapse:collapse; }
     th,td { border:1px solid #dfe6f0;padding:clamp(4px,0.5vw,8px) clamp(4px,0.6vw,10px);text-align:center;font-size:clamp(9px,0.8vw,13px);white-space:nowrap; }
@@ -95,6 +95,33 @@
     td { background:#fff;font-weight:700; }
     tfoot td { background:#f8fafc;font-weight:900;color:#003b8e; }
     .td-inp { background:transparent;border:none;outline:none;font-family:inherit;font-size:clamp(9px,0.8vw,13px);font-weight:700;text-align:center;width:100%;color:#111827; }
+
+    /* ── Collection별/지역별 표: 말줄임 방지 + 유동 축소 ── */
+    #lineTable, #regionTable { table-layout:fixed; width:100%; }
+    #lineTable th, #lineTable td,
+    #regionTable th, #regionTable td {
+      font-size:clamp(7px,0.65vw,11px);
+      padding:clamp(2px,0.3vw,5px) clamp(2px,0.35vw,6px);
+      overflow:visible;
+      text-overflow:clip;
+      white-space:nowrap;
+    }
+    #lineTable .td-inp, #regionTable .td-inp { font-size:clamp(7px,0.65vw,11px); width:100%; }
+    /* Line/지역 열: 넉넉한 38% */
+    #lineTable th:nth-child(1), #lineTable td:nth-child(1),
+    #regionTable th:nth-child(1), #regionTable td:nth-child(1) { width:38%; }
+    /* Qty */
+    #lineTable th:nth-child(2), #lineTable td:nth-child(2),
+    #regionTable th:nth-child(2), #regionTable td:nth-child(2) { width:11%; }
+    /* Amount */
+    #lineTable th:nth-child(3), #lineTable td:nth-child(3),
+    #regionTable th:nth-child(3), #regionTable td:nth-child(3) { width:22%; }
+    /* 비중 */
+    #lineTable th:nth-child(4), #lineTable td:nth-child(4),
+    #regionTable th:nth-child(4), #regionTable td:nth-child(4) { width:11%; }
+    /* 전년대비 */
+    #lineTable th:nth-child(5), #lineTable td:nth-child(5),
+    #regionTable th:nth-child(5), #regionTable td:nth-child(5) { width:18%; }
     .highlight-month { color:#0067e8;font-weight:900;background:#eef6ff; }
 
     /* ── 도넛 차트 ── */
@@ -824,7 +851,7 @@ function renderLineTable() {
       <td><input class="td-inp" type="text" value="${r.qty||0}" oninput="lineData[${i}].qty=Number(this.value)||0;updateSummary();"/></td>
       <td><input class="td-inp" type="text" value="${fmtK(r.amount)}" oninput="lineData[${i}].amount=Number(this.value.replace(/,/g,''))*1000||0;updateSummary();"/></td>
       <td>${shares[i]}%</td>
-      <td><input class="td-inp ${yoyClass}" value="${r.yoy>=0?'+'+r.yoy:r.yoy}" oninput="lineData[${i}].yoy=Number(this.value)||0;" style="width:60px;"/></td>
+      <td><input class="td-inp ${yoyClass}" value="${r.yoy>=0?'+'+r.yoy:r.yoy}" oninput="lineData[${i}].yoy=Number(this.value)||0;"/></td>
     </tr>`;
   }).join('');
 
@@ -869,7 +896,7 @@ function renderRegionTable() {
       <td><input class="td-inp" type="text" value="${r.qty||0}" oninput="regionData[${i}].qty=Number(this.value)||0;updateSummary();"/></td>
       <td><input class="td-inp" type="text" value="${fmtK(r.amount)}" oninput="regionData[${i}].amount=Number(this.value.replace(/,/g,''))*1000||0;updateSummary();"/></td>
       <td>${shares[i]}%</td>
-      <td><input class="td-inp ${yoyClass}" value="${r.yoy>=0?'+'+r.yoy:r.yoy}" oninput="regionData[${i}].yoy=Number(this.value)||0;" style="width:60px;"/></td>
+      <td><input class="td-inp ${yoyClass}" value="${r.yoy>=0?'+'+r.yoy:r.yoy}" oninput="regionData[${i}].yoy=Number(this.value)||0;"/></td>
     </tr>`;
   }).join('');
 
