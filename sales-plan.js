@@ -905,7 +905,7 @@ function renderSummary() {
   const ORDER  = ['전체','판매완료','선수금','반품','판매예정','컨펌예정','이월예정','잔여재고','AS','기타','등록'];
   const LABELS = { '전체':'전체 재고','판매완료':'판매 완료','선수금':'선수금','반품':'반품','판매예정':'판매 예정','컨펌예정':'컨펌 예정','이월예정':'이월 예정','잔여재고':'잔여 재고','AS':'AS','기타':'기타(이동)','등록':'MPDS 등록 중' };
   const COLORS = { '전체':'black','판매완료':'amber','선수금':'black','반품':'refund','판매예정':'green','컨펌예정':'orange','이월예정':'blue','잔여재고':'black','AS':'red','기타':'black','등록':'blue' };
-  const TD = 'style="text-align:center;padding:11px 12px;"';
+  const TD = 'style="text-align:center;padding:8px 6px;"';
 
   const summary = {};
   ORDER.forEach(s => { summary[s] = { qty:0, amount:0 }; });
@@ -919,7 +919,7 @@ function renderSummary() {
   });
   document.getElementById('summaryTbody').innerHTML = ORDER.map(s => {
     const qtyDisp = pcsLabel(summary[s].qty);
-    return `<tr><td ${TD} class="${COLORS[s]}">${LABELS[s]}</td><td ${TD}>${qtyDisp}</td><td ${TD}>${fmtW(summary[s].amount)}</td></tr>`;
+    return `<tr><td ${TD} class="${COLORS[s]}">${LABELS[s]}</td><td ${TD}>${qtyDisp}</td><td ${TD}>${fmtW(summary[s].amount).replace(' 원','원')}</td></tr>`;
   }).join('');
 }
 
