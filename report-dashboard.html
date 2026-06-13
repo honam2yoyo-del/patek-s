@@ -87,7 +87,7 @@
     /* ── 테이블 ── */
     .analysis-panel { display:flex;flex-wrap:nowrap;gap:14px;padding:0 14px 18px;align-items:flex-start; }
     .analysis-panel > * { min-width:0; }
-    .analysis-panel > :first-child { flex:1.1;min-width:0;overflow-x:visible; }
+    .analysis-panel > :first-child { flex:1.65;min-width:0;overflow-x:visible; }
     .analysis-panel > :last-child  { flex:1;min-width:0; }
     table { width:100%;border-collapse:collapse; }
     th,td { border:1px solid #dfe6f0;padding:clamp(4px,0.5vw,8px) clamp(4px,0.6vw,10px);text-align:center;font-size:clamp(9px,0.8vw,13px);white-space:nowrap; }
@@ -125,21 +125,12 @@
     .highlight-month { color:#0067e8;font-weight:900;background:#eef6ff; }
 
     /* ── 도넛 차트 ── */
-    .chart-side { display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px 8px 8px; }
-    .mini-card { border:1px solid #dfe6f0;border-radius:8px;padding:10px 12px;background:#fbfdff;min-width:140px;width:100%;max-width:200px; }
-    .mini-title { font-size:11px;color:#64748b;font-weight:900;text-align:center;margin-bottom:3px; }
-    .mini-main { text-align:center;color:#003b8e;font-size:16px;font-weight:900;margin-bottom:8px; }
-    .mini-row { display:flex;justify-content:space-between;gap:8px;font-size:12px;font-weight:800;border-top:1px solid #e5eaf2;padding-top:6px;margin-top:4px; }
-    .donut-wrap { position:relative;width:clamp(120px,11vw,220px);aspect-ratio:1/1;display:flex;align-items:center;justify-content:center; }
-    .donut { width:100%;height:100%;border-radius:50%;position:absolute;inset:0; }
-    .donut-hole { width:90px;height:90px;background:#fff;border-radius:50%;z-index:2;display:flex;align-items:center;justify-content:center;text-align:center;font-size:12px;font-weight:900;line-height:1.5;box-shadow:inset 0 0 0 1px #eef2f7;color:#374151; }
-    .chart-label { position:absolute;font-size:11px;font-weight:900;color:#111827;line-height:1.3;text-align:center;pointer-events:none; }
-    /* Line labels */
-    .ll1 { top:10px;right:8px; } .ll2 { right:-4px;bottom:72px; } .ll3 { right:50px;bottom:18px; }
-    .ll4 { left:12px;bottom:80px; } .ll5 { left:6px;top:80px; } .ll6 { left:56px;top:14px; }
-    /* Region labels */
-    .rl1 { top:20px;right:10px; } .rl2 { right:6px;bottom:50px; } .rl3 { left:72px;bottom:20px; }
-    .rl4 { left:10px;bottom:90px; } .rl5 { left:14px;top:82px; } .rl6 { left:78px;top:14px; }
+    .chart-side { display:flex;flex-direction:column;align-items:center;gap:8px;padding:8px 6px 6px; }
+    .mini-card { border:1px solid #dfe6f0;border-radius:8px;padding:6px 10px;background:#fbfdff;min-width:90px;width:100%;max-width:160px; }
+    .mini-title { font-size:10px;color:#64748b;font-weight:900;text-align:center;margin-bottom:2px; }
+    .mini-main { text-align:center;color:#003b8e;font-size:13px;font-weight:900;margin-bottom:4px; }
+    .mini-row { display:flex;justify-content:space-between;gap:6px;font-size:10px;font-weight:800;border-top:1px solid #e5eaf2;padding-top:4px;margin-top:3px; }
+    .donut-wrap { width:100%;display:flex;align-items:center;justify-content:center;overflow:visible; }
 
     /* ── 하단 그리드 ── */
     .bottom-grid { display:flex;flex-direction:column;gap:14px;margin-bottom:14px; }
@@ -401,16 +392,7 @@
                 <div class="mini-row"><span>비중</span><b id="line-mini-share">-</b></div>
                 <div class="mini-row"><span>수량</span><b id="line-mini-qty">-</b></div>
               </div>
-              <div class="donut-wrap">
-                <div class="donut" id="lineDonut"></div>
-                <div class="donut-hole">Collection별<br>Amount 비중</div>
-                <div class="chart-label ll1" id="ll1"></div>
-                <div class="chart-label ll2" id="ll2"></div>
-                <div class="chart-label ll3" id="ll3"></div>
-                <div class="chart-label ll4" id="ll4"></div>
-                <div class="chart-label ll5" id="ll5"></div>
-                <div class="chart-label ll6" id="ll6"></div>
-              </div>
+              <div class="donut-wrap" id="lineDonutWrap"></div>
             </div>
           </div>
         </div>
@@ -434,16 +416,7 @@
                 <div class="mini-row"><span>비중</span><b id="region-mini-share">-</b></div>
                 <div class="mini-row"><span>수량</span><b id="region-mini-qty">-</b></div>
               </div>
-              <div class="donut-wrap">
-                <div class="donut" id="regionDonut"></div>
-                <div class="donut-hole">지역별<br>Amount 비중</div>
-                <div class="chart-label rl1" id="rl1"></div>
-                <div class="chart-label rl2" id="rl2"></div>
-                <div class="chart-label rl3" id="rl3"></div>
-                <div class="chart-label rl4" id="rl4"></div>
-                <div class="chart-label rl5" id="rl5"></div>
-                <div class="chart-label rl6" id="rl6"></div>
-              </div>
+              <div class="donut-wrap" id="regionDonutWrap"></div>
             </div>
           </div>
         </div>
@@ -864,23 +837,80 @@ function renderLineTable() {
   updateLineChart(shares);
 }
 
-function updateLineChart(shares) {
-  const colors = LINE_COLORS;
-  let cum = 0;
-  const stops = shares.map((s,i) => { const start=cum; cum+=s; return `${colors[i]||'#ccc'} ${start}% ${cum}%`; });
-  document.getElementById('lineDonut').style.background = `conic-gradient(${stops.join(',')})`;
+/* ── SVG 도넛 차트 빌더 (지시선 + 외부 라벨) ── */
+function buildDonutSVG(data, colors, centerText, shortNameFn) {
+  const W = 260, H = 200, cx = 130, cy = 100;
+  const R = 58, ri = 34;
+  const total = data.reduce((s, d) => s + (Number(d.amount)||0), 0);
 
-  const labelIds = ['ll1','ll2','ll3','ll4','ll5','ll6'];
-  lineData.slice(0,6).forEach((r,i) => {
-    const el = document.getElementById(labelIds[i]);
-    if (el) el.innerHTML = `${r.line.split(' ')[0]}<br>${shares[i]}%`;
+  const cLines = centerText.split('<br>');
+  const ctSVG = cLines.map((l, j) =>
+    `<text x="${cx}" y="${(cy + (j-(cLines.length-1)/2)*9).toFixed(1)}" font-size="7.5" font-weight="900" text-anchor="middle" dominant-baseline="central" fill="#374151">${l}</text>`
+  ).join('');
+
+  if (total === 0) {
+    return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="overflow:visible" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="${cx}" cy="${cy}" r="${R}" fill="#e2e8f0"/>
+      <circle cx="${cx}" cy="${cy}" r="${ri}" fill="white" stroke="#eef2f7" stroke-width="1"/>
+      ${ctSVG}
+    </svg>`;
+  }
+
+  let startAngle = -Math.PI / 2;
+  let pathsHTML = '', labelsHTML = '';
+
+  data.forEach((d, i) => {
+    const val = Number(d.amount) || 0;
+    const frac = val / total;
+    const span = frac * 2 * Math.PI;
+    const endAngle = startAngle + span;
+    const mid = startAngle + span / 2;
+    const pct = Math.round(frac * 100);
+
+    if (span > 0.003) {
+      const cosS = Math.cos(startAngle), sinS = Math.sin(startAngle);
+      const cosE = Math.cos(endAngle), sinE = Math.sin(endAngle);
+      const large = frac > 0.5 ? 1 : 0;
+      const p = [
+        `M${(cx+R*cosS).toFixed(1)},${(cy+R*sinS).toFixed(1)}`,
+        `A${R},${R},0,${large},1,${(cx+R*cosE).toFixed(1)},${(cy+R*sinE).toFixed(1)}`,
+        `L${(cx+ri*cosE).toFixed(1)},${(cy+ri*sinE).toFixed(1)}`,
+        `A${ri},${ri},0,${large},0,${(cx+ri*cosS).toFixed(1)},${(cy+ri*sinS).toFixed(1)}Z`
+      ].join(' ');
+      pathsHTML += `<path d="${p}" fill="${colors[i%colors.length]||'#ccc'}"/>`;
+    }
+
+    if (pct > 0) {
+      const cm = Math.cos(mid), sm = Math.sin(mid);
+      const lx1 = (cx+(R+4)*cm).toFixed(1), ly1 = (cy+(R+4)*sm).toFixed(1);
+      const lx2 = (cx+(R+17)*cm).toFixed(1), ly2 = (cy+(R+17)*sm).toFixed(1);
+      const isRight = cm >= 0;
+      const tx = (cx+(R+20)*cm + (isRight ? 2 : -2)).toFixed(1);
+      const anchor = isRight ? 'start' : 'end';
+      const name = shortNameFn(d);
+      labelsHTML += `<line x1="${lx1}" y1="${ly1}" x2="${lx2}" y2="${ly2}" stroke="#c0c8d5" stroke-width="0.9"/>`;
+      labelsHTML += `<text x="${tx}" y="${ly2}" font-size="7.5" font-weight="800" text-anchor="${anchor}" dominant-baseline="central" fill="#374151">${name} <tspan fill="#6b7280">${pct}%</tspan></text>`;
+    }
+    startAngle = endAngle;
   });
 
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="overflow:visible" xmlns="http://www.w3.org/2000/svg">
+    ${pathsHTML}
+    <circle cx="${cx}" cy="${cy}" r="${ri}" fill="white" stroke="#eef2f7" stroke-width="1"/>
+    ${ctSVG}
+    ${labelsHTML}
+  </svg>`;
+}
+
+function updateLineChart(shares) {
   const top = [...lineData].sort((a,b)=>(b.amount||0)-(a.amount||0))[0];
   const topShare = shares[lineData.indexOf(top)];
   document.getElementById('line-mini-name').textContent  = top?.line || '-';
   document.getElementById('line-mini-share').textContent = (topShare||0)+'%';
   document.getElementById('line-mini-qty').textContent   = (top?.qty||0)+' pcs';
+
+  document.getElementById('lineDonutWrap').innerHTML =
+    buildDonutSVG(lineData, LINE_COLORS, 'Collection별<br>비중', d => d.line.split(' ')[0]);
 }
 
 /* ── 지역 테이블 ── */
@@ -910,22 +940,14 @@ function renderRegionTable() {
 }
 
 function updateRegionChart(shares) {
-  const colors = REGION_COLORS;
-  let cum = 0;
-  const stops = shares.map((s,i) => { const start=cum; cum+=s; return `${colors[i]||'#ccc'} ${start}% ${cum}%`; });
-  document.getElementById('regionDonut').style.background = `conic-gradient(${stops.join(',')})`;
-
-  const labelIds = ['rl1','rl2','rl3','rl4','rl5','rl6'];
-  regionData.slice(0,6).forEach((r,i) => {
-    const el = document.getElementById(labelIds[i]);
-    if (el) el.innerHTML = `${r.region.split(',')[0]}<br>${shares[i]}%`;
-  });
-
   const top = [...regionData].sort((a,b)=>(b.amount||0)-(a.amount||0))[0];
   const topShare = shares[regionData.indexOf(top)];
   document.getElementById('region-mini-name').textContent  = top?.region || '-';
   document.getElementById('region-mini-share').textContent = (topShare||0)+'%';
   document.getElementById('region-mini-qty').textContent   = (top?.qty||0)+' pcs';
+
+  document.getElementById('regionDonutWrap').innerHTML =
+    buildDonutSVG(regionData, REGION_COLORS, '지역별<br>비중', d => d.region.split(',')[0].trim());
 }
 
 /* renderRegionalTable 제거됨 — 기간 필터는 renderAll에서 처리 */
