@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ko">
 <head>
   <meta charset="UTF-8"/>
@@ -6,6 +6,7 @@
   <title>캘린더</title>
   <style>
     *{box-sizing:border-box;margin:0;padding:0;font-family:"Malgun Gothic","맑은 고딕",Arial,sans-serif;}
+    html{overflow-x:hidden;}
     body{background:#f7f9fc;color:#111827;}
     .app{display:flex;min-height:100vh;}
     #login-overlay{position:fixed;inset:0;background:rgba(6,27,52,.97);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;}
@@ -520,5 +521,31 @@ onAuthStateChanged(auth, user => {
   }).catch(() => { document.getElementById('login-overlay').style.display='flex'; signOut(auth); });
 });
 </script>
-</body>
+
+<script>
+(function(){
+  var DESIGN_W=1255;
+  function applyZoom(){
+    var sb=document.getElementById('sidebar');
+    var app=document.querySelector('.app');
+    var main=document.querySelector('.main');
+    if(!main)return;
+    var collapsed=app&&app.classList.contains('sidebar-collapsed');
+    var sbW=collapsed?52:185;
+    var avail=window.innerWidth-sbW;
+    if(avail>=DESIGN_W){
+      main.style.zoom='';main.style.width='';main.style.marginLeft=sbW+'px';
+      return;
+    }
+    var s=avail/DESIGN_W;
+    main.style.zoom=s;
+    main.style.width=DESIGN_W+'px';
+    main.style.marginLeft=(sbW/s)+'px';
+  }
+  window.addEventListener('resize',applyZoom);
+  window.addEventListener('load',applyZoom);
+  var _tog=window.toggleSidebar;
+  window.toggleSidebar=function(){if(_tog)_tog.apply(this,arguments);setTimeout(applyZoom,300);};
+})();
+</script></body>
 </html>

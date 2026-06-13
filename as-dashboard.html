@@ -1537,5 +1537,31 @@ document.getElementById('save-btn').addEventListener('click', async () => {
   });
 })();
 </script>
-</body>
+
+<script>
+(function(){
+  var DESIGN_W=1255;
+  function applyZoom(){
+    var sb=document.getElementById('sidebar');
+    var app=document.querySelector('.app');
+    var main=document.querySelector('.main');
+    if(!main)return;
+    var collapsed=app&&app.classList.contains('sidebar-collapsed');
+    var sbW=collapsed?52:185;
+    var avail=window.innerWidth-sbW;
+    if(avail>=DESIGN_W){
+      main.style.zoom='';main.style.width='';main.style.marginLeft=sbW+'px';
+      return;
+    }
+    var s=avail/DESIGN_W;
+    main.style.zoom=s;
+    main.style.width=DESIGN_W+'px';
+    main.style.marginLeft=(sbW/s)+'px';
+  }
+  window.addEventListener('resize',applyZoom);
+  window.addEventListener('load',applyZoom);
+  var _tog=window.toggleSidebar;
+  window.toggleSidebar=function(){if(_tog)_tog.apply(this,arguments);setTimeout(applyZoom,300);};
+})();
+</script></body>
 </html>
