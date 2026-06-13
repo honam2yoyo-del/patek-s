@@ -563,6 +563,14 @@ function renderChart() {
   const q = curQuarter();
   const months = quarterMonths(q);
 
+  const growthLabel = (cur, prev) => {
+    if (!prev) return '';
+    const r = (cur - prev) / prev * 100;
+    const s = (r >= 0 ? '+' : '') + r.toFixed(1) + '%';
+    const c = r >= 0 ? '#059669' : '#dc2626';
+    return `<div style="font-size:10px;font-weight:800;color:${c};margin-top:2px;">${s}</div>`;
+  };
+
   if (showPrevYear) {
     // 전년도 같은 분기 데이터
     const prevAmounts = months.map(m => Number(prevYearCentumData[`m${m}`]) || 0);
@@ -588,11 +596,13 @@ function renderChart() {
           <div style="width:26px;height:${ph}px;border-radius:5px 5px 0 0;background:linear-gradient(180deg,#c4c9d4 0%,#9ca3af 100%);"></div>
         </div>
         <div class="bar-month">${d.label||''}</div>
+        ${growthLabel(amounts[i], prevAmounts[i])}
       </div>`;
     }).join('');
 
   } else {
     // 단독 모드
+    const prevAmounts = months.map(m => Number(prevYearCentumData[`m${m}`]) || 0);
     const maxAmt = Math.max(...amounts, 1);
     wrap.innerHTML = '<div class="chart-unit">(천 원)</div>' + data.map((d, i) => {
       const h       = calcBarH(amounts[i], maxAmt);
@@ -602,6 +612,7 @@ function renderChart() {
         <div class="bar-meta"><div>${pStr}</div><div>${dispAmt}</div></div>
         <div class="bar" style="height:${h}px;"></div>
         <div class="bar-month">${d.label||''}</div>
+        ${growthLabel(amounts[i], prevAmounts[i])}
       </div>`;
     }).join('');
   }
@@ -913,10 +924,10 @@ function renderSummary() {
   }).join('');
 }
 
-/* ── 판매예정 합산 → 예상 매출 자동 반영 ── */
+/* ── 판매예정 + 판매완료 + 선수금 합산 → 예상 매출 자동 반영 ── */
 function autoCalcFromInventory() {
   if (_manualSalesLock.expectedSales) { recalcRemain(); return; }
-  const filtered = rows.filter(r => r.status === '판매예정');
+  const filtered = rows.filter(r => r.status === '판매예정' || r.status === '판매완료' || r.status === '선수금');
   const totalAmt = filtered.reduce((s, r) => s + (Number(r.amount)||0), 0);
   const totalPcs = filtered.length;
   const salesEl = document.getElementById('f-expectedSales');
