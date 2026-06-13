@@ -791,10 +791,10 @@ function renderAll() {
     // DEFAULT 항목 전부 표시 (데이터 없으면 0)
     const lmap = Object.fromEntries(fsLine.map(r => [r.line, r]));
     lineData = DEFAULT_LINES.map(d => lmap[d.line] ? { ...lmap[d.line] } : { ...d });
-    fsLine.forEach(r => { if (!DEFAULT_LINES.some(d => d.line === r.line)) lineData.push(r); });
-    const rmap = Object.fromEntries(fsRegion.map(r => [r.region, r]));
+    fsLine.forEach(r => { if ((r.line||'') && !DEFAULT_LINES.some(d => d.line === r.line)) lineData.push(r); });
+    const rmap = Object.fromEntries(fsRegion.filter(r => r.region).map(r => [r.region, r]));
     regionData = DEFAULT_REGIONS.map(d => rmap[d.region] ? { ...rmap[d.region] } : { ...d });
-    fsRegion.forEach(r => { if (!DEFAULT_REGIONS.some(d => d.region === r.region)) regionData.push(r); });
+    fsRegion.forEach(r => { if ((r.region||'') && !DEFAULT_REGIONS.some(d => d.region === r.region)) regionData.push(r); });
     applyYoy(lineData, 'line');
     applyYoy(regionData, 'region');
   }
@@ -927,7 +927,7 @@ function updateLineChart(shares) {
   document.getElementById('line-mini-qty').textContent   = (top?.qty||0)+' pcs';
 
   document.getElementById('lineDonutWrap').innerHTML =
-    buildDonutSVG(lineData, LINE_COLORS, 'Collection별<br>비중', d => d.line.split(' ')[0]);
+    buildDonutSVG(lineData, LINE_COLORS, 'Collection별<br>비중', d => (d.line||'').split(' ')[0]);
 }
 
 /* ── 지역 테이블 ── */
@@ -964,7 +964,7 @@ function updateRegionChart(shares) {
   document.getElementById('region-mini-qty').textContent   = (top?.qty||0)+' pcs';
 
   document.getElementById('regionDonutWrap').innerHTML =
-    buildDonutSVG(regionData, REGION_COLORS, '지역별<br>비중', d => d.region.split(',')[0].trim());
+    buildDonutSVG(regionData, REGION_COLORS, '지역별<br>비중', d => (d.region||'').split(',')[0].trim());
 }
 
 /* renderRegionalTable 제거됨 — 기간 필터는 renderAll에서 처리 */
