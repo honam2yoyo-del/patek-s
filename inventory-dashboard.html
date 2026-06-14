@@ -59,11 +59,12 @@
 
     /* ── KPI 카드 ── */
     .kpi-grid { display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:20px; }
-    .kpi-card { background:#fff;border:1px solid #e2e7ef;border-radius:8px;padding:13px 14px;box-shadow:0 2px 8px rgba(15,23,42,.035); }
-    .kpi-label { font-size:12px;font-weight:900;margin-bottom:6px;color:#374151; }
-    .kpi-pcs   { font-size:22px;font-weight:900;letter-spacing:-.5px;line-height:1; }
-    .kpi-pcs small { font-size:13px;font-weight:700;margin-left:2px;color:#374151; }
-    .kpi-amt   { margin-top:6px;font-size:12px;font-weight:800;color:#374151; }
+    .kpi-card { background:#fff;border:2px solid #e2e7ef;border-radius:8px;padding:13px 14px;box-shadow:0 2px 8px rgba(15,23,42,.035);text-align:center;cursor:pointer;transition:border-color .15s; }
+    .kpi-label { font-size:12px;font-weight:900;margin-bottom:6px;color:#111827; }
+    .kpi-pcs   { font-size:22px;font-weight:900;letter-spacing:-.5px;line-height:1;color:#111827;transition:color .15s; }
+    .kpi-pcs small { font-size:13px;font-weight:700;margin-left:2px;color:#9ca3af; }
+    .kpi-amt   { margin-top:6px;font-size:12px;font-weight:800;color:#9ca3af; }
+    .kpi-card.kpi-active .kpi-pcs { color:var(--kpi-color,#111827); }
 
     .blue { color:#0067e8; } .green { color:#009844; } .red { color:#ff1f1f; }
     .orange { color:#ff7a00; } .black { color:#111827; } .purple { color:#7c3aed; } .amber { color:#d97706; }
@@ -285,16 +286,16 @@
 
     <!-- KPI 카드 (10개, 5×2) -->
     <section class="kpi-grid">
-      <div class="kpi-card"><div class="kpi-label">전체 재고</div><div class="kpi-pcs black" id="kpi-all-pcs">0 <small>pcs</small></div><div class="kpi-amt" id="kpi-all-amt">0 원</div></div>
-      <div class="kpi-card"><div class="kpi-label">판매 예정</div><div class="kpi-pcs green" id="kpi-sale-pcs">0 <small>pcs</small></div><div class="kpi-amt" id="kpi-sale-amt">0 원</div></div>
-      <div class="kpi-card"><div class="kpi-label">컨펌 예정</div><div class="kpi-pcs orange" id="kpi-confirm-pcs">0 <small>pcs</small></div><div class="kpi-amt" id="kpi-confirm-amt">0 원</div></div>
-      <div class="kpi-card"><div class="kpi-label">이월 예정</div><div class="kpi-pcs blue" id="kpi-carry-pcs">0 <small>pcs</small></div><div class="kpi-amt" id="kpi-carry-amt">0 원</div></div>
-      <div class="kpi-card"><div class="kpi-label">선수금</div><div class="kpi-pcs" style="color:#0891b2;" id="kpi-adv-pcs">- <small>pcs</small></div><div class="kpi-amt" id="kpi-adv-amt">0 원</div></div>
-      <div class="kpi-card"><div class="kpi-label">AS</div><div class="kpi-pcs red" id="kpi-as-pcs">0 <small>pcs</small></div><div class="kpi-amt" id="kpi-as-amt">0 원</div></div>
-      <div class="kpi-card"><div class="kpi-label">기타</div><div class="kpi-pcs purple" id="kpi-etc-pcs">0 <small>pcs</small></div><div class="kpi-amt" id="kpi-etc-amt">0 원</div></div>
-      <div class="kpi-card"><div class="kpi-label">MPDS 등록 중</div><div class="kpi-pcs blue" id="kpi-reg-pcs">0 <small>pcs</small></div><div class="kpi-amt" id="kpi-reg-amt">0 원</div></div>
-      <div class="kpi-card"><div class="kpi-label">판매 완료</div><div class="kpi-pcs amber" id="kpi-done-pcs">0 <small>pcs</small></div><div class="kpi-amt" id="kpi-done-amt">0 원</div></div>
-      <div class="kpi-card"><div class="kpi-label">잔여 재고</div><div class="kpi-pcs black" id="kpi-rest-pcs">0 <small>pcs</small></div><div class="kpi-amt" id="kpi-rest-amt">0 원</div></div>
+      <div class="kpi-card" id="kpi-card-all" data-filter="전체" data-color="#374151" onclick="selectKpiCard(this)"><div class="kpi-label">전체 재고</div><div class="kpi-pcs" id="kpi-all-pcs">0 <small>pcs</small></div><div class="kpi-amt" id="kpi-all-amt">0 원</div></div>
+      <div class="kpi-card" id="kpi-card-sale" data-filter="판매예정" data-color="#009844" onclick="selectKpiCard(this)"><div class="kpi-label">판매 예정</div><div class="kpi-pcs" id="kpi-sale-pcs">0 <small>pcs</small></div><div class="kpi-amt" id="kpi-sale-amt">0 원</div></div>
+      <div class="kpi-card" id="kpi-card-confirm" data-filter="컨펌예정" data-color="#ff7a00" onclick="selectKpiCard(this)"><div class="kpi-label">컨펌 예정</div><div class="kpi-pcs" id="kpi-confirm-pcs">0 <small>pcs</small></div><div class="kpi-amt" id="kpi-confirm-amt">0 원</div></div>
+      <div class="kpi-card" id="kpi-card-carry" data-filter="이월예정" data-color="#0067e8" onclick="selectKpiCard(this)"><div class="kpi-label">이월 예정</div><div class="kpi-pcs" id="kpi-carry-pcs">0 <small>pcs</small></div><div class="kpi-amt" id="kpi-carry-amt">0 원</div></div>
+      <div class="kpi-card" id="kpi-card-adv" data-filter="선수금" data-color="#0891b2" onclick="selectKpiCard(this)"><div class="kpi-label">선수금</div><div class="kpi-pcs" id="kpi-adv-pcs">0 <small>pcs</small></div><div class="kpi-amt" id="kpi-adv-amt">0 원</div></div>
+      <div class="kpi-card" id="kpi-card-as" data-filter="AS" data-color="#ff1f1f" onclick="selectKpiCard(this)"><div class="kpi-label">AS</div><div class="kpi-pcs" id="kpi-as-pcs">0 <small>pcs</small></div><div class="kpi-amt" id="kpi-as-amt">0 원</div></div>
+      <div class="kpi-card" id="kpi-card-etc" data-filter="기타" data-color="#7c3aed" onclick="selectKpiCard(this)"><div class="kpi-label">기타</div><div class="kpi-pcs" id="kpi-etc-pcs">0 <small>pcs</small></div><div class="kpi-amt" id="kpi-etc-amt">0 원</div></div>
+      <div class="kpi-card" id="kpi-card-reg" data-filter="등록" data-color="#0067e8" onclick="selectKpiCard(this)"><div class="kpi-label">MPDS 등록 중</div><div class="kpi-pcs" id="kpi-reg-pcs">0 <small>pcs</small></div><div class="kpi-amt" id="kpi-reg-amt">0 원</div></div>
+      <div class="kpi-card" id="kpi-card-done" data-filter="판매완료" data-color="#d97706" onclick="selectKpiCard(this)"><div class="kpi-label">판매 완료</div><div class="kpi-pcs" id="kpi-done-pcs">0 <small>pcs</small></div><div class="kpi-amt" id="kpi-done-amt">0 원</div></div>
+      <div class="kpi-card" id="kpi-card-rest" data-filter="잔여재고" data-color="#111827" onclick="selectKpiCard(this)"><div class="kpi-label">잔여 재고</div><div class="kpi-pcs" id="kpi-rest-pcs">0 <small>pcs</small></div><div class="kpi-amt" id="kpi-rest-amt">0 원</div></div>
     </section>
 
     <!-- 재고 목록 -->
@@ -790,6 +791,7 @@ onAuthStateChanged(auth, user => {
     loadLineConfig();
     loadStaffForInv();
     loadMonth();
+    applyKpiCardStyles();
   }
 });
 
@@ -870,6 +872,7 @@ document.getElementById('filterBar').addEventListener('click', e => {
     if (activeFilters.size === 0) activeFilters.add('전체');
   }
   applyFilterStyles();
+  applyKpiCardStyles();
   renderTable();
 });
 
@@ -880,6 +883,41 @@ function applyFilterStyles() {
     pill.className = 'filter-pill' + (isActive ? ' ' + (PILL_CLASS[val] || 'active') : '');
   });
 }
+
+function applyKpiCardStyles() {
+  document.querySelectorAll('.kpi-card[data-filter]').forEach(card => {
+    const filterVal = card.dataset.filter;
+    const color = card.dataset.color;
+    const isActive = activeFilters.has(filterVal);
+    if (isActive) {
+      card.classList.add('kpi-active');
+      card.style.setProperty('--kpi-color', color);
+      card.style.borderColor = color;
+    } else {
+      card.classList.remove('kpi-active');
+      card.style.removeProperty('--kpi-color');
+      card.style.borderColor = '';
+    }
+  });
+}
+
+window.selectKpiCard = function(card) {
+  const filterVal = card.dataset.filter;
+  if (filterVal === '전체') {
+    activeFilters = new Set(['전체']);
+  } else {
+    activeFilters.delete('전체');
+    if (activeFilters.has(filterVal)) {
+      activeFilters.delete(filterVal);
+      if (activeFilters.size === 0) activeFilters.add('전체');
+    } else {
+      activeFilters.add(filterVal);
+    }
+  }
+  applyFilterStyles();
+  applyKpiCardStyles();
+  renderTable();
+};
 
 /* ────────── 테이블 정렬 상태 (0=기본, 1=오름차순, -1=내림차순) ────────── */
 let invSortKey = '';
