@@ -142,6 +142,12 @@
     .s-보류 { background:#fffbeb;color:#d97706; }
     .s-완료 { background:#f0fdf4;color:#16a34a; }
 
+    /* ── D-3 긴급 카드 ── */
+    .note-card.urgent { background:#fff5f5;border-color:#fecaca; }
+    .note-card.urgent::before { background:#dc2626 !important; }
+    .note-card.urgent .nc-date-val { color:#dc2626;font-size:12px;font-weight:900; }
+    .d-badge { display:inline-block;font-size:10.5px;font-weight:900;color:#dc2626;background:#fee2e2;border-radius:4px;padding:1px 5px;margin-left:3px; }
+
     /* ── 우측 상세 패널 ── */
     .detail-pane { background:#fff;border:1px solid #e2e7ef;border-radius:10px;box-shadow:0 2px 8px rgba(15,23,42,.035);display:flex;flex-direction:column;overflow:hidden; }
     .dp-empty { flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#9ca3af;gap:12px; }
@@ -356,11 +362,14 @@
         <div class="filter-bar">
           <select class="filter-select" id="f-category" onchange="applyFilter()">
             <option value="">카테고리</option>
-            <option value="PP">PP</option>
             <option value="고객">고객</option>
+            <option value="매장">매장</option>
+            <option value="제품">제품</option>
             <option value="본사">본사</option>
-            <option value="재고">재고</option>
             <option value="AS">AS</option>
+            <option value="PP">PP</option>
+            <option value="행사">행사</option>
+            <option value="교육">교육</option>
             <option value="기타">기타</option>
           </select>
           <select class="filter-select" id="f-status" onchange="applyFilter()">
@@ -381,13 +390,6 @@
             <option value="today">오늘</option>
             <option value="week">이번 주</option>
             <option value="month">이번 달</option>
-          </select>
-          <select class="filter-select" id="f-tag" onchange="applyFilter()">
-            <option value="">태그</option>
-            <option value="#신제품">#신제품</option>
-            <option value="#VIP">#VIP</option>
-            <option value="#긴급">#긴급</option>
-            <option value="#마감">#마감</option>
           </select>
           <button class="filter-reset" onclick="resetFilters()">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
@@ -451,9 +453,10 @@
 
           <!-- 스크롤 영역 -->
           <div class="detail-scroll">
-            <div class="dp-status-row">
+            <div class="dp-status-row" id="dpStatusRow">
               <span class="cat-badge" id="dpCatBadge" style="--cc:#6b7280;--cb:#f3f4f6;">—</span>
               <span class="s-badge" id="dpStatusBadge">—</span>
+              <span id="dpEditedBadge" style="display:none;font-size:11px;font-weight:700;color:#9ca3af;background:#f3f4f6;border-radius:5px;padding:2px 8px;">수정됨</span>
             </div>
 
             <!-- 정보 그리드 -->
@@ -506,20 +509,27 @@
   <div class="modal">
     <div class="modal-title" id="writeModalTitle">전달 노트 작성</div>
     <div class="form-row">
+      <label class="form-label">카테고리</label>
+      <select class="form-select" id="wf-category">
+        <option value="고객">고객</option>
+        <option value="매장">매장</option>
+        <option value="제품">제품</option>
+        <option value="본사">본사</option>
+        <option value="AS">AS</option>
+        <option value="PP">PP</option>
+        <option value="행사">행사</option>
+        <option value="교육">교육</option>
+        <option value="기타">기타</option>
+      </select>
+    </div>
+    <div class="form-row">
       <label class="form-label">제목</label>
       <input class="form-input" id="wf-title" type="text" placeholder="전달 내용을 요약하세요"/>
     </div>
     <div class="form-row-2" style="margin-bottom:12px;">
       <div class="form-row" style="margin-bottom:0">
-        <label class="form-label">카테고리</label>
-        <select class="form-select" id="wf-category">
-          <option value="PP">PP</option>
-          <option value="고객">고객</option>
-          <option value="본사">본사</option>
-          <option value="재고">재고</option>
-          <option value="AS">AS</option>
-          <option value="기타">기타</option>
-        </select>
+        <label class="form-label">마감일</label>
+        <input class="form-input" id="wf-due" type="date"/>
       </div>
       <div class="form-row" style="margin-bottom:0">
         <label class="form-label">상태</label>
@@ -537,13 +547,9 @@
         <input class="form-input" id="wf-assignee" type="text" placeholder="담당자 이름"/>
       </div>
       <div class="form-row" style="margin-bottom:0">
-        <label class="form-label">마감일</label>
-        <input class="form-input" id="wf-due" type="date"/>
+        <label class="form-label">전달 대상</label>
+        <input class="form-input" id="wf-target" type="text" placeholder="예: 전체 팀, 임지"/>
       </div>
-    </div>
-    <div class="form-row">
-      <label class="form-label">전달 대상</label>
-      <input class="form-input" id="wf-target" type="text" placeholder="예: 전체 팀, 임지"/>
     </div>
     <div class="form-row">
       <label class="form-label">태그 (쉼표 구분)</label>
@@ -610,9 +616,12 @@ let unsub      = null;
 const CAT_MAP = {
   'PP':   { cc:'#d97706', cb:'#fffbeb' },
   '고객': { cc:'#2563eb', cb:'#eff6ff' },
+  '매장': { cc:'#0891b2', cb:'#e0f2fe' },
+  '제품': { cc:'#16a34a', cb:'#f0fdf4' },
   '본사': { cc:'#7c3aed', cb:'#f5f3ff' },
-  '재고': { cc:'#16a34a', cb:'#f0fdf4' },
   'AS':   { cc:'#f97316', cb:'#fff7ed' },
+  '행사': { cc:'#db2777', cb:'#fdf2f8' },
+  '교육': { cc:'#4f46e5', cb:'#eef2ff' },
   '기타': { cc:'#6b7280', cb:'#f9fafb' },
 };
 
@@ -658,7 +667,6 @@ window.applyFilter = function() {
   const fCat    = document.getElementById('f-category').value;
   const fStat   = document.getElementById('f-status').value;
   const fAssign = document.getElementById('f-assignee').value;
-  const fTag    = document.getElementById('f-tag').value;
   const sortVal = document.getElementById('sortSelect').value;
 
   let rows = allNotes.filter(n => {
@@ -667,8 +675,7 @@ window.applyFilter = function() {
     const matchCat  = !fCat   || n.category === fCat;
     const matchStat = !fStat  || n.status === fStat;
     const matchAss  = !fAssign|| n.assignee === fAssign;
-    const matchTag  = !fTag   || (n.tags||[]).includes(fTag);
-    return matchTab && matchQ && matchCat && matchStat && matchAss && matchTag;
+    return matchTab && matchQ && matchCat && matchStat && matchAss;
   });
 
   if (sortVal === 'due')      rows.sort((a,b) => (a.dueDate||'').localeCompare(b.dueDate||''));
@@ -679,7 +686,7 @@ window.applyFilter = function() {
 };
 
 window.resetFilters = function() {
-  ['f-category','f-status','f-assignee','f-period','f-tag'].forEach(id => document.getElementById(id).value = '');
+  ['f-category','f-status','f-assignee','f-period'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('searchInput').value = '';
   applyFilter();
 };
@@ -698,22 +705,35 @@ function renderList(notes) {
     const commentCount = (n.commentList||[]).length;
     const totalMembers = TEAM_MEMBERS.length;
 
+    // D-3 긴급 여부 계산
+    let isUrgent = false;
+    let dDiff = null;
+    if (n.status !== '완료' && n.dueDate) {
+      dDiff = Math.ceil((new Date(n.dueDate + 'T00:00:00') - new Date(TODAY + 'T00:00:00')) / 86400000);
+      if (dDiff <= 3) isUrgent = true;
+    }
+
     // 날짜 컬럼
     let dateHtml = '<span class="nc-date"></span>';
     if (n.status === '완료' && n.completedDate) {
       dateHtml = `<span class="nc-date">완료일 <span class="nc-date-val done">${n.completedDate.replace(/-/g,'.')}</span></span>`;
     } else if (n.dueDate) {
-      dateHtml = `<span class="nc-date">마감일 <span class="nc-date-val">${n.dueDate.replace(/-/g,'.')}</span></span>`;
+      const dLabel = dDiff !== null && dDiff <= 3
+        ? (dDiff < 0 ? `<span class="d-badge">D+${Math.abs(dDiff)}</span>` : dDiff === 0 ? `<span class="d-badge">D-Day</span>` : `<span class="d-badge">D-${dDiff}</span>`)
+        : '';
+      dateHtml = `<span class="nc-date">마감일 <span class="nc-date-val">${n.dueDate.replace(/-/g,'.')}</span>${dLabel}</span>`;
     }
 
+    const editedBadge = n.isEdited ? `<span style="font-size:10px;font-weight:700;color:#9ca3af;background:#f3f4f6;border-radius:4px;padding:1px 5px;margin-left:4px;">수정됨</span>` : '';
+
     return `
-    <div class="note-card${n.id === selectedId ? ' selected' : ''}" style="--cc:${cm.cc};--cb:${cm.cb};" onclick="selectNote('${n.id}')">
+    <div class="note-card${n.id === selectedId ? ' selected' : ''}${isUrgent ? ' urgent' : ''}" style="--cc:${cm.cc};--cb:${cm.cb};" onclick="selectNote('${n.id}')">
       <div class="nc-col1">
         <span class="cat-badge" style="--cc:${cm.cc};--cb:${cm.cb};">${n.category||'기타'}</span>
         <span class="s-badge s-${n.status||'대기'}">${n.status||'대기'}</span>
       </div>
       <div class="nc-col2">
-        <div class="note-title">${n.title||'(제목 없음)'}</div>
+        <div class="note-title">${n.title||'(제목 없음)'}${editedBadge}</div>
         <div class="note-meta">작성자: ${n.author||'-'}&nbsp;&nbsp;담당자: ${n.assignee||'-'}${n.completer ? '&nbsp;&nbsp;완료: '+n.completer : ''}</div>
       </div>
       ${dateHtml}
@@ -783,7 +803,20 @@ function renderDetail(n) {
   cb.style.cssText = `--cc:${cm.cc};--cb:${cm.cb};`;
 
   const starBtn = document.getElementById('dpStarBtn');
-  starBtn.classList.toggle('star-active', !!n.starred);
+  starBtn.classList.toggle('star-active', !!(n.starred || n.important));
+
+  // 본인(작성자)만 수정·삭제 가능
+  const myName = currentUser?.displayName || currentUser?.email?.split('@')[0] || '';
+  const isAuthor = myName && (myName === n.author || (n.authorEmail && currentUser?.email === n.authorEmail));
+  const editBtn = document.querySelector('.dp-top-btns .dp-icon-btn[title="수정"]');
+  const delBtn  = document.querySelector('.btn-del');
+  if (editBtn) editBtn.style.display = isAuthor ? '' : 'none';
+  if (delBtn)  delBtn.style.display  = isAuthor ? '' : 'none';
+
+  // 수정됨 표시
+  const statusRow = document.getElementById('dpStatusRow');
+  const editedEl  = document.getElementById('dpEditedBadge');
+  if (editedEl) editedEl.style.display = n.isEdited ? '' : 'none';
 
   document.getElementById('dpAuthor').textContent   = n.author    || '—';
   document.getElementById('dpAssignee').textContent = n.assignee  || '—';
@@ -921,13 +954,43 @@ window.deleteComment = async function(i) {
   catch(e) { renderComments(newList); }
 };
 
-/* ── 별 토글 (starred + important 동시) ── */
+/* ── 별 토글 (starred + important + notices 동기화) ── */
 window.toggleStar = async function(id, val) {
   const note = allNotes.find(n => n.id === id);
   if (!note) return;
   note.starred = val;
   note.important = val;
-  try { await updateDoc(doc(db,'delivery_notes',id), { starred: val, important: val }); }
+  const updateData = { starred: val, important: val };
+
+  if (val) {
+    // 중요 표시 ON → notices에 등록
+    if (!note.noticeId) {
+      try {
+        const noticeRef = await addDoc(collection(db, 'notices'), {
+          title:        note.title || '',
+          category:     note.category || '기타',
+          content:      note.body || '',
+          registerDate: (note.createdAt || new Date().toISOString()).split('T')[0],
+          deadlineDate: note.dueDate || '',
+          completed:    note.status === '완료',
+          starred:      false,
+          source:       'delivery_note',
+          sourceId:     id,
+        });
+        note.noticeId = noticeRef.id;
+        updateData.noticeId = noticeRef.id;
+      } catch(e) { console.warn('notices 등록 실패', e); }
+    }
+  } else {
+    // 중요 표시 OFF → notices에서 제거
+    if (note.noticeId) {
+      try { await deleteDoc(doc(db, 'notices', note.noticeId)); } catch(e) {}
+      note.noticeId = null;
+      updateData.noticeId = null;
+    }
+  }
+
+  try { await updateDoc(doc(db,'delivery_notes',id), updateData); }
   catch(e) { applyFilter(); }
 };
 window.toggleDetailStar = function() {
@@ -957,8 +1020,14 @@ window.setNoteStatus = async function(newStatus) {
 /* ── 삭제 ── */
 window.deleteCurrentNote = async function() {
   if (!selectedId) return;
+  const note = allNotes.find(n => n.id === selectedId);
+  if (!note) return;
+  const myName = currentUser?.displayName || currentUser?.email?.split('@')[0] || '';
+  const isAuthor = myName && (myName === note.author || (note.authorEmail && currentUser?.email === note.authorEmail));
+  if (!isAuthor) { alert('본인이 작성한 노트만 삭제할 수 있습니다.'); return; }
   if (!confirm('이 전달 노트를 삭제하시겠습니까?')) return;
   try {
+    if (note.noticeId) { try { await deleteDoc(doc(db,'notices',note.noticeId)); } catch(e2) {} }
     await deleteDoc(doc(db,'delivery_notes',selectedId));
   } catch(e) {
     allNotes = allNotes.filter(n => n.id !== selectedId);
@@ -971,6 +1040,9 @@ window.editCurrentNote = function() {
   if (!selectedId) return;
   const note = allNotes.find(n => n.id === selectedId);
   if (!note) return;
+  const myName = currentUser?.displayName || currentUser?.email?.split('@')[0] || '';
+  const isAuthor = myName && (myName === note.author || (note.authorEmail && currentUser?.email === note.authorEmail));
+  if (!isAuthor) { alert('본인이 작성한 노트만 수정할 수 있습니다.'); return; }
   editingId = selectedId;
   document.getElementById('writeModalTitle').textContent = '전달 노트 수정';
   document.getElementById('wf-title').value    = note.title    || '';
@@ -1021,6 +1093,8 @@ window.saveNote = async function() {
   const tags = tagRaw ? tagRaw.split(',').map(t => t.trim()).filter(Boolean) : [];
   const now = new Date();
   const createdStr = now.toLocaleDateString('ko-KR',{year:'numeric',month:'2-digit',day:'2-digit'}).replace(/\. /g,'.').replace('.','');
+  const authorName = currentUser?.displayName || currentUser?.email?.split('@')[0] || '임영지';
+  const isImportant = document.getElementById('wf-important').checked;
   const data = {
     title,
     category: document.getElementById('wf-category').value,
@@ -1030,17 +1104,42 @@ window.saveNote = async function() {
     target:   document.getElementById('wf-target').value.trim(),
     tags,
     body:     document.getElementById('wf-body').value.trim(),
-    important: document.getElementById('wf-important').checked,
-    starred:  document.getElementById('wf-important').checked,
-    author:   '임영지',
-    reads:    0,
-    readBy:   [],
-    commentList: [],
-    createdAt: now.toISOString(),
+    important: isImportant,
+    starred:  isImportant,
+    ...(editingId ? { isEdited: true } : { author: authorName, authorEmail: currentUser?.email || '', reads: 0, readBy: [], commentList: [], createdAt: now.toISOString() }),
   };
   try {
-    if (editingId) { await updateDoc(doc(db,'delivery_notes',editingId), data); }
-    else           { await addDoc(collection(db,'delivery_notes'), data); }
+    if (editingId) {
+      const prevNote = allNotes.find(n => n.id === editingId);
+      await updateDoc(doc(db,'delivery_notes',editingId), data);
+      // 중요 표시 변경 시 notices 동기화
+      if (isImportant && !prevNote?.noticeId) {
+        try {
+          const nRef = await addDoc(collection(db,'notices'), {
+            title: data.title, category: data.category, content: data.body,
+            registerDate: (prevNote?.createdAt || now.toISOString()).split('T')[0],
+            deadlineDate: data.dueDate || '', completed: data.status === '완료',
+            starred: false, source: 'delivery_note', sourceId: editingId,
+          });
+          await updateDoc(doc(db,'delivery_notes',editingId), { noticeId: nRef.id });
+        } catch(e2) {}
+      } else if (!isImportant && prevNote?.noticeId) {
+        try { await deleteDoc(doc(db,'notices',prevNote.noticeId)); } catch(e2) {}
+        await updateDoc(doc(db,'delivery_notes',editingId), { noticeId: null });
+      }
+    } else {
+      const newRef = await addDoc(collection(db,'delivery_notes'), data);
+      if (isImportant) {
+        try {
+          const nRef = await addDoc(collection(db,'notices'), {
+            title: data.title, category: data.category, content: data.body,
+            registerDate: now.toISOString().split('T')[0], deadlineDate: data.dueDate || '',
+            completed: false, starred: false, source: 'delivery_note', sourceId: newRef.id,
+          });
+          await updateDoc(doc(db,'delivery_notes',newRef.id), { noticeId: nRef.id });
+        } catch(e2) {}
+      }
+    }
     closeWriteModal();
   } catch(e) {
     if (!editingId) {

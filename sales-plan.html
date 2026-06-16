@@ -89,6 +89,8 @@
     .todo-badge.b-today { background:#eff6ff;color:#2563eb; }
     .todo-badge.b-ongoing { background:#fff7ed;color:#ea580c; }
     .todo-badge.b-done { background:#f0fdf4;color:#16a34a; }
+    .todo-badge.b-urgent { background:#fee2e2;color:#dc2626; }
+    .todo-cb.cb-urgent { background:#dc2626; }
     .todo-empty { color:#9ca3af;font-size:12.5px;font-weight:600;text-align:center;padding:24px 0; }
 
     /* ── 공지 상세 모달 (web) ── */
@@ -505,23 +507,32 @@ function render(){
   yoySubEl.textContent = `작년 동월 ${lastYear ? toOk(lastYear) : '-'}`;
 }
 
-// ── To Do & Check list (공지사항 연동) ──
+// ── To Do & Check list (공지사항 + 전달 노트 D-3 연동) ──
 let noticesData = [];
+let deliveryNotesData = [];
 let webNoticeCurrentId = null;
 
-const NOTICE_CATS = {매장:{bg:'#F9E5E2',text:'#D46B61'},본사:{bg:'#E3EDFD',text:'#5A85DB'},PP:{bg:'#FCE6C3',text:'#D69641'},백화점:{bg:'#E5E5E5',text:'#7A7A7A'},행사:{bg:'#EBE2FB',text:'#8E67C9'}};
+const NOTICE_CATS = {매장:{bg:'#F9E5E2',text:'#D46B61'},본사:{bg:'#E3EDFD',text:'#5A85DB'},PP:{bg:'#FCE6C3',text:'#D69641'},백화점:{bg:'#E5E5E5',text:'#7A7A7A'},행사:{bg:'#EBE2FB',text:'#8E67C9'},고객:{bg:'#EFF6FF',text:'#2563EB'},제품:{bg:'#F0FDF4',text:'#16A34A'},AS:{bg:'#FFF7ED',text:'#EA580C'},교육:{bg:'#EEF2FF',text:'#4F46E5'}};
 
 function getTodayStr(){
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
-function getTodoStatus(notice){
-  if(notice.completed === true) return 'done';
+function getTodoStatus(item){
+  if(item._source === 'delivery'){
+    if(item.status === '완료') return 'done';
+    const today = getTodayStr();
+    const diff = item.dueDate ? Math.ceil((new Date(item.dueDate+'T00:00:00') - new Date(today+'T00:00:00')) / 86400000) : 99;
+    if(diff <= 0) return 'urgent';
+    if(diff <= 3) return 'ongoing';
+    return 'ongoing';
+  }
+  if(item.completed === true) return 'done';
   const today = getTodayStr();
-  if((notice.registerDate || '') === today) return 'today';
-  if(notice.deadlineDate){
-    const diff = Math.round((new Date(notice.deadlineDate+'T00:00:00') - new Date(today+'T00:00:00')) / 86400000);
+  if((item.registerDate || '') === today) return 'today';
+  if(item.deadlineDate){
+    const diff = Math.round((new Date(item.deadlineDate+'T00:00:00') - new Date(today+'T00:00:00')) / 86400000);
     if(diff >= 0 && diff <= 3) return 'ongoing';
   }
   return 'ongoing';
@@ -537,39 +548,60 @@ function filterTodoNotices(notices){
     }
     if(n.starred === true) return true;
     return false;
-  });
+  }).map(n => ({...n, _source: 'notice'}));
+}
+
+function filterTodoDelivery(notes){
+  const today = getTodayStr();
+  return notes.filter(n => {
+    if(n.status === '완료') return false;
+    if(!n.dueDate) return false;
+    const diff = Math.ceil((new Date(n.dueDate+'T00:00:00') - new Date(today+'T00:00:00')) / 86400000);
+    return diff <= 3;
+  }).map(n => ({...n, _source: 'delivery'}));
 }
 
 function renderTodoList(){
   const list = document.getElementById('todo-list');
   if(!list) return;
-  const filtered = filterTodoNotices(noticesData);
 
-  filtered.sort((a,b) => {
-    if(!!a.completed !== !!b.completed) return a.completed ? 1 : -1;
-    const da = a.deadlineDate || '9999-12-31';
-    const db2 = b.deadlineDate || '9999-12-31';
+  const filteredNotices  = filterTodoNotices(noticesData);
+  const filteredDelivery = filterTodoDelivery(deliveryNotesData);
+  const combined = [...filteredNotices, ...filteredDelivery];
+
+  combined.sort((a,b) => {
+    const aDone = a._source === 'notice' ? !!a.completed : a.status === '완료';
+    const bDone = b._source === 'notice' ? !!b.completed : b.status === '완료';
+    if(aDone !== bDone) return aDone ? 1 : -1;
+    const da = (a._source === 'notice' ? a.deadlineDate : a.dueDate) || '9999-12-31';
+    const db2 = (b._source === 'notice' ? b.deadlineDate : b.dueDate) || '9999-12-31';
     return da < db2 ? -1 : da > db2 ? 1 : 0;
   });
 
-  if(filtered.length === 0){
-    list.innerHTML = '<div class="todo-empty">표시할 공지사항이 없습니다</div>';
+  if(combined.length === 0){
+    list.innerHTML = '<div class="todo-empty">표시할 항목이 없습니다</div>';
     return;
   }
 
   const CHECK_SVG = `<svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M2 5.5l2.5 2.5 4.5-4.5" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
-  list.innerHTML = filtered.map(n => {
-    const status = getTodoStatus(n);
-    const isDone = n.completed === true;
-    const cbClass = isDone ? 'cb-done' : 'cb-active';
-    const badgeClass = status === 'today' ? 'b-today' : status === 'done' ? 'b-done' : 'b-ongoing';
-    const badgeText = status === 'today' ? '오늘' : status === 'done' ? '완료' : '진행중';
+  list.innerHTML = combined.map(n => {
+    const status  = getTodoStatus(n);
+    const isDone  = n._source === 'notice' ? n.completed === true : n.status === '완료';
+    const cbClass = isDone ? 'cb-done' : (status === 'urgent' ? 'cb-urgent' : 'cb-active');
+    const badgeClass = status === 'today' ? 'b-today' : status === 'done' ? 'b-done' : status === 'urgent' ? 'b-urgent' : 'b-ongoing';
+    const badgeText  = status === 'today' ? '오늘' : status === 'done' ? '완료' : status === 'urgent' ? 'D-Day' : '진행중';
     const titleClass = isDone ? 'todo-title t-done' : 'todo-title';
     const title = (n.title || '').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    return `<div class="todo-item" onclick="window.openWebNoticeDetail('${n.id}')">
+    const sourceTag = n._source === 'delivery'
+      ? `<span style="font-size:10px;font-weight:800;color:#6b7280;background:#f3f4f6;border-radius:3px;padding:1px 5px;margin-right:2px;flex-shrink:0;">전달</span>`
+      : '';
+    const clickFn = n._source === 'delivery'
+      ? `window.location.href='delivery-note-dashboard.html'`
+      : `window.openWebNoticeDetail('${n.id}')`;
+    return `<div class="todo-item" onclick="${clickFn}">
       <div class="todo-cb ${cbClass}">${isDone ? CHECK_SVG : ''}</div>
-      <div class="${titleClass}">${title}</div>
+      ${sourceTag}<div class="${titleClass}">${title}</div>
       <span class="todo-badge ${badgeClass}">${badgeText}</span>
     </div>`;
   }).join('');
@@ -683,6 +715,12 @@ function startListeners(){
   // 공지사항 (To Do & Check list)
   onSnapshot(collection(db, 'notices'), snap => {
     noticesData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderTodoList();
+  });
+
+  // 전달 노트 D-3 (To Do & Check list)
+  onSnapshot(collection(db, 'delivery_notes'), snap => {
+    deliveryNotesData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     renderTodoList();
   });
 
