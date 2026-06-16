@@ -661,10 +661,19 @@ window.completeWebNotice = async function(){
   const btn = document.getElementById('wn-complete-btn');
   btn.disabled = true; btn.textContent = '처리 중...';
   try {
+    const now = new Date().toISOString();
     await updateDoc(doc(db, 'notices', webNoticeCurrentId), {
-      completed: true,
-      completedAt: new Date().toISOString()
+      completed: true, completedAt: now
     });
+    // 연결된 전달 노트도 동기화
+    const notice = noticesData.find(n => n.id === webNoticeCurrentId);
+    if(notice && notice.source === 'delivery_note' && notice.sourceId){
+      try {
+        await updateDoc(doc(db,'delivery_notes',notice.sourceId), {
+          status: '완료', completedAt: now, completedDate: now.split('T')[0]
+        });
+      } catch(e2) {}
+    }
     window.closeWebNoticeModal();
   } catch(e){
     btn.disabled = false; btn.textContent = '완료 처리';

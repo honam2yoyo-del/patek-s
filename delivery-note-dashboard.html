@@ -1005,16 +1005,26 @@ window.setNoteStatus = async function(newStatus) {
   const note = allNotes.find(n => n.id === selectedId);
   if (!note) return;
   note.status = newStatus;
+  const completerName = currentUser?.displayName || currentUser?.email?.split('@')[0] || '임지';
   const updateData = { status: newStatus };
   if (newStatus === '완료') {
-    note.completer = note.completer || '임지';
+    note.completer = completerName;
     const now = new Date();
     note.completedDate = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
-    updateData.completer    = note.completer;
+    updateData.completer     = note.completer;
     updateData.completedDate = note.completedDate;
   }
-  try { await updateDoc(doc(db,'delivery_notes',selectedId), updateData); }
-  catch(e) { renderDetail(note); applyFilter(); }
+  try {
+    await updateDoc(doc(db,'delivery_notes',selectedId), updateData);
+    // 연결된 공지사항도 동기화
+    if (newStatus === '완료' && note.noticeId) {
+      try {
+        await updateDoc(doc(db,'notices',note.noticeId), {
+          completed: true, completedAt: new Date().toISOString()
+        });
+      } catch(e2) {}
+    }
+  } catch(e) { renderDetail(note); applyFilter(); }
 };
 
 /* ── 삭제 ── */

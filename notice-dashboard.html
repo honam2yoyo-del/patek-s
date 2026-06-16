@@ -703,7 +703,20 @@ window.completeNotice = async () => {
   const btn = document.getElementById('detail-complete-btn');
   btn.disabled = true; btn.textContent = '처리 중...';
   try {
-    await updateDoc(doc(db,'notices',currentDetailId), { completed:true, completedAt:new Date().toISOString(), completedBy:currentUser.uid });
+    const now = new Date().toISOString();
+    await updateDoc(doc(db,'notices',currentDetailId), { completed:true, completedAt:now, completedBy:currentUser.uid });
+    // 연결된 전달 노트도 동기화
+    const notice = allNotices.find(n => n.id === currentDetailId);
+    if(notice && notice.source === 'delivery_note' && notice.sourceId){
+      try {
+        const completerName = currentUser?.displayName || currentUser?.email?.split('@')[0] || '';
+        await updateDoc(doc(db,'delivery_notes',notice.sourceId), {
+          status: '완료', completedAt: now,
+          completer: completerName,
+          completedDate: now.split('T')[0],
+        });
+      } catch(e2) {}
+    }
     closeDetailModal();
   } catch(e){ alert('실패'); btn.disabled=false; btn.textContent='완료 처리'; }
 };
