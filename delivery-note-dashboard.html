@@ -1016,12 +1016,18 @@ window.setNoteStatus = async function(newStatus) {
   }
   try {
     await updateDoc(doc(db,'delivery_notes',selectedId), updateData);
-    // 연결된 공지사항도 동기화
-    if (newStatus === '완료' && note.noticeId) {
+    // 연결된 공지사항도 동기화 (완료 ↔ 미완료 양방향)
+    if (note.noticeId) {
       try {
-        await updateDoc(doc(db,'notices',note.noticeId), {
-          completed: true, completedAt: new Date().toISOString()
-        });
+        if (newStatus === '완료') {
+          await updateDoc(doc(db,'notices',note.noticeId), {
+            completed: true, completedAt: new Date().toISOString()
+          });
+        } else {
+          await updateDoc(doc(db,'notices',note.noticeId), {
+            completed: false, completedAt: ''
+          });
+        }
       } catch(e2) {}
     }
   } catch(e) { renderDetail(note); applyFilter(); }
